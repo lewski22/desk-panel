@@ -1,0 +1,264 @@
+// ============================================================
+// Desk Beacon System — Prisma Schema
+// PostgreSQL 15 · Prisma 5.x
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  OFFICE_ADMIN
+  STAFF
+  END_USER
+}
+
+enum DeskStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  COMPLETED
+}
+
+enum CheckinMethod {
+  NFC
+  QR
+  MANUAL
+}
+
+enum EventType {
+  DESK_CREATED
+  DESK_UPDATED
+  DESK_STATUS_CHANGED
+  RESERVATION_CREATED
+  RESERVATION_CANCELLED
+  RESERVATION_EXPIRED
+  CHECKIN_NFC
+  CHECKIN_QR
+  CHECKIN_MANUAL
+  CHECKOUT
+  DEVICE_ONLINE
+  DEVICE_OFFLINE
+  DEVICE_PROVISIONED
+  GATEWAY_ONLINE
+  GATEWAY_OFFLINE
+  UNAUTHORIZED_SCAN
+  USER_CREATED
+  USER_UPDATED
+}
+
+// ─── Organizations (multi-tenant root) ───────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("starter")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations Location[]
+  users     User[]
+  events    Event[]
+}
+
+// ─── Locations (offices) ─────────────────────────────────────
+
+model Location {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  address        String?
+  city           String?
+  timezone       String   @default("Europe/Warsaw")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  desks        Desk[]
+  gateways     Gateway[]
+  users        User[]       @relation("LocationUsers")
+}
+
+// ─── Desks ───────────────────────────────────────────────────
+
+model Desk {
+  id         String     @id @default(cuid())
+  locationId String
+  name       String
+  code       String
+  floor      String?
+  zone       String?
+  status     DeskStatus @default(ACTIVE)
+  qrToken    String     @unique @default(cuid())
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  location     Location      @relation(fields: [locationId], references: [id])
+  device       Device?
+  reservations Reservation[]
+  checkins     Checkin[]
+  events       Event[]
+
+  @@unique([locationId, code])
+}
+
+// ─── Devices (beacons) ───────────────────────────────────────
+
+model Device {
+  id              String   @id @default(cuid())
+  deskId          String?  @unique
+  gatewayId       String?
+  hardwareId      String   @unique
+  mqttUsername    String   @unique
+  mqttPasswordHash String
+  firmwareVersion String?
+  lastSeen        DateTime?
+  isOnline        Boolean  @default(false)
+  rssi            Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  desk     Desk?     @relation(fields: [deskId], references: [id])
+  gateway  Gateway?  @relation(fields: [gatewayId], references: [id])
+  events   Event[]
+}
+
+// ─── Gateways ────────────────────────────────────────────────
+
+model Gateway {
+  id           String    @id @default(cuid())
+  locationId   String
+  name         String
+  secretHash   String
+  ipAddress    String?
+  lastSeen     DateTime?
+  isOnline     Boolean   @default(false)
+  version      String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id])
+  devices  Device[]
+  events   Event[]
+}
+
+// ─── Users ───────────────────────────────────────────────────
+
+model User {
+  id             String   @id @default(cuid())
+  organizationId String?
+  email          String   @unique
+  passwordHash   String
+  firstName      String?
+  lastName       String?
+  role           UserRole @default(END_USER)
+  cardUid        String?  @unique
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  locations    Location[]    @relation("LocationUsers")
+  reservations Reservation[]
+  checkins     Checkin[]
+  refreshTokens RefreshToken[]
+  events       Event[]       @relation("ActorEvents")
+}
+
+// ─── Refresh Tokens ──────────────────────────────────────────
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Reservations ────────────────────────────────────────────
+
+model Reservation {
+  id        String            @id @default(cuid())
+  deskId    String
+  userId    String
+  date      DateTime          @db.Date
+  startTime DateTime
+  endTime   DateTime
+  status    ReservationStatus @default(PENDING)
+  qrToken   String            @unique @default(cuid())
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  desk    Desk      @relation(fields: [deskId], references: [id])
+  user    User      @relation(fields: [userId], references: [id])
+  checkin Checkin?
+  events  Event[]
+}
+
+// ─── Checkins ────────────────────────────────────────────────
+
+model Checkin {
+  id            String        @id @default(cuid())
+  reservationId String?       @unique
+  deskId        String
+  userId        String
+  method        CheckinMethod
+  cardUid       String?
+  checkedInAt   DateTime      @default(now())
+  checkedOutAt  DateTime?
+  createdAt     DateTime      @default(now())
+
+  reservation Reservation? @relation(fields: [reservationId], references: [id])
+  desk        Desk         @relation(fields: [deskId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
+}
+
+// ─── Events (audit log) ──────────────────────────────────────
+
+model Event {
+  id             String    @id @default(cuid())
+  organizationId String?
+  type           EventType
+  entityType     String?
+  entityId       String?
+  actorId        String?
+  gatewayId      String?
+  deviceId       String?
+  deskId         String?
+  reservationId  String?
+  payload        Json?
+  ts             DateTime  @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  actor        User?         @relation("ActorEvents", fields: [actorId], references: [id])
+  gateway      Gateway?      @relation(fields: [gatewayId], references: [id])
+  device       Device?       @relation(fields: [deviceId], references: [id])
+  desk         Desk?         @relation(fields: [deskId], references: [id])
+  reservation  Reservation?  @relation(fields: [reservationId], references: [id])
+
+  @@index([type])
+  @@index([entityId])
+  @@index([actorId])
+  @@index([ts])
+}
