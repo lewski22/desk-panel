@@ -1,4 +1,3 @@
-// ── locations.service.ts ─────────────────────────────────────
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -47,33 +46,10 @@ export class LocationsService {
     return this.prisma.location.update({ where: { id }, data: dto });
   }
 
-  async getOccupancyReport(id: string) {
-    await this.findOne(id);
+  async getOccupancyAnalytics(locationId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [totalDesks, reservationsToday, checkinsToday] = await Promise.all([
-      this.prisma.desk.count({ where: { locationId: id, status: 'ACTIVE' } }),
-      this.prisma.reservation.count({
-        where: { desk: { locationId: id }, date: today, status: { in: ['CONFIRMED', 'PENDING'] } },
-      }),
-      this.prisma.checkin.count({
-        where: { desk: { locationId: id }, checkedInAt: { gte: today }, checkedOutAt: null },
-      }),
-    ]);
-
-    return {
-      locationId: id,
-      date:       today.toISOString().slice(0, 10),
-      totalDesks,
-      reservationsToday,
-      currentlyOccupied: checkinsToday,
-      occupancyPct: totalDesks ? Math.round((checkinsToday / totalDesks) * 100) : 0,
-    };
-  }
-}
-
-  async getOccupancyAnalytics(locationId: string) {
     const desks = await this.prisma.desk.findMany({
       where: { locationId, status: 'ACTIVE' },
       include: {
@@ -87,21 +63,27 @@ export class LocationsService {
     const total    = desks.length;
     const occupied = desks.filter(d => d.checkins.length > 0).length;
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
     const todayCheckins = await this.prisma.checkin.count({
       where: {
-        desk: { locationId },
-        checkedInAt: { gte: todayStart },
+        desk:        { locationId },
+        checkedInAt: { gte: today },
+      },
+    });
+
+    const reservationsToday = await this.prisma.reservation.count({
+      where: {
+        desk:   { locationId },
+        date:   today,
+        status: { in: ['CONFIRMED', 'PENDING'] },
       },
     });
 
     return {
-      totalDesks:      total,
-      activeDesks:     total,
-      occupiedDesks:   occupied,
-      occupancyPct:    total > 0 ? Math.round((occupied / total) * 100) : 0,
+      totalDesks:       total,
+      occupiedDesks:    occupied,
+      occupancyPct:     total > 0 ? Math.round((occupied / total) * 100) : 0,
       todayCheckins,
+      reservationsToday,
     };
   }
+}

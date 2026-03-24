@@ -21,16 +21,22 @@ export class LocationsController {
 
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  findOne(@Param('id') id: string) { return this.svc.findOne(id); }
+  findOne(@Param('id') id: string) {
+    return this.svc.findOne(id);
+  }
 
-  @Get(':id/occupancy')
+  @Get(':id/analytics/occupancy')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  @ApiOperation({ summary: 'Today occupancy report' })
-  occupancy(@Param('id') id: string) { return this.svc.getOccupancyReport(id); }
+  @ApiOperation({ summary: 'Occupancy analytics for a location' })
+  getOccupancyAnalytics(@Param('id') id: string) {
+    return this.svc.getOccupancyAnalytics(id);
+  }
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  create(@Body() dto: CreateLocationDto) { return this.svc.create(dto); }
+  create(@Body() dto: CreateLocationDto) {
+    return this.svc.create(dto);
+  }
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
@@ -38,9 +44,3 @@ export class LocationsController {
     return this.svc.update(id, dto);
   }
 }
-
-  @Get(':id/analytics/occupancy')
-  @ApiOperation({ summary: 'Occupancy analytics for a location' })
-  occupancy(@Param('id') id: string) {
-    return this.svc.getOccupancyAnalytics(id);
-  }
