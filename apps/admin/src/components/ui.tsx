@@ -156,3 +156,18 @@ export function Credentials({ items }: { items: { key: string; value: string; hi
     </div>
   );
 }
+
+// ── PageHeader ────────────────────────────────────────────────
+export function PageHeader({
+  title, subtitle, action,
+}: { title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h1 className="text-xl font-semibold text-zinc-800">{title}</h1>
+        {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
+      </div>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}

@@ -48,9 +48,11 @@ export const adminApi = {
   },
 
   locations: {
-    list:   (orgId: string)                 => req<any[]>(`/organizations/${orgId}/locations`),
-    create: (orgId: string, d: any)         => req<any>(`/organizations/${orgId}/locations`, { method: 'POST', body: JSON.stringify(d) }),
-    update: (id: string, d: any)            => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    list:      (orgId: string)              => req<any[]>(`/organizations/${orgId}/locations`),
+    create:    (orgId: string, d: any)      => req<any>(`/organizations/${orgId}/locations`, { method: 'POST', body: JSON.stringify(d) }),
+    update:    (id: string, d: any)         => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    // Returns { occupancyPct, todayCheckins, totalDesks, activeDesks }
+    occupancy: (locId: string)              => req<any>(`/locations/${locId}/analytics/occupancy`),
   },
 
   desks: {

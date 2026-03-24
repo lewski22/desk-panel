@@ -1,0 +1,27 @@
+# Mosquitto ACL — Desk Beacon System
+
+# Backend server — full access
+user backend
+topic readwrite desk/#
+topic readwrite gateway/#
+topic readwrite user/#
+topic readwrite system/#
+topic read $SYS/#
+
+# Gateway service accounts — pattern: gateway-{gatewayId}
+# Add per-gateway entry during provisioning via provision-beacon.sh
+# Example:
+# user gateway-gw-warsaw-1
+# topic readwrite desk/#
+# topic write gateway/gw-warsaw-1/#
+# topic read $SYS/#
+
+# Beacon accounts — pattern: beacon-{hardwareId}
+# Added automatically by scripts/provision-beacon.sh
+# Example:
+# user beacon-d-abc123
+# topic write desk/DESK_ID/checkin
+# topic write desk/DESK_ID/status
+# topic write desk/DESK_ID/qr_scan
+# topic read  desk/DESK_ID/command
+# topic read  desk/DESK_ID/config

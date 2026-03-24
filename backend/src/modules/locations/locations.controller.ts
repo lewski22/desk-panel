@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@ne
 import { ApiTags, ApiBearerAuth, ApiOperation }                        from '@nestjs/swagger';
 import { UserRole }                                                    from '@prisma/client';
 import { LocationsService, CreateLocationDto }                         from './locations.service';
-import { JwtAuthGuard } from '../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
 
@@ -38,3 +38,9 @@ export class LocationsController {
     return this.svc.update(id, dto);
   }
 }
+
+  @Get(':id/analytics/occupancy')
+  @ApiOperation({ summary: 'Occupancy analytics for a location' })
+  occupancy(@Param('id') id: string) {
+    return this.svc.getOccupancyAnalytics(id);
+  }

@@ -1,11 +1,3 @@
-// ── guards/jwt-auth.guard.ts ─────────────────────────────────
-import { Injectable } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-
-@Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {}
-
-// ── guards/roles.guard.ts ────────────────────────────────────
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@prisma/client';

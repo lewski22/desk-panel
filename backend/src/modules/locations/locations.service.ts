@@ -72,3 +72,36 @@ export class LocationsService {
     };
   }
 }
+
+  async getOccupancyAnalytics(locationId: string) {
+    const desks = await this.prisma.desk.findMany({
+      where: { locationId, status: 'ACTIVE' },
+      include: {
+        checkins: {
+          where: { checkedOutAt: null },
+          take: 1,
+        },
+      },
+    });
+
+    const total    = desks.length;
+    const occupied = desks.filter(d => d.checkins.length > 0).length;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayCheckins = await this.prisma.checkin.count({
+      where: {
+        desk: { locationId },
+        checkedInAt: { gte: todayStart },
+      },
+    });
+
+    return {
+      totalDesks:      total,
+      activeDesks:     total,
+      occupiedDesks:   occupied,
+      occupancyPct:    total > 0 ? Math.round((occupied / total) * 100) : 0,
+      todayCheckins,
+    };
+  }

@@ -1,0 +1,53 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: desk_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       desk
+      POSTGRES_USER:     admin
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d desk"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: desk_mqtt
+    restart: unless-stopped
+    volumes:
+      - ./infra/docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./infra/docker/mosquitto/acl:/mosquitto/config/acl:ro
+      - mosquitto_data:/mosquitto/data
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/backend/Dockerfile
+    container_name: desk_backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL:    postgresql://admin:admin@postgres:5432/desk
+      MQTT_BROKER_URL: mqtt://mosquitto:1883
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  mosquitto_data:

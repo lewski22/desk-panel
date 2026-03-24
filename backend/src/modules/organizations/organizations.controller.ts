@@ -2,7 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/co
 import { ApiTags, ApiBearerAuth, ApiOperation }                  from '@nestjs/swagger';
 import { UserRole }                                              from '@prisma/client';
 import { OrganizationsService, CreateOrganizationDto, UpdateOrganizationDto } from './organizations.service';
-import { JwtAuthGuard } from '../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
 

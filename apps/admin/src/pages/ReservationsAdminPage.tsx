@@ -4,7 +4,7 @@ import { Btn, Card } from '../components/ui';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
-const LOC_ID = import.meta.env.VITE_DEFAULT_LOCATION_ID ?? '';
+const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? '';
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   CONFIRMED: { label: 'Potwierdzona', cls: 'bg-emerald-100 text-emerald-700' },

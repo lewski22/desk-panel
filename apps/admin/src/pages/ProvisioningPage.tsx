@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 import { Btn, Card, Modal, FormField } from '../components/ui';
 
-const LOC_ID = import.meta.env.VITE_DEFAULT_LOCATION_ID ?? '';
+const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? '';
 
 function GatewaySection() {
   const [gateways, setGateways] = useState<any[]>([]);
