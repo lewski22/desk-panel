@@ -1,93 +1,94 @@
 # desk-panel
 
-**Backend API + Admin Panel + Staff Panel** for the Reserti Desk Management System.
+**Backend API + Admin Panel + Staff Panel** dla systemu Reserti Desk Management.
 
-This repo contains the main server (NestJS + PostgreSQL), the Office Admin interface, and the Staff real-time occupancy panel.
+Repozytorium zawiera serwer główny (NestJS + PostgreSQL), panel administracyjny (Office Admin / Super Admin) oraz panel Staff do podglądu zajętości biurek w czasie rzeczywistym.
 
-Part of the [Reserti Desk Management System](https://github.com/reserti).
+Część systemu [Reserti Desk Management](https://github.com/reserti).
 
 ---
 
-## What's inside
+## Zawartość repo
 
 ```
 desk-panel/
-├── backend/          NestJS REST API + MQTT bridge
+├── backend/              NestJS REST API + MQTT bridge
+│   ├── src/modules/      Moduły domenowe (desks, users, reservations...)
+│   ├── prisma/           Schema bazy danych (PostgreSQL)
+│   └── Dockerfile        Build produkcyjny (dla Coolify)
+│
 ├── apps/
-│   ├── admin/        Office Admin & Super Admin panel (React)
-│   └── staff/        Staff real-time occupancy view (React)
-└── scripts/
-    ├── setup.sh       One-shot dev environment setup
-    └── flash-config.py  Serial provisioning for ESP32
+│   ├── admin/            Panel Office Admin + Super Admin (React + Vite)
+│   │   └── Dockerfile    Build produkcyjny nginx
+│   └── staff/            Panel Staff — mapa zajętości (React + Vite)
+│       └── Dockerfile    Build produkcyjny nginx
+│
+├── infra/
+│   └── docker/           Konfiguracje: Mosquitto, PostgreSQL, Dockerfile
+│
+├── docs/                 Dokumentacja techniczna
+│   ├── deployment.md     ← Wdrożenie produkcyjne (Coolify + Proxmox)
+│   ├── api.md            REST API reference
+│   ├── architecture.md   Architektura systemu
+│   ├── mqtt.md           MQTT specyfikacja
+│   └── provisioning.md   Provisioning beaconów
+│
+├── scripts/
+│   ├── setup.sh          One-shot dev setup
+│   └── flash-config.py   Serial provisioning ESP32
+│
+└── docker-compose.yml    Lokalny dev stack
 ```
 
 ---
 
-## Screenshots
+## Role użytkowników
 
-| Staff — Desk map | Admin — Provisioning |
-|---|---|
-| Live occupancy grid, floor-grouped | Register gateways + beacons |
-
----
-
-## User roles
-
-| Role | Panel | Permissions |
+| Rola | Panel | Uprawnienia |
 |------|-------|-------------|
-| **Super Admin** | `/admin` | Full platform — all orgs, devices, logs |
-| **Office Admin** | `/admin` | One org — desks, users, reservations, provisioning |
-| **Staff** | `/staff` | Read-only map + manual check-in / check-out |
-| **End User** | Mobile / PWA | Create reservations, QR check-in |
+| **Super Admin** | `/admin` | Pełny dostęp — wszystkie organizacje, urządzenia, logi |
+| **Office Admin** | `/admin` | Jedna organizacja — biurka, użytkownicy, rezerwacje, provisioning |
+| **Staff** | `/staff` | Podgląd mapy + ręczny check-in / check-out |
+| **End User** | Mobilna PWA | Tworzenie rezerwacji, QR check-in |
 
 ---
 
-## Quick start
+## Szybki start — development
 
-### Prerequisites
-- Node.js 20+, npm
+### Wymagania
+- Node.js 20+
 - Docker + Docker Compose
-- PostgreSQL 15 (or use Docker)
 
-### One-shot setup
+### Instalacja
+
 ```bash
 git clone https://github.com/reserti/desk-panel
 cd desk-panel
-
 ./scripts/setup.sh
 ```
 
-This script:
-1. Copies `.env.example` → `.env` in `backend/`
-2. Installs all backend dependencies
-3. Generates Prisma client
-4. Starts PostgreSQL + Mosquitto via Docker
-5. Runs database migrations
-6. Seeds the database with demo data and test accounts
+Skrypt automatycznie: kopiuje `.env`, instaluje zależności, generuje Prisma client, startuje PostgreSQL i Mosquitto, uruchamia migracje i seed.
 
-### Start everything
+### Uruchomienie
 
 ```bash
-# Backend
-cd backend && npm run start:dev
-# → http://localhost:3000
-# → Swagger: http://localhost:3000/api/docs
+# Wszystko naraz (wymaga: npm install w root)
+npm run dev
 
-# Admin panel
-cd apps/admin && npm run dev
-# → http://localhost:5174
-
-# Staff panel
-cd apps/staff && npm run dev
-# → http://localhost:5173
+# Lub osobno:
+cd backend      && npm run start:dev   # → http://localhost:3000
+cd apps/admin   && npm run dev         # → http://localhost:5174
+cd apps/staff   && npm run dev         # → http://localhost:5173
 ```
+
+**Swagger UI:** http://localhost:3000/api/docs
 
 ---
 
-## Test accounts (seed)
+## Konta testowe (seed)
 
-| Email | Password | Role |
-|-------|----------|------|
+| Email | Hasło | Rola |
+|-------|-------|------|
 | `superadmin@reserti.pl` | `Admin1234!` | Super Admin |
 | `admin@demo-corp.pl` | `Admin1234!` | Office Admin |
 | `staff@demo-corp.pl` | `Staff1234!` | Staff |
@@ -95,122 +96,86 @@ cd apps/staff && npm run dev
 
 ---
 
-## Backend — NestJS modules
-
-| Module | Description |
-|--------|-------------|
-| `auth` | JWT + refresh token rotation, role guards |
-| `organizations` | Multi-tenant root (Super Admin) |
-| `locations` | Office buildings per org |
-| `desks` | CRUD, live status map, QR tokens |
-| `devices` | Beacon provisioning + heartbeat tracking |
-| `gateways` | Gateway registration + sync API |
-| `reservations` | Create/cancel with conflict check |
-| `checkins` | NFC / QR / manual + checkout |
-| `mqtt` | Bridge to gateway MQTT network |
-| `users` | Accounts + NFC card assignment |
-
-Full API reference → [`docs/api.md`](../docs/api.md)
-
----
-
-## Environment variables
+## Zmienne środowiskowe
 
 ### `backend/.env`
-
 ```env
-DATABASE_URL=postgresql://admin:admin@localhost:5432/desk
-JWT_SECRET=change-me-32-chars-minimum
-JWT_REFRESH_SECRET=change-me-refresh-32-chars
-MQTT_BROKER_URL=mqtt://localhost:1883
-MQTT_USERNAME=backend
-MQTT_PASSWORD=backend-secret
-PORT=3000
-CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+DATABASE_URL        = postgresql://admin:admin@localhost:5432/desk
+JWT_SECRET          = (min. 32 znaki)
+JWT_REFRESH_SECRET  = (min. 32 znaki)
+MQTT_BROKER_URL     = mqtt://localhost:1883
+MQTT_USERNAME       = backend
+MQTT_PASSWORD       = changeme
+PORT                = 3000
+NODE_ENV            = production
+CORS_ORIGINS        = https://admin.twoja-domena.pl,https://staff.twoja-domena.pl
 ```
 
-### `apps/staff/.env`
-
+### `apps/admin/.env` i `apps/staff/.env`
 ```env
-VITE_API_URL=http://localhost:3000/api/v1
-VITE_LOCATION_ID=seed-location-01
-```
-
-### `apps/admin/.env`
-
-```env
-VITE_API_URL=http://localhost:3000/api/v1
-VITE_DEFAULT_LOCATION_ID=seed-location-01
+VITE_API_URL      = https://api.twoja-domena.pl/api/v1
+VITE_LOCATION_ID  = seed-location-01
 ```
 
 ---
 
-## Database
+## Baza danych
 
 ```bash
-# Generate Prisma client after schema changes
-cd backend && npx prisma generate
+# Utwórz tabele (pierwszy deploy — brak migracji)
+cd backend && npx prisma db push
 
-# Create and apply new migration
-cd backend && npx prisma migrate dev --name <migration-name>
+# Lub migracje (development)
+cd backend && npx prisma migrate dev --name nazwa
 
-# Open Prisma Studio (DB GUI)
+# Prisma Studio — GUI bazy
 cd backend && npm run db:studio
 
-# Re-seed
-cd backend && npm run db:seed
+# Seed danych testowych
+cd backend && node dist/database/seeds/seed.js
 ```
-
-Schema → [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma)
 
 ---
 
-## Docker (production)
+## Deploy produkcyjny
 
-```bash
-# Build and run all services
-docker-compose up -d
+Pełna instrukcja wdrożenia na **Proxmox LXC + Coolify + Cloudflare Tunnel**:
 
-# View logs
-docker-compose logs -f backend
-```
+→ **[docs/deployment.md](docs/deployment.md)**
 
-`docker-compose.yml` starts: PostgreSQL 15, Eclipse Mosquitto, NestJS backend (with auto-migrate on start).
+---
+
+## Moduły backendu
+
+| Moduł | Opis |
+|-------|------|
+| `auth` | JWT + rotacja refresh tokenów, role guards |
+| `organizations` | Multi-tenant root (Super Admin) |
+| `locations` | Biura w ramach organizacji |
+| `desks` | CRUD, mapa zajętości, tokeny QR |
+| `devices` | Provisioning beaconów, heartbeat |
+| `gateways` | Rejestracja gateway, API synchronizacji |
+| `reservations` | CRUD z weryfikacją konfliktów |
+| `checkins` | NFC / QR / ręczny + checkout |
+| `mqtt` | Bridge do sieci MQTT gateway |
+| `users` | Konta użytkowników, przypisanie kart NFC |
+
+Pełne API → [docs/api.md](docs/api.md)
 
 ---
 
 ## CI/CD
 
-GitHub Actions runs on every push to `main` / `develop`:
-
-- **Backend:** install → generate Prisma → migrate test DB → lint → build → test
-- **Frontend:** build check per app (coming)
-
-See [`.github/workflows/`](.github/workflows/).
+GitHub Actions na każdy push do `main` / `develop`:
+- **Backend** — install → Prisma generate → migrate test DB → build → test
+- **Admin panel** — build check
+- **Staff panel** — build check
 
 ---
 
-## Provisioning a new beacon (serial flash)
+## Powiązane repozytoria
 
-```bash
-python3 scripts/flash-config.py \
-  --port      /dev/ttyUSB0 \
-  --device-id d-abc123 \
-  --desk-id   clxxxxxxxxxxxxxxxxxx \
-  --wifi-ssid "OfficeWiFi" \
-  --wifi-pass "wifipass" \
-  --mqtt-host 192.168.1.100 \
-  --mqtt-user beacon-d-abc123 \
-  --mqtt-pass "generated-secret"
-```
-
-Full provisioning guide → [`docs/provisioning.md`](../docs/provisioning.md)
-
----
-
-## Related repos
-
-| Repo | Description |
-|------|-------------|
-| [`desk-firmware`](https://github.com/reserti/desk-firmware) | ESP32 firmware for desk beacons |
-| [`desk-gateway`](https://github.com/reserti/desk-gateway) | Per-office MQTT bridge + local cache |
+| Repo | Opis |
+|------|------|
+| [`desk-firmware`](https://github.com/reserti/desk-firmware) | Firmware ESP32 dla beaconów (NFC + LED) |
+| [`desk-gateway`](https://github.com/reserti/desk-gateway) | Gateway per-biuro (MQTT bridge + cache offline) |
