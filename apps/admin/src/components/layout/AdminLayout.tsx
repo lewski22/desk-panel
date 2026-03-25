@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+
+const SESSION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minut
 
 interface Props {
   user: { firstName?: string; lastName?: string; email: string; role: string };
@@ -14,7 +16,7 @@ const NAV_ITEMS = [
   { to: '/users',         icon: '👥', label: 'Użytkownicy',     roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
   { to: '/provisioning',  icon: '📡', label: 'Provisioning',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
   { to: '/reports',       icon: '📊', label: 'Raporty',         roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-  { to: '/organizations', icon: '🏢', label: 'Organizacje',     roles: ['SUPER_ADMIN'] },
+  { to: '/organizations', icon: '🏢', label: 'Biura',           roles: ['SUPER_ADMIN'] },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -25,16 +27,60 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export function AdminLayout({ user, onLogout, children }: Props) {
-  const [collapsed, setCollapsed] = useState(false);
-  const navigate = useNavigate();
+  const [collapsed,  setCollapsed]  = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const navigate   = useNavigate();
+  const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const visible = NAV_ITEMS.filter(n => n.roles.includes(user.role));
 
+  // ── Session timeout ─────────────────────────────────────────
+  const doLogout = useCallback(() => {
+    onLogout();
+    navigate('/login');
+  }, [onLogout, navigate]);
+
+  const resetTimer = useCallback(() => {
+    setShowWarning(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (warnRef.current)  clearTimeout(warnRef.current);
+
+    // Pokaż ostrzeżenie 60s przed końcem sesji
+    warnRef.current = setTimeout(() => setShowWarning(true), SESSION_TIMEOUT_MS - 60_000);
+    timerRef.current = setTimeout(doLogout, SESSION_TIMEOUT_MS);
+  }, [doLogout]);
+
+  useEffect(() => {
+    const events = ['mousemove','mousedown','keydown','touchstart','scroll'];
+    events.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer(); // uruchom timer przy montowaniu
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetTimer));
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (warnRef.current)  clearTimeout(warnRef.current);
+    };
+  }, [resetTimer]);
+
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden" style={{ fontFamily: "'DM Sans',sans-serif" }}>
+
+      {/* ── Session expiry warning ──────────────────────────── */}
+      {showWarning && (
+        <div className="fixed top-4 right-4 z-50 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 shadow-lg flex items-center gap-3 max-w-sm">
+          <span className="text-amber-500 text-lg">⏱</span>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800">Sesja wygaśnie za minutę</p>
+            <p className="text-xs text-amber-600 mt-0.5">Kliknij gdziekolwiek aby przedłużyć</p>
+          </div>
+          <button onClick={resetTimer} className="text-xs px-2 py-1 bg-amber-200 hover:bg-amber-300 rounded-lg text-amber-800 transition-colors">
+            Przedłuż
+          </button>
+        </div>
+      )}
+
       {/* ── Sidebar ──────────────────────────────────────────── */}
       <aside className={`flex flex-col bg-zinc-900 shrink-0 transition-all duration-300 ${collapsed ? 'w-14' : 'w-56'}`}>
-        {/* Logo */}
         <div className={`flex items-center gap-2.5 border-b border-zinc-800 ${collapsed ? 'justify-center py-5' : 'px-4 py-5'}`}>
           <span className="text-[#B53578] font-black text-xl tracking-tight select-none shrink-0">R</span>
           {!collapsed && (
@@ -45,7 +91,6 @@ export function AdminLayout({ user, onLogout, children }: Props) {
           )}
         </div>
 
-        {/* Nav links */}
         <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2 overflow-y-auto">
           {visible.map(({ to, icon, label }) => (
             <NavLink
@@ -53,10 +98,7 @@ export function AdminLayout({ user, onLogout, children }: Props) {
               to={to}
               className={({ isActive }) => `
                 flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-all
-                ${isActive
-                  ? 'bg-[#B53578]/20 text-[#e06aaa] font-medium'
-                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
-                }
+                ${isActive ? 'bg-[#B53578]/20 text-[#e06aaa] font-medium' : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'}
                 ${collapsed ? 'justify-center' : ''}
               `}
               title={collapsed ? label : undefined}
@@ -66,24 +108,18 @@ export function AdminLayout({ user, onLogout, children }: Props) {
             </NavLink>
           ))}
 
-          {/* Divider before super-admin section */}
           {user.role === 'SUPER_ADMIN' && !collapsed && (
-            <p className="text-[10px] uppercase tracking-widest text-zinc-700 px-2.5 pt-4 pb-1 font-semibold">
-              Platform
-            </p>
+            <p className="text-[10px] uppercase tracking-widest text-zinc-700 px-2.5 pt-4 pb-1 font-semibold">Platform</p>
           )}
         </nav>
 
-        {/* User + collapse */}
         <div className="border-t border-zinc-800 p-2 flex flex-col gap-1">
           {!collapsed && (
             <div className="px-2 py-1.5 rounded-lg">
               <p className="text-xs font-medium text-zinc-300 leading-tight truncate">
                 {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
               </p>
-              <p className="text-[10px] text-zinc-600 leading-tight mt-0.5">
-                {ROLE_LABEL[user.role] ?? user.role}
-              </p>
+              <p className="text-[10px] text-zinc-600 leading-tight mt-0.5">{ROLE_LABEL[user.role] ?? user.role}</p>
             </div>
           )}
           <div className={`flex gap-1 ${collapsed ? 'flex-col items-center' : ''}`}>
@@ -107,9 +143,7 @@ export function AdminLayout({ user, onLogout, children }: Props) {
 
       {/* ── Main ─────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          {children}
-        </div>
+        <div className="max-w-6xl mx-auto px-6 py-6">{children}</div>
       </main>
     </div>
   );

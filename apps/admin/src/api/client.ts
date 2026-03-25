@@ -61,6 +61,8 @@ export const adminApi = {
     create:      (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
     update:      (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     remove:      (id: string)               => req<any>(`/desks/${id}`, { method: 'DELETE' }),
+    activate:    (id: string)               => req<any>(`/desks/${id}/activate`, { method: 'PATCH' }),
+    unpair:      (id: string)               => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
     availability:(id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
   },
 
@@ -74,17 +76,22 @@ export const adminApi = {
   },
 
   gateways: {
-    list:     (locId?: string)              => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
-    register: (locId: string, name: string) => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
-    sync:     (id: string)                  => req<any>(`/gateway/${id}/sync`, { method: 'POST' }),
-    remove:   (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
+    list:             (locId?: string)              => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
+    register:         (locId: string, name: string) => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
+    sync:             (id: string)                  => req<any>(`/gateway/${id}/sync`, { method: 'POST' }),
+    remove:           (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
+    regenerateSecret: (id: string)                  => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
   },
 
   users: {
-    list:       (orgId?: string)            => req<any[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
-    create:     (d: any)                    => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
-    assignCard: (id: string, uid: string)   => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
-    deactivate: (id: string)                => req<any>(`/users/${id}`, { method: 'DELETE' }),
+    list:          (orgId?: string)                      => req<any[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
+    listDeactivated:(orgId?: string)                     => req<any[]>(`/users/deactivated${orgId ? `?organizationId=${orgId}` : ''}`),
+    create:        (d: any)                              => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
+    update:        (id: string, d: any)                  => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    assignCard:    (id: string, uid: string)             => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
+    deactivate:    (id: string, retentionDays?: number)  => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
+    restore:       (id: string)                          => req<any>(`/users/${id}/restore`, { method: 'PATCH' }),
+    hardDelete:    (id: string)                          => req<any>(`/users/${id}/permanent`, { method: 'DELETE' }),
   },
 
   reservations: {
