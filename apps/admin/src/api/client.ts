@@ -70,12 +70,14 @@ export const adminApi = {
     assign:   (id: string, deskId: string)  => req<any>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
     command:  (id: string, cmd: string, params?: any) =>
       req<any>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command: cmd, params }) }),
+    remove:   (id: string)                  => req<any>(`/devices/${id}`, { method: 'DELETE' }),
   },
 
   gateways: {
     list:     (locId?: string)              => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
     register: (locId: string, name: string) => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
     sync:     (id: string)                  => req<any>(`/gateway/${id}/sync`, { method: 'POST' }),
+    remove:   (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
   },
 
   users: {

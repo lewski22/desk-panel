@@ -19,6 +19,14 @@ function GatewaySection() {
     await load();
   };
 
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Usunąć gateway "${name}"? Wszystkie przypisane beacony zostaną odpięte.`)) return;
+    try {
+      await adminApi.gateways.remove(id);
+      await load();
+    } catch (e: any) { alert(e.message); }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -29,13 +37,13 @@ function GatewaySection() {
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Nazwa','IP','Urządzenia','Status','Ostatni kontakt'].map(h =>
+            <tr>{['Nazwa','IP','Urządzenia','Status','Ostatni kontakt',''].map(h =>
               <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
           </thead>
           <tbody>
             {gateways.map(gw => (
-              <tr key={gw.id} className="border-b border-zinc-50 hover:bg-zinc-50/50">
+              <tr key={gw.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 group">
                 <td className="py-3 px-4 font-medium text-zinc-800">{gw.name}</td>
                 <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.ipAddress ?? '—'}</td>
                 <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
@@ -47,10 +55,19 @@ function GatewaySection() {
                 <td className="py-3 px-4 text-xs text-zinc-400">
                   {gw.lastSeen ? new Date(gw.lastSeen).toLocaleString('pl-PL', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' }) : '—'}
                 </td>
+                <td className="py-3 px-4">
+                  <button
+                    onClick={() => handleDelete(gw.id, gw.name)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                    title="Usuń gateway"
+                  >
+                    Usuń
+                  </button>
+                </td>
               </tr>
             ))}
             {gateways.length === 0 && (
-              <tr><td colSpan={5} className="py-8 text-center text-zinc-400 text-sm">Brak gateway'ów</td></tr>
+              <tr><td colSpan={6} className="py-8 text-center text-zinc-400 text-sm">Brak gateway'ów</td></tr>
             )}
           </tbody>
         </table>
@@ -119,6 +136,14 @@ function BeaconSection() {
     await adminApi.devices.command(deviceId, cmd);
   };
 
+  const handleDelete = async (id: string, hardwareId: string) => {
+    if (!confirm(`Usunąć beacon "${hardwareId}"?`)) return;
+    try {
+      await adminApi.devices.remove(id);
+      await load();
+    } catch (e: any) { alert(e.message); }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -156,8 +181,12 @@ function BeaconSection() {
                       💡
                     </button>
                     <button onClick={() => sendCmd(d.id, 'REBOOT')}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors" title="Restart">
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-600 transition-colors" title="Restart">
                       ↺
+                    </button>
+                    <button onClick={() => handleDelete(d.id, d.hardwareId)}
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors" title="Usuń beacon">
+                      🗑
                     </button>
                   </div>
                 </td>
