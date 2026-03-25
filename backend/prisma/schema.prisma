@@ -163,17 +163,21 @@ model Gateway {
 // ─── Users ───────────────────────────────────────────────────
 
 model User {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String?
-  email          String   @unique
+  email          String    @unique
   passwordHash   String
   firstName      String?
   lastName       String?
-  role           UserRole @default(END_USER)
-  cardUid        String?  @unique
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  role           UserRole  @default(END_USER)
+  cardUid        String?   @unique
+  isActive       Boolean   @default(true)
+  // Soft delete — konto dezaktywowane czeka na usunięcie po retentionDays
+  deletedAt      DateTime?
+  scheduledDeleteAt DateTime?   // data kiedy konto zostanie trwale usunięte
+  retentionDays  Int?          // ile dni od dezaktywacji do trwałego usunięcia (min 30)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   organization Organization? @relation(fields: [organizationId], references: [id])
   locations    Location[]    @relation("LocationUsers")

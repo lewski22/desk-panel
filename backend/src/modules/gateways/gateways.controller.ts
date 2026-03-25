@@ -53,3 +53,11 @@ export class GatewaysController {
     return this.svc.remove(id);
   }
 }
+
+  @Post(':id/regenerate-secret')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Regenerate gateway secret — returns new secret once' })
+  regenerateSecret(@Param('id') id: string) {
+    return this.svc.regenerateSecret(id);
+  }

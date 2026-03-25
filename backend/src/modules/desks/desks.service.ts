@@ -107,3 +107,17 @@ export class DesksService {
     }));
   }
 }
+
+  async activate(id: string) {
+    await this.findOne(id);
+    return this.prisma.desk.update({ where: { id }, data: { status: DeskStatus.ACTIVE } });
+  }
+
+  async unassignDevice(id: string) {
+    await this.findOne(id);
+    // Find device assigned to this desk and unlink it
+    const device = await this.prisma.device.findFirst({ where: { deskId: id } });
+    if (!device) return { unlinked: false };
+    await this.prisma.device.update({ where: { id: device.id }, data: { deskId: null } });
+    return { unlinked: true, deviceId: device.id };
+  }

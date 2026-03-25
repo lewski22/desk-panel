@@ -89,3 +89,17 @@ export class GatewaysService {
     return { deleted: true };
   }
 }
+
+  async regenerateSecret(id: string) {
+    const gw = await this.prisma.gateway.findUnique({ where: { id } });
+    if (!gw) throw new NotFoundException('Gateway not found');
+    const secret = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const secretHash = await bcrypt.hash(secret, 10);
+    const updated = await this.prisma.gateway.update({
+      where: { id },
+      data: { secretHash },
+      select: { id: true, name: true, isOnline: true, lastSeen: true, ipAddress: true },
+    });
+    // Return first 8 chars of secret for confirmation
+    return { gateway: updated, secret, secretPreview: secret.slice(0, 8) + '…' };
+  }

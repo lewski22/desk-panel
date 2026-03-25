@@ -67,3 +67,17 @@ export class DesksController {
     return this.desks.remove(id);
   }
 }
+
+  @Patch('desks/:id/activate')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Reactivate a deactivated desk' })
+  activate(@Param('id') id: string) {
+    return this.desks.activate(id);
+  }
+
+  @Patch('desks/:id/unpair')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Unpair beacon from desk' })
+  unassignDevice(@Param('id') id: string) {
+    return this.desks.unassignDevice(id);
+  }
