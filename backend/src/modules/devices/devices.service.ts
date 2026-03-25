@@ -97,3 +97,8 @@ export class DevicesService {
     return { command, params, ts: Date.now() };
   }
 }
+
+  async remove(id: string) {
+    await this.prisma.device.delete({ where: { id } });
+    return { deleted: true };
+  }

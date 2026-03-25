@@ -83,4 +83,9 @@ export class GatewaysService {
       data: { isOnline: true, lastSeen: new Date(), ...(ipAddress && { ipAddress }) },
     });
   }
+
+  async remove(id: string) {
+    await this.prisma.gateway.delete({ where: { id } });
+    return { deleted: true };
+  }
 }

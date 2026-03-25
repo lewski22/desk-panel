@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { GatewaysService } from './gateways.service';
@@ -43,5 +43,13 @@ export class GatewaysController {
     @Body('ipAddress') ipAddress?: string,
   ) {
     return this.svc.heartbeat(id, ipAddress);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Delete gateway' })
+  remove(@Param('id') id: string) {
+    return this.svc.remove(id);
   }
 }

@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Patch, Body, Param, Query, UseGuards,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -51,5 +51,12 @@ export class DevicesController {
   @ApiOperation({ summary: 'Assign beacon to a desk' })
   assign(@Param('id') id: string, @Body('deskId') deskId: string) {
     return this.svc.assignToDesk(id, deskId);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Delete beacon / device' })
+  remove(@Param('id') id: string) {
+    return this.svc.remove(id);
   }
 }
