@@ -66,7 +66,6 @@ export class DesksController {
   remove(@Param('id') id: string) {
     return this.desks.remove(id);
   }
-}
 
   @Patch('desks/:id/activate')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
@@ -81,3 +80,4 @@ export class DesksController {
   unassignDevice(@Param('id') id: string) {
     return this.desks.unassignDevice(id);
   }
+}

@@ -88,7 +88,6 @@ export class GatewaysService {
     await this.prisma.gateway.delete({ where: { id } });
     return { deleted: true };
   }
-}
 
   async regenerateSecret(id: string) {
     const gw = await this.prisma.gateway.findUnique({ where: { id } });
@@ -100,6 +99,6 @@ export class GatewaysService {
       data: { secretHash },
       select: { id: true, name: true, isOnline: true, lastSeen: true, ipAddress: true },
     });
-    // Return first 8 chars of secret for confirmation
     return { gateway: updated, secret, secretPreview: secret.slice(0, 8) + '…' };
   }
+}

@@ -106,7 +106,6 @@ export class DesksService {
       isOccupied: d.checkins.length > 0,
     }));
   }
-}
 
   async activate(id: string) {
     await this.findOne(id);
@@ -115,9 +114,9 @@ export class DesksService {
 
   async unassignDevice(id: string) {
     await this.findOne(id);
-    // Find device assigned to this desk and unlink it
     const device = await this.prisma.device.findFirst({ where: { deskId: id } });
     if (!device) return { unlinked: false };
     await this.prisma.device.update({ where: { id: device.id }, data: { deskId: null } });
     return { unlinked: true, deviceId: device.id };
   }
+}

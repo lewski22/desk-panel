@@ -52,7 +52,6 @@ export class GatewaysController {
   remove(@Param('id') id: string) {
     return this.svc.remove(id);
   }
-}
 
   @Post(':id/regenerate-secret')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -61,3 +60,4 @@ export class GatewaysController {
   regenerateSecret(@Param('id') id: string) {
     return this.svc.regenerateSecret(id);
   }
+}
