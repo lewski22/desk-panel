@@ -4,6 +4,8 @@ import React from 'react';
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: BtnVariant;
+  size?: 'sm' | 'md';
+  loading?: boolean;
 }
 const VARIANT_CLS: Record<BtnVariant, string> = {
   primary:   'bg-[#B53578] hover:bg-[#9d2d66] text-white',
@@ -11,9 +13,15 @@ const VARIANT_CLS: Record<BtnVariant, string> = {
   danger:    'bg-red-100 hover:bg-red-200 text-red-700',
   ghost:     'hover:bg-zinc-100 text-zinc-600',
 };
-export function Btn({ variant = 'primary', className = '', children, ...props }: BtnProps) {
+export function Btn({ variant = 'primary', size = 'md', loading, className = '', children, disabled, ...props }: BtnProps) {
+  const sizeCls = size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3.5 py-2 text-sm';
   return (
-    <button {...props} className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${VARIANT_CLS[variant]} ${className}`}>
+    <button
+      {...props}
+      disabled={disabled || loading}
+      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${sizeCls} ${VARIANT_CLS[variant]} ${className}`}
+    >
+      {loading && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
       {children}
     </button>
   );
@@ -25,11 +33,13 @@ export function Card({ children, className = '' }: { children: React.ReactNode; 
 }
 
 // ── Stat ──────────────────────────────────────────────────────
-export function Stat({ label, value, sub, color = 'text-zinc-800' }: { label: string; value: string | number; sub?: string; color?: string }) {
+export function Stat({ label, value, sub, color, accent }: {
+  label: string; value: string | number; sub?: string; color?: string; accent?: boolean;
+}) {
   return (
     <Card>
       <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-3xl font-bold font-mono ${color}`}>{value}</p>
+      <p className={`text-3xl font-bold font-mono ${accent ? 'text-[#B53578]' : color ?? 'text-zinc-800'}`}>{value}</p>
       {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
     </Card>
   );
@@ -38,11 +48,15 @@ export function Stat({ label, value, sub, color = 'text-zinc-800' }: { label: st
 // ── Spinner ───────────────────────────────────────────────────
 export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-8 h-8' : 'w-5 h-5';
-  return <div className={`${sz} border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin`} />;
+  return (
+    <div className="flex items-center justify-center py-12">
+      <div className={`${sz} border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin`} />
+    </div>
+  );
 }
 
 // ── Badge ─────────────────────────────────────────────────────
-type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray' | 'purple';
+export type BadgeColor = 'green' | 'blue' | 'amber' | 'red' | 'gray' | 'purple' | 'zinc';
 const BADGE_CLS: Record<BadgeColor, string> = {
   green:  'bg-emerald-100 text-emerald-700',
   blue:   'bg-sky-100 text-sky-700',
@@ -50,9 +64,16 @@ const BADGE_CLS: Record<BadgeColor, string> = {
   red:    'bg-red-100 text-red-600',
   gray:   'bg-zinc-100 text-zinc-500',
   purple: 'bg-purple-100 text-purple-700',
+  zinc:   'bg-zinc-100 text-zinc-500',
 };
-export function Badge({ label, color = 'gray' }: { label: string; color?: BadgeColor }) {
-  return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE_CLS[color]}`}>{label}</span>;
+export function Badge({ label, color = 'gray', children }: {
+  label?: string; color?: BadgeColor; children?: React.ReactNode;
+}) {
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${BADGE_CLS[color]}`}>
+      {label ?? children}
+    </span>
+  );
 }
 
 // ── FormField ─────────────────────────────────────────────────
@@ -66,26 +87,52 @@ export function FormField({ label, children, hint }: { label: string; children: 
   );
 }
 
-// ── Input ─────────────────────────────────────────────────────
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+// ── Input — supports optional label prop ─────────────────────
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+}
+export function Input({ label, className = '', ...props }: InputProps) {
+  const input = (
+    <input
+      {...props}
+      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 transition-all ${className}`}
+    />
+  );
+  if (!label) return input;
   return (
-    <input {...props} className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 transition-all ${props.className ?? ''}`} />
+    <div>
+      <label className="block text-xs text-zinc-500 font-medium mb-1.5">{label}</label>
+      {input}
+    </div>
   );
 }
 
-// ── Select ────────────────────────────────────────────────────
-export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement> & { children: React.ReactNode }) {
-  const { children, className = '', ...rest } = props;
-  return (
-    <select {...rest} className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 ${className}`}>
+// ── Select — supports optional label prop ────────────────────
+interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  label?: string;
+  children: React.ReactNode;
+}
+export function Select({ label, children, className = '', ...props }: SelectProps) {
+  const select = (
+    <select
+      {...props}
+      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 ${className}`}
+    >
       {children}
     </select>
+  );
+  if (!label) return select;
+  return (
+    <div>
+      <label className="block text-xs text-zinc-500 font-medium mb-1.5">{label}</label>
+      {select}
+    </div>
   );
 }
 
 // ── Modal ─────────────────────────────────────────────────────
-export function Modal({ open, title, onClose, children, wide = false }: {
-  open: boolean; title: string; onClose: () => void; children: React.ReactNode; wide?: boolean;
+export function Modal({ open = true, title, onClose, children, wide = false }: {
+  open?: boolean; title: string; onClose: () => void; children: React.ReactNode; wide?: boolean;
 }) {
   if (!open) return null;
   return (
@@ -103,32 +150,57 @@ export function Modal({ open, title, onClose, children, wide = false }: {
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────
-export function Empty({ icon = '📭', title, sub, action }: { icon?: string; title: string; sub?: string; action?: React.ReactNode }) {
+// ── PageHeader ────────────────────────────────────────────────
+export function PageHeader({ title, subtitle, sub, action }: {
+  title: string; subtitle?: string; sub?: string; action?: React.ReactNode;
+}) {
   return (
-    <div className="text-center py-16 text-zinc-400">
-      <p className="text-4xl mb-3">{icon}</p>
-      <p className="font-medium text-zinc-500">{title}</p>
-      {sub && <p className="text-sm mt-1">{sub}</p>}
-      {action && <div className="mt-4">{action}</div>}
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h1 className="text-xl font-semibold text-zinc-800">{title}</h1>
+        {(subtitle || sub) && <p className="text-xs text-zinc-400 mt-0.5">{subtitle ?? sub}</p>}
+      </div>
+      {action && <div>{action}</div>}
     </div>
   );
 }
 
-// ── Table helpers ─────────────────────────────────────────────
-export function Table({ children }: { children: React.ReactNode }) {
+// ── Table with headers + empty state ─────────────────────────
+export function Table({ children, headers, empty }: {
+  children: React.ReactNode; headers?: string[]; empty?: boolean;
+}) {
+  if (empty) {
+    return (
+      <div className="text-center py-16 text-zinc-400">
+        <p className="text-3xl mb-2">📭</p>
+        <p className="text-sm">Brak danych</p>
+      </div>
+    );
+  }
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-100">
-      <table className="w-full text-left text-sm">{children}</table>
+      <table className="w-full text-left text-sm">
+        {headers && (
+          <thead className="bg-zinc-50/80 border-b border-zinc-100">
+            <tr>
+              {headers.map(h => (
+                <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>{children}</tbody>
+      </table>
     </div>
   );
 }
-export function Thead({ cols }: { cols: string[] }) {
-  return (
-    <thead className="bg-zinc-50/80 border-b border-zinc-100">
-      <tr>{cols.map(c => <th key={c} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider whitespace-nowrap">{c}</th>)}</tr>
-    </thead>
-  );
+
+// ── TR / TD ───────────────────────────────────────────────────
+export function TR({ children }: { children: React.ReactNode }) {
+  return <tr className="border-b border-zinc-50 hover:bg-zinc-50/60 transition-colors group">{children}</tr>;
+}
+export function TD({ children, mono }: { children?: React.ReactNode; mono?: boolean }) {
+  return <td className={`py-3 px-4 text-zinc-700 ${mono ? 'font-mono text-xs' : 'text-sm'}`}>{children}</td>;
 }
 
 // ── Alert ─────────────────────────────────────────────────────
@@ -143,7 +215,7 @@ export function Alert({ kind = 'error', children }: { kind?: AlertKind; children
   return <div className={`p-3 rounded-lg border text-sm ${ALERT_CLS[kind]}`}>{children}</div>;
 }
 
-// ── Credentials display (one-time secret) ────────────────────
+// ── Credentials display ───────────────────────────────────────
 export function Credentials({ items }: { items: { key: string; value: string; highlight?: boolean }[] }) {
   return (
     <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1 select-all">
@@ -157,17 +229,25 @@ export function Credentials({ items }: { items: { key: string; value: string; hi
   );
 }
 
-// ── PageHeader ────────────────────────────────────────────────
-export function PageHeader({
-  title, subtitle, action,
-}: { title: string; subtitle?: string; action?: React.ReactNode }) {
+// ── Empty state ───────────────────────────────────────────────
+export function Empty({ icon = '📭', title, sub, action }: {
+  icon?: string; title: string; sub?: string; action?: React.ReactNode;
+}) {
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-800">{title}</h1>
-        {subtitle && <p className="text-xs text-zinc-400 mt-0.5">{subtitle}</p>}
-      </div>
-      {action && <div>{action}</div>}
+    <div className="text-center py-16 text-zinc-400">
+      <p className="text-4xl mb-3">{icon}</p>
+      <p className="font-medium text-zinc-500">{title}</p>
+      {sub && <p className="text-sm mt-1">{sub}</p>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
+  );
+}
+
+// ── Thead (standalone) ────────────────────────────────────────
+export function Thead({ cols }: { cols: string[] }) {
+  return (
+    <thead className="bg-zinc-50/80 border-b border-zinc-100">
+      <tr>{cols.map(c => <th key={c} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider whitespace-nowrap">{c}</th>)}</tr>
+    </thead>
   );
 }
