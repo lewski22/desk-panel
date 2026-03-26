@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                        from '@nestjs/swagger';
 import { UserRole }                                                    from '@prisma/client';
 import { LocationsService, CreateLocationDto }                         from './locations.service';
@@ -15,8 +15,12 @@ export class LocationsController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  findAll(@Query('organizationId') orgId?: string) {
-    return this.svc.findAll(orgId);
+  findAll(@Query('organizationId') orgId?: string, @Request() req?: any) {
+    // OFFICE_ADMIN: always scoped to their org; SUPER_ADMIN: can filter or see all
+    const effectiveOrgId = req?.user?.role === UserRole.OFFICE_ADMIN
+      ? req.user.organizationId
+      : orgId;
+    return this.svc.findAll(effectiveOrgId);
   }
 
   @Get(':id')

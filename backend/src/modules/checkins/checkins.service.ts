@@ -122,12 +122,41 @@ export class CheckinsService {
       throw new BadRequestException(`Biurko dostępne tylko w godzinach ${openTime}–${closeTime}`);
     }
 
-    // Check not occupied right now
+    // Check not occupied right now (by anyone including self)
     const activeCheckin = await this.prisma.checkin.findFirst({
       where: { deskId, checkedOutAt: null },
+      select: { userId: true },
     });
     if (activeCheckin) {
+      if (activeCheckin.userId === userId) {
+        throw new ConflictException('Jesteś już zameldowany przy tym biurku.');
+      }
       throw new ConflictException('To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko.');
+    }
+
+    // FIX: also check that the same user doesn't already have an active CONFIRMED reservation
+    // here today (prevents double walk-in if QR scanned twice)
+    const ownActive = await this.prisma.reservation.findFirst({
+      where: {
+        deskId,
+        userId,
+        status: ReservationStatus.CONFIRMED,
+        endTime: { gt: now },
+      },
+    });
+    if (ownActive) {
+      // Already have a reservation — just return it (idempotent)
+      const existingCheckin = await this.prisma.checkin.findUnique({
+        where: { reservationId: ownActive.id },
+      });
+      return {
+        checkin:     existingCheckin,
+        reservation: ownActive,
+        deskName:    desk.name,
+        endTime:     ownActive.endTime,
+        closeTime,
+        alreadyReserved: true,
+      };
     }
 
     // Check no active reservation from someone else that would conflict
@@ -196,21 +225,25 @@ export class CheckinsService {
   // ── Manual check-in via Staff panel ─────────────────────────
   async checkinManual(deskId: string, userId: string, reservationId?: string) {
     const now = new Date();
-    const checkin = await this.prisma.checkin.create({
-      data: {
-        ...(reservationId && { reservationId }),
-        deskId,
-        userId,
-        method: CheckinMethod.MANUAL,
-      },
-    });
 
-    if (reservationId) {
-      await this.prisma.reservation.update({
-        where: { id: reservationId },
-        data:  { checkedInAt: now, checkedInMethod: 'MANUAL' },
+    // FIX: wrap both writes in a transaction — prevents partial state if second write fails
+    const checkin = await this.prisma.$transaction(async (tx) => {
+      const ci = await tx.checkin.create({
+        data: {
+          ...(reservationId && { reservationId }),
+          deskId,
+          userId,
+          method: CheckinMethod.MANUAL,
+        },
       });
-    }
+      if (reservationId) {
+        await tx.reservation.update({
+          where: { id: reservationId },
+          data:  { checkedInAt: now, checkedInMethod: 'MANUAL' },
+        });
+      }
+      return ci;
+    });
 
     await this.logEvent(EventType.CHECKIN_MANUAL, { deskId, userId, checkinId: checkin.id });
     return checkin;

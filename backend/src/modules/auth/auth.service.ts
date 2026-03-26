@@ -50,12 +50,18 @@ export class AuthService {
 
   async refresh(token: string) {
     const record = await this.prisma.refreshToken.findUnique({
-      where: { token },
+      where:   { token },
       include: { user: true },
     });
 
     if (!record || record.expiresAt < new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // FIX: reject refresh if account was deactivated after token was issued
+    if (!record.user.isActive || record.user.deletedAt) {
+      await this.prisma.refreshToken.delete({ where: { id: record.id } });
+      throw new UnauthorizedException('Konto jest nieaktywne');
     }
 
     // Rotate: delete old, issue new pair

@@ -19,7 +19,7 @@ export class LocationsService {
     return this.prisma.location.findMany({
       where: organizationId ? { organizationId } : undefined,
       include: {
-        _count: { select: { desks: true, gateways: true } },
+        _count:       { select: { desks: true, gateways: true } },
         organization: { select: { name: true } },
       },
       orderBy: { name: 'asc' },

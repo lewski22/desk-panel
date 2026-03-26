@@ -110,6 +110,9 @@ export class UsersService {
       where: { id },
       data: {
         email:        `deleted-${id}@deleted.invalid`,
+        // FIX: anonymize name — was preserving firstName/lastName despite "anonymize" comment
+        firstName:    'Usunięty',
+        lastName:     'Użytkownik',
         passwordHash: '',
         cardUid:      null,
         isActive:     false,

@@ -46,7 +46,7 @@ export class GatewaysService {
       where: locationId ? { locationId } : undefined,
       include: {
         _count:   { select: { devices: true } },
-        location: { select: { name: true } },
+        location: { select: { id: true, name: true } },
       },
     });
   }
