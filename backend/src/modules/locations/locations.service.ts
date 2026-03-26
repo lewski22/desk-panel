@@ -32,7 +32,7 @@ export class LocationsService {
       include: {
         desks:    { orderBy: [{ floor: 'asc' }, { code: 'asc' }] },
         gateways: true,
-        organization: { select: { name: true, plan: true } },
+        organization: { select: { name: true } },
       },
     });
     if (!loc) throw new NotFoundException(`Location ${id} not found`);
