@@ -45,10 +45,18 @@ export class CheckinsController {
 
   @Post('qr')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'QR check-in (mobile app)' })
+  @ApiOperation({ summary: 'QR check-in (user has reservation)' })
   @HttpCode(HttpStatus.OK)
   qr(@Body() dto: QrCheckinDto, @Request() req) {
     return this.svc.checkinQr(req.user.id, dto.deskId, dto.qrToken);
+  }
+
+  @Post('qr/walkin')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'QR walk-in — no reservation, creates one + checks in' })
+  @HttpCode(HttpStatus.OK)
+  walkin(@Body('deskId') deskId: string, @Request() req) {
+    return this.svc.walkinQr(req.user.id, deskId);
   }
 
   @Post('manual')

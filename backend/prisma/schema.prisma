@@ -211,6 +211,8 @@ model Reservation {
   status    ReservationStatus @default(PENDING)
   qrToken   String            @unique @default(cuid())
   notes     String?
+  checkedInAt  DateTime?      // kiedy nastąpił check-in (NFC lub QR)
+  checkedInMethod String?     // NFC | QR | MANUAL
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
