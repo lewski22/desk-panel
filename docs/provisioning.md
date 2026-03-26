@@ -142,3 +142,37 @@ d-a02,clxxx2,BiuroWiFi,pass,192.168.1.100,beacon-d-a02,secret2
 
 python3 scripts/flash-config.py --csv beacons.csv --port /dev/ttyUSB0
 ```
+
+---
+
+## Generowanie kodów QR dla biurek
+
+Kody QR pozwalają użytkownikom robić check-in bez beacona NFC — przez telefon.
+
+### Generowanie w Admin Panel
+
+```
+Admin Panel → Biurka → przycisk "QR" przy wybranym biurku
+→ Modal z podglądem kodu QR
+→ Przyciski: "Kopiuj URL" lub "Drukuj QR"
+```
+
+Druk generuje stronę z nazwą biurka, kodem QR i URL-em — gotową do wydruku i przyklejenia.
+
+### URL struktury QR kodu
+
+```
+https://staff.domena.pl/checkin/{qrToken}
+```
+
+`qrToken` jest unikalny per biurko i generowany automatycznie przy tworzeniu biurka (CUID).
+Nie zmienia się, chyba że biurko zostanie usunięte i stworzone ponownie.
+
+### Zmienne środowiskowe dla QR
+
+W Coolify dla `front-admin` ustaw:
+```
+VITE_STAFF_URL = https://staff.twoja-domena.pl
+```
+
+Bez tej zmiennej URL w QR będzie wskazywał na domyślny adres `https://staff.prohalw2026.ovh`.

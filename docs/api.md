@@ -205,3 +205,107 @@
 | `OFFICE_ADMIN` | OA | Jedna organizacja — pełny zarząd |
 | `STAFF` | S | Podgląd + ręczny check-in/out |
 | `END_USER` | U | Własne rezerwacje + QR check-in |
+
+---
+
+## QR Check-in (mobilny, bez beacona)
+
+### `GET /desks/qr/:token` — publiczny, bez autoryzacji
+
+Zwraca stan biurka na podstawie tokenu QR. Używany przez stronę mobilną przy skanowaniu kodu QR.
+
+```json
+{
+  "id":       "clxxx",
+  "name":     "Desk A-01",
+  "code":     "A-01",
+  "floor":    "2",
+  "zone":     "Open Space",
+  "qrToken":  "clxxx",
+  "isOccupied": false,
+  "device":   { "isOnline": true },
+  "checkins": [],
+  "currentReservation": {
+    "id":        "clxxx",
+    "startTime": "2025-01-20T08:00:00.000Z",
+    "endTime":   "2025-01-20T17:00:00.000Z",
+    "qrToken":   "clxxx",
+    "user":      { "firstName": "Jan", "lastName": "Kowalski" }
+  }
+}
+```
+
+### `POST /checkins/qr` — JWT wymagany
+
+Check-in przy istniejącej rezerwacji.
+
+```json
+{ "deskId": "clxxx", "qrToken": "RESERVATION_QR_TOKEN" }
+```
+
+### `POST /checkins/qr/walkin` — JWT wymagany
+
+Walk-in — biurko wolne, brak rezerwacji. Tworzy rezerwację + check-in atomowo.
+Koniec rezerwacji = `closeTime` lokalizacji lub 5 min przed kolejną rezerwacją.
+
+```json
+{ "deskId": "clxxx" }
+```
+
+**Response 200:**
+```json
+{
+  "checkin":     { "id": "...", "method": "QR", "checkedInAt": "..." },
+  "reservation": { "id": "...", "startTime": "...", "endTime": "..." },
+  "deskName":    "Desk A-01",
+  "endTime":     "2025-01-20T17:00:00.000Z",
+  "closeTime":   "17:00"
+}
+```
+
+**Błędy:**
+- `409` — biurko zajęte przez kogoś innego
+- `400` — poza godzinami pracy biura
+
+---
+
+## Lokalizacje — godziny pracy
+
+### `PATCH /locations/:id`
+
+Aktualizuje dane lokalizacji, w tym godziny pracy biura.
+
+```json
+{
+  "openTime":  "08:00",
+  "closeTime": "17:00"
+}
+```
+
+Godziny pracy wpływają na:
+- Walk-in QR: rezerwacja kończy się o `closeTime`
+- Walk-in po `closeTime`: zablokowany z błędem 400
+- Walk-in gdy ktoś ma rezerwację później: kończy się 5 min przed nią
+
+---
+
+## Rezerwacje — nowe pola
+
+Endpoint `GET /reservations` teraz zwraca `checkin` w każdej rezerwacji:
+
+```json
+{
+  "id": "clxxx",
+  "status": "CONFIRMED",
+  "checkedInAt": "2025-01-20T09:05:00.000Z",
+  "checkedInMethod": "QR",
+  "checkin": {
+    "id":           "clxxx",
+    "method":       "QR",
+    "checkedInAt":  "2025-01-20T09:05:00.000Z",
+    "checkedOutAt": null
+  }
+}
+```
+
+Metody check-in: `NFC`, `QR`, `MANUAL`

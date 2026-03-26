@@ -31,6 +31,8 @@ export class ReservationsService {
       include: {
         desk: { select: { name: true, code: true, floor: true, zone: true } },
         user: { select: { firstName: true, lastName: true, email: true } },
+        // Include checkin data — method + time
+        checkin: { select: { id: true, method: true, checkedInAt: true, checkedOutAt: true } },
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
       // FIX: default limit to prevent unbounded query; callers can override

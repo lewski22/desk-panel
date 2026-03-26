@@ -92,35 +92,51 @@ export class CheckinsService {
   }
 
   // ── Walk-in QR — no reservation, desk must be free ───────────
-  // Creates reservation + check-in in one transaction
   async walkinQr(userId: string, deskId: string) {
     const now = new Date();
 
-    // Check desk is active
+    // Get desk + location (for office hours)
     const desk = await this.prisma.desk.findUnique({
-      where: { id: deskId },
-      select: { id: true, status: true, name: true },
+      where:   { id: deskId },
+      select:  { id: true, status: true, name: true, locationId: true },
     });
     if (!desk || desk.status !== 'ACTIVE') {
       throw new BadRequestException('Biurko niedostępne');
     }
 
+    // Get location office hours
+    const location = await this.prisma.location.findUnique({
+      where:  { id: desk.locationId },
+      select: { openTime: true, closeTime: true },
+    });
+    const openTime  = location?.openTime  ?? '08:00';
+    const closeTime = location?.closeTime ?? '17:00';
+
+    // Parse closeTime into today's Date
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+    const endOfWork = new Date(now);
+    endOfWork.setHours(closeH, closeM, 0, 0);
+
+    // If current time is past closeTime, don't allow walk-in
+    if (now > endOfWork) {
+      throw new BadRequestException(`Biurko dostępne tylko w godzinach ${openTime}–${closeTime}`);
+    }
+
     // Check not occupied right now
     const activeCheckin = await this.prisma.checkin.findFirst({
       where: { deskId, checkedOutAt: null },
-      include: { user: { select: { firstName: true, lastName: true } } },
     });
     if (activeCheckin) {
       throw new ConflictException('To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko.');
     }
 
-    // Check no active reservation from someone else
+    // Check no active reservation from someone else that would conflict
     const conflictRes = await this.prisma.reservation.findFirst({
       where: {
         deskId,
         status: ReservationStatus.CONFIRMED,
         userId: { not: userId },
-        startTime: { lte: new Date(now.getTime() + 15 * 60 * 1000) },
+        startTime: { lte: endOfWork },
         endTime:   { gt: now },
       },
     });
@@ -128,9 +144,22 @@ export class CheckinsService {
       throw new ConflictException('To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko.');
     }
 
-    // Create reservation (today, now → end of day) + check-in atomically
+    // If someone else has a reservation later today, end walk-in before it starts
+    const nextReservation = await this.prisma.reservation.findFirst({
+      where: {
+        deskId,
+        status: ReservationStatus.CONFIRMED,
+        userId: { not: userId },
+        startTime: { gt: now, lte: endOfWork },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+
     const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay   = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+    // End reservation at closeTime OR 5 min before next reservation
+    const walkinEnd = nextReservation
+      ? new Date(new Date(nextReservation.startTime).getTime() - 5 * 60 * 1000)
+      : endOfWork;
 
     const [reservation, checkin] = await this.prisma.$transaction(async (tx) => {
       const res = await tx.reservation.create({
@@ -139,19 +168,14 @@ export class CheckinsService {
           userId,
           date:      startOfDay,
           startTime: now,
-          endTime:   endOfDay,
+          endTime:   walkinEnd,
           status:    ReservationStatus.CONFIRMED,
           checkedInAt:     now,
           checkedInMethod: 'QR',
         },
       });
       const ci = await tx.checkin.create({
-        data: {
-          reservationId: res.id,
-          deskId,
-          userId,
-          method: CheckinMethod.QR,
-        },
+        data: { reservationId: res.id, deskId, userId, method: CheckinMethod.QR },
       });
       return [res, ci];
     });
@@ -160,7 +184,13 @@ export class CheckinsService {
       deskId, userId, checkinId: checkin.id, reservationId: reservation.id, walkin: true,
     });
 
-    return { checkin, reservation, deskName: desk.name };
+    return {
+      checkin,
+      reservation,
+      deskName:  desk.name,
+      endTime:   walkinEnd,
+      closeTime,
+    };
   }
 
   // ── Manual check-in via Staff panel ─────────────────────────

@@ -177,3 +177,40 @@ Pełna instrukcja → [deployment.md](deployment.md)
 | CORS | Whitelist origins (CORS_ORIGINS env var) |
 | MQTT TLS | Port 8883 — zalecane w produkcji |
 | NFC | UID karty — rozważyć NDEF/challenge-response dla wyższego bezpieczeństwa |
+
+---
+
+## QR Check-in — flow bez beacona
+
+Alternatywny flow check-inu bez hardware ESP32. Działa na każdym telefonie z aparatem.
+
+```
+1. Admin generuje QR kod dla biurka (Admin Panel → Biurka → przycisk QR)
+   URL: https://staff.domena.pl/checkin/{qrToken}
+   Drukuje i klei na biurku
+
+2. Użytkownik skanuje QR telefonem → otwiera się Staff Panel (mobilny)
+
+3a. Biurko WOLNE:
+    → przycisk "Zarezerwuj i zrób check-in"
+    → POST /checkins/qr/walkin
+    → backend: tworzy rezerwację (teraz → closeTime) + check-in w transakcji
+    → sukces: "Biurko zostało zarezerwowane"
+
+3b. MOJA rezerwacja:
+    → przycisk "Check-in — potwierdź rezerwację"
+    → POST /checkins/qr z qrToken rezerwacji
+    → sukces: "Check-in udany!"
+
+3c. Biurko ZAJĘTE przez kogoś innego:
+    → "To biurko jest już zajęte. Wybierz inne biurko."
+    → przycisk do mapy biurek
+
+4. Czas check-inu zapisywany na rezerwacji (checkedInAt + checkedInMethod)
+```
+
+**Godziny pracy biura** (`Location.openTime` / `Location.closeTime`):
+- Konfigurowane przez Super Admin: Biura → ⏰ Godziny
+- Walk-in kończy się o `closeTime` (domyślnie 17:00)
+- Walk-in po `closeTime` jest zablokowany
+- Jeśli ktoś ma rezerwację w godzinach pracy → walk-in kończy się 5 min przed nią

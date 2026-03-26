@@ -7,6 +7,8 @@ export interface CreateLocationDto {
   address?: string;
   city?: string;
   timezone?: string;
+  openTime?: string;   // HH:mm, e.g. "08:00"
+  closeTime?: string;  // HH:mm, e.g. "17:00"
 }
 
 @Injectable()

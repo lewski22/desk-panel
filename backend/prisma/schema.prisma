@@ -88,6 +88,9 @@ model Location {
   city           String?
   timezone       String   @default("Europe/Warsaw")
   isActive       Boolean  @default(true)
+  // Godziny pracy biura (format HH:mm) — używane przy walk-in QR i walidacji rezerwacji
+  openTime       String   @default("08:00")
+  closeTime      String   @default("17:00")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
