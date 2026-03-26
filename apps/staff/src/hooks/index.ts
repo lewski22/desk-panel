@@ -40,11 +40,16 @@ export function useReservations() {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
 
-  // FIX: renamed from `fetch` to `loadReservations`
+  // END_USER sees only their own reservations
+  const storedUser = (() => {
+    try { return JSON.parse(localStorage.getItem('staff_user') ?? 'null'); } catch { return null; }
+  })();
+  const userId = storedUser?.role === 'END_USER' ? storedUser?.id : undefined;
+
   const loadReservations = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.reservations.getToday(LOCATION_ID);
+      const data = await api.reservations.getToday(LOCATION_ID, userId);
       setReservations(data);
       setError(null);
     } catch (e: any) {
@@ -52,7 +57,7 @@ export function useReservations() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadReservations();

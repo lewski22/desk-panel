@@ -92,12 +92,16 @@ export const api = {
 
   // ── Reservations ──────────────────────────────────────────
   reservations: {
-    getToday(locationId: string) {
+    getToday(locationId: string, userId?: string) {
       const today = new Date().toISOString().slice(0, 10);
-      return request<Reservation[]>(`/reservations?locationId=${locationId}&date=${today}`);
+      const params = new URLSearchParams({ locationId, date: today });
+      if (userId) params.set('userId', userId);
+      return request<Reservation[]>(`/reservations?${params}`);
     },
-    getUpcoming(locationId: string) {
-      return request<Reservation[]>(`/reservations?locationId=${locationId}`);
+    getUpcoming(locationId: string, userId?: string) {
+      const params = new URLSearchParams({ locationId });
+      if (userId) params.set('userId', userId);
+      return request<Reservation[]>(`/reservations?${params}`);
     },
     cancel(id: string) {
       return request<void>(`/reservations/${id}`, { method: 'DELETE' });

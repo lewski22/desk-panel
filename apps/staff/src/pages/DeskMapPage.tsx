@@ -2,8 +2,14 @@ import React from 'react';
 import { useDesks } from '../hooks';
 import { DeskMap } from '../components/desks/DeskMap';
 
+function getStoredUserRole(): string {
+  try { return JSON.parse(localStorage.getItem('staff_user') ?? 'null')?.role ?? ''; }
+  catch { return ''; }
+}
+
 export function DeskMapPage() {
   const { desks, loading, error, lastUpdated, refetch } = useDesks();
+  const userRole = getStoredUserRole();
 
   if (loading && desks.length === 0) {
     return (
@@ -23,10 +29,8 @@ export function DeskMapPage() {
           <p className="text-4xl mb-3">⚠️</p>
           <p className="text-zinc-600 font-medium mb-1">Błąd połączenia</p>
           <p className="text-zinc-400 text-sm mb-4">{error}</p>
-          <button
-            onClick={refetch}
-            className="text-sm px-4 py-2 rounded-lg bg-[#B53578] text-white hover:bg-[#9d2d66] transition-colors"
-          >
+          <button onClick={refetch}
+            className="text-sm px-4 py-2 rounded-lg bg-[#B53578] text-white hover:bg-[#9d2d66] transition-colors">
             Spróbuj ponownie
           </button>
         </div>
@@ -42,7 +46,7 @@ export function DeskMapPage() {
           <span>Problem z połączeniem — dane mogą być nieaktualne</span>
         </div>
       )}
-      <DeskMap desks={desks} lastUpdated={lastUpdated} onRefresh={refetch} />
+      <DeskMap desks={desks} lastUpdated={lastUpdated} onRefresh={refetch} userRole={userRole} />
     </div>
   );
 }

@@ -8,10 +8,17 @@ interface Props {
 }
 
 const NAV = [
-  { to: '/',            icon: '⬡', label: 'Mapa biurek'  },
-  { to: '/reservations', icon: '📅', label: 'Rezerwacje'   },
-  { to: '/devices',     icon: '📡', label: 'Urządzenia'   },
+  { to: '/',             icon: '⬡', label: 'Mapa biurek', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
+  { to: '/reservations', icon: '📅', label: 'Rezerwacje',  roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
+  { to: '/devices',      icon: '📡', label: 'Urządzenia',  roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
 ];
+
+const ROLE_LABEL: Record<string, string> = {
+  SUPER_ADMIN:  'Super Admin',
+  OFFICE_ADMIN: 'Office Admin',
+  STAFF:        'Staff',
+  END_USER:     'Użytkownik',
+};
 
 export function Layout({ user, onLogout, children }: Props) {
   const [collapsed, setCollapsed] = useState(false);
@@ -42,7 +49,7 @@ export function Layout({ user, onLogout, children }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 py-4 flex flex-col gap-0.5 px-2">
-          {NAV.map(({ to, icon, label }) => (
+          {NAV.filter(n => n.roles.includes(user.role)).map(({ to, icon, label }) => (
             <NavLink
               key={to}
               to={to}
@@ -70,7 +77,7 @@ export function Layout({ user, onLogout, children }: Props) {
               <p className="text-xs font-medium text-zinc-300 leading-tight">
                 {user.firstName} {user.lastName}
               </p>
-              <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{user.role}</p>
+              <p className="text-[10px] text-zinc-500 leading-tight mt-0.5">{ROLE_LABEL[user.role] ?? user.role}</p>
             </div>
           )}
           <div className={`flex gap-1 ${collapsed ? 'flex-col items-center' : ''}`}>

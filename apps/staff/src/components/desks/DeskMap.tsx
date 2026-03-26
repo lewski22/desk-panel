@@ -7,6 +7,7 @@ interface Props {
   desks: DeskMapItem[];
   lastUpdated: Date | null;
   onRefresh: () => void;
+  userRole?: string;
 }
 
 function groupByFloor(desks: DeskMapItem[]) {
@@ -45,9 +46,15 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   );
 }
 
-export function DeskMap({ desks, lastUpdated, onRefresh }: Props) {
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
   const [checkinTarget, setCheckinTarget] = useState<DeskMapItem | null>(null);
-  const floors = groupByFloor(desks);
+
+  // END_USER sees only free desks
+  const visibleDesks = userRole === 'END_USER'
+    ? desks.filter(d => d.status === 'ACTIVE' && !d.isOccupied && !d.currentReservation)
+    : desks;
+
+  const floors = groupByFloor(visibleDesks);
 
   const handleCheckin = async (desk: DeskMapItem) => {
     setCheckinTarget(desk);
@@ -79,7 +86,9 @@ export function DeskMap({ desks, lastUpdated, onRefresh }: Props) {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-800">Mapa zajętości</h2>
+          <h2 className="text-lg font-semibold text-zinc-800">
+            {userRole === 'END_USER' ? 'Wolne biurka' : 'Mapa zajętości'}
+          </h2>
           {lastUpdated && (
             <p className="text-xs text-zinc-400 mt-0.5">
               Aktualizacja: {lastUpdated.toLocaleTimeString('pl-PL')}
@@ -94,7 +103,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh }: Props) {
         </button>
       </div>
 
-      <Stats desks={desks} />
+      {userRole !== 'END_USER' && <Stats desks={desks} />}
 
       {floors.map(([floor, floorDesks]) => (
         <div key={floor} className="mb-8">
