@@ -8,8 +8,10 @@ type Step = 'loading' | 'login-required' | 'desk-info' | 'confirming' | 'success
 function getStoredUser() {
   try { return JSON.parse(localStorage.getItem('staff_user') ?? 'null'); } catch { return null; }
 }
-function getToken() {
-  try { return getStoredUser()?.accessToken ?? null; } catch { return null; }
+function getToken(): string | null {
+  // Prefer accessToken stored in user object, fallback to separate key
+  const u = getStoredUser();
+  return u?.accessToken ?? localStorage.getItem('access_token');
 }
 
 export function QrCheckinPage() {
@@ -32,7 +34,9 @@ export function QrCheckinPage() {
       .then(data => {
         if (!data) { setStep('error'); setError('Biurko nie istnieje lub jest nieaktywne'); return; }
         setDesk(data);
-        setStep(getToken() ? 'desk-info' : 'login-required');
+        // If user just came back from login, they're now authenticated — go straight to desk-info
+        const jwt = getToken();
+        setStep(jwt ? 'desk-info' : 'login-required');
       })
       .catch(() => { setStep('error'); setError('Brak połączenia z serwerem'); });
   }, [token]);

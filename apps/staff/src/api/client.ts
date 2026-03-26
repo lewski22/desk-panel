@@ -62,9 +62,10 @@ export const api = {
         '/auth/login',
         { method: 'POST', body: JSON.stringify({ email, password }) },
       );
-      localStorage.setItem('access_token', data.accessToken);
+      localStorage.setItem('access_token',  data.accessToken);
       localStorage.setItem('refresh_token', data.refreshToken);
-      return data.user;
+      // Store accessToken inside user object so QrCheckinPage can read it without hooks
+      return { ...data.user, accessToken: data.accessToken };
     },
     logout() {
       const refreshToken = localStorage.getItem('refresh_token');

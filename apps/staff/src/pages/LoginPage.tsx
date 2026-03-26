@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Props {
   onLogin: (email: string, password: string) => Promise<any>;
@@ -10,7 +10,11 @@ export function LoginPage({ onLogin }: Props) {
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+
+  // Redirect back to QR page (or wherever user came from) after login
+  const returnTo = (location.state as any)?.returnTo ?? '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +22,7 @@ export function LoginPage({ onLogin }: Props) {
     setLoading(true);
     try {
       await onLogin(email, password);
-      navigate('/');
+      navigate(returnTo, { replace: true });
     } catch (err: any) {
       setError(err.message ?? 'Nieprawidłowe dane logowania');
     } finally {
