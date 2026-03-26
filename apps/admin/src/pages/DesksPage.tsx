@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 import {
-  PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner,
+  PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Spinner,
 } from '../components/ui';
 
-const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';
+const LOC_ID      = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';
+const STAFF_URL   = import.meta.env.VITE_STAFF_URL   ?? 'https://staff.prohalw2026.ovh';
 
 const STATUS_COLOR: Record<string, 'green'|'amber'|'red'|'zinc'> = {
   ACTIVE: 'green', INACTIVE: 'zinc', MAINTENANCE: 'amber',
@@ -13,15 +14,82 @@ const STATUS_LABEL: Record<string, string> = {
   ACTIVE: 'Aktywne', INACTIVE: 'Dezaktywowane', MAINTENANCE: 'Serwis',
 };
 
+function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
+  const qrUrl = `${STAFF_URL}/checkin/${desk.qrToken}`;
+  const imgSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrUrl)}&size=240x240&margin=12&format=png`;
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(qrUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const print = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(`
+      <html><head><title>QR — ${desk.name}</title>
+      <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; }
+        h2 { font-size: 22px; margin-bottom: 4px; }
+        p  { color: #666; font-size: 13px; margin-bottom: 20px; }
+        img { display: block; margin: 0 auto 16px; }
+        code { font-size: 11px; color: #888; word-break: break-all; }
+      </style></head><body>
+        <h2>${desk.name}</h2>
+        <p>${desk.code}${desk.floor ? ` · Piętro ${desk.floor}` : ''}${desk.zone ? ` · ${desk.zone}` : ''}</p>
+        <img src="${imgSrc}" width="200" height="200" />
+        <code>${qrUrl}</code>
+      </body></html>
+    `);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 500);
+  };
+
+  return (
+    <Modal title={`Kod QR — ${desk.name}`} onClose={onClose}>
+      <div className="flex flex-col items-center gap-4">
+        <div className="p-3 bg-white rounded-xl border border-zinc-100 shadow-sm">
+          <img src={imgSrc} width={200} height={200} alt="QR kod" className="rounded" />
+        </div>
+
+        <div className="w-full">
+          <p className="text-xs text-zinc-400 mb-1 font-medium">URL check-in</p>
+          <div className="flex gap-2">
+            <code className="flex-1 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-600 break-all">
+              {qrUrl}
+            </code>
+          </div>
+        </div>
+
+        <div className="flex gap-2 w-full">
+          <Btn variant="secondary" className="flex-1" onClick={copy}>
+            {copied ? '✓ Skopiowano' : 'Kopiuj URL'}
+          </Btn>
+          <Btn className="flex-1" onClick={print}>
+            Drukuj QR
+          </Btn>
+        </div>
+
+        <p className="text-xs text-zinc-400 text-center">
+          Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in
+        </p>
+      </div>
+    </Modal>
+  );
+}
+
 export function DesksPage() {
-  const [desks,    setDesks]   = useState<any[]>([]);
-  const [loading,  setLoading] = useState(true);
-  const [modal,    setModal]   = useState<'create'|'edit'|'provision'|null>(null);
-  const [target,   setTarget]  = useState<any>(null);
-  const [provision,setProvision] = useState<any>(null);
-  const [form,     setForm]    = useState({ name:'', code:'', floor:'', zone:'' });
-  const [busy,     setBusy]    = useState(false);
-  const [err,      setErr]     = useState('');
+  const [desks,    setDesks]    = useState<any[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [modal,    setModal]    = useState<'create'|'edit'|'qr'|null>(null);
+  const [target,   setTarget]   = useState<any>(null);
+  const [form,     setForm]     = useState({ name:'', code:'', floor:'', zone:'' });
+  const [busy,     setBusy]     = useState(false);
+  const [err,      setErr]      = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -35,6 +103,11 @@ export function DesksPage() {
     setTarget(desk);
     setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '' });
     setModal('edit');
+  };
+
+  const openQr = (desk: any) => {
+    setTarget(desk);
+    setModal('qr');
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -66,10 +139,15 @@ export function DesksPage() {
     catch (e: any) { alert(e.message); }
   };
 
-  const handleUnpair = async (id: string) => {
-    if (!confirm('Odparować beacon od tego biurka?')) return;
-    try { await adminApi.desks.unpair(id); await load(); }
-    catch (e: any) { alert(e.message); }
+  const handleUnpair = async (desk: any) => {
+    if (!confirm(`Odparować beacon "${desk.device?.hardwareId ?? ''}" od biurka "${desk.name}"?`)) return;
+    try {
+      const result = await adminApi.desks.unpair(desk.id);
+      if (result?.unlinked === false) {
+        alert('Brak beacona przypisanego do tego biurka');
+      }
+      await load();
+    } catch (e: any) { alert(e.message); }
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -97,11 +175,17 @@ export function DesksPage() {
             <TD>{d.zone ?? '—'}</TD>
             <TD>
               {d.device ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.device.isOnline ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
                   <span className="text-xs text-zinc-500">{d.device.isOnline ? 'Online' : 'Offline'}</span>
-                  <button onClick={() => handleUnpair(d.id)}
-                    className="ml-1 text-[10px] text-zinc-400 hover:text-red-500 transition-colors" title="Odparuj beacon">✕</button>
+                  <span className="text-xs text-zinc-300 font-mono">{d.device.hardwareId}</span>
+                  <button
+                    onClick={() => handleUnpair(d)}
+                    className="text-xs px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors font-medium"
+                    title="Odparuj beacon od biurka"
+                  >
+                    Odparuj
+                  </button>
                 </div>
               ) : (
                 <span className="text-xs text-zinc-300">Brak beacona</span>
@@ -109,9 +193,9 @@ export function DesksPage() {
             </TD>
             <TD><Badge color={STATUS_COLOR[d.status] ?? 'zinc'}>{STATUS_LABEL[d.status] ?? d.status}</Badge></TD>
             <TD>
-              <div className="flex gap-1">
-                {/* Edycja zawsze dostępna */}
+              <div className="flex gap-1 flex-wrap">
                 <Btn variant="ghost" size="sm" onClick={() => openEdit(d)}>Edytuj</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openQr(d)} title="Generuj kod QR">QR</Btn>
 
                 {d.status === 'ACTIVE' && (
                   <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'MAINTENANCE')}>Serwis</Btn>
@@ -119,7 +203,6 @@ export function DesksPage() {
                 {d.status === 'MAINTENANCE' && (
                   <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'ACTIVE')}>Aktywuj</Btn>
                 )}
-                {/* Reaktywacja INACTIVE */}
                 {d.status === 'INACTIVE' && (
                   <Btn variant="secondary" size="sm" onClick={() => handleActivate(d.id)}>Reaktywuj</Btn>
                 )}
@@ -132,7 +215,7 @@ export function DesksPage() {
         ))}
       </Table>
 
-      {/* Create modal */}
+      {/* Create / Edit modal */}
       {(modal === 'create' || modal === 'edit') && (
         <Modal
           title={modal === 'create' ? 'Nowe biurko' : `Edytuj: ${target?.name}`}
@@ -160,17 +243,9 @@ export function DesksPage() {
         </Modal>
       )}
 
-      {/* Provision result modal */}
-      {modal === 'provision' && provision && (
-        <Modal title="Beacon sparowany" onClose={() => { setModal(null); setProvision(null); }}>
-          <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1">
-            <p><span className="text-zinc-500">DEVICE_ID=</span>{provision.device?.id}</p>
-            <p><span className="text-zinc-500">MQTT_USER=</span>{provision.mqttUsername}</p>
-            <p><span className="text-zinc-500">MQTT_PASS=</span><span className="text-amber-400">{provision.mqttPassword}</span></p>
-          </div>
-          <p className="text-xs text-red-500 mt-2">⚠ Hasło MQTT nie będzie wyświetlone ponownie</p>
-          <Btn className="mt-4 w-full" variant="secondary" onClick={() => { setModal(null); setProvision(null); }}>Zamknij</Btn>
-        </Modal>
+      {/* QR modal */}
+      {modal === 'qr' && target && (
+        <QrModal desk={target} onClose={() => setModal(null)} />
       )}
     </div>
   );

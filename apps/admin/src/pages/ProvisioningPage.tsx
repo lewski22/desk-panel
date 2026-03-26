@@ -245,9 +245,15 @@ function BeaconSection() {
                       ↺
                     </button>
                     {d.desk && (
-                      <button onClick={() => adminApi.desks.unpair(d.desk.id).then(() => load())}
-                        className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-orange-100 text-zinc-600 hover:text-orange-600 transition-colors" title="Odparuj">
-                        ⇄
+                      <button onClick={async () => {
+                        if (!confirm(`Odparować beacon "${d.hardwareId}" od biurka "${d.desk.name}"?`)) return;
+                        try {
+                          await adminApi.desks.unpair(d.desk.id);
+                          await load();
+                        } catch(e: any) { alert(e.message); }
+                      }}
+                        className="text-xs px-2 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 hover:text-orange-700 transition-colors font-medium" title="Odparuj beacon od biurka">
+                        Odparuj
                       </button>
                     )}
                     <button onClick={() => handleDelete(d.id, d.hardwareId)}
