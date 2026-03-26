@@ -3,25 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-type Step = 'loading' | 'login-required' | 'desk-info' | 'confirming' | 'success' | 'error';
+type Step = 'loading' | 'login-required' | 'desk-info' | 'confirming' | 'success' | 'occupied' | 'error';
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  free:     { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Wolne' },
-  reserved: { bg: 'bg-sky-50',     text: 'text-sky-700',     label: 'Zarezerwowane' },
-  occupied: { bg: 'bg-red-50',     text: 'text-red-600',     label: 'Zajęte' },
-};
-
+function getStoredUser() {
+  try { return JSON.parse(localStorage.getItem('staff_user') ?? 'null'); } catch { return null; }
+}
 function getToken() {
-  try { return JSON.parse(localStorage.getItem('staff_user') ?? 'null')?.accessToken ?? null; }
-  catch { return null; }
+  try { return getStoredUser()?.accessToken ?? null; } catch { return null; }
 }
 
 export function QrCheckinPage() {
-  const { token } = useParams<{ token: string }>();
+  const { token }  = useParams<{ token: string }>();
   const navigate   = useNavigate();
   const [step,     setStep]    = useState<Step>('loading');
   const [desk,     setDesk]    = useState<any>(null);
-  const [checkin,  setCheckin] = useState<any>(null);
+  const [result,   setResult]  = useState<any>(null);
   const [error,    setError]   = useState('');
 
   const deskStatus = desk
@@ -36,48 +32,75 @@ export function QrCheckinPage() {
       .then(data => {
         if (!data) { setStep('error'); setError('Biurko nie istnieje lub jest nieaktywne'); return; }
         setDesk(data);
-        const jwt = getToken();
-        setStep(jwt ? 'desk-info' : 'login-required');
+        setStep(getToken() ? 'desk-info' : 'login-required');
       })
       .catch(() => { setStep('error'); setError('Brak połączenia z serwerem'); });
   }, [token]);
 
+  // ── Check-in: user has a reservation for this desk ───────────
   const handleCheckin = async () => {
     const jwt = getToken();
     if (!jwt) { setStep('login-required'); return; }
     setStep('confirming');
     try {
       const res = await fetch(`${API}/checkins/qr`, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body: JSON.stringify({ deskId: desk.id, qrToken: desk.currentReservation?.qrToken ?? token }),
+        body:    JSON.stringify({ deskId: desk.id, qrToken: desk.currentReservation?.qrToken ?? token }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? 'Błąd check-in');
-      setCheckin(data);
+      if (!res.ok) {
+        // Occupied by someone else
+        if (res.status === 409) { setStep('occupied'); return; }
+        throw new Error(data.message ?? 'Błąd check-in');
+      }
+      setResult({ type: 'checkin', checkin: data, deskName: desk.name });
       setStep('success');
     } catch (e: any) {
-      setError(e.message);
-      setStep('error');
+      setError(e.message); setStep('error');
     }
   };
 
+  // ── Walk-in: desk is free, no reservation — create one + check-in
+  const handleWalkin = async () => {
+    const jwt = getToken();
+    if (!jwt) { setStep('login-required'); return; }
+    setStep('confirming');
+    try {
+      const res = await fetch(`${API}/checkins/qr/walkin`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body:    JSON.stringify({ deskId: desk.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 409) { setStep('occupied'); return; }
+        throw new Error(data.message ?? 'Błąd rezerwacji');
+      }
+      setResult({ type: 'walkin', deskName: data.deskName ?? desk.name });
+      setStep('success');
+    } catch (e: any) {
+      setError(e.message); setStep('error');
+    }
+  };
+
+  // ── Check-out ─────────────────────────────────────────────────
   const handleCheckout = async (checkinId: string) => {
     const jwt = getToken();
     setStep('confirming');
     try {
       await fetch(`${API}/checkins/${checkinId}/checkout`, {
-        method: 'PATCH',
+        method:  'PATCH',
         headers: { Authorization: `Bearer ${jwt}` },
       });
+      setResult({ type: 'checkout', deskName: desk.name });
       setStep('success');
-      setDesk((d: any) => ({ ...d, isOccupied: false, checkins: [] }));
     } catch {
       setStep('error'); setError('Błąd podczas check-out');
     }
   };
 
-  // ── Views ──────────────────────────────────────────────────
+  // ── Layout wrapper ────────────────────────────────────────────
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-5"
       style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -91,6 +114,7 @@ export function QrCheckinPage() {
     </div>
   );
 
+  // ── Views ─────────────────────────────────────────────────────
   if (step === 'loading') return (
     <Wrapper>
       <div className="flex justify-center py-12">
@@ -99,6 +123,37 @@ export function QrCheckinPage() {
     </Wrapper>
   );
 
+  if (step === 'confirming') return (
+    <Wrapper>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
+        <p className="text-zinc-300 text-sm">Przetwarzanie…</p>
+      </div>
+    </Wrapper>
+  );
+
+  // ── Occupied by someone else ──────────────────────────────────
+  if (step === 'occupied') return (
+    <Wrapper>
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+          <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+        <p className="text-white font-semibold text-lg mb-2">Biurko zajęte</p>
+        <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+          To biurko jest już zajęte przez kogoś innego.<br />Wybierz inne biurko.
+        </p>
+        <button onClick={() => navigate('/')}
+          className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
+          Przejdź do mapy biurek
+        </button>
+      </div>
+    </Wrapper>
+  );
+
+  // ── Error ─────────────────────────────────────────────────────
   if (step === 'error') return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
@@ -113,12 +168,10 @@ export function QrCheckinPage() {
     </Wrapper>
   );
 
+  // ── Login required ────────────────────────────────────────────
   if (step === 'login-required') return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-        <p className="text-zinc-400 text-sm text-center mb-5">
-          Aby zrobić check-in, zaloguj się do panelu Staff
-        </p>
         {desk && (
           <div className="mb-5 p-3 rounded-xl bg-zinc-800 text-center">
             <p className="text-white font-semibold">{desk.name}</p>
@@ -127,6 +180,9 @@ export function QrCheckinPage() {
             </p>
           </div>
         )}
+        <p className="text-zinc-400 text-sm text-center mb-5">
+          Zaloguj się aby zarezerwować biurko lub zrobić check-in
+        </p>
         <button onClick={() => navigate('/login', { state: { returnTo: `/checkin/${token}` } })}
           className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
           Zaloguj się
@@ -135,30 +191,39 @@ export function QrCheckinPage() {
     </Wrapper>
   );
 
-  if (step === 'confirming') return (
-    <Wrapper>
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
-        <p className="text-zinc-300 text-sm">Przetwarzanie…</p>
-      </div>
-    </Wrapper>
-  );
-
+  // ── Success ───────────────────────────────────────────────────
   if (step === 'success') return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
         <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
           <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
           </svg>
         </div>
-        <p className="text-white font-semibold text-lg mb-1">Check-in udany!</p>
-        <p className="text-zinc-400 text-sm mb-2">{desk?.name}</p>
-        {checkin?.checkin && (
-          <p className="text-zinc-500 text-xs">
-            {new Date(checkin.checkin.checkedInAt).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-          </p>
+
+        {result?.type === 'walkin' && (
+          <>
+            <p className="text-white font-semibold text-lg mb-1">Biurko zarezerwowane!</p>
+            <p className="text-zinc-400 text-sm mb-1">{result.deskName}</p>
+            <p className="text-zinc-500 text-xs">Rezerwacja na dziś · check-in zarejestrowany</p>
+          </>
         )}
+        {result?.type === 'checkin' && (
+          <>
+            <p className="text-white font-semibold text-lg mb-1">Check-in udany!</p>
+            <p className="text-zinc-400 text-sm mb-1">{result.deskName}</p>
+            <p className="text-zinc-500 text-xs">
+              {new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </>
+        )}
+        {result?.type === 'checkout' && (
+          <>
+            <p className="text-white font-semibold text-lg mb-1">Check-out zarejestrowany</p>
+            <p className="text-zinc-400 text-sm">{result.deskName}</p>
+          </>
+        )}
+
         <button onClick={() => navigate('/')}
           className="mt-6 w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
           Wróć do mapy
@@ -167,41 +232,46 @@ export function QrCheckinPage() {
     </Wrapper>
   );
 
-  // desk-info — główny widok
-  const statusCfg = STATUS_COLORS[deskStatus];
+  // ── Main desk-info view ───────────────────────────────────────
+  const isMyReservation = desk.currentReservation && getStoredUser()?.id === desk.currentReservation.userId;
+
   return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-        {/* Desk header */}
+        {/* Header */}
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-white font-bold text-xl">{desk.name}</p>
               <p className="text-zinc-500 text-sm mt-0.5 font-mono">{desk.code}</p>
             </div>
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusCfg.bg} ${statusCfg.text}`}>
-              {statusCfg.label}
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+              deskStatus === 'free'     ? 'bg-emerald-950/60 text-emerald-400' :
+              deskStatus === 'reserved' ? 'bg-sky-950/60 text-sky-400' :
+                                          'bg-red-950/60 text-red-400'
+            }`}>
+              {deskStatus === 'free' ? 'Wolne' : deskStatus === 'reserved' ? 'Zarezerwowane' : 'Zajęte'}
             </span>
           </div>
           {(desk.floor || desk.zone) && (
             <div className="flex gap-3 mt-3">
-              {desk.floor && (
-                <span className="text-xs text-zinc-500">📍 Piętro {desk.floor}</span>
-              )}
-              {desk.zone && (
-                <span className="text-xs text-zinc-500">🗂 {desk.zone}</span>
-              )}
+              {desk.floor && <span className="text-xs text-zinc-500">📍 Piętro {desk.floor}</span>}
+              {desk.zone  && <span className="text-xs text-zinc-500">🗂 {desk.zone}</span>}
             </div>
           )}
         </div>
 
-        {/* Current reservation info */}
+        {/* Reservation info */}
         {desk.currentReservation && (
           <div className="px-5 py-3 bg-sky-950/40 border-b border-zinc-800">
-            <p className="text-xs text-sky-400 font-medium mb-0.5">Aktualna rezerwacja</p>
-            <p className="text-sky-200 text-sm font-semibold">
-              {desk.currentReservation.user?.firstName} {desk.currentReservation.user?.lastName}
+            <p className="text-xs text-sky-400 font-medium mb-0.5">
+              {isMyReservation ? 'Twoja rezerwacja' : 'Zarezerwowane przez'}
             </p>
+            {!isMyReservation && (
+              <p className="text-sky-200 text-sm font-semibold">
+                {desk.currentReservation.user?.firstName} {desk.currentReservation.user?.lastName}
+              </p>
+            )}
             <p className="text-sky-400 text-xs">
               {new Date(desk.currentReservation.startTime).toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' })}
               {' – '}
@@ -210,7 +280,7 @@ export function QrCheckinPage() {
           </div>
         )}
 
-        {/* Occupied — show who/since */}
+        {/* Occupied info */}
         {desk.isOccupied && desk.checkins?.[0] && (
           <div className="px-5 py-3 bg-red-950/30 border-b border-zinc-800">
             <p className="text-xs text-red-400 font-medium mb-0.5">Zajęte od</p>
@@ -221,24 +291,58 @@ export function QrCheckinPage() {
         )}
 
         {/* Action */}
-        <div className="p-5">
+        <div className="p-5 space-y-2">
+          {/* Free desk — walk-in reservation + check-in */}
           {deskStatus === 'free' && (
-            <button onClick={handleCheckin}
+            <button onClick={handleWalkin}
               className="w-full py-3.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors">
-              Check-in
+              Zarezerwuj i zrób check-in
             </button>
           )}
-          {deskStatus === 'reserved' && desk.currentReservation && (
+
+          {/* Reserved — my reservation → check-in */}
+          {deskStatus === 'reserved' && isMyReservation && (
             <button onClick={handleCheckin}
               className="w-full py-3.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors">
               Check-in — potwierdź rezerwację
             </button>
           )}
+
+          {/* Reserved by someone else */}
+          {deskStatus === 'reserved' && !isMyReservation && (
+            <div className="text-center py-2">
+              <p className="text-zinc-400 text-sm mb-3">
+                To biurko jest już zajęte przez kogoś innego.<br />Wybierz inne biurko.
+              </p>
+              <button onClick={() => navigate('/')}
+                className="w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
+                Przejdź do mapy biurek
+              </button>
+            </div>
+          )}
+
+          {/* Occupied — check-out (only own checkin) */}
           {deskStatus === 'occupied' && desk.checkins?.[0] && (
-            <button onClick={() => handleCheckout(desk.checkins[0].id)}
-              className="w-full py-3.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-sm transition-colors">
-              Check-out — zwolnij biurko
-            </button>
+            (() => {
+              const myUserId = getStoredUser()?.id;
+              const isMyCheckin = desk.checkins[0].userId === myUserId;
+              return isMyCheckin ? (
+                <button onClick={() => handleCheckout(desk.checkins[0].id)}
+                  className="w-full py-3.5 rounded-xl bg-zinc-700 hover:bg-zinc-600 text-white font-semibold text-sm transition-colors">
+                  Check-out — zwolnij biurko
+                </button>
+              ) : (
+                <div className="text-center py-2">
+                  <p className="text-zinc-400 text-sm mb-3">
+                    To biurko jest już zajęte przez kogoś innego.<br />Wybierz inne biurko.
+                  </p>
+                  <button onClick={() => navigate('/')}
+                    className="w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
+                    Przejdź do mapy biurek
+                  </button>
+                </div>
+              );
+            })()
           )}
         </div>
       </div>
