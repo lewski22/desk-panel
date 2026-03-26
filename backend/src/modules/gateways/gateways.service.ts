@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { EventType } from '@prisma/client';
@@ -8,7 +9,8 @@ export class GatewaysService {
   constructor(private prisma: PrismaService) {}
 
   async register(locationId: string, name: string) {
-    const secret = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    // FIX: crypto.randomBytes instead of Math.random()
+    const secret     = randomBytes(24).toString('hex');
     const secretHash = await bcrypt.hash(secret, 10);
 
     const gateway = await this.prisma.gateway.create({
@@ -24,7 +26,7 @@ export class GatewaysService {
       },
     });
 
-    return { gateway, secret }; // plain secret returned once
+    return { gateway, secret };
   }
 
   async authenticate(gatewayId: string, secret: string) {
@@ -34,7 +36,7 @@ export class GatewaysService {
     if (!valid) throw new UnauthorizedException('Invalid gateway secret');
     await this.prisma.gateway.update({
       where: { id: gatewayId },
-      data: { isOnline: true, lastSeen: new Date() },
+      data:  { isOnline: true, lastSeen: new Date() },
     });
     return gw;
   }
@@ -43,7 +45,7 @@ export class GatewaysService {
     return this.prisma.gateway.findMany({
       where: locationId ? { locationId } : undefined,
       include: {
-        _count: { select: { devices: true } },
+        _count:   { select: { devices: true } },
         location: { select: { name: true } },
       },
     });
@@ -56,17 +58,14 @@ export class GatewaysService {
     });
     if (!gw) throw new NotFoundException('Gateway not found');
 
-    // Return all active reservations for today + tomorrow for this location
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 2);
+    const today    = new Date(); today.setHours(0, 0, 0, 0);
+    const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
 
     const reservations = await this.prisma.reservation.findMany({
       where: {
         desk: { locationId: gw.locationId },
         status: { in: ['CONFIRMED', 'PENDING'] },
-        date: { gte: today, lt: tomorrow },
+        date:   { gte: today, lt: dayAfter },
       },
       include: {
         user: { select: { id: true, cardUid: true } },
@@ -80,7 +79,7 @@ export class GatewaysService {
   async heartbeat(gatewayId: string, ipAddress?: string) {
     return this.prisma.gateway.update({
       where: { id: gatewayId },
-      data: { isOnline: true, lastSeen: new Date(), ...(ipAddress && { ipAddress }) },
+      data:  { isOnline: true, lastSeen: new Date(), ...(ipAddress && { ipAddress }) },
     });
   }
 
@@ -92,13 +91,16 @@ export class GatewaysService {
   async regenerateSecret(id: string) {
     const gw = await this.prisma.gateway.findUnique({ where: { id } });
     if (!gw) throw new NotFoundException('Gateway not found');
-    const secret = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+    const secret     = randomBytes(24).toString('hex');
     const secretHash = await bcrypt.hash(secret, 10);
+
     const updated = await this.prisma.gateway.update({
-      where: { id },
-      data: { secretHash },
+      where:  { id },
+      data:   { secretHash },
       select: { id: true, name: true, isOnline: true, lastSeen: true, ipAddress: true },
     });
+
     return { gateway: updated, secret, secretPreview: secret.slice(0, 8) + '…' };
   }
 }

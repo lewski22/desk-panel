@@ -1,6 +1,5 @@
 import {
-  Injectable, NotFoundException, ConflictException,
-  ForbiddenException,
+  Injectable, NotFoundException, ConflictException, ForbiddenException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
@@ -42,25 +41,17 @@ export class UsersService {
     return this.prisma.user.create({ data: { ...rest, passwordHash }, select: USER_SELECT });
   }
 
-  // Aktywni użytkownicy (isActive=true, deletedAt=null)
   async findAll(organizationId?: string) {
     return this.prisma.user.findMany({
-      where: {
-        ...(organizationId ? { organizationId } : {}),
-        deletedAt: null,
-      },
+      where: { ...(organizationId ? { organizationId } : {}), deletedAt: null },
       select: USER_SELECT,
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  // Dezaktywowani — czekają na usunięcie
   async findDeactivated(organizationId?: string) {
     return this.prisma.user.findMany({
-      where: {
-        ...(organizationId ? { organizationId } : {}),
-        deletedAt: { not: null },
-      },
+      where: { ...(organizationId ? { organizationId } : {}), deletedAt: { not: null } },
       select: USER_SELECT,
       orderBy: { deletedAt: 'desc' },
     });
@@ -72,68 +63,53 @@ export class UsersService {
     return u;
   }
 
-  // Edycja danych użytkownika
-  // Zmiana roli na SUPER_ADMIN wymaga by aktor był SUPER_ADMIN
   async update(id: string, dto: UpdateUserDto, actorRole: UserRole) {
-    await this.findOne(id);
-
     if (dto.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only Super Admin can grant Super Admin role');
     }
-
     const data: any = { ...dto };
     if (dto.password) {
       data.passwordHash = await bcrypt.hash(dto.password, 10);
       delete data.password;
     }
-
+    // FIX: single update — Prisma throws P2025 if not found, no pre-fetch needed
     return this.prisma.user.update({ where: { id }, data, select: USER_SELECT });
   }
 
   async updateCardUid(id: string, cardUid: string) {
-    await this.findOne(id);
     return this.prisma.user.update({ where: { id }, data: { cardUid }, select: { id: true, cardUid: true } });
   }
 
-  // Soft delete — dezaktywuje konto i ustawia datę trwałego usunięcia
-  async softDelete(id: string, retentionDays: number = 30) {
+  async softDelete(id: string, retentionDays = 30) {
     if (retentionDays < 30) retentionDays = 30;
-    await this.findOne(id);
-
     const deletedAt = new Date();
     const scheduledDeleteAt = new Date(deletedAt);
     scheduledDeleteAt.setDate(scheduledDeleteAt.getDate() + retentionDays);
-
     return this.prisma.user.update({
       where: { id },
-      data: { isActive: false, deletedAt, scheduledDeleteAt, retentionDays },
+      data:  { isActive: false, deletedAt, scheduledDeleteAt, retentionDays },
       select: USER_SELECT,
     });
   }
 
-  // Przywróć konto (cofnij dezaktywację)
   async restore(id: string) {
     return this.prisma.user.update({
       where: { id },
-      data: { isActive: true, deletedAt: null, scheduledDeleteAt: null, retentionDays: null },
+      data:  { isActive: true, deletedAt: null, scheduledDeleteAt: null, retentionDays: null },
       select: USER_SELECT,
     });
   }
 
-  // Twarde usunięcie — tylko gdy minęło scheduledDeleteAt
   async hardDelete(id: string) {
     const user = await this.findOne(id);
     if (!user.deletedAt) throw new ForbiddenException('User must be deactivated first');
     if (user.scheduledDeleteAt && new Date() < new Date(user.scheduledDeleteAt as any)) {
       throw new ForbiddenException(`Permanent deletion scheduled for ${user.scheduledDeleteAt}`);
     }
-    // Zachowaj aktywności — anonimizuj dane zamiast kasować
     return this.prisma.user.update({
       where: { id },
       data: {
         email:        `deleted-${id}@deleted.invalid`,
-        firstName:    user.firstName,  // zachowaj imię
-        lastName:     user.lastName,   // zachowaj nazwisko
         passwordHash: '',
         cardUid:      null,
         isActive:     false,

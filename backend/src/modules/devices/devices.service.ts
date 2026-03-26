@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { EventType } from '@prisma/client';
@@ -23,18 +20,13 @@ export class DevicesService {
     });
     if (exists) throw new ConflictException('Device already provisioned');
 
-    const mqttPassword = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    // FIX: use crypto.randomBytes instead of Math.random() — cryptographically secure
+    const mqttPassword     = randomBytes(20).toString('hex');
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);
-    const mqttUsername = `beacon-${dto.hardwareId}`;
+    const mqttUsername     = `beacon-${dto.hardwareId}`;
 
     const device = await this.prisma.device.create({
-      data: {
-        hardwareId: dto.hardwareId,
-        mqttUsername,
-        mqttPasswordHash,
-        gatewayId: dto.gatewayId,
-        deskId: dto.deskId,
-      },
+      data: { hardwareId: dto.hardwareId, mqttUsername, mqttPasswordHash, gatewayId: dto.gatewayId, deskId: dto.deskId },
     });
 
     await this.prisma.event.create({
@@ -46,7 +38,6 @@ export class DevicesService {
       },
     });
 
-    // Return plain password only once — not stored
     return { device, mqttUsername, mqttPassword };
   }
 
@@ -66,33 +57,31 @@ export class DevicesService {
     return d;
   }
 
-  async heartbeat(hardwareId: string, rssi?: number) {
+  // FIX: combine heartbeat + firmwareVersion into one query (was 2 separate calls from MQTT handler)
+  async heartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string) {
     return this.prisma.device.update({
       where: { hardwareId },
-      data: { isOnline: true, lastSeen: new Date(), rssi },
-    });
-  }
-
-  async updateFirmwareVersion(hardwareId: string, version: string) {
-    return this.prisma.device.update({
-      where: { hardwareId },
-      data: { firmwareVersion: version },
+      data:  {
+        isOnline: true,
+        lastSeen: new Date(),
+        ...(rssi !== undefined && { rssi }),
+        ...(firmwareVersion    && { firmwareVersion }),
+      },
     });
   }
 
   async markOffline(hardwareId: string) {
     return this.prisma.device.update({
       where: { hardwareId },
-      data: { isOnline: false },
+      data:  { isOnline: false },
     });
   }
 
   async assignToDesk(id: string, deskId: string) {
-    await this.findOne(id);
+    // FIX: single update — if device doesn't exist Prisma throws P2025, no pre-fetch needed
     return this.prisma.device.update({ where: { id }, data: { deskId } });
   }
 
-  // Returns command payload — actual MQTT publish is done by MqttService
   buildCommand(command: 'SET_LED' | 'REBOOT' | 'IDENTIFY', params?: object) {
     return { command, params, ts: Date.now() };
   }

@@ -18,22 +18,23 @@ export class ReservationsService {
     userId?: string;
     date?: string;
     status?: ReservationStatus;
+    take?: number;
   }) {
     return this.prisma.reservation.findMany({
       where: {
-        ...(filters.deskId && { deskId: filters.deskId }),
-        ...(filters.userId && { userId: filters.userId }),
-        ...(filters.date && { date: new Date(filters.date) }),
-        ...(filters.status && { status: filters.status }),
-        ...(filters.locationId && {
-          desk: { locationId: filters.locationId },
-        }),
+        ...(filters.deskId     && { deskId: filters.deskId }),
+        ...(filters.userId     && { userId: filters.userId }),
+        ...(filters.date       && { date: new Date(filters.date) }),
+        ...(filters.status     && { status: filters.status }),
+        ...(filters.locationId && { desk: { locationId: filters.locationId } }),
       },
       include: {
         desk: { select: { name: true, code: true, floor: true, zone: true } },
         user: { select: { firstName: true, lastName: true, email: true } },
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+      // FIX: default limit to prevent unbounded query; callers can override
+      take: filters.take ?? 500,
     });
   }
 

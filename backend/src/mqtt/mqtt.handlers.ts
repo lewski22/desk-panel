@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { MqttService } from './mqtt.service';
+import { MqttService }    from './mqtt.service';
 import { CheckinsService } from '../modules/checkins/checkins.service';
 import { DevicesService }  from '../modules/devices/devices.service';
 import { GatewaysService } from '../modules/gateways/gateways.service';
@@ -22,10 +22,8 @@ export class MqttHandlers implements OnModuleInit {
     this.mqtt.registerGatewayHelloHandler(this.handleGatewayHello.bind(this));
   }
 
-  // ── desk/{deskId}/checkin ─────────────────────────────────
   private async handleCheckin(deskId: string, payload: any) {
     const { card_uid, device_id, offline = false, event_id } = payload;
-
     this.logger.log('NFC scan', { deskId, cardUid: card_uid, offline, eventId: event_id });
 
     try {
@@ -35,13 +33,9 @@ export class MqttHandlers implements OnModuleInit {
         this.mqtt.sendLedCommand(deskId, 'OCCUPIED');
         this.logger.log(`Check-in OK: desk=${deskId}`, { offline });
 
-        // Notify user on their personal topic
         if (result.checkin?.userId) {
           const event: UserEventPayload = {
-            type:    'checkin_confirmed',
-            userId:  result.checkin.userId,
-            deskId,
-            ts:      Date.now(),
+            type: 'checkin_confirmed', userId: result.checkin.userId, deskId, ts: Date.now(),
           };
           this.mqtt.notifyUser(result.checkin.userId, event);
         }
@@ -55,22 +49,18 @@ export class MqttHandlers implements OnModuleInit {
     }
   }
 
-  // ── desk/{deskId}/status ──────────────────────────────────
   private async handleStatus(deskId: string, payload: any) {
     const { device_id, rssi, fw_version } = payload;
     if (!device_id) return;
 
     try {
-      await this.devices.heartbeat(device_id, rssi);
-      if (fw_version) {
-        await this.devices.updateFirmwareVersion(device_id, fw_version);
-      }
+      // FIX: single DB write instead of 2 — heartbeat now accepts firmwareVersion
+      await this.devices.heartbeat(device_id, rssi, fw_version);
     } catch {
       // device not provisioned yet — ignore
     }
   }
 
-  // ── gateway/{gwId}/hello ──────────────────────────────────
   private async handleGatewayHello(gwId: string, payload: any) {
     this.logger.log(`Gateway online: ${gwId}`);
     try {

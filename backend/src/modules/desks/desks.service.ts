@@ -119,4 +119,40 @@ export class DesksService {
     await this.prisma.device.update({ where: { id: device.id }, data: { deskId: null } });
     return { unlinked: true, deviceId: device.id };
   }
+
+  // Public endpoint — returns desk info by QR token (no auth needed)
+  async getByQrToken(token: string) {
+    const desk = await this.prisma.desk.findFirst({
+      where: { qrToken: token, status: 'ACTIVE' },
+      select: {
+        id: true, name: true, code: true, floor: true, zone: true,
+        qrToken: true,
+        device: { select: { isOnline: true } },
+        checkins: {
+          where: { checkedOutAt: null },
+          select: { id: true, userId: true, checkedInAt: true },
+          take: 1,
+        },
+        reservations: {
+          where: {
+            status: 'CONFIRMED',
+            date: { gte: new Date(new Date().setHours(0,0,0,0)) },
+            endTime: { gte: new Date() },
+          },
+          orderBy: { startTime: 'asc' },
+          take: 1,
+          select: {
+            id: true, startTime: true, endTime: true, qrToken: true,
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
+      },
+    });
+    if (!desk) return null;
+    return {
+      ...desk,
+      isOccupied: desk.checkins.length > 0,
+      currentReservation: desk.reservations[0] ?? null,
+    };
+  }
 }

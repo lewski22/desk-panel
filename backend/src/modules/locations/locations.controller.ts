@@ -32,6 +32,13 @@ export class LocationsController {
     return this.svc.getOccupancyAnalytics(id);
   }
 
+  @Get(':id/analytics/extended')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Extended analytics: 7-day history, hourly, top desks, trend' })
+  getExtendedAnalytics(@Param('id') id: string) {
+    return this.svc.getAnalyticsExtended(id);
+  }
+
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   create(@Body() dto: CreateLocationDto) {
