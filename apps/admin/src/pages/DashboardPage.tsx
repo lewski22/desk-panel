@@ -6,8 +6,6 @@ import {
 import { adminApi } from '../api/client';
 import { Stat, Card, Spinner } from '../components/ui';
 
-const LOCATION_ID = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';
-
 const ACCENT      = '#B53578';
 const C_OCCUPIED  = '#6366f1';
 const C_RESERVED  = '#38bdf8';
@@ -25,7 +23,12 @@ function TrendBadge({ pct }: { pct: number }) {
 }
 
 export function DashboardPage() {
-  // FIX: removed separate `occ` state — occupancy fetched once via `extended` endpoint
+  // FIX: read inside component — module-level read is stale after location switch
+  const LOCATION_ID =
+    localStorage.getItem('desks_loc') ??
+    import.meta.env.VITE_LOCATION_ID ??
+    'seed-location-01';
+
   const [ext,      setExt]     = useState<any>(null);
   const [desks,    setDesks]   = useState<any[]>([]);
   const [loading,  setLoading] = useState(true);

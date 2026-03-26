@@ -4,8 +4,7 @@ import {
   PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Spinner,
 } from '../components/ui';
 
-const LOC_ID      = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';
-const STAFF_URL   = import.meta.env.VITE_STAFF_URL   ?? 'https://staff.prohalw2026.ovh';
+const STAFF_URL = import.meta.env.VITE_STAFF_URL ?? 'https://staff.prohalw2026.ovh';
 
 const STATUS_COLOR: Record<string, 'green'|'amber'|'red'|'zinc'> = {
   ACTIVE: 'green', INACTIVE: 'zinc', MAINTENANCE: 'amber',
@@ -83,25 +82,45 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
 }
 
 export function DesksPage() {
+  const [locations, setLocations] = useState<any[]>([]);
+  const [locId,     setLocId]     = useState(() =>
+    localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? ''
+  );
   const [desks,    setDesks]    = useState<any[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [modal,    setModal]    = useState<'create'|'edit'|'qr'|null>(null);
   const [target,   setTarget]   = useState<any>(null);
-  const [form,     setForm]     = useState({ name:'', code:'', floor:'', zone:'' });
+  const [form,     setForm]     = useState({ name:'', code:'', floor:'', zone:'', locId: locId });
   const [busy,     setBusy]     = useState(false);
   const [err,      setErr]      = useState('');
 
+  useEffect(() => {
+    adminApi.locations.listAll().then(locs => {
+      setLocations(locs);
+      if (!locId && locs.length > 0) {
+        setLocId(locs[0].id);
+        localStorage.setItem('desks_loc', locs[0].id);
+      }
+    }).catch(() => {});
+  }, []);
+
   const load = async () => {
+    if (!locId) return;
     setLoading(true);
-    try { setDesks(await adminApi.desks.list(LOC_ID)); }
+    try { setDesks(await adminApi.desks.list(locId)); }
     catch (e: any) { setErr(e.message); }
     setLoading(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [locId]);
+
+  const switchLoc = (id: string) => {
+    setLocId(id);
+    localStorage.setItem('desks_loc', id);
+  };
 
   const openEdit = (desk: any) => {
     setTarget(desk);
-    setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '' });
+    setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '', locId });
     setModal('edit');
   };
 
@@ -113,8 +132,8 @@ export function DesksPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
     try {
-      await adminApi.desks.create(LOC_ID, form);
-      setModal(null); setForm({ name:'', code:'', floor:'', zone:'' });
+      await adminApi.desks.create(form.locId || locId, form);
+      setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId });
       await load();
     } catch (e: any) { setErr(e.message); }
     setBusy(false);
@@ -163,8 +182,25 @@ export function DesksPage() {
       <PageHeader
         title="Biurka"
         sub={`${desks.filter(d => d.status === 'ACTIVE').length} aktywnych z ${desks.length}`}
-        action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'' }); setErr(''); }}>+ Nowe biurko</Btn>}
+        action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>+ Nowe biurko</Btn>}
       />
+
+      {/* Biuro switcher */}
+      {locations.length > 1 && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs text-zinc-400">Biuro:</span>
+          {locations.map(l => (
+            <button key={l.id} onClick={() => switchLoc(l.id)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                locId === l.id
+                  ? 'bg-[#B53578] text-white'
+                  : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+              }`}>
+              {l.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <Table headers={['Kod','Nazwa','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
         {desks.map(d => (
@@ -222,6 +258,21 @@ export function DesksPage() {
           onClose={() => setModal(null)}
         >
           <form onSubmit={modal === 'create' ? handleCreate : handleEdit} className="flex flex-col gap-3">
+            {/* Biuro selector — only on create, only when multiple locations */}
+            {modal === 'create' && locations.length > 1 && (
+              <div>
+                <label className="block text-xs text-zinc-400 mb-1 font-medium">Biuro</label>
+                <select
+                  value={form.locId}
+                  onChange={e => setForm(f => ({ ...f, locId: e.target.value }))}
+                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+                  required
+                >
+                  <option value="">— wybierz biuro —</option>
+                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+            )}
             <Input label="Nazwa" placeholder="Desk A-01" required value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
             <Input label="Kod (unikalny w lokalizacji)" placeholder="A-01" required value={form.code}
