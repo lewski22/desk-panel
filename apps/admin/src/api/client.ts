@@ -1,13 +1,15 @@
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-const token = () => localStorage.getItem('admin_access');
+const getToken = () => localStorage.getItem('admin_access');
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
+  // FIX: read token once, not twice (was calling token() twice in headers spread)
+  const tok = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     headers: {
       'Content-Type': 'application/json',
-      ...(token() ? { Authorization: `Bearer ${token()}` } : {}),
+      ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
       ...(opts.headers ?? {}),
     },
   });
@@ -51,8 +53,8 @@ export const adminApi = {
     list:      (orgId: string)              => req<any[]>(`/organizations/${orgId}/locations`),
     create:    (orgId: string, d: any)      => req<any>(`/organizations/${orgId}/locations`, { method: 'POST', body: JSON.stringify(d) }),
     update:    (id: string, d: any)         => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    // Returns { occupancyPct, todayCheckins, totalDesks, activeDesks }
     occupancy: (locId: string)              => req<any>(`/locations/${locId}/analytics/occupancy`),
+    extended:  (locId: string)              => req<any>(`/locations/${locId}/analytics/extended`),
   },
 
   desks: {

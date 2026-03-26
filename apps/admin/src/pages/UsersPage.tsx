@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { adminApi } from '../api/client';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
 
@@ -10,11 +10,6 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ORG_ID = import.meta.env.VITE_ORG_ID ?? '';
-
-// Pobierz rolę zalogowanego usera
-const myRole = () => {
-  try { return JSON.parse(localStorage.getItem('admin_user') ?? '{}')?.role ?? ''; } catch { return ''; }
-};
 
 type TabType = 'active' | 'deactivated';
 
@@ -33,7 +28,10 @@ export function UsersPage() {
   const [busy,     setBusy]   = useState(false);
   const [err,      setErr]    = useState('');
 
-  const currentUserRole = myRole();
+  // FIX: read once per mount from localStorage, not via a stale module-level function
+  const currentUserRole = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('admin_user') ?? '{}')?.role ?? ''; } catch { return ''; }
+  }, []);
 
   const load = async () => {
     setLoading(true);
