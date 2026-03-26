@@ -96,7 +96,7 @@ export function DashboardPage() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Stat label="Zajętość teraz"     value={`${Math.round((occupiedDesks / Math.max(totalDesks, 1)) * 100)}%`} accent />
+        <Stat label="Zajętość teraz"     value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`} accent />
         <Stat label="Zajęte biurka"      value={occupiedDesks}
           sub={`z ${desks.length} aktywnych`} />
         <Stat label="Check-iny dziś"     value={todayCheckins} />
