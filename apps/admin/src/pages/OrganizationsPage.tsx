@@ -31,6 +31,30 @@ export function OrganizationsPage() {
     setModal('edit');
   };
 
+  // Load locations for office hours editing
+  const [locations, setLocations]   = useState<any[]>([]);
+  const [locModal,  setLocModal]    = useState(false);
+  const [locTarget, setLocTarget]   = useState<any>(null);
+  const [locForm,   setLocForm]     = useState({ openTime: '08:00', closeTime: '17:00' });
+
+  const openLocEdit = async (org: any) => {
+    const locs = await adminApi.locations.list(org.id).catch(() => []);
+    setLocations(locs);
+    setTarget(org);
+    setLocModal(true);
+  };
+
+  const saveLocHours = async () => {
+    if (!locTarget) return;
+    setSaving(true);
+    try {
+      await adminApi.locations.update(locTarget.id, locForm);
+      setLocModal(false);
+      setLocTarget(null);
+    } catch (e: any) { setErr(e.message); }
+    setSaving(false);
+  };
+
   const save = async () => {
     setSaving(true); setErr('');
     try {
@@ -85,6 +109,7 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400">
                   {new Date(org.createdAt).toLocaleDateString('pl-PL')}
                 </p>
+                <Btn variant="ghost" size="sm" onClick={() => openLocEdit(org)}>⏰ Godziny</Btn>
                 <Btn variant="ghost" size="sm" onClick={() => openEdit(org)}>Edytuj</Btn>
               </div>
             </Card>
@@ -131,6 +156,46 @@ export function OrganizationsPage() {
             </Btn>
           </div>
         </div>
+      </Modal>
+
+      {/* Office hours modal */}
+      <Modal open={locModal} title={`Godziny pracy — ${target?.name}`} onClose={() => { setLocModal(false); setLocTarget(null); }}>
+        {locations.length === 0 ? (
+          <p className="text-sm text-zinc-400 py-4 text-center">Brak lokalizacji w tej organizacji</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <p className="text-xs text-zinc-400">
+              Godziny pracy określają przedział czasu, w którym użytkownicy mogą rezerwować biurka.
+              Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.
+            </p>
+            {locations.map(loc => (
+              <div key={loc.id} className="border border-zinc-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-zinc-700 mb-3">{loc.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1">Otwarcie</label>
+                    <input type="time" defaultValue={loc.openTime ?? '08:00'}
+                      onChange={e => { setLocTarget(loc); setLocForm(f => ({ ...f, openTime: e.target.value })); }}
+                      onFocus={() => { setLocTarget(loc); setLocForm({ openTime: loc.openTime ?? '08:00', closeTime: loc.closeTime ?? '17:00' }); }}
+                      className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1">Zamknięcie</label>
+                    <input type="time" defaultValue={loc.closeTime ?? '17:00'}
+                      onChange={e => { setLocTarget(loc); setLocForm(f => ({ ...f, closeTime: e.target.value })); }}
+                      onFocus={() => { setLocTarget(loc); setLocForm({ openTime: loc.openTime ?? '08:00', closeTime: loc.closeTime ?? '17:00' }); }}
+                      className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                  </div>
+                </div>
+                {locTarget?.id === loc.id && (
+                  <Btn className="mt-3 w-full" onClick={saveLocHours} loading={saving}>
+                    Zapisz godziny
+                  </Btn>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </Modal>
     </div>
   );

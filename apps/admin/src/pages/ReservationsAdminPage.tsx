@@ -118,17 +118,30 @@ export function ReservationsAdminPage() {
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-500">
                       {r.checkin ? (
-                        <div>
-                          <p>{r.checkin.method}</p>
-                          <p className="text-zinc-400">{format(new Date(r.checkin.checkedInAt), 'HH:mm')}</p>
+                        <div className="space-y-0.5">
+                          <p className="font-medium text-zinc-700">
+                            {format(new Date(r.checkin.checkedInAt), 'HH:mm')}
+                          </p>
+                          <p className="text-zinc-400">
+                            {r.checkin.method === 'NFC' ? '📡 NFC'
+                             : r.checkin.method === 'QR' ? '📱 QR kod'
+                             : '✋ Ręczny'}
+                          </p>
+                          {r.checkin.checkedOutAt && (
+                            <p className="text-zinc-400">
+                              out: {format(new Date(r.checkin.checkedOutAt), 'HH:mm')}
+                            </p>
+                          )}
                         </div>
-                      ) : '—'}
+                      ) : (
+                        <span className="text-zinc-300">—</span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1">
                         {r.status === 'CONFIRMED' && !r.checkin && (
                           <button onClick={() => checkin(r)}
-                            className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors">
+                            className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-medium">
                             Check-in
                           </button>
                         )}
