@@ -44,9 +44,7 @@ export function DashboardPage() {
     })();
   }, []);
 
-  if (loading) return <Spinner />;
-
-  // FIX: computed once with useMemo, not recomputed on every render
+  // ── All hooks must be BEFORE any conditional return ────────
   const zoneData = useMemo(() => {
     const zones = new Map<string, { free:number; occupied:number; reserved:number }>();
     for (const d of desks) {
@@ -60,7 +58,7 @@ export function DashboardPage() {
     return Array.from(zones.entries()).map(([name, v]) => ({ name, ...v }));
   }, [desks]);
 
-  const onlineCount = desks.filter(d => d.isOnline).length;
+  const onlineCount = useMemo(() => desks.filter(d => d.isOnline).length, [desks]);
 
   const methodData = useMemo(() => (ext?.methods ?? []).map((m: any) => ({
     name:  m.method === 'NFC' ? 'NFC' : m.method === 'QR' ? 'QR kod' : 'Ręczny',
@@ -68,7 +66,6 @@ export function DashboardPage() {
     color: m.method === 'NFC' ? '#6366f1' : m.method === 'QR' ? '#38bdf8' : '#a78bfa',
   })), [ext?.methods]);
 
-  // FIX: hourly slice computed once (was filtered twice: for chart data + for Cell loop)
   const hourlyFiltered = useMemo(() =>
     (ext?.hourly ?? []).filter((_: any, i: number) => i >= 6 && i <= 20),
   [ext?.hourly]);
@@ -80,13 +77,12 @@ export function DashboardPage() {
       .map((h: any) => h.hour),
   [ext?.hourly]);
 
-  // KPI from extended data (avoids separate occupancy call)
-  const occupancyPct    = ext ? (ext.thisWeekCount > 0 ? Math.min(100, Math.round(ext.thisWeekCount / 7)) : 0) : 0;
-  const totalDesks      = ext?.topDesks?.length ?? desks.length;
-  const occupiedDesks   = desks.filter(d => d.isOccupied).length;
-  const todayCheckins   = (ext?.weekData?.[ext.weekData.length - 1]?.checkins) ?? 0;
+  const occupiedDesks = useMemo(() => desks.filter(d => d.isOccupied).length, [desks]);
+  const todayCheckins = ext?.weekData?.[ext.weekData.length - 1]?.checkins ?? 0;
+  const now           = new Date();
 
-  const now = new Date();
+  // ── Early return AFTER all hooks ──────────────────────────
+  if (loading) return <Spinner />;
 
   return (
     <div>
