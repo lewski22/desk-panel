@@ -202,9 +202,12 @@ export function DesksPage() {
         </div>
       )}
 
-      <Table headers={['Kod','Nazwa','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
+      <Table headers={['Biuro','Kod','Nazwa','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
         {desks.map(d => (
           <TR key={d.id}>
+            <TD>
+              <span className="text-xs text-zinc-500">{d.location?.name ?? '—'}</span>
+            </TD>
             <TD mono>{d.code}</TD>
             <TD>{d.name}</TD>
             <TD>{d.floor ?? '—'}</TD>
@@ -258,19 +261,25 @@ export function DesksPage() {
           onClose={() => setModal(null)}
         >
           <form onSubmit={modal === 'create' ? handleCreate : handleEdit} className="flex flex-col gap-3">
-            {/* Biuro selector — only on create, only when multiple locations */}
-            {modal === 'create' && locations.length > 1 && (
+            {/* Biuro selector — always shown on create */}
+            {modal === 'create' && (
               <div>
                 <label className="block text-xs text-zinc-400 mb-1 font-medium">Biuro</label>
-                <select
-                  value={form.locId}
-                  onChange={e => setForm(f => ({ ...f, locId: e.target.value }))}
-                  className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
-                  required
-                >
-                  <option value="">— wybierz biuro —</option>
-                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                </select>
+                {locations.length > 1 ? (
+                  <select
+                    value={form.locId}
+                    onChange={e => setForm(f => ({ ...f, locId: e.target.value }))}
+                    className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+                    required
+                  >
+                    <option value="">— wybierz biuro —</option>
+                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                ) : (
+                  <div className="px-3 py-2 rounded-lg bg-zinc-50 border border-zinc-200 text-sm text-zinc-600">
+                    {locations[0]?.name ?? '—'}
+                  </div>
+                )}
               </div>
             )}
             <Input label="Nazwa" placeholder="Desk A-01" required value={form.name}
