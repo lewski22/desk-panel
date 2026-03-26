@@ -16,8 +16,8 @@ export class DesksService {
     return this.prisma.desk.findMany({
       where: { locationId },
       include: {
-        device: { select: { isOnline: true, lastSeen: true } },
-        _count: { select: { reservations: true } },
+        device: { select: { id: true, hardwareId: true, isOnline: true, lastSeen: true } },
+        _count:  { select: { reservations: true } },
       },
       orderBy: [{ floor: 'asc' }, { name: 'asc' }],
     });
