@@ -79,7 +79,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Nazwa','Biuro','IP','Urządzenia','Status','Ostatni kontakt',''].map(h =>
+            <tr>{['Nazwa','ID','Biuro','IP','Urządzenia','Status','Ostatni kontakt',''].map(h =>
               <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
           </thead>
@@ -87,6 +87,12 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
             {gateways.map(gw => (
               <tr key={gw.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 group">
                 <td className="py-3 px-4 font-medium text-zinc-800">{gw.name}</td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-1">
+                    <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
+                    <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                  </div>
+                </td>
                 <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
                 <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.ipAddress ?? '—'}</td>
                 <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
@@ -142,9 +148,13 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
             <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
               ✓ Gateway zarejestrowany pomyślnie
             </div>
-            <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1">
+            <p className="text-xs text-zinc-500 mb-2 font-medium">Skopiuj do pliku <code className="bg-zinc-100 px-1 rounded">.env</code> na Raspberry Pi:</p>
+            <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1 select-all">
               <p><span className="text-zinc-500">GATEWAY_ID=</span>{result.gateway.id}</p>
               <p><span className="text-zinc-500">GATEWAY_SECRET=</span><span className="text-amber-400">{result.secret}</span></p>
+              <p><span className="text-zinc-500">LOCATION_ID=</span>{locId}</p>
+              <p><span className="text-zinc-500">SERVER_URL=</span>{import.meta.env.VITE_API_URL ?? 'https://api.prohalw2026.ovh/api/v1'}</p>
+              <p><span className="text-zinc-500">MQTT_PASSWORD=</span><span className="text-amber-400">{`# ustaw własne hasło`}</span></p>
             </div>
             <p className="text-xs text-red-500 mt-2">⚠ Zapisz secret — nie będzie wyświetlony ponownie</p>
             <div className="flex justify-end mt-4"><Btn onClick={() => setModal(null)}>Zamknij</Btn></div>
@@ -259,7 +269,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Hardware ID','MQTT user','Biuro','Biurko','Status','RSSI','Fw','Akcje'].map(h =>
+            <tr>{['Hardware ID','ID urządzenia','MQTT user','Biuro','Biurko','Status','Fw','Akcje'].map(h =>
               <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
           </thead>
@@ -267,6 +277,12 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
             {filteredDevices.map(d => (
               <tr key={d.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 group">
                 <td className="py-3 px-4 font-mono text-xs text-zinc-700">{d.hardwareId}</td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-1">
+                    <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
+                    <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                  </div>
+                </td>
                 <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.mqttUsername}</td>
                 <td className="py-3 px-4 text-xs text-zinc-500">{getDeviceLocation(d)}</td>
                 <td className="py-3 px-4 text-zinc-700">
@@ -277,7 +293,6 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                     {d.isOnline ? 'Online' : 'Offline'}
                   </span>
                 </td>
-                <td className="py-3 px-4 font-mono text-xs text-zinc-500">{d.rssi ? `${d.rssi} dBm` : '—'}</td>
                 <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.firmwareVersion ?? '—'}</td>
                 <td className="py-3 px-4">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

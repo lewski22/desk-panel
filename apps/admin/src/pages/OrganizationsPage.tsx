@@ -112,6 +112,16 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400 mt-0.5">
                   {[loc.address, loc.city].filter(Boolean).join(', ') || 'Brak adresu'}
                 </p>
+                {/* ID do prowizjonowania */}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">ID:</span>
+                  <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{loc.id}</code>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(loc.id); }}
+                    className="text-[10px] text-zinc-400 hover:text-[#B53578] transition-colors"
+                    title="Kopiuj ID"
+                  >⎘</button>
+                </div>
               </div>
               {/* Godziny */}
               <div className="shrink-0 text-center px-4 border-l border-zinc-100">

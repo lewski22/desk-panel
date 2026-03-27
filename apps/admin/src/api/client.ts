@@ -61,7 +61,7 @@ export const adminApi = {
   desks: {
     list:        (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
     status:      (locId: string)            => req<any[]>(`/locations/${locId}/desks/status`),
-    create:      (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
+    create:      (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify((({ locId: _l, ...rest }) => rest)(d)) }),
     update:      (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     remove:      (id: string)               => req<any>(`/desks/${id}`, { method: 'DELETE' }),
     activate:    (id: string)               => req<any>(`/desks/${id}/activate`, { method: 'PATCH' }),

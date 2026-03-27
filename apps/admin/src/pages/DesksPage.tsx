@@ -202,7 +202,7 @@ export function DesksPage() {
         </div>
       )}
 
-      <Table headers={['Biuro','Kod','Nazwa','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
+      <Table headers={['Biuro','Kod','Nazwa','ID biurka','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
         {desks.map(d => (
           <TR key={d.id}>
             <TD>
@@ -210,6 +210,12 @@ export function DesksPage() {
             </TD>
             <TD mono>{d.code}</TD>
             <TD>{d.name}</TD>
+            <TD>
+              <div className="flex items-center gap-1">
+                <code className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
+                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title="Kopiuj ID">⎘</button>
+              </div>
+            </TD>
             <TD>{d.floor ?? '—'}</TD>
             <TD>{d.zone ?? '—'}</TD>
             <TD>
