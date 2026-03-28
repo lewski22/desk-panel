@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
@@ -12,6 +12,7 @@ export interface ProvisionDeviceDto {
 
 @Injectable()
 export class DevicesService {
+  private readonly logger = new Logger(DevicesService.name);
   constructor(private prisma: PrismaService) {}
 
   async provision(dto: ProvisionDeviceDto) {
@@ -20,7 +21,6 @@ export class DevicesService {
     });
     if (exists) throw new ConflictException('Device already provisioned');
 
-    // FIX: use crypto.randomBytes instead of Math.random() — cryptographically secure
     const mqttPassword     = randomBytes(20).toString('hex');
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);
     const mqttUsername     = `beacon-${dto.hardwareId}`;
@@ -38,7 +38,54 @@ export class DevicesService {
       },
     });
 
+    // ── Notify gateway to add MQTT user automatically ────────
+    await this._notifyGateway(dto.gatewayId, mqttUsername, mqttPassword);
+
     return { device, mqttUsername, mqttPassword };
+  }
+
+  // Push MQTT credentials to gateway's local Mosquitto
+  private async _notifyGateway(gatewayId: string, username: string, password: string) {
+    try {
+      const gw = await this.prisma.gateway.findUnique({
+        where:  { id: gatewayId },
+        select: { ipAddress: true, secretHash: true, id: true },
+      });
+      if (!gw?.ipAddress) {
+        this.logger.warn('Gateway has no IP — cannot push MQTT credentials', { gatewayId });
+        return;
+      }
+
+      // Gateway API is on port 3001
+      const url = `http://${gw.ipAddress}:3001/beacon/add`;
+
+      // We need the plain secret — it's in the DB as hash, so we use a special gateway-provision header
+      // Gateway authenticates via x-gateway-secret which we fetch from env for the specific gateway
+      // For now use a shared provisioning key via env
+      const provisionKey = process.env.GATEWAY_PROVISION_KEY ?? '';
+
+      const resp = await fetch(url, {
+        method:  'POST',
+        headers: {
+          'Content-Type':      'application/json',
+          'x-gateway-secret':  provisionKey,
+        },
+        body: JSON.stringify({ username, password }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (resp.ok) {
+        this.logger.log('Gateway notified — MQTT user added', { username });
+      } else {
+        this.logger.warn('Gateway notification failed', { status: resp.status });
+      }
+    } catch (err: any) {
+      // Non-fatal — admin can add manually or restart gateway for sync
+      this.logger.warn('Could not reach gateway API — MQTT user NOT added automatically', {
+        err: err.message,
+        tip: 'Add manually on Pi: docker exec desk_mqtt mosquitto_passwd -b /mosquitto/config/passwd ' + username + ' <password>',
+      });
+    }
   }
 
   async findAll(gatewayId?: string) {

@@ -736,3 +736,58 @@ Komponenty do współdzielenia z istniejącym Staff Panel (React):
 | Ręczny sync admin → M365 | Auto-create resource przy POST /desks |
 | Polegać wyłącznie na Outlook (offline) | NFC + gateway = fallback zawsze działa |
 | Osobna baza dla Teams App | Jeden backend, wiele frontendów |
+
+---
+
+## Auto-Provisioning ESP32 przez USB — plan implementacji
+
+### Cel
+
+Zero konfiguracji ręcznej. Admin podłącza ESP32 do komputera, klika jeden przycisk
+w panelu admina → firmware wgrywa się automatycznie z predeklarowaną konfiguracją.
+
+### Faza 1 — Web Serial API (bez instalacji czegokolwiek)
+
+Przeglądarki Chrome/Edge obsługują Web Serial API — można pisać na port COM
+bezpośrednio z JavaScript w przeglądarce.
+
+**Flow:**
+1. Admin Panel → Provisioning → + Nowe biurko → "Flash przez USB"
+2. Panel generuje konfigurację (device_id, mqtt_host, mqtt_pass, etc.)
+3. Użytkownik klika "Połącz ESP32" → przeglądarka otwiera dialog wyboru portu COM
+4. JavaScript wysyła komendę `PROVISION:{...}` przez Web Serial
+5. ESP32 odpowiada `PROVISION_OK` → panel pokazuje sukces
+
+**Techniczne:**
+- `navigator.serial.requestPort()` — dialog wyboru COM
+- `port.open({ baudRate: 115200 })` — otwarcie połączenia
+- `writer.write(new TextEncoder().encode('PROVISION:...\n'))` — wysłanie
+- Czytanie odpowiedzi przez `reader.read()` — walidacja
+
+**Wymagania:**
+- Chrome/Edge 89+ (brak wsparcia Firefox)
+- HTTPS (Web Serial wymaga bezpiecznego kontekstu)
+- Firmware już wgrany na ESP32 (lub użytkownik robi `pio upload` osobno)
+
+### Faza 2 — Electron desktop app (pełna automatyzacja)
+
+Aplikacja desktopowa `reserti-provisioner`:
+1. Wykrywa podłączony ESP32 automatycznie
+2. Pobiera config z API panelu (po zalogowaniu)
+3. Flashuje firmware (esptool.py w bundlu)
+4. Wysyła PROVISION komendę
+5. Weryfikuje połączenie z MQTT
+
+**Wymagania:** Electron + node-serialport + esptool.py
+
+### Faza 3 — Dedicated provisioning station
+
+Raspberry Pi z ekranem dotykowym + stałym USB hubem.
+Fizycznie podłączasz ESP32 → ekran pokazuje postęp → gotowe.
+
+### Rekomendacja na teraz (MVP)
+
+Zaimplementuj **Faza 1** (Web Serial) — zero instalacji, działa z aktualnym
+frontendem React, wystarczy dodać stronę `/provisioning/flash`.
+
+Szacowany czas implementacji: 2-3 dni.
