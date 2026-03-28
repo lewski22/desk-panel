@@ -84,40 +84,97 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
             )}</tr>
           </thead>
           <tbody>
-            {gateways.map(gw => (
-              <tr key={gw.id} className="border-b border-zinc-50 hover:bg-zinc-50/50 group">
-                <td className="py-3 px-4 font-medium text-zinc-800">{gw.name}</td>
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-1">
-                    <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
-                    <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
-                  </div>
-                </td>
-                <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
-                <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.ipAddress ?? '—'}</td>
-                <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
-                <td className="py-3 px-4">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${gw.isOnline ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'}`}>
-                    {gw.isOnline ? 'Online' : 'Offline'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-xs text-zinc-400">
-                  {gw.lastSeen ? new Date(gw.lastSeen).toLocaleString('pl-PL', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit' }) : '—'}
-                </td>
-                <td className="py-3 px-4">
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleRegenSecret(gw.id)}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-700 transition-colors"
-                      title="Wygeneruj nowy secret">🔑</button>
-                    <button onClick={() => handleDelete(gw.id, gw.name)}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors"
-                      title="Usuń gateway">Usuń</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {gateways.map(gw => {
+              // Diagnoza stanu gateway
+              const now = Date.now();
+              const lastSeenMs = gw.lastSeen ? new Date(gw.lastSeen).getTime() : null;
+              const minutesSince = lastSeenMs ? Math.floor((now - lastSeenMs) / 60000) : null;
+              const neverSeen    = !lastSeenMs;
+              const stale        = lastSeenMs && minutesSince! > 5;
+              const healthy      = gw.isOnline && !stale;
+
+              // Komunikat diagnostyczny
+              let diagMsg  = '';
+              let diagColor = '';
+              if (neverSeen) {
+                diagMsg   = 'Nigdy nie połączony — sprawdź .env na Raspberry Pi';
+                diagColor = 'text-amber-600 bg-amber-50 border-amber-200';
+              } else if (!gw.isOnline && stale) {
+                diagMsg   = `Offline od ${minutesSince} min — sprawdź czy Docker działa na Pi`;
+                diagColor = 'text-red-600 bg-red-50 border-red-200';
+              } else if (gw.isOnline && stale) {
+                diagMsg   = `Brak heartbeat od ${minutesSince} min — możliwy problem z MQTT`;
+                diagColor = 'text-amber-600 bg-amber-50 border-amber-200';
+              }
+
+              return (
+              <React.Fragment key={gw.id}>
+                <tr className="border-b border-zinc-50 hover:bg-zinc-50/50 group">
+                  <td className="py-3 px-4 font-medium text-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${healthy ? 'bg-emerald-400' : stale ? 'bg-amber-400 animate-pulse' : 'bg-zinc-300'}`} />
+                      {gw.name}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-1">
+                      <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
+                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.ipAddress ?? '—'}</td>
+                  <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
+                  <td className="py-3 px-4">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${healthy ? 'bg-emerald-100 text-emerald-700' : stale ? 'bg-amber-100 text-amber-700' : 'bg-zinc-100 text-zinc-500'}`}>
+                      {healthy ? 'Online' : stale ? 'Problem' : 'Offline'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-xs text-zinc-400">
+                    {gw.lastSeen
+                      ? `${minutesSince === 0 ? 'przed chwilą' : `${minutesSince} min temu`}`
+                      : '—'}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleRegenSecret(gw.id)}
+                        className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-700 transition-colors"
+                        title="Wygeneruj nowy secret">🔑</button>
+                      <button onClick={() => handleDelete(gw.id, gw.name)}
+                        className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors"
+                        title="Usuń gateway">Usuń</button>
+                    </div>
+                  </td>
+                </tr>
+                {/* Wiersz diagnostyczny — pokazuje się gdy coś nie gra */}
+                {diagMsg && (
+                  <tr className="border-b border-zinc-50">
+                    <td colSpan={8} className="px-4 py-2">
+                      <div className={`flex items-start gap-2 text-xs rounded-lg border px-3 py-2 ${diagColor}`}>
+                        <span className="shrink-0 mt-0.5">⚠</span>
+                        <div>
+                          <span className="font-medium">{gw.name}: </span>
+                          {diagMsg}
+                          {neverSeen && (
+                            <span className="block mt-1 opacity-75">
+                              Sprawdź: SERVER_URL w .env · czy docker compose up -d działa · docker compose logs gateway
+                            </span>
+                          )}
+                          {!neverSeen && (
+                            <span className="block mt-1 opacity-75">
+                              Sprawdź: docker compose logs mosquitto · docker compose ps · czy Pi ma internet
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+              );
+            })}
             {gateways.length === 0 && (
-              <tr><td colSpan={7} className="py-8 text-center text-zinc-400 text-sm">Brak gateway'ów</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">Brak gateway'ów</td></tr>
             )}
           </tbody>
         </table>
