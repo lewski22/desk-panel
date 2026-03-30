@@ -84,6 +84,10 @@ export const adminApi = {
     sync:             (id: string)                  => req<any>(`/gateway/${id}/sync`, { method: 'POST' }),
     remove:           (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
     regenerateSecret: (id: string)                  => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
+    // Setup tokens — auto-instalacja
+    createSetupToken: (locationId: string)          => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
+    listSetupTokens:  (locationId: string)          => req<any[]>(`/gateway/setup-tokens/${locationId}`),
+    revokeSetupToken: (tokenId: string)             => req<any>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
   },
 
   users: {

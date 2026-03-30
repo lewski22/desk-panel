@@ -2,11 +2,99 @@ import React, { useEffect, useState } from 'react';
 import { adminApi } from '../api/client';
 import { PageHeader, Btn, Card, Modal, Input } from '../components/ui';
 
-// "Biura" = Locations (fizyczne biura)
-// Organizacja jest warstwą nadrzędną (firma) — niewidoczna dla OFFICE_ADMIN
-
 function getUser() {
   try { return JSON.parse(localStorage.getItem('admin_user') ?? 'null'); } catch { return null; }
+}
+
+// ── Modal: generowanie tokenu instalacyjnego gateway ──────────
+function InstallTokenModal({ location, onClose }: { location: any; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [token,   setToken]   = useState<any>(null);
+  const [copied,  setCopied]  = useState(false);
+  const [error,   setError]   = useState('');
+
+  useEffect(() => {
+    adminApi.gateways.createSetupToken(location.id)
+      .then(t => { setToken(t); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, [location.id]);
+
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  return (
+    <Modal title={`Dodaj gateway — ${location.name}`} onClose={onClose}>
+      {loading && (
+        <div className="flex justify-center py-8">
+          <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+        </div>
+      )}
+      {error && (
+        <p className="text-sm text-red-500 bg-red-50 p-3 rounded-lg">{error}</p>
+      )}
+      {token && (
+        <div className="space-y-5">
+          {/* Instrukcja */}
+          <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
+            <p className="text-sm font-semibold text-zinc-700 mb-2">Jak zainstalować gateway:</p>
+            <ol className="text-sm text-zinc-600 space-y-1.5 list-decimal list-inside">
+              <li>Włącz Raspberry Pi i połącz z internetem</li>
+              <li>Otwórz terminal (SSH lub lokalnie)</li>
+              <li>Wklej poniższą komendę i naciśnij Enter</li>
+              <li>Skrypt zapyta tylko o nazwę WiFi (jeśli na kablu — pomija)</li>
+            </ol>
+          </div>
+
+          {/* Komenda instalacyjna */}
+          <div>
+            <p className="text-xs text-zinc-400 mb-1.5 font-medium">Komenda instalacyjna (ważna 24h, jednorazowa)</p>
+            <div className="bg-zinc-950 rounded-xl p-4 flex items-start gap-3">
+              <code className="text-emerald-400 text-xs font-mono flex-1 break-all leading-relaxed">
+                {token.installCmd}
+              </code>
+              <button
+                onClick={() => copy(token.installCmd)}
+                className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors font-medium"
+              >
+                {copied ? '✓' : '⎘'}
+              </button>
+            </div>
+          </div>
+
+          {/* Informacje */}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="bg-zinc-50 rounded-lg p-3">
+              <p className="text-zinc-400 mb-0.5">Biuro</p>
+              <p className="font-medium text-zinc-700">{token.location?.name}</p>
+            </div>
+            <div className="bg-zinc-50 rounded-lg p-3">
+              <p className="text-zinc-400 mb-0.5">Ważny do</p>
+              <p className="font-medium text-zinc-700">
+                {new Date(token.expiresAt).toLocaleString('pl-PL', {
+                  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+            <span className="text-amber-500 shrink-0">⚠</span>
+            <p className="text-xs text-amber-700">
+              Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie,
+              wróć tutaj i wygeneruj nowy.
+            </p>
+          </div>
+
+          <div className="flex justify-end">
+            <Btn onClick={onClose}>Zamknij</Btn>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
 }
 
 export function OrganizationsPage() {
@@ -21,8 +109,7 @@ export function OrganizationsPage() {
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '',
   });
-  const [saving,  setSaving]  = useState(false);
-  const [err,     setErr]     = useState('');
+  const [installModal, setInstallModal] = useState<any>(null);
 
   const load = async () => {
     setLoading(true);
@@ -134,6 +221,7 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400">
                   {new Date(loc.createdAt).toLocaleDateString('pl-PL')}
                 </p>
+                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>+ Gateway</Btn>
                 <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>Edytuj</Btn>
               </div>
             </Card>
@@ -204,6 +292,10 @@ export function OrganizationsPage() {
           </div>
         </div>
       </Modal>
+      {/* Install token modal */}
+      {installModal && (
+        <InstallTokenModal location={installModal} onClose={() => setInstallModal(null)} />
+      )}
     </div>
   );
 }
