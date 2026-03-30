@@ -97,7 +97,8 @@ model Location {
   organization Organization @relation(fields: [organizationId], references: [id])
   desks        Desk[]
   gateways     Gateway[]
-  users        User[]       @relation("LocationUsers")
+  users        User[]            @relation("LocationUsers")
+  setupTokens  GatewaySetupToken[]
 }
 
 // ─── Desks ───────────────────────────────────────────────────
@@ -158,9 +159,27 @@ model Gateway {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  location Location @relation(fields: [locationId], references: [id])
-  devices  Device[]
-  events   Event[]
+  location    Location          @relation(fields: [locationId], references: [id])
+  devices     Device[]
+  events      Event[]
+  setupTokens GatewaySetupToken[]
+}
+
+// Token jednorazowy do automatycznej instalacji gateway na Raspberry Pi
+// Generowany przez Admin Panel → Biura → "Dodaj gateway"
+// Ważny 24h, jednorazowy — po użyciu usedAt jest ustawiane
+model GatewaySetupToken {
+  id         String    @id @default(cuid())
+  token      String    @unique @default(cuid())
+  locationId String
+  gatewayId  String?   // uzupełniane po pomyślnej instalacji
+  createdBy  String    // userId admina który wygenerował
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  location Location  @relation(fields: [locationId], references: [id])
+  gateway  Gateway?  @relation(fields: [gatewayId], references: [id])
 }
 
 // ─── Users ───────────────────────────────────────────────────
