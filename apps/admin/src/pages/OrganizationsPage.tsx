@@ -109,6 +109,8 @@ export function OrganizationsPage() {
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '',
   });
+  const [saving,       setSaving]       = useState(false);
+  const [err,          setErr]          = useState('');
   const [installModal, setInstallModal] = useState<any>(null);
 
   const load = async () => {
