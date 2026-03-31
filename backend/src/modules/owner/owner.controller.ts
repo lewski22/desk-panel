@@ -1,0 +1,96 @@
+import {
+  Controller, Get, Post, Patch, Delete,
+  Param, Body, Query, UseGuards, Request,
+  HttpCode, HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { JwtAuthGuard }      from '../auth/guards/jwt-auth.guard';
+import { OwnerGuard }        from './guards/owner.guard';
+import { OwnerService }      from './owner.service';
+import { OwnerHealthService }from './owner-health.service';
+import { CreateOrgDto }      from './dto/create-org.dto';
+import { UpdateOrgDto }      from './dto/update-org.dto';
+
+@ApiTags('owner')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, OwnerGuard)
+@Controller('owner')
+export class OwnerController {
+  constructor(
+    private svc:    OwnerService,
+    private health: OwnerHealthService,
+  ) {}
+
+  // ── Organizacje ───────────────────────────────────────────────
+
+  @Get('organizations')
+  @ApiOperation({ summary: 'Lista wszystkich firm z metrykami' })
+  getOrganizations(
+    @Query('isActive') isActive?: string,
+    @Query('plan')     plan?: string,
+    @Query('search')   search?: string,
+  ) {
+    return this.svc.getOrganizations({
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      plan,
+      search,
+    });
+  }
+
+  @Post('organizations')
+  @ApiOperation({ summary: 'Utwórz nową firmę + pierwszego SUPER_ADMIN' })
+  createOrganization(@Body() dto: CreateOrgDto, @Request() req: any) {
+    return this.svc.createOrganization(dto, req.user.id);
+  }
+
+  @Get('organizations/:id')
+  @ApiOperation({ summary: 'Szczegóły firmy: biura, gateway, beacony, aktywność' })
+  getOrganization(@Param('id') id: string) {
+    return this.svc.getOrganization(id);
+  }
+
+  @Patch('organizations/:id')
+  @ApiOperation({ summary: 'Edytuj firmę (plan, status, notatki)' })
+  updateOrganization(@Param('id') id: string, @Body() dto: UpdateOrgDto) {
+    return this.svc.updateOrganization(id, dto);
+  }
+
+  @Delete('organizations/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Dezaktywuj firmę (soft delete, isActive=false)' })
+  deactivateOrganization(@Param('id') id: string) {
+    return this.svc.deactivateOrganization(id);
+  }
+
+  @Post('organizations/:id/impersonate')
+  @ApiOperation({ summary: 'Wejdź jako SUPER_ADMIN firmy (JWT 30 min, audit trail)' })
+  impersonate(@Param('id') id: string, @Request() req: any) {
+    const ip = req.ip ?? req.headers['x-forwarded-for'] ?? 'unknown';
+    return this.svc.impersonate(id, req.user.id, ip);
+  }
+
+  // ── Health / monitoring ───────────────────────────────────────
+
+  @Get('health')
+  @ApiOperation({ summary: 'Globalny stan gateway i beaconów' })
+  getGlobalHealth(
+    @Query('status') status?: string,
+    @Query('orgId')  orgId?:  string,
+  ) {
+    return this.health.getGlobalHealth({ status, orgId });
+  }
+
+  @Get('health/:orgId')
+  @ApiOperation({ summary: 'Stan infrastruktury jednej firmy' })
+  getOrgHealth(@Param('orgId') orgId: string) {
+    return this.health.getOrgHealth(orgId);
+  }
+
+  // ── Statystyki platformy ──────────────────────────────────────
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Metryki platformy: firmy, gateway, beacony, check-iny' })
+  getStats() {
+    return this.svc.getStats();
+  }
+}

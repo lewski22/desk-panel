@@ -13,6 +13,7 @@ import { GatewaysModule }       from './modules/gateways/gateways.module';
 import { ReservationsModule }   from './modules/reservations/reservations.module';
 import { CheckinsModule }       from './modules/checkins/checkins.module';
 import { MqttModule }           from './mqtt/mqtt.module';
+import { OwnerModule }          from './modules/owner/owner.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { MqttModule }           from './mqtt/mqtt.module';
     ReservationsModule,
     CheckinsModule,
     MqttModule,
+    OwnerModule,
   ],
   providers: [
     // ThrottlerGuard globalnie — działa na wszystkich endpointach

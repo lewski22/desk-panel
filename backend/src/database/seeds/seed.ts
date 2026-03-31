@@ -32,6 +32,20 @@ async function main() {
   // ── Users ─────────────────────────────────────────────────
   const hash = (p: string) => bcrypt.hash(p, 10);
 
+  // Konto OWNER — operator platformy (bez organizacji)
+  await prisma.user.upsert({
+    where: { email: 'owner@reserti.pl' },
+    update: {},
+    create: {
+      email:        'owner@reserti.pl',
+      passwordHash: await hash('Owner1234!'),
+      firstName:    'Platform',
+      lastName:     'Owner',
+      role:         UserRole.OWNER,
+      isActive:     true,
+    },
+  });
+
   const superAdmin = await prisma.user.upsert({
     where: { email: 'superadmin@reserti.pl' },
     update: {},
@@ -142,6 +156,7 @@ async function main() {
   console.log('\n✅ Seed complete!');
   console.log('\nTest accounts:');
   console.log('  superadmin@reserti.pl  / Admin1234!  (SUPER_ADMIN)');
+  console.log('  owner@reserti.pl       / Owner1234!  (OWNER)');
   console.log('  admin@demo-corp.pl     / Admin1234!  (OFFICE_ADMIN)');
   console.log('  staff@demo-corp.pl     / Staff1234!  (STAFF)');
   console.log('  user@demo-corp.pl      / User1234!   (END_USER)');

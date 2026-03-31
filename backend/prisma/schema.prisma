@@ -15,6 +15,7 @@ datasource db {
 // ─── Enums ───────────────────────────────────────────────────
 
 enum UserRole {
+  OWNER
   SUPER_ADMIN
   OFFICE_ADMIN
   STAFF
@@ -60,6 +61,7 @@ enum EventType {
   UNAUTHORIZED_SCAN
   USER_CREATED
   USER_UPDATED
+  OWNER_IMPERSONATION
 }
 
 // ─── Organizations (multi-tenant root) ───────────────────────
@@ -71,6 +73,14 @@ model Organization {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Owner Panel — plan i metadane klienta
+  plan           String    @default("starter")  // starter | pro | enterprise
+  planExpiresAt  DateTime?
+  trialEndsAt    DateTime?
+  notes          String?   @db.Text
+  contactEmail   String?
+  createdBy      String?
 
   // M365 / Entra ID SSO (opcjonalne — per firma)
   azureTenantId  String?          // Tenant ID z Entra ID firmy-klienta
