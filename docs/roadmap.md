@@ -13,58 +13,320 @@
 
 ## Planowane — P2
 
-### Panel OWNER (nowy poziom uprawnień)
+## Panel OWNER — Plan implementacji
 
-Obecnie najwyższą rolą jest `SUPER_ADMIN` zarządzający platformą.  
-Planowany poziom **OWNER** będzie zarządzał firmami (organizacjami) — to tenant root.
+> Owner = poziom ponad SUPER_ADMIN. To operator platformy Reserti (Ty).
+> Zarządza wszystkimi klientami (firmami), ich stanem technicznym i kontami.
+> Ostatnia aktualizacja: 2026-03-31
 
-**Zakres panelu Owner:**
-- Tworzenie i zarządzanie firmami (tenantami)
-- Przypisywanie Super Adminów do firm
-- Podgląd statystyk wszystkich firm
-- Zarządzanie planami (starter / pro / enterprise)
-- Billing i rozliczenia
+---
 
-**Otwarte pytania do analizy:**
+### Czym jest Owner vs SUPER_ADMIN
 
-#### A. Izolacja środowisk — oddzielny backend per firma vs współdzielony
-
-| | Oddzielne backend per firma | Współdzielony backend |
+| | SUPER_ADMIN | OWNER |
 |---|---|---|
-| Izolacja danych | Pełna (osobna baza) | Row-level security |
-| Koszt | Wyższy (wiele instancji) | Niższy |
-| Wdrożenie | Złożone (Coolify multi-project) | Prostsze |
-| Skalowanie | Niezależne per firma | Wspólna pula zasobów |
-| Migracje | Niezależne | Jeden deployment |
-| Compliance (GDPR) | Łatwiejsze | Wymaga dokładnego RLS |
+| Kim jest | Admin konkretnej firmy-klienta | Operator platformy Reserti |
+| Widzi | Jedną organizację (swoją) | Wszystkie organizacje |
+| Tworzy | Biura, biurka, użytkowników w swojej org | Nowe firmy-klientów, przypisuje SUPER_ADMIN |
+| Widzi urządzenia | Swoje gateway i beacony | Wszystkich klientów — pełny monitoring |
+| Billing | Nie ma dostępu | Zarządza planami i płatnościami |
+| Domena | admin.prohalw2026.ovh | owner.prohalw2026.ovh (nowa) |
 
-**Rekomendacja:** Współdzielony backend z RLS (`organizationId` na każdej tabeli) dla < 50 firm. Powyżej — rozważyć sharding per firma.
+Owner **nie ingeruje** w dane firmy bez powodu — tylko podgląd techniczny i zarządzanie strukturą.
 
-#### B. Połączenie panelu Admin + Staff
+---
 
-Obecnie: dwie oddzielne aplikacje React pod różnymi domenami.
+### Architektura dostępu
 
-**Opcja 1: Jeden panel z routingiem per rola**
 ```
-https://app.reserti.pl/
-  → logowanie → wykrycie roli → redirect do odpowiedniego widoku
-  SUPER_ADMIN / OFFICE_ADMIN → /admin/*
-  STAFF                      → /staff/*
-  END_USER                   → /user/* (nowy)
+OWNER (ty)
+  │  owner.prohalw2026.ovh
+  │  osobny frontend — nie Admin Panel
+  ▼
+Backend NestJS
+  /owner/*  ← nowy prefix, guard OwnersGuard
+  │
+  ├── GET /owner/organizations        ← lista wszystkich firm
+  ├── POST /owner/organizations       ← utwórz nową firmę
+  ├── GET /owner/organizations/:id    ← szczegóły firmy
+  ├── PATCH /owner/organizations/:id  ← edytuj (plan, isActive)
+  ├── GET /owner/health               ← stan wszystkich gateway i beaconów
+  ├── GET /owner/health/:orgId        ← stan gateway/beaconów jednej firmy
+  └── GET /owner/stats                ← metryki platformy
 ```
-Zalety: jeden codebase, jedna domena, spójny login flow  
-Wady: większy bundle, wymaga refactoru obu aplikacji
 
-**Opcja 2: Zachowanie oddzielnych aplikacji + SSO**
-```
-https://admin.reserti.pl  → Admin Panel
-https://staff.reserti.pl  → Staff Panel
-https://app.reserti.pl    → PWA mobilna (nowa)
-```
-Zalety: mniejsze bundle, niezależny deploy  
-Wady: duplikacja kodu (auth, komponenty), dwa URL-e do pamiętania
+---
 
-**Rekomendacja:** Opcja 1 — jeden panel z lazy-loaded modułami per rola. Frontend pod jedną domeną.
+### Nowa rola w Prisma schema
+
+```prisma
+enum UserRole {
+  OWNER        // ← NOWE — operator platformy
+  SUPER_ADMIN  // admin firmy-klienta
+  OFFICE_ADMIN
+  STAFF
+  END_USER
+}
+```
+
+OWNER to rola przypisywana ręcznie w bazie — nie przez żaden UI.
+W produkcji: jeden lub kilka kont z tą rolą.
+
+---
+
+### Nowe pola w Organization
+
+```prisma
+model Organization {
+  // istniejące pola...
+
+  // NOWE:
+  plan           String    @default("starter")  // starter | pro | enterprise
+  planExpiresAt  DateTime?                       // null = bezterminowy
+  isActive       Boolean   @default(true)        // false = dostęp zablokowany
+  trialEndsAt    DateTime?                       // okres próbny
+  notes          String?                         // notatki wewnętrzne Ownera
+  contactEmail   String?                         // główny kontakt techniczny
+  createdBy      String?                         // userId Ownera który stworzył
+}
+```
+
+---
+
+### Nowy moduł backend: `OwnerModule`
+
+```
+src/modules/owner/
+  owner.module.ts
+  owner.controller.ts      ← @Controller('owner'), @UseGuards(OwnerGuard)
+  owner.service.ts
+  owner-health.service.ts  ← agregacja stanu gateway i beaconów
+  guards/
+    owner.guard.ts         ← sprawdza role === OWNER (nie RolesGuard)
+  dto/
+    create-organization.dto.ts
+    update-organization.dto.ts
+```
+
+#### `owner.controller.ts` — endpointy
+
+```
+GET  /owner/organizations
+  → lista wszystkich firm z metrykami (liczba biur, biurek, gateway online/offline)
+  → filtry: ?isActive=true, ?plan=pro, ?search=nazwaFirmy
+
+POST /owner/organizations
+  → tworzy firmę + przypisuje pierwszego SUPER_ADMIN
+  → body: { name, slug, plan, contactEmail, adminEmail, adminName }
+
+GET  /owner/organizations/:id
+  → pełne dane firmy: biura, gateway, beacony, użytkownicy, ostatnia aktywność
+
+PATCH /owner/organizations/:id
+  → edytuje: plan, isActive, planExpiresAt, notes, contactEmail
+
+DELETE /owner/organizations/:id
+  → soft delete (isActive=false), nie usuwa danych
+
+GET /owner/health
+  → stan wszystkich gateway i beaconów w całym systemie
+  → grupowane per organizacja
+  → filtr: ?status=offline, ?orgId=xxx
+
+GET /owner/health/:orgId
+  → stan gateway i beaconów konkretnej firmy
+
+GET /owner/stats
+  → metryki platformy:
+     - łączna liczba firm (aktywne / nieaktywne / trial)
+     - łączna liczba gateway (online / offline)
+     - łączna liczba beaconów (online / offline)
+     - liczba check-inów ostatnie 24h / 7 dni
+     - firmy które nie miały aktywności > 7 dni (podejrzane)
+
+POST /owner/organizations/:id/impersonate
+  → generuje tymczasowy JWT z rolą SUPER_ADMIN dla tej org
+  → Owner może wejść w panel klienta bez znajomości hasła
+  → token ważny 30 min, logowany w Events
+```
+
+---
+
+### Nowy frontend: `apps/owner/`
+
+Osobna aplikacja React pod `owner.prohalw2026.ovh`.
+**Nie łączyć z Admin Panel** — inny cel, inne ograniczenia dostępu.
+
+```
+apps/owner/
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+└── src/
+    ├── main.tsx
+    ├── App.tsx                   ← routing, OwnerLayout
+    ├── components/
+    │   ├── OwnerLayout.tsx       ← sidebar: Klienci | Health | Statystyki
+    │   ├── StatusBadge.tsx       ← Online/Offline/Problem z ikoną
+    │   ├── OrgCard.tsx           ← karta klienta z key metrics
+    │   └── ui.tsx                ← wspólne komponenty (jak w Admin Panel)
+    ├── pages/
+    │   ├── LoginPage.tsx         ← email/password, tylko OWNER ma dostęp
+    │   ├── ClientsPage.tsx       ← lista wszystkich firm
+    │   ├── ClientDetailPage.tsx  ← szczegóły firmy: biura, gateway, beacony
+    │   ├── NewClientPage.tsx     ← formularz tworzenia nowego klienta
+    │   ├── HealthPage.tsx        ← mapa stanu całej infrastruktury
+    │   └── StatsPage.tsx         ← metryki platformy + wykresy
+    └── api/
+        └── client.ts             ← calls do /owner/* endpointów
+```
+
+---
+
+### Widoki szczegółowe
+
+#### `ClientsPage.tsx` — lista klientów
+
+Tabela z kolumnami: Firma | Plan | Biura | Gateway (online/total) | Beacony (online/total) | Ostatnia aktywność | Status
+
+Filtry: aktywne / trial / nieaktywne / wszystkie
+
+Akcje per wiersz: Szczegóły | Impersonate | Edytuj plan | Dezaktywuj
+
+#### `ClientDetailPage.tsx` — szczegóły firmy
+
+Cztery sekcje:
+
+1. **Informacje ogólne** — nazwa, plan, daty, kontakt, notatki Ownera
+2. **Biura i gateway** — tabela biur z listą gateway per biuro + status Online/Offline/Problem
+3. **Beacony** — lista wszystkich beaconów firmy: Hardware ID | Biurko | Gateway | Status | Ostatni heartbeat | RSSI
+4. **Aktywność** — ostatnie 20 zdarzeń (check-iny, provisioning, błędy)
+
+Przycisk **"Wejdź jako Admin"** (impersonate) → otwiera panel Admin w nowej karcie z tokenem SUPER_ADMIN tej firmy.
+
+#### `HealthPage.tsx` — monitoring całej infrastruktury
+
+Widok globalny — wszystkie firmy jednocześnie.
+
+Grupy firm z kolorowym wskaźnikiem:
+- 🟢 Wszystkie gateway online
+- 🟡 Część gateway offline / problem z heartbeat
+- 🔴 Wszystkie gateway offline
+
+Dla każdej firmy: liczba beaconów offline, ostatni kontakt gateway.
+
+Filtr: "Pokaż tylko problemy" — ukrywa zdrowe firmy.
+
+Odświeżanie co 30 sekund bez przeładowania strony.
+
+#### `NewClientPage.tsx` — tworzenie klienta
+
+Formularz dwu-krokowy:
+
+**Krok 1 — Dane firmy:**
+- Nazwa organizacji
+- Slug (auto-generowany z nazwy, edytowalny)
+- Plan (starter / pro / enterprise)
+- Okres próbny (dni) lub data wygaśnięcia planu
+- Email kontaktowy (techniczny)
+- Notatki wewnętrzne
+
+**Krok 2 — Pierwszy Super Admin:**
+- Imię i nazwisko
+- Email (będzie używany do logowania)
+- Opcja: wyślij email z zaproszeniem (link do ustawienia hasła)
+
+Po zapisaniu: redirect do `ClientDetailPage` nowej firmy.
+
+---
+
+### Funkcja impersonation (wejście w panel klienta)
+
+Krytyczna funkcja dla supportu i onboardingu.
+
+**Flow:**
+```
+1. Owner klika "Wejdź jako Admin" przy firmie
+2. POST /owner/organizations/:id/impersonate
+3. Backend:
+   a. Sprawdza role === OWNER
+   b. Tworzy Event (typ: OWNER_IMPERSONATION, payload: { ownerId, orgId, ip })
+   c. Generuje JWT z rolą SUPER_ADMIN, organizationId=orgId, ważny 30 min
+   d. Dodaje flagę impersonated: true do JWT payload
+4. Frontend otwiera https://admin.prohalw2026.ovh/auth/impersonate?token=...
+5. Admin Panel przyjmuje token, zapisuje w localStorage jako admin_access
+6. Owner widzi baner: "Jesteś zalogowany jako SUPER_ADMIN firmy [Nazwa]"
+7. Po 30 min lub ręcznym wylogowaniu → powrót do Owner Panel
+```
+
+**Bezpieczeństwo:**
+- Każda impersonacja logowana w Events
+- Token ma flagę `impersonated: true` — nie można przedłużyć
+- Admin Panel pokazuje baner z firmą (Owner pamięta gdzie jest)
+
+---
+
+### Guard i middleware
+
+```typescript
+// src/modules/owner/guards/owner.guard.ts
+@Injectable()
+export class OwnerGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const user = context.switchToHttp().getRequest().user;
+    return user?.role === 'OWNER';
+  }
+}
+```
+
+Wszystkie endpointy `/owner/*` używają `OwnerGuard` zamiast `RolesGuard`.
+
+---
+
+### Deploy
+
+Nowa aplikacja w Coolify: `front-owner`
+- Build: `apps/owner/`
+- Domena: `owner.prohalw2026.ovh`
+- Cloudflare Tunnel: automatyczny HTTPS
+
+Zmienne środowiskowe:
+```env
+VITE_API_URL=https://api.prohalw2026.ovh/api/v1
+VITE_ADMIN_URL=https://admin.prohalw2026.ovh
+```
+
+---
+
+### Kolejność implementacji
+
+| Krok | Co | Czas |
+|---|---|---|
+| 1 | Schema: rola OWNER + nowe pola Organization | 1h |
+| 2 | OwnerGuard + OwnerModule skeleton | 2h |
+| 3 | Endpointy CRUD organizacji (`/owner/organizations`) | 4h |
+| 4 | Endpoint health (`/owner/health`, `/owner/health/:orgId`) | 3h |
+| 5 | Endpoint stats (`/owner/stats`) | 2h |
+| 6 | Impersonation (`/owner/.../impersonate` + Admin Panel handler) | 4h |
+| 7 | Frontend: scaffold + ClientsPage + NewClientPage | 1 dzień |
+| 8 | Frontend: ClientDetailPage + HealthPage | 1 dzień |
+| 9 | Frontend: StatsPage + auto-refresh | 0.5 dnia |
+| 10 | Deploy Coolify + testy | 0.5 dnia |
+
+**Łącznie: ~4-5 dni roboczych**
+
+---
+
+### Czego NIE robić w Owner Panel
+
+| ❌ Nie | ✅ Zamiast |
+|---|---|
+| Edytować dane biurek / rezerwacji klienta | Użyj impersonation → Admin Panel |
+| Dawać Ownerowi dostępu do hashy haseł | Tylko impersonation token |
+| Mieszać Owner UI z Admin Panel | Osobna aplikacja, osobna domena |
+| Pozwalać Ownerowi tworzyć rezerwacje za klienta | To rola SUPER_ADMIN po impersonation |
+
+
 
 ---
 
@@ -791,3 +1053,689 @@ Zaimplementuj **Faza 1** (Web Serial) — zero instalacji, działa z aktualnym
 frontendem React, wystarczy dodać stronę `/provisioning/flash`.
 
 Szacowany czas implementacji: 2-3 dni.
+
+---
+
+## Moduł M365 / Entra ID — Plan implementacji (skonsolidowany)
+
+> Poprzednie sekcje tego pliku zawierają architekturę i decyzje projektowe.
+> Ten rozdział to **wykonalny plan pracy** — elementy do zakodowania krok po kroku.
+> Ostatnia aktualizacja: 2026-03-31
+
+---
+
+### Zasady fundamentalne (nie zmieniają się)
+
+1. **Backend Reserti = jedyne źródło prawdy.** M365 tylko wyświetla i synchronizuje.
+2. **Istniejący JWT flow nie zmienia się.** Azure auth generuje ten sam JWT co email/password.
+3. **NFC + gateway działa offline** niezależnie od M365 — to nie może się zepsuć.
+4. **Per-firma Enterprise Application w Entra ID** — każda organizacja ma własną
+   Enterprise App (nie tylko App Registration). Różnica jest istotna:
+   - **App Registration** = definicja aplikacji (Client ID, scopes, redirect URIs)
+   - **Enterprise Application** = instancja tej aplikacji w konkretnym tenant Entra ID,
+     z pełną kontrolą kto ma dostęp, widocznością w portalu użytkownika (myapps.microsoft.com),
+     wsparciem Conditional Access i User Assignment per tenant.
+   Każda firma-klient rejestruje Reserti jako Enterprise App w swoim tenant — IT Admin
+   zatwierdza uprawnienia i zarządza dostępem bez angażowania Reserti.
+5. **Logowanie przez Microsoft jest OPCJONALNE w Fazie 1.** Email/password pozostaje
+   aktywne i dostępne równolegle. Są dwa niezależne sposoby logowania:
+   - Przycisk "Zaloguj przez Microsoft" → Azure SSO flow
+   - Formularz email + hasło → istniejący flow (bez zmian)
+   Wyłączenie logowania hasłem dla konkretnej organizacji to oddzielna funkcja,
+   planowana na późniejszy etap (np. gdy firma wymaga wymuszenia SSO przez Conditional Access).
+
+---
+
+### Przegląd faz
+
+| Faza | Nazwa | Zależności | Szac. czas |
+|---|---|---|---|
+| **M1** | Entra ID SSO | brak | 3-4 dni |
+| **M2** | Teams App | M1 | 4-5 dni |
+| **M3** | Outlook Add-in | M1 | 4-5 dni |
+| **M4** | Graph Sync (rezerwacje ↔ kalendarz) | M1 + M2 lub M3 | 5-7 dni |
+| **M5** | Auto-tworzenie resource mailbox | M4 | 2-3 dni |
+
+**MVP rekomendowany: M1 + M3** (SSO + Outlook Add-in) — 7-9 dni roboczych.
+
+---
+
+### M1 — Entra ID SSO
+
+**Co robi:** Na stronie logowania pojawia się drugi przycisk "Zaloguj przez Microsoft"
+obok istniejącego formularza email/password. Oba sposoby działają równolegle —
+użytkownik wybiera który preferuje. Azure SSO generuje ten sam JWT Reserti co
+email/password — reszta systemu nie widzi różnicy.
+
+#### Ważne: Enterprise App vs App Registration
+
+W Entra ID są dwa powiązane pojęcia:
+
+| | App Registration | Enterprise Application |
+|---|---|---|
+| Gdzie | Tenant Reserti (jeden globalny) | Tenant każdego klienta (per firma) |
+| Co definiuje | Client ID, scopes, redirect URIs | Kto ma dostęp, Conditional Access, widoczność w myapps.microsoft.com |
+| Kto zarządza | Reserti (my) | IT Admin firmy-klienta |
+| Consent | Raz, przy rejestracji | Admin consent przy pierwszym użyciu |
+
+**Flow dla nowej firmy:**
+1. Reserti ma jedną globalną App Registration (Client ID znany z góry)
+2. IT Admin firmy klika "Grant admin consent" w swoim tenant → tworzy Enterprise App
+3. Enterprise App daje IT Adminowi pełną kontrolę: kto może się logować, MFA, Conditional Access
+4. IT Admin kopiuje Tenant ID do panelu Reserti — gotowe
+
+To oznacza **brak Client Secret per firma** — używamy jednego globalnego Client ID
+z Reserti App Registration, a autentykacja odbywa się przez tenant użytkownika.
+
+#### Ważne: SSO jest opcjonalne (Faza 1)
+
+W Fazie 1 logowanie hasłem **pozostaje aktywne** dla wszystkich.
+Nie ma żadnej flagi "wymuś SSO" — to planowane na późniejszy etap.
+
+Scenariusze:
+- Firma bez M365 → tylko email/password (bez zmian)
+- Firma z M365, ale IT Admin nie skonfigurował → tylko email/password
+- Firma z M365, IT Admin zatwierdził → oba sposoby dostępne równolegle
+- Przyszłość: flaga `ssoRequired: true` w Organization → ukrywa formularz hasła
+
+#### Wymagania (Faza 1)
+
+- Organizacja musi mieć aktywny Microsoft 365 lub Azure AD
+- IT Admin firmy zatwierdza consent dla Reserti Enterprise App w swoim tenant
+- Użytkownik musi istnieć w Reserti z tym samym emailem **LUB** jest tworzony automatycznie przy pierwszym SSO logowaniu (JIT provisioning)
+- Logowanie hasłem pozostaje aktywne i niezmienione
+
+#### Nowe zmienne środowiskowe (backend)
+
+```env
+# Globalne — dla Reserti App Registration (jeden dla wszystkich firm)
+AZURE_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx  # Client ID Reserti App Registration
+AZURE_CLIENT_SECRET=                                   # Client Secret Reserti App Registration
+AZURE_REDIRECT_URI=https://api.prohalw2026.ovh/auth/azure/callback
+AZURE_SECRET_ENCRYPTION_KEY=32-byte-hex               # szyfrowanie tokenów w DB
+```
+
+#### Zmiany w Prisma schema
+
+```prisma
+model Organization {
+  # NOWE pola:
+  azureTenantId      String?   # Tenant ID firmy-klienta (kopiowany przez IT Admina)
+  azureEnabled       Boolean   @default(false)  # czy SSO aktywne dla tej org
+  # NIE ma azureClientId/Secret per firma — używamy globalnego App Registration
+}
+
+model User {
+  # NOWE pola:
+  azureObjectId      String?   @unique   # Azure AD object ID (oid z tokenu)
+  azureTenantId      String?             # tenant użytkownika
+}
+```
+
+}
+```
+
+#### Nowe pliki backend
+
+```
+src/modules/auth/strategies/azure-ad.strategy.ts
+  - Passport strategy używająca passport-azure-ad (BearerStrategy)
+  - Waliduje token od Azure, wyciąga oid + email
+  - JIT: jeśli user nie istnieje → tworzy z rolą END_USER
+
+src/modules/auth/dto/azure-login.dto.ts
+  - { idToken: string, tenantId: string }
+
+src/modules/auth/azure-auth.service.ts  (nowy)
+  - validateAzureToken(idToken, tenantId): sprawdza podpis, mapuje na User
+  - getOrCreateUserFromAzure(oid, email, name, tenantId)
+  - findOrgByTenantId(tenantId): mapuje tenant → Organization
+```
+
+#### Zmiany w istniejących plikach backend
+
+```
+src/modules/auth/auth.controller.ts
+  + POST /auth/azure          → { idToken, tenantId } → { accessToken, refreshToken, user }
+  + GET  /auth/azure/redirect → redirect do Azure OAuth2 login page (dla web flow)
+  + GET  /auth/azure/callback → odbiór kodu autoryzacyjnego od Azure
+
+src/modules/auth/auth.module.ts
+  + Zarejestruj AzureADStrategy, AzureAuthService
+
+src/modules/organizations/organizations.service.ts
+  + updateAzureConfig(orgId, { clientId, clientSecret, tenantId })
+  + getAzureConfig(orgId): zwraca config per firma (potrzebny do strategy)
+```
+
+#### Zmiany w panelach (Admin + Staff)
+
+```
+apps/admin/src/pages/LoginPage.tsx
+  + Przycisk "Zaloguj przez Microsoft" (obok email/password)
+  + onClick → redirect do GET /auth/azure/redirect
+
+apps/staff/src/pages/LoginPage.tsx
+  + To samo
+
+apps/admin/src/pages/OrganizationsPage.tsx
+  + Sekcja "Integracja Microsoft 365" przy edycji biura
+  + Formularz: Client ID, Tenant ID, Client Secret (masked)
+  + Przycisk "Testuj połączenie"
+
+apps/admin/src/api/client.ts
+  + adminApi.auth.loginAzure(idToken, tenantId)
+  + adminApi.organizations.updateAzureConfig(orgId, config)
+```
+
+#### Nowe zależności npm (backend)
+
+```json
+"passport-azure-ad": "^4.3.5",
+"@azure/msal-node": "^2.6.0",
+"jsonwebtoken": "^9.0.0"  // już istnieje
+```
+
+#### Testowanie M1
+
+Weryfikacja poprawności przed przejściem do M2:
+- [ ] Logowanie przez Microsoft działa na Admin Panel
+- [ ] Token Azure → JWT Reserti → auth header działa
+- [ ] JIT provisioning: nowy user Azure → automatyczny User w Reserti
+- [ ] Istniejący user email/password nadal działa bez zmian
+- [ ] azureObjectId zapisany w DB po pierwszym logowaniu
+
+---
+
+### M2 — Teams App
+
+**Co robi:** Zakładka w Microsoft Teams → użytkownik widzi dostępne biurka, rezerwuje, sprawdza swoje rezerwacje. React SPA identyczny ze Staff Panel, dostosowany do okna Teams.
+
+#### Wymagania
+
+- M1 musi działać (SSO przez Teams SDK)
+- Nowa aplikacja webowa `apps/teams/` w monorepo
+- Zarejestrowana jako Teams App przez manifest (JSON, nowy format)
+- Hostowana pod nową domeną `teams.prohalw2026.ovh` w Coolify
+
+#### Nowe pliki (apps/teams/)
+
+```
+apps/teams/
+  package.json
+  vite.config.ts
+  tsconfig.json
+  manifest/
+    manifest.json       ← Teams App manifest (tab + bot konfiguracja)
+    color.png           ← ikona 192x192
+    outline.png         ← ikona 32x32
+  src/
+    main.tsx
+    App.tsx             ← Teams SDK init + auth silent SSO
+    pages/
+      HomePage.tsx      ← lista biurek dziś, moje rezerwacje
+      BookPage.tsx      ← wybór biurka na konkretny dzień/godzinę
+      MyBookingsPage.tsx← moje aktywne rezerwacje + przycisk anulowania
+    components/
+      TeamsLogin.tsx     ← microsoftTeams.authentication.authenticate()
+      DeskGrid.tsx       ← siatka biurek z kolorami statusu
+      TimeSlotPicker.tsx ← wybór godziny rezerwacji
+    api/client.ts        ← calls do Reserti backend (reużywa logiki Staff)
+```
+
+#### Nowe endpointy backend (dla Teams App)
+
+```
+GET /desks/available?locationId=X&date=YYYY-MM-DD&startTime=HH:MM&endTime=HH:MM
+  → lista biurek wolnych na dany slot czasowy
+  → Roles: END_USER+
+
+GET /reservations/my?date=YYYY-MM-DD
+  → moje rezerwacje na dany dzień
+  → Roles: END_USER+
+
+GET /locations/my
+  → lokalizacje do których użytkownik ma dostęp
+  → Roles: END_USER+
+```
+
+#### manifest.json (Teams App — kluczowe pola)
+
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "id": "AZURE_APP_CLIENT_ID",
+  "name": { "short": "Reserti", "full": "Reserti Desk Booking" },
+  "staticTabs": [{
+    "entityId": "desks",
+    "name": "Biurka",
+    "contentUrl": "https://teams.prohalw2026.ovh",
+    "scopes": ["personal", "team"]
+  }],
+  "validDomains": ["teams.prohalw2026.ovh", "api.prohalw2026.ovh"],
+  "webApplicationInfo": {
+    "id": "AZURE_APP_CLIENT_ID",
+    "resource": "api://teams.prohalw2026.ovh/AZURE_APP_CLIENT_ID"
+  }
+}
+```
+
+#### Nowe zależności npm (apps/teams)
+
+```json
+"@microsoft/teams-js": "^2.22.0",
+"@azure/msal-browser": "^3.10.0"
+```
+
+---
+
+### M3 — Outlook Add-in
+
+**Co robi:** Panel boczny przy tworzeniu spotkania w Outlook → wybierz biurko → zarezerwuj → informacja pojawia się w polu "Lokalizacja" spotkania.
+
+#### Wymagania
+
+- M1 musi działać
+- Nowa aplikacja webowa `apps/outlook/` w monorepo
+- Zarejestrowana przez manifest XML (Outlook wymaga XML, nie JSON)
+- Hostowana pod `outlook.prohalw2026.ovh`
+- Wdrożenie w firmie: M365 Admin Center → Integrated Apps (IT Admin robi raz)
+
+#### Nowe pliki (apps/outlook/)
+
+```
+apps/outlook/
+  package.json
+  vite.config.ts
+  manifest.xml          ← Outlook Add-in manifest (wymagany XML)
+  src/
+    main.tsx
+    App.tsx             ← Office.js init
+    pages/
+      TaskpaneApp.tsx   ← główny widok panelu bocznego
+      LoginPage.tsx     ← SSO login jeśli nie zalogowany
+    components/
+      DeskPicker.tsx    ← lista wolnych biurek z filtrowaniem
+      BookingForm.tsx   ← data/godzina z eventów Outlooka (auto-fill)
+      BookingSuccess.tsx← potwierdzenie + lokalizacja ustawiona w event
+    api/client.ts
+    utils/office.ts     ← helpery dla Office.js API (czytaj event subject, dates)
+```
+
+#### manifest.xml (kluczowe fragmenty)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  Type="MailApp" Version="1.1">
+  <Id>GUID</Id>
+  <DisplayName DefaultValue="Reserti Desk Booking"/>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Requirements>
+    <Sets><Set Name="Mailbox" MinVersion="1.3"/></Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://outlook.prohalw2026.ovh"/>
+        <RequestedHeight>300</RequestedHeight>
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteItem</Permissions>
+</OfficeApp>
+```
+
+#### Nowe endpointy backend
+
+```
+GET /desks/available
+  → ten sam endpoint co dla Teams App (M2)
+
+PATCH /reservations/:id/link-event
+  → { outlookEventId: string }
+  → zapisuje powiązanie rezerwacji z event Outlook
+```
+
+#### Nowe zależności npm (apps/outlook)
+
+```json
+"@microsoft/office-js": "^1.1.93",
+"@azure/msal-browser": "^3.10.0"
+```
+
+---
+
+### M4 — Graph API Sync
+
+**Co robi:** Dwukierunkowa synchronizacja. Reserti → tworzy/aktualizuje event w kalendarzu użytkownika. Outlook → webhook gdy event usunięty → anuluje rezerwację w Reserti.
+
+#### Wymagania
+
+- M1 + M3 muszą działać
+- Backend musi przechowywać tokeny OAuth2 per użytkownik (GraphToken)
+- Publiczny endpoint dla webhooków Microsoft (HTTPS, weryfikacja podpisów)
+
+#### Nowe tabele Prisma
+
+```prisma
+model GraphToken {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  expiresAt    DateTime
+  tenantId     String
+  scopes       String   @default("Calendars.ReadWrite")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GraphSubscription {
+  id              String   @id @default(cuid())
+  subscriptionId  String   @unique   # ID z Microsoft Graph API
+  userId          String
+  resource        String              # np. "/me/events"
+  changeTypes     String              # "created,updated,deleted"
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+}
+
+model Desk {
+  # NOWE pola:
+  m365ResourceId    String?   # Graph resource ID
+  m365ResourceEmail String?   # np. desk-a01@firma.pl
+}
+
+model Reservation {
+  # NOWE pole:
+  outlookEventId    String?   # powiązany event w Outlook
+}
+```
+
+#### Nowe pliki backend
+
+```
+src/modules/integrations/
+  integrations.module.ts
+
+  microsoft/
+    graph.service.ts
+      - getClient(userId): zwraca axios z aktualnym access tokenem
+      - refreshTokenIfNeeded(userId)
+      - createCalendarEvent(userId, reservation): POST /me/events
+      - updateCalendarEvent(userId, eventId, data): PATCH /me/events/{id}
+      - deleteCalendarEvent(userId, eventId): DELETE /me/events/{id}
+      - registerWebhook(userId): POST /subscriptions
+      - renewWebhooks(): odnawianie wygasających subskrypcji
+
+    graph-token.service.ts
+      - saveTokens(userId, tokens)
+      - getValidToken(userId): auto-refresh jeśli wygasło
+      - revokeTokens(userId)
+
+    graph-sync.service.ts
+      - @Cron('0 */5 * * * *') syncUserEvents(): pull z Graph co 5 min
+      - @Cron('0 0 */3 * * *') renewWebhooks(): odnów subskrypcje co 3 dni
+
+    graph-webhook.controller.ts
+      - POST /integrations/graph/notify
+        → walidacja X-Ms-Signature
+        → dispatch: created/updated/deleted
+        → updated → zaktualizuj godziny rezerwacji
+        → deleted → anuluj rezerwację → MQTT SET_LED free
+```
+
+#### Zmiany w istniejących plikach
+
+```
+src/modules/reservations/reservations.service.ts
+  + Po create: jeśli user ma GraphToken → graph.createCalendarEvent()
+  + Po cancel: jeśli outlookEventId → graph.deleteCalendarEvent()
+
+src/modules/desks/desks.service.ts
+  + POST /desks: jeśli org.azureEnabled → tworzy resource mailbox (M5)
+```
+
+#### Nowe zmienne środowiskowe
+
+```env
+GRAPH_WEBHOOK_SECRET=random-32-chars  # do walidacji podpisów MS webhooków
+```
+
+---
+
+### M5 — Auto resource mailbox
+
+**Co robi:** Gdy Office Admin doda biurko w panelu → backend automatycznie tworzy resource mailbox w Exchange (`desk-a01@firma.pl`) przez Graph API. Rezerwacja biurka = wpis w kalendarzu zasobu.
+
+#### Wymagania
+
+- M4 musi działać
+- App Registration musi mieć uprawnienie `Place.ReadWrite.All` (Application, nie Delegated)
+- Wymaga Exchange Online w firmie
+
+#### Zmiany
+
+```
+src/modules/desks/desks.service.ts
+  + _provisionM365Resource(desk, org): POST /places (Graph API)
+  + Zapisuje m365ResourceId i m365ResourceEmail w Desk
+
+src/modules/integrations/microsoft/graph.service.ts
+  + createRoomResource(name, email, capacity, floor)
+  + deleteRoomResource(resourceId)
+```
+
+---
+
+### Onboarding klienta — checklist
+
+Gdy nowa firma chce M365 (model Enterprise App — jeden Client ID dla wszystkich firm):
+
+**Krok 1: IT Admin firmy zatwierdza Reserti w swoim tenant (~5 min)**
+
+```
+Sposób A — przez link zgody (najprostszy):
+  IT Admin otwiera:
+  https://login.microsoftonline.com/{TENANT_ID}/adminconsent
+    ?client_id={RESERTI_CLIENT_ID}
+    &redirect_uri=https://api.prohalw2026.ovh/auth/azure/callback
+
+  → Loguje się jako Global Admin / Application Admin
+  → Zatwierdza uprawnienia: User.Read, Calendars.ReadWrite
+  → Reserti pojawia się w Enterprise Applications tenant firmy
+
+Sposób B — przez Azure Portal:
+  Azure Portal → Enterprise Applications → New application
+  → Search: wyszukaj "Reserti" (jeśli opublikowane w Gallery)
+    lub: + Create your own application → Non-gallery
+  → Grant admin consent
+  → Skopiuj Tenant ID (Directory ID)
+```
+
+**Krok 2: Konfiguracja w Reserti Admin Panel**
+
+```
+Admin Panel → Organizacje → [Firma] → Edytuj → Integracja M365
+  Azure Tenant ID: [wklej Tenant ID firmy]
+  → Zapisz → Testuj połączenie
+  (Client ID i Secret są globalne — zarządza nimi tylko Reserti)
+```
+
+**Krok 3: Wdrożenie Outlook Add-in (IT Admin, ~5 min)**
+
+```
+M365 Admin Center → Settings → Integrated apps → Add-in → Deploy
+  → Wgraj manifest.xml
+  → Assign: All users lub wybrana grupa
+```
+
+**Krok 4: Weryfikacja**
+
+```
+- Zaloguj przez Microsoft na Admin Panel ✓  (email/password nadal działa)
+- Otwórz Outlook → tworzenie spotkania → Add-in widoczny ✓
+- Zarezerwuj biurko → event pojawia się w kalendarzu ✓
+- Beacon zmienia LED na niebieski ✓
+```
+
+---
+
+### Ryzyka i mitigacje
+
+| Ryzyko | Prawdopodobieństwo | Wpływ | Mitigacja |
+|---|---|---|---|
+| Graph token wygasa co 1h | Pewne | Wysoki | GraphTokenService auto-refresh przez refresh token |
+| Graph webhook wygasa co 72h | Pewne | Średni | Cron job co 3 dni odnawia subskrypcje |
+| Graph rate limit (10k req/10min) | Średnie | Średni | Delta queries + debounce + request batching |
+| Add-in nie ładuje się w Outlook Desktop | Wysokie | Średni | Testuj na OWA — pełne wsparcie, Desktop czasem quirky |
+| Tenant admin consent odmówiony | Niskie | Wysoki | Przygotuj dokumentację uprawnień dla IT Admina firmy |
+| Client Secret wygasa (co 2 lata) | Średnie | Wysoki | Alert emailowy 60 dni przed wygaśnięciem |
+| Conditional Access blokuje app | Niskie | Wysoki | App Registration musi przejść tenant-level consent |
+| Firma nie ma Exchange Online | Niskie | Wysoki | M5 wymaga Exchange — dokumentuj wyraźnie |
+
+---
+
+### Zależności zewnętrzne do zainstalowania
+
+```bash
+# Backend
+npm install passport-azure-ad @azure/msal-node
+
+# Frontend (apps/teams + apps/outlook)
+npm install @microsoft/teams-js @microsoft/office-js @azure/msal-browser
+
+# Scheduler (Graph sync co 5 min)
+npm install @nestjs/schedule  # jeśli nie zainstalowany
+```
+
+---
+
+### Środowiska testowe
+
+**Azure:** Można stworzyć bezpłatne Azure AD Free tier na czas developmentu.
+
+**Outlook Add-in:** Office Add-in Debugger w VS Code + testowanie na OWA (office.com).
+
+**Teams App:** Microsoft Teams Toolkit dla VS Code + sideloading do własnego tenant.
+
+---
+
+### Co NIE zmienia się przy implementacji M365
+
+- Istniejące JWT flow (email/password) — nadal działa bez zmian
+- NFC check-in przez gateway — niezależny od M365
+- Struktura bazy danych poza dodanymi polami
+- Deployment (Coolify + Cloudflare Tunnel) — tylko nowe serwisy
+- MQTT i beacony — bez zmian
+
+---
+
+## Code Review — Plan poprawek
+
+> Wyniki przeglądu kodu z 2026-03-31.
+> Poprawki 1, 2, 3, 4 (docs), 5 wykonane w tym samym commicie.
+
+### Wykonane
+
+| # | Problem | Status |
+|---|---|---|
+| 1 | OAuth2 Implicit Flow → MSAL PKCE popup | ✅ |
+| 2 | `findAvailable` brak scoping do org | ✅ |
+| 3 | `GET /locations/:id` brak scoping OFFICE_ADMIN | ✅ |
+| 4 (docs) | M365 — tylko SUPER_ADMIN i OFFICE_ADMIN (własna org) | ✅ |
+| 5 | JIT passwordHash pusty → marker `AZURE_SSO_ONLY` | ✅ |
+
+---
+
+### Do wykonania — Priorytet 1 (bezpieczeństwo)
+
+**P1-A: Rate limiting na endpointach auth**
+Zainstalować `@nestjs/throttler`. Priorytety:
+- `POST /auth/login` — 5 req/min per IP
+- `POST /auth/azure` — 10 req/min per IP
+- `GET /auth/azure/check` — 20 req/min per IP (publiczny, podatny na enumeration)
+
+```bash
+npm install @nestjs/throttler
+```
+
+Zmiany: `app.module.ts` + `ThrottlerGuard` globalnie lub per endpoint.
+
+**P1-B: Admin API client — auto-refresh tokenu przy 401**
+`apps/admin/src/api/client.ts` — przy 401 wylogowuje natychmiast.
+Staff panel ma `tryRefresh()`. Admin powinien robić to samo.
+Zmiana: dodać `tryRefresh()` i retry po odświeżeniu, dokładnie jak w `apps/staff/src/api/client.ts`.
+
+**P1-C: `hardDelete` nie czyści `azureObjectId`**
+`users.service.ts` — po anonimizacji konta `azureObjectId` zostaje.
+JIT provisioning znajdzie stary rekord i nie stworzy nowego.
+Zmiana: dodać `azureObjectId: null, azureTenantId: null` do danych `hardDelete`.
+
+---
+
+### Do wykonania — Priorytet 2 (logika)
+
+**P2-A: Brak `@Cron` dla `expireOld()` rezerwacji**
+`reservations.service.ts` ma metodę `expireOld()` ale nic jej nie wywołuje.
+Zainstalować `@nestjs/schedule`, dodać `@Cron` w serwisie lub nowym `SchedulerModule`.
+
+```bash
+npm install @nestjs/schedule
+```
+
+**P2-B: Walk-in — data w strefie UTC może dać poprzedni dzień**
+`checkins.service.ts:187` — `startOfDay` to UTC midnight, w UTC+1 to 23:00 poprzedniego dnia.
+Zmiana: `const startOfDay = new Date(new Date(now).toDateString())` (local date).
+
+**P2-C: `findAvailable` — brak walidacji `startTime < endTime`**
+Gdy klient wyśle `startTime >= endTime`, zapytanie zwróci wszystkie biurka (puste okno).
+Zmiana: dodać `if (startDt >= endDt) throw new BadRequestException(...)` na początku metody.
+
+**P2-D: `reservations/my` — brak paginacji**
+Nowy endpoint zwraca wszystkie aktywne rezerwacje bez limitu.
+Zmiana: dodać `take: 50` i opcjonalny `@Query('limit')`.
+
+**P2-E: Outlook Add-in — brak refresh tokenu**
+`apps/outlook/src/api/client.ts` — przy 401 rzuca błąd bez próby odświeżenia.
+W Add-in sesja może wygasnąć w trakcie spotkania.
+Zmiana: dodać `tryRefresh()` analogicznie do staff panelu, z sessionStorage.
+
+---
+
+### Do wykonania — Priorytet 3 (jakość i utrzymanie)
+
+**P3-A: `manifest.xml` — placeholder GUID**
+`apps/outlook/manifest/manifest.xml:10` — `a1b2c3d4-...` musi być unikalny.
+Zmiana: wygenerować UUID (`crypto.randomUUID()` lub online), podmienić przed wdrożeniem.
+Dodać do dokumentacji jako krok onboardingu.
+
+**P3-B: `_notifyGateway` — `process.env` zamiast `ConfigService`**
+`devices.service.ts` — niespójne z resztą kodu, trudniejsze do testowania.
+Zmiana: wstrzyknąć `ConfigService` do `DevicesService`, użyć `this.config.get('GATEWAY_PROVISION_KEY')`.
+
+**P3-C: `install.controller.ts` — hardcoded GitHub URL**
+`_buildScript()` wskazuje na `lewski22/desk-gateway-python`.
+Zmiana: przenieść do zmiennej środowiskowej `GATEWAY_INSTALL_SCRIPT_URL`.
+
+**P3-D: `ReservationStatus` — string literals zamiast enum**
+`reservations.service.ts:cancel()` — `'CANCELLED', 'COMPLETED'` jako string.
+Zmiana: `ReservationStatus.CANCELLED, ReservationStatus.COMPLETED`.
+
+**P3-E: Brak `vite-env.d.ts` w admin app**
+`import.meta.env.VITE_AZURE_CLIENT_ID` bez typowania TypeScript.
+Zmiana: dodać `apps/admin/src/vite-env.d.ts` z `interface ImportMetaEnv`.
+
+**P3-F: Staff panel — brak SSO**
+`apps/staff/src/pages/LoginPage.tsx` — brak przycisku Microsoft.
+Użytkownicy z rolą `STAFF`/`END_USER` w firmie z `azureEnabled = true` muszą używać hasła.
+Zmiana: dodać analogiczne `checkSso` + przycisk jak w Admin Panelu.
+
+**P3-G: `GatewaySetupToken` — brak indeksu na `locationId`**
+`listTokens(locationId)` robi full table scan.
+Zmiana: dodać `@@index([locationId])` do modelu w schema.prisma.

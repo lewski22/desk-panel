@@ -6,8 +6,118 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('admin_user') ?? 'null'); } catch { return null; }
 }
 
-// ── Modal: generowanie tokenu instalacyjnego gateway ──────────
-function InstallTokenModal({ location, onClose }: { location: any; onClose: () => void }) {
+// ── Modal: konfiguracja Azure SSO ────────────────────────────
+function AzureConfigModal({ location, onClose }: { location: any; onClose: () => void }) {
+  const [config,   setConfig]   = useState<any>(null);
+  const [tenantId, setTenantId] = useState('');
+  const [enabled,  setEnabled]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [testing,  setTesting]  = useState(false);
+  const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
+  const [err, setErr]           = useState('');
+
+  // Znajdź organizationId przez location — API konfiguracji jest per-org
+  const orgId = location.organizationId;
+
+  useEffect(() => {
+    if (!orgId) return;
+    adminApi.organizations.getAzureConfig(orgId)
+      .then(c => { setConfig(c); setTenantId(c.azureTenantId ?? ''); setEnabled(c.azureEnabled); })
+      .catch(() => {});
+  }, [orgId]);
+
+  const save = async () => {
+    setSaving(true); setErr('');
+    try {
+      await adminApi.organizations.updateAzureConfig(orgId, { azureTenantId: tenantId || null, azureEnabled: enabled });
+      onClose();
+    } catch (e: any) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const test = async () => {
+    if (!tenantId) return;
+    setTesting(true); setTestResult(null);
+    try {
+      // Sprawdź czy JWKS endpoint odpowiada dla tego tenanta
+      const r = await fetch(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`);
+      setTestResult(r.ok ? 'ok' : 'fail');
+    } catch { setTestResult('fail'); }
+    setTesting(false);
+  };
+
+  return (
+    <Modal title={`Microsoft 365 SSO — ${location.name}`} onClose={onClose}>
+      <div className="space-y-4">
+        {/* Instrukcja */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
+          <p className="font-semibold">Jak skonfigurować (IT Admin firmy):</p>
+          <p>1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:</p>
+          <code className="block bg-blue-100 rounded px-2 py-1 text-[10px] break-all">
+            {`https://login.microsoftonline.com/organizations/adminconsent?client_id=${import.meta.env.VITE_AZURE_CLIENT_ID ?? 'CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin)}`}
+          </code>
+          <p>2. Kliknij "Akceptuj" → Skopiuj <strong>Tenant ID</strong> z URL lub Azure Portal</p>
+          <p>3. Wklej Tenant ID poniżej i włącz SSO</p>
+        </div>
+
+        {err && <p className="text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
+
+        <div>
+          <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Azure Tenant ID</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={tenantId}
+              onChange={e => { setTenantId(e.target.value); setTestResult(null); }}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+            />
+            <button
+              onClick={test}
+              disabled={testing || !tenantId}
+              className="text-xs px-3 py-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-600 disabled:opacity-40 transition-colors whitespace-nowrap"
+            >
+              {testing ? '…' : 'Testuj'}
+            </button>
+          </div>
+          {testResult === 'ok'   && <p className="text-xs text-emerald-600 mt-1">✓ Tenant ID poprawny — Entra ID odpowiada</p>}
+          {testResult === 'fail' && <p className="text-xs text-red-500 mt-1">✗ Nie można połączyć z tym tenant ID</p>}
+          <p className="text-[10px] text-zinc-400 mt-1">
+            Znajdziesz w: Azure Portal → Azure Active Directory → Overview → Tenant ID
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-zinc-50">
+          <div>
+            <p className="text-sm font-medium text-zinc-700">Logowanie przez Microsoft</p>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {enabled ? 'Przycisk "Zaloguj przez Microsoft" widoczny na stronie logowania' : 'Wyłączone — tylko email i hasło'}
+            </p>
+          </div>
+          <button
+            onClick={() => setEnabled(e => !e)}
+            className={`relative w-10 h-6 rounded-full transition-colors ${enabled ? 'bg-[#B53578]' : 'bg-zinc-300'}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${enabled ? 'left-5' : 'left-1'}`} />
+          </button>
+        </div>
+
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+          <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
+          <p className="text-xs text-amber-700">
+            Logowanie hasłem pozostaje aktywne — użytkownicy mogą używać obu metod.
+            Wyłączenie hasła planowane w przyszłej wersji.
+          </p>
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
+          <Btn onClick={save} loading={saving} disabled={enabled && !tenantId}>Zapisz</Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+}
   const [loading, setLoading] = useState(true);
   const [token,   setToken]   = useState<any>(null);
   const [copied,  setCopied]  = useState(false);
@@ -294,6 +404,12 @@ export function OrganizationsPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal konfiguracji Azure SSO */}
+      {azureModal && (
+        <AzureConfigModal location={azureModal} onClose={() => setAzureModal(null)} />
+      )}
+
       {/* Install token modal */}
       {installModal && (
         <InstallTokenModal location={installModal} onClose={() => setInstallModal(null)} />

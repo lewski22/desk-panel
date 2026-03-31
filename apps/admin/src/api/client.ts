@@ -2,8 +2,27 @@ const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
 const getToken = () => localStorage.getItem('admin_access');
 
-async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
-  // FIX: read token once, not twice (was calling token() twice in headers spread)
+// ── Auto-refresh tokenu przy 401 ─────────────────────────────
+async function tryRefresh(): Promise<boolean> {
+  const rt = localStorage.getItem('admin_refresh');
+  if (!rt) return false;
+  try {
+    const res = await fetch(`${BASE}/auth/refresh`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ refreshToken: rt }),
+    });
+    if (!res.ok) return false;
+    const d = await res.json();
+    localStorage.setItem('admin_access',  d.accessToken);
+    localStorage.setItem('admin_refresh', d.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Promise<T> {
   const tok = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
@@ -13,6 +32,13 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
       ...(opts.headers ?? {}),
     },
   });
+  if (res.status === 401 && _retry) {
+    // Spróbuj odświeżyć token zamiast wylogowywać natychmiast
+    const refreshed = await tryRefresh();
+    if (refreshed) return req<T>(path, opts, false); // jeden retry
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
   if (res.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
   if (res.status === 204) return undefined as unknown as T;
   if (!res.ok) {
@@ -31,6 +57,18 @@ export const adminApi = {
       localStorage.setItem('admin_user',    JSON.stringify(d.user));
       return d.user;
     },
+
+    async loginAzure(idToken: string) {
+      const d = await req<any>('/auth/azure', { method: 'POST', body: JSON.stringify({ idToken }) });
+      localStorage.setItem('admin_access',  d.accessToken);
+      localStorage.setItem('admin_refresh', d.refreshToken);
+      localStorage.setItem('admin_user',    JSON.stringify(d.user));
+      return d.user;
+    },
+
+    async checkSso(email: string): Promise<{ available: boolean; tenantId?: string }> {
+      return req<any>(`/auth/azure/check?email=${encodeURIComponent(email)}`);
+    },
     logout() {
       const rt = localStorage.getItem('admin_refresh');
       if (rt) fetch(`${BASE}/auth/logout`, {
@@ -47,6 +85,8 @@ export const adminApi = {
     list:   ()                              => req<any[]>('/organizations'),
     create: (d: any)                        => req<any>('/organizations', { method: 'POST', body: JSON.stringify(d) }),
     update: (id: string, d: any)            => req<any>(`/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    getAzureConfig:    (id: string)         => req<any>(`/organizations/${id}/azure`),
+    updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PATCH', body: JSON.stringify(d) }),
   },
 
   locations: {

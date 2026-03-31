@@ -235,3 +235,87 @@ Pole `plan` zostało usunięte ze schematu Organization. Usuń z seed i queries.
 
 ### Token setup wygasł
 `POST /gateway/setup-tokens` — wygeneruj nowy. Stary jest automatycznie unieważniany.
+
+---
+
+## Endpoint skryptu instalacyjnego (Faza C)
+
+### `GET /install/gateway/:token`
+
+**Nie ma** prefiksu `/api/v1` — wyłączony przez:
+```typescript
+app.setGlobalPrefix('api/v1', {
+  exclude: [{ path: 'install/(.*)', method: RequestMethod.GET }],
+});
+```
+
+**Co robi:**
+Serwuje skrypt bash z tokenem i URL API wstrzykniętymi jako zmienne środowiskowe.
+Token jest sanityzowany (tylko `[a-zA-Z0-9_-]`). Odpowiedź ma `Cache-Control: no-store`.
+
+**Struktura odpowiedzi (text/plain):**
+```bash
+#!/usr/bin/env bash
+export RESERTI_SETUP_TOKEN="cuid_token"
+export RESERTI_API_URL="https://api.domain.pl/api/v1"
+# pobiera install.sh z GitHub i uruchamia
+```
+
+**Plik:** `backend/src/modules/gateways/install.controller.ts`
+**Moduł:** `GatewaysModule` (kontroler `InstallController`)
+
+### Pełny flow end-to-end (Faza A + B + C)
+
+```
+1. Admin Panel → Biura → "+ Gateway"
+   POST /api/v1/gateway/setup-tokens { locationId }
+   ← { token, installCmd, expiresAt }
+   installCmd = "curl -fsSL https://api.domain.pl/install/gateway/TOKEN | bash"
+
+2. Klient uruchamia komendę na Raspberry Pi
+   GET /install/gateway/TOKEN
+   ← skrypt bash z tokenem
+
+3. Skrypt pobiera właściwy install.sh z GitHub i uruchamia go
+
+4. install.sh wywołuje:
+   POST /api/v1/gateway/setup/TOKEN { gatewayName }
+   ← { gatewayId, gatewaySecret, mqttUsername, mqttPassword, ... }
+
+5. install.sh instaluje Python + Mosquitto + generuje .env + systemd
+   → Gateway działa, pojawia się jako Online w panelu
+```
+
+---
+
+## Faza D — Integracja i spójność UX
+
+### Co zostało zrobione
+
+**ProvisioningPage — nowy flow gateway:**
+- Przycisk "+ Nowy gateway" teraz wywołuje `createSetupToken()` zamiast `register()`
+- Stary modal "Rejestracja gateway" (ręczne dane .env) usunięty
+- Nowy modal: komenda instalacyjna `curl | bash` z tokenem (identyczny jak OrganizationsPage)
+- Auto-refresh stanu gateway co 15 sekund (bez przeładowania strony)
+- Diagnostyka poprawiona: zamiast "sprawdź Docker" → `journalctl -u reserti-gateway`
+
+**ProvisioningPage — wynik provisioning beacona:**
+- Zamiast surowych wartości MQTT_USER/MQTT_PASS pokazuje gotową komendę `PROVISION:{...}`
+- Komenda zawiera wszystkie wymagane pola: wifi_ssid placeholder, mqtt_user, mqtt_pass, device_id, gateway_id
+- Przycisk ⎘ kopiuje komendę do schowka jednym kliknięciem
+- Opis: "Podmień NAZWA_WIFI, HASLO_WIFI i IP_RASPBERRY"
+
+### Spójność UX po Fazie D
+
+| Akcja | Gdzie | Flow |
+|---|---|---|
+| Dodaj gateway | Biura → "+ Gateway" | Token → curl \| bash |
+| Dodaj gateway | Provisioning → "+ Nowy gateway" | Token → curl \| bash |
+| Dodaj beacon | Provisioning → "+ Provisioning" | Formularz → gotowa komenda PROVISION: |
+| Zmień secret | Provisioning → 🔑 przy gateway | Nowy secret + instrukcja systemctl |
+
+### Znane ograniczenia (do następnych faz)
+
+- `_notifyGateway()` używa wspólnego `GATEWAY_PROVISION_KEY` — wszystkie Pi muszą mieć ten sam klucz
+- Auto-provisioning działa tylko jeśli gateway ma `ipAddress` w DB (ustawiane przy heartbeat)
+- Pierwszy heartbeat musi nastąpić zanim można dodać pierwszy beacon
