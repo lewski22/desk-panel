@@ -70,8 +70,22 @@ export function AdminLayout({ user, onLogout, children }: Props) {
     };
   }, [handleActivity, resetTimer]);
 
+  const isImpersonated = localStorage.getItem('admin_impersonated') === 'true';
+
   return (
-    <div className="flex h-screen bg-zinc-50 overflow-hidden" style={{ fontFamily: "'DM Sans',sans-serif" }}>
+    <div className="flex flex-col h-screen bg-zinc-50 overflow-hidden" style={{ fontFamily: "'DM Sans',sans-serif" }}>
+      {/* Baner impersonacji Owner */}
+      {isImpersonated && (
+        <div className="bg-amber-500 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
+          <span>👁 Przeglądasz jako <strong>SUPER_ADMIN</strong> — sesja tymczasowa (30 min), każda akcja jest logowana</span>
+          <button
+            onClick={() => { localStorage.removeItem('admin_impersonated'); onLogout(); }}
+            className="ml-4 underline hover:no-underline">
+            Zakończ sesję
+          </button>
+        </div>
+      )}
+      <div className="flex flex-1 overflow-hidden">
 
       {showWarning && (
         <div className="fixed top-4 right-4 z-50 bg-amber-50 border border-amber-300 rounded-xl px-4 py-3 shadow-lg flex items-center gap-3 max-w-sm">
@@ -143,6 +157,7 @@ export function AdminLayout({ user, onLogout, children }: Props) {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-6xl mx-auto px-6 py-6">{children}</div>
       </main>
+    </div>
     </div>
   );
 }

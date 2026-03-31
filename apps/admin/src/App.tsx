@@ -9,6 +9,7 @@ import { ReportsPage }        from './pages/ReportsPage';
 import { OrganizationsPage }  from './pages/OrganizationsPage';
 import { ProvisioningPage }   from './pages/ProvisioningPage';
 import { ReservationsAdminPage } from './pages/ReservationsAdminPage';
+import { ImpersonatePage }       from './pages/ImpersonatePage';
 
 // ── Komponent: Modal logowania przez Entra ID ─────────────────
 // Całkowicie oddzielony od formularza email/hasło.
@@ -256,6 +257,9 @@ export default function App() {
       <Routes>
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={u => setUser(u)} />
+        } />
+        <Route path="/auth/impersonate" element={
+          <ImpersonatePage onLogin={u => setUser(u)} />
         } />
 
         <Route path="/*" element={

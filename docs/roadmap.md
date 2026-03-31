@@ -1739,3 +1739,333 @@ Zmiana: dodać analogiczne `checkSso` + przycisk jak w Admin Panelu.
 **P3-G: `GatewaySetupToken` — brak indeksu na `locationId`**
 `listTokens(locationId)` robi full table scan.
 Zmiana: dodać `@@index([locationId])` do modelu w schema.prisma.
+
+---
+
+## Scalenie Admin + Staff Panel — Plan implementacji
+
+> Ostatnia aktualizacja: 2026-03-31
+> Status: PLANOWANE — żaden plik nie jest jeszcze modyfikowany
+
+### Cel
+
+Dwa osobne frontendy (`apps/admin/` i `apps/staff/`) pod różnymi domenami
+zastąpić **jedną aplikacją React** dostępną pod jedną domeną (`app.prohalw2026.ovh`),
+która po zalogowaniu automatycznie renderuje odpowiedni interfejs zależnie od roli użytkownika.
+
+---
+
+### Dlaczego to ma sens
+
+| Problem dziś | Po scaleniu |
+|---|---|
+| Dwa oddzielne buildy, dwie domeny, dwie CI/CD konfiguracje | Jeden build, jedna domena, jedna konfiguracja Coolify |
+| Użytkownik z rolą OFFICE_ADMIN musi wiedzieć o istnieniu dwóch URL-i | Jeden link — system sam pokazuje właściwy widok |
+| Duplikacja: Auth, EntraID modal, API client, komponenty UI | Współdzielony kod w `src/shared/` |
+| Przy zmianie hasła/tokenu — dwie osobne localStorage | Jedna sesja, jeden token |
+| Staff nie ma dostępu do rezerwacji z poziomu mapy biurek | Można płynnie przejść między widokami Staff ↔ Admin |
+
+---
+
+### Architektura docelowa
+
+```
+app.prohalw2026.ovh/           ← jedna domena, jeden Docker
+  /login                       ← wspólna strona logowania (email + Entra ID)
+  /                            ← redirect po roli
+  /map                         ← widok Staff: mapa biurek, rezerwacje
+  /admin/dashboard             ← widok Admin: dashboard
+  /admin/desks                 ← widok Admin: biurka
+  /admin/users                 ← widok Admin: użytkownicy
+  /admin/reservations          ← widok Admin: rezerwacje
+  /admin/provisioning          ← widok Admin: provisioning
+  /admin/organizations         ← widok Admin: biura i organizacje
+  /admin/reports               ← widok Admin: raporty
+  /checkin/:token              ← publiczny QR check-in (bez auth)
+```
+
+---
+
+### Podział ról → widoki
+
+| Rola | Po zalogowaniu redirect | Ma dostęp do |
+|---|---|---|
+| `SUPER_ADMIN` | `/admin/dashboard` | Wszystkie widoki `/admin/*` + `/map` |
+| `OFFICE_ADMIN` | `/admin/dashboard` | Wszystkie widoki `/admin/*` (scoped do org) + `/map` |
+| `STAFF` | `/map` | `/map`, `/admin/reservations` (tylko podgląd) |
+| `END_USER` | `/map` | `/map` (mapa + własne rezerwacje) |
+
+Próba wejścia na niedostępny widok → redirect do właściwego ekranu.
+
+---
+
+### Struktura katalogów po scaleniu
+
+```
+apps/unified/                      ← nowa aplikacja (zastąpi admin/ i staff/)
+├── package.json                   ← zależności obu paneli
+├── vite.config.ts
+├── tsconfig.json
+├── src/
+│   ├── main.tsx
+│   ├── App.tsx                    ← routing + guard per rola
+│   │
+│   ├── shared/                    ← kod wspólny dla wszystkich ról
+│   │   ├── api/
+│   │   │   └── client.ts          ← połączony API client (admin + staff)
+│   │   ├── auth/
+│   │   │   ├── AuthContext.tsx    ← React Context: user, login, logout, loginAzure
+│   │   │   └── EntraIDModal.tsx   ← wyciągnięty z App.tsx, jeden dla wszystkich
+│   │   ├── components/
+│   │   │   └── ui.tsx             ← wspólne komponenty (Btn, Modal, Card itp.)
+│   │   └── hooks/
+│   │       └── index.ts           ← useDesks, useReservations, useAuth itp.
+│   │
+│   ├── pages/
+│   │   ├── LoginPage.tsx          ← wspólna strona logowania
+│   │   ├── QrCheckinPage.tsx      ← publiczny QR (bez auth)
+│   │   │
+│   │   ├── staff/                 ← widoki dla STAFF i END_USER
+│   │   │   ├── DeskMapPage.tsx
+│   │   │   └── ReservationsPage.tsx
+│   │   │
+│   │   └── admin/                 ← widoki dla OFFICE_ADMIN i SUPER_ADMIN
+│   │       ├── DashboardPage.tsx
+│   │       ├── DesksPage.tsx
+│   │       ├── UsersPage.tsx
+│   │       ├── ReservationsAdminPage.tsx
+│   │       ├── ProvisioningPage.tsx
+│   │       ├── OrganizationsPage.tsx
+│   │       └── ReportsPage.tsx
+│   │
+│   └── layouts/
+│       ├── StaffLayout.tsx        ← górny pasek dla mapy
+│       └── AdminLayout.tsx        ← sidebar dla panelu admin
+```
+
+---
+
+### Routing i guard
+
+```typescript
+// App.tsx — logika po zalogowaniu
+function RoleRedirect({ user }: { user: any }) {
+  const adminRoles = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
+  if (adminRoles.includes(user.role)) return <Navigate to="/admin/dashboard" replace />;
+  return <Navigate to="/map" replace />;
+}
+
+// Guard — chroni widoki /admin/*
+function AdminRoute({ user, children }: { user: any; children: ReactNode }) {
+  const allowed = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
+  if (!user) return <Navigate to="/login" replace />;
+  if (!allowed.includes(user.role)) return <Navigate to="/map" replace />;
+  return <>{children}</>;
+}
+```
+
+---
+
+### Kolejność migracji (zalecana)
+
+| Krok | Co | Czas |
+|---|---|---|
+| 1 | Utwórz `apps/unified/` — skopiuj zależności z obu package.json | 1h |
+| 2 | Wyciągnij `AuthContext` + `EntraIDModal` do `shared/` | 2h |
+| 3 | Skopiuj i połącz API clienty w `shared/api/client.ts` | 2h |
+| 4 | Migruj `LoginPage` do `pages/` (jeden, wspólny) | 1h |
+| 5 | Migruj wszystkie strony admin → `pages/admin/` | 3h |
+| 6 | Migruj wszystkie strony staff → `pages/staff/` | 2h |
+| 7 | Implementuj `App.tsx` z routingiem i guardami per rola | 2h |
+| 8 | Nowe Dockerfile + Coolify (`front-unified`) | 1h |
+| 9 | Testy wszystkich ról, QR check-in, Entra ID | 1 dzień |
+| 10 | Wyłącz stare serwisy `front-admin` i `front-staff` | 0.5h |
+
+**Łącznie: 3-4 dni robocze**
+
+---
+
+### Czego NIE robić podczas migracji
+
+| ❌ Nie | ✅ Zamiast |
+|---|---|
+| Przepisywać logikę komponentów | Kopiować 1:1, tylko zmieniać import paths |
+| Zmieniać backend | Zero zmian w API — tylko frontend |
+| Deployować w połowie migracji | Najpierw przetestować lokalnie, potem jeden deploy |
+| Usuwać stare `apps/admin/` i `apps/staff/` przed testami | Zostawić jako backup, usunąć dopiero po potwierdzeniu |
+
+---
+
+## Panel Owner — Plan szczegółowy
+
+> Ostatnia aktualizacja: 2026-03-31
+> Szczegółowy kontekst techniczny: `docs/AI_OWNER_CONTEXT.md`
+> Status: PLANOWANE — żaden plik nie jest jeszcze modyfikowany
+
+### Cel operacyjny
+
+Panel Owner to narzędzie Ciebie jako operatora platformy Reserti.
+Daje Ci pełną widoczność wszystkich klientów, ich infrastruktury IoT
+oraz możliwość wejścia w panel konkretnej firmy bez znajomości hasła.
+
+---
+
+### Co Panel Owner robi, czego nie mają inne panele
+
+| Funkcja | SUPER_ADMIN | OWNER |
+|---|---|---|
+| Widzi swoją organizację | ✅ | ✅ |
+| Widzi WSZYSTKIE organizacje | ❌ | ✅ |
+| Tworzy nową firmę-klienta | ❌ | ✅ |
+| Zarządza planami i subskrypcjami | ❌ | ✅ |
+| Widzi stan gateway i beaconów wszystkich firm | ❌ | ✅ |
+| Wchodzi w panel firmy bez hasła (impersonation) | ❌ | ✅ |
+| Widzi notatki wewnętrzne o kliencie | ❌ | ✅ |
+
+---
+
+### Zakres MVP (Priorytet 1)
+
+**Ekran 1 — Lista klientów (`/clients`)**
+- Tabela: Firma | Plan | Biura | Gateway online/total | Beacony online/total | Ostatnia aktywność | Status
+- Filtry: aktywne / trial / nieaktywne / wszystkie
+- Szybkie akcje: Szczegóły | Impersonuj | Dezaktywuj
+- Przycisk: `+ Nowy klient` → formularz tworzenia
+
+**Ekran 2 — Szczegóły klienta (`/clients/:id`)**
+- Sekcja 1: Dane firmy (nazwa, plan, daty, kontakt, notatki Ownera)
+- Sekcja 2: Biura i gateway (tabela: biuro → lista gateway + status Online/Offline/Problem)
+- Sekcja 3: Beacony (hardware ID, biurko, gateway, status, heartbeat, RSSI)
+- Sekcja 4: Ostatnia aktywność (20 najnowszych zdarzeń: check-in, provisioning, błędy)
+- Przycisk: `Wejdź jako Admin` → impersonation
+
+**Ekran 3 — Health (`/health`)**
+- Globalny monitoring wszystkich gateway i beaconów
+- Auto-refresh co 30 sekund
+- Kolorowanie firm: 🟢 wszystkie online / 🟡 część offline / 🔴 wszystkie offline
+- Filtr: "Pokaż tylko problemy"
+
+**Ekran 4 — Nowy klient (`/clients/new`)**
+- Krok 1: Dane firmy (nazwa, slug auto, plan, email kontaktowy, notatki, trial)
+- Krok 2: Pierwszy Super Admin (imię, email, opcja: wyślij zaproszenie)
+- Po zapisaniu: redirect do `/clients/:id` nowej firmy
+
+---
+
+### Zakres MVP (Priorytet 2 — można dodać po uruchomieniu)
+
+- Ekran Statystyki (`/stats`): metryki platformy, wykresy, firmy bez aktywności
+- Edycja planu i dat subskrypcji
+- Historia impersonacji (audit log)
+- Eksport listy klientów do CSV
+
+---
+
+### Backend — nowe elementy
+
+```
+Nowa rola w UserRole enum:
+  OWNER  ← dodać PRZED SUPER_ADMIN
+
+Nowe pola w Organization:
+  plan           String   @default("starter")
+  planExpiresAt  DateTime?
+  trialEndsAt    DateTime?
+  notes          String?
+  contactEmail   String?
+  createdBy      String?
+
+Nowy moduł: src/modules/owner/
+  owner.module.ts
+  owner.controller.ts   ← /owner/* endpoints, tylko OWNER
+  owner.service.ts      ← CRUD organizacji, tworzenie klientów
+  owner-health.service.ts ← agregacja stanu gateway + beaconów
+  guards/owner.guard.ts ← sprawdza user.role === 'OWNER'
+
+Nowe endpointy:
+  GET  /owner/organizations           ← lista firm z metrykami
+  POST /owner/organizations           ← utwórz firmę + SUPER_ADMIN
+  GET  /owner/organizations/:id       ← szczegóły firmy
+  PATCH /owner/organizations/:id      ← edytuj plan, status, notatki
+  DELETE /owner/organizations/:id     ← soft delete (isActive=false)
+  GET  /owner/health                  ← globalny stan infrastruktury
+  GET  /owner/health/:orgId           ← stan jednej firmy
+  GET  /owner/stats                   ← metryki platformy
+  POST /owner/organizations/:id/impersonate ← JWT 30min jako SUPER_ADMIN
+```
+
+---
+
+### Frontend — nowa aplikacja
+
+```
+apps/owner/                         ← nowa aplikacja React
+  Domena: owner.prohalw2026.ovh
+  Port dev: 3005
+  Deploy: nowy serwis w Coolify (front-owner)
+```
+
+Osobna aplikacja — **nie łączyć z Admin/Staff/Unified** ze względu na:
+- Inny poziom uprawnień (OWNER — tylko 1-2 konta w całym systemie)
+- Inny cel (operacja platformy vs użytkowanie platformy)
+- Izolacja bezpieczeństwa (wyciek Owner JWT = dostęp do wszystkich firm)
+
+---
+
+### Impersonation — mechanizm
+
+```
+Owner klika "Wejdź jako Admin" przy firmie
+  ↓
+POST /owner/organizations/:id/impersonate
+  ↓
+Backend:
+  1. Weryfikuje role === 'OWNER'
+  2. Loguje Event(OWNER_IMPERSONATION, { ownerId, orgId, ip, at })
+  3. Generuje JWT z payload:
+     { sub: adminUserId, role: 'SUPER_ADMIN', orgId, impersonated: true }
+     ważny 30 minut, nieprzedłużalny
+  ↓
+Owner Panel otwiera admin.prohalw2026.ovh/auth/impersonate?token=...
+  ↓
+Admin Panel (lub Unified Panel):
+  - zapisuje token jako admin_access
+  - pokazuje baner: "Jesteś zalogowany jako SUPER_ADMIN: NazwaFirmy"
+  - po 30 min lub ręcznym wylogowaniu → powrót
+```
+
+Każda impersonacja jest logowana w Events — Owner nie może ukryć swojej aktywności.
+
+---
+
+### Kolejność implementacji Owner Panel
+
+| Krok | Co | Czas |
+|---|---|---|
+| 1 | Schema: rola OWNER + nowe pola Organization + prisma db push | 1h |
+| 2 | OwnerGuard + OwnerModule skeleton | 2h |
+| 3 | Endpointy CRUD organizacji | 4h |
+| 4 | Endpoint health (globalny + per org) | 3h |
+| 5 | Endpoint impersonation | 3h |
+| 6 | Frontend: scaffold apps/owner/ + LoginPage | 3h |
+| 7 | Frontend: ClientsPage + ClientDetailPage | 1 dzień |
+| 8 | Frontend: HealthPage z auto-refresh | 4h |
+| 9 | Frontend: NewClientPage (wizard 2-krokowy) | 3h |
+| 10 | ImpersonatePage w Admin/Unified Panel | 2h |
+| 11 | Deploy Coolify + baner impersonation | 2h |
+| 12 | Testy i seed konta OWNER | 2h |
+
+**Łącznie: 5-6 dni roboczych**
+
+---
+
+### Priorytet względem scalenia Admin+Staff
+
+Rekomendacja: **Panel Owner PRZED scaleniem Admin+Staff**.
+
+Uzasadnienie:
+- Panel Owner to osobna aplikacja — zero zależności od scalenia
+- Scalenie Admin+Staff to duży refactor z ryzykiem regresji
+- Owner Panel daje Ci narzędzie do zarządzania klientami na produkcji
+- Scalenie można zrobić stopniowo, Owner Panel to greenfield
+
