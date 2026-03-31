@@ -118,7 +118,8 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
     </Modal>
   );
 }
-  const [loading, setLoading] = useState(true);
+
+function InstallTokenModal({ location, onClose }: { location: any; onClose: () => void }) {
   const [token,   setToken]   = useState<any>(null);
   const [copied,  setCopied]  = useState(false);
   const [error,   setError]   = useState('');
