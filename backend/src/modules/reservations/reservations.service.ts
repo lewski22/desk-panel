@@ -105,7 +105,7 @@ export class ReservationsService {
       throw new ForbiddenException('Not allowed to cancel this reservation');
     }
 
-    if (['CANCELLED', 'COMPLETED'].includes(reservation.status)) {
+    if ([ReservationStatus.CANCELLED, ReservationStatus.COMPLETED].includes(reservation.status as any)) {
       throw new ConflictException('Reservation already closed');
     }
 
@@ -145,7 +145,7 @@ export class ReservationsService {
     return this.prisma.reservation.findMany({
       where: {
         userId,
-        status: { in: ['PENDING', 'CONFIRMED'] },
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
         ...(date ? { date: new Date(date) } : {}),
       },
       include: {

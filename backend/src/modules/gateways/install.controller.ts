@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Res } from '@nestjs/common';
 import { Response }                    from 'express';
+import { ConfigService }               from '@nestjs/config';
 import { ApiExcludeController }        from '@nestjs/swagger';
 
 /**
@@ -13,13 +14,14 @@ import { ApiExcludeController }        from '@nestjs/swagger';
 @ApiExcludeController()
 @Controller('install')
 export class InstallController {
+  constructor(private config: ConfigService) {}
 
   @Get('gateway/:token')
   serveInstallScript(
     @Param('token') token: string,
     @Res() res: Response,
   ) {
-    const apiUrl = process.env.PUBLIC_API_URL
+    const apiUrl = this.config.get<string>('PUBLIC_API_URL')
                    ?? 'https://api.prohalw2026.ovh/api/v1';
 
     // Skrypt instalacyjny z wstrzykniętymi zmiennymi
@@ -51,7 +53,7 @@ export RESERTI_SETUP_TOKEN="${safeToken}"
 export RESERTI_API_URL="${safeApiUrl}"
 
 # Pobierz i uruchom właściwy skrypt instalacyjny
-SCRIPT_URL="https://raw.githubusercontent.com/lewski22/desk-gateway-python/main/install.sh"
+SCRIPT_URL="${this.config.get<string>('GATEWAY_INSTALL_SCRIPT_URL') ?? 'https://raw.githubusercontent.com/lewski22/desk-gateway-python/main/install.sh'}"
 
 echo "Pobieranie skryptu instalacyjnego..."
 TMPFILE=$(mktemp /tmp/reserti-install-XXXXXX.sh)

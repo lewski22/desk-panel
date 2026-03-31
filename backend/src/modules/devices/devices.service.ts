@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
 import { EventType } from '@prisma/client';
 
@@ -13,7 +14,10 @@ export interface ProvisionDeviceDto {
 @Injectable()
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma:  PrismaService,
+    private config:  ConfigService,
+  ) {}
 
   async provision(dto: ProvisionDeviceDto) {
     const exists = await this.prisma.device.findUnique({
@@ -62,7 +66,7 @@ export class DevicesService {
       // We need the plain secret — it's in the DB as hash, so we use a special gateway-provision header
       // Gateway authenticates via x-gateway-secret which we fetch from env for the specific gateway
       // For now use a shared provisioning key via env
-      const provisionKey = process.env.GATEWAY_PROVISION_KEY ?? '';
+      const provisionKey = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
 
       const resp = await fetch(url, {
         method:  'POST',

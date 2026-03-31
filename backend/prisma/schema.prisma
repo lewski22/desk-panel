@@ -183,6 +183,8 @@ model GatewaySetupToken {
 
   location Location  @relation(fields: [locationId], references: [id])
   gateway  Gateway?  @relation(fields: [gatewayId], references: [id])
+
+  @@index([locationId])
 }
 
 // ─── Users ───────────────────────────────────────────────────
