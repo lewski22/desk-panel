@@ -3,7 +3,7 @@
 > Kontekst modułu Owner Panel — aplikacja do zarządzania wszystkimi klientami platformy Reserti.
 > Uzupełnienie do `AI_CONTEXT.md` i `AI_BACKEND_CONTEXT.md`.
 > Ostatnia aktualizacja: 2026-03-31
-> Status: PLANOWANY — żaden z poniższych plików jeszcze nie istnieje
+> Status: ✅ ZAIMPLEMENTOWANY — backend + frontend w pełni gotowe
 
 ---
 

@@ -4,6 +4,121 @@ Format: `[wersja] — data — opis`
 
 ---
 
+## [0.8.0] — 2026-03-31 — Panel Owner + poprawki P3
+
+### Nowe funkcje
+
+**Panel Owner (`apps/owner/`) — nowa aplikacja**
+- Domena: `owner.prohalw2026.ovh` — osobna, izolowana aplikacja
+- `LoginPage` — weryfikacja `role === OWNER` przy logowaniu
+- `ClientsPage` — tabela wszystkich firm z metrykami: gateway online/total,
+  beacony online/total, plan, aktywność; filtr aktywne/nieaktywne; wyszukiwanie
+- `ClientDetailPage` — 4 sekcje: info (plan, daty, kontakt, notatki), gateway
+  (tabela + status online/stale/offline), beacony, ostatnia aktywność (20 zdarzeń)
+  + modal edycji planu/notatek
+- `NewClientPage` — wizard 2-krokowy: dane firmy (auto-slug, plan, trial, notatki)
+  → admin (imię, email); ekran sukcesu z tymczasowym hasłem
+- `HealthPage` — globalny monitoring IoT, auto-refresh co 30s, filtry
+  all/problemy/offline, kolorowe ramki per status firmy (zielony/żółty/czerwony)
+- `StatsPage` — 8 kart metryk + 2 wykresy Recharts (infrastruktura + check-iny)
+  + tabela firm bez aktywności 7+ dni
+- `OwnerLayout` — sidebar + amber baner impersonacji
+
+**Backend — moduł `/owner/*`**
+- Nowa rola `OWNER` w `UserRole` enum (przed SUPER_ADMIN)
+- `EventType.OWNER_IMPERSONATION` — audit trail impersonacji
+- Nowe pola `Organization`: `plan`, `planExpiresAt`, `trialEndsAt`, `notes`,
+  `contactEmail`, `createdBy`
+- `OwnerGuard` — dedykowany guard (sprawdza `role === 'OWNER'`)
+- `OwnerService`: `createOrganization` (transakcja org + user), `impersonate`
+  (JWT 30min + audit Event), `getStats` (metryki platformy)
+- `OwnerHealthService`: `getGlobalHealth`, `getOrgHealth` — statusy
+  `healthy` / `stale` / `offline` na podstawie czasu heartbeatu
+- 9 endpointów `GET/POST/PATCH/DELETE /owner/*`
+- Konto seed: `owner@reserti.pl` / `Owner1234!`
+
+**Impersonation (Owner → Admin)**
+- `POST /owner/organizations/:id/impersonate` → JWT 30min jako SUPER_ADMIN
+- `apps/admin/src/pages/ImpersonatePage.tsx` — odbiera token z URL, zapisuje sesję
+- `AdminLayout` — amber baner informujący o sesji tymczasowej + przycisk "Zakończ"
+
+**Logowanie — rozdzielenie Email/Hasło i Entra ID**
+- Usunięty `checkSso` wywoływany automatycznie przy keystroke → koniec `Failed to fetch`
+- Formularz email/hasło — zero requestów SSO w tle
+- Przycisk "Zaloguj się przez Entra ID" zawsze widoczny statycznie
+- `EntraIDModal`: krok 1 (email) → `GET /auth/azure/check` (dopiero po kliknięciu
+  "Dalej") → krok 2 (MSAL popup)
+- Identyczna zmiana w Admin Panel i Staff Panel
+
+### Poprawki P3
+
+- **P3-A** `manifest.xml`: placeholder GUID → `cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09`
+- **P3-B** `DevicesService`: `process.env` → `ConfigService`
+- **P3-C** `InstallController`: hardcoded GitHub URL → `GATEWAY_INSTALL_SCRIPT_URL` env var
+- **P3-D** `ReservationStatus`: string literals `'CANCELLED'` → `ReservationStatus.CANCELLED` enum
+- **P3-E** `vite-env.d.ts`: dodano do `apps/admin/src/` i `apps/staff/src/`
+- **P3-F** Staff Panel: dodano logowanie przez Entra ID (EntraIDModal, `@azure/msal-browser`)
+- **P3-G** `GatewaySetupToken`: `@@index([locationId])` — zapobiega full table scan
+
+### Infrastruktura
+
+- `Dockerfile` CMD: `migrate deploy` → `db push --accept-data-loss`
+- Seed uruchamiany automatycznie: `node dist/database/seeds/seed.js` w CMD
+- Seed jest idempotentny (upsert) — bezpieczny przy każdym restarcie kontenera
+
+---
+
+## [0.7.0] — 2026-03-31 — Poprawki P1 + P2 (Code Review)
+
+### Poprawki
+
+- **P1-A** `@nestjs/throttler` — globalny rate limiting + per endpoint (login 5/min, azure 10/min)
+- **P1-B** Admin Panel `adminApi` — `tryRefresh()` przy 401 (jak Staff Panel)
+- **P1-C** `hardDelete` — czyści `azureObjectId: null, azureTenantId: null`
+- **P2-A** `@Cron('0 */15 * * * *')` na `expireOld()` rezerwacji
+- **P2-B** Walk-in date: `new Date(now.toDateString())` — fix UTC offset dający poprzedni dzień
+- **P2-C** `findAvailable`: walidacja `startTime < endTime`
+- **P2-D** `findMy`: paginacja `take = 50`, max 100
+- **P2-E** Outlook Add-in: `tryRefresh()` z sessionStorage przy 401
+
+---
+
+## [0.6.0] — 2026-03-30 — M1 Entra ID SSO + M3 Outlook Add-in
+
+### Nowe funkcje
+
+**M1 — Entra ID SSO**
+- `azure-auth.service.ts` — weryfikacja JWKS, JIT provisioning
+- `POST /auth/azure`, `GET /auth/azure/check`
+- Admin Panel + Staff Panel: `EntraIDModal` (2-krokowy: email → MSAL popup)
+- `OrganizationsPage`: modal konfiguracji Azure (Tenant ID + toggle azureEnabled)
+- Enterprise App model: jeden globalny Client ID, per-firma Tenant ID
+
+**M3 — Outlook Add-in**
+- `apps/outlook/` — kompletna aplikacja React
+- `manifest/manifest.xml` — UUID: `cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09`
+- `LoginPage` — dwukrokowy: email → MSAL popup
+- `TaskpaneApp` — auto-fill dat ze spotkania, wybór biurka, `setItemLocation()`
+- `GET /desks/available`, `GET /reservations/my`
+
+---
+
+## [0.5.0] — 2026-03-29 — Fazy A-D: provisioning gateway
+
+### Nowe funkcje
+
+- **Faza A**: `GatewaySetupToken` — jednorazowe tokeny 24h, `InstallTokenModal`
+  w Admin Panel z przyciskiem `+ Gateway` per biuro
+- **Faza B**: Python gateway (`desk-gateway-python`) — `gateway.py` ~666 linii,
+  klasy: `Cache`, `SyncService`, `MqttBridge`, `DeviceMonitor`, `MqttAdmin`,
+  `GatewayApiHandler`
+- **Faza C**: `InstallController` — `GET /install/gateway/:token` serwuje bash
+  wrapper z wstrzykniętym tokenem + URL API
+- **Faza D**: UX provisioningu — auto-refresh co 15s, komenda `PROVISION:{...}`
+  w panelu z przyciskiem kopiowania
+
+---
+
 ## [0.4.0] — 2026-03-26 — QR check-in, godziny biura, uprawnienia
 
 ### Nowe funkcje

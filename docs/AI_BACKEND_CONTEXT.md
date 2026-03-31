@@ -1,8 +1,7 @@
 # Backend — Kontekst dla narzędzi AI
 
-> Szczegółowy kontekst backendu `desk-panel/backend`.
-> Uzupełnienie do `AI_CONTEXT.md` (kontekst całego systemu).
-> Ostatnia aktualizacja: 2026-03-30
+> Szczegółowy kontekst `desk-panel/backend`.
+> Ostatnia aktualizacja: 2026-03-31
 
 ---
 
@@ -11,10 +10,12 @@
 - **NestJS** 10 + TypeScript (strict)
 - **Prisma** 5 + PostgreSQL 15
 - **Passport.js** — JWT (15min) + Local strategy
-- **mqtt** lib — połączenie z Mosquitto
-- `class-validator` + `forbidNonWhitelisted: true` — walidacja DTO
-- `bcrypt` — hasła, secrety
-- `crypto.randomBytes` — generowanie haseł MQTT, secretów gateway
+- **@nestjs/throttler** — rate limiting globalny + per endpoint
+- **@nestjs/schedule** — cron: `expireOld()` co 15 min
+- **jwks-rsa** + **jsonwebtoken** — weryfikacja Azure JWKS
+- **bcrypt** — hasła, secrety
+- **crypto.randomBytes** — generowanie haseł MQTT, secretów gateway
+- **ConfigService** — wszystkie env vars (nie `process.env`)
 
 ---
 
@@ -22,300 +23,251 @@
 
 ```
 src/
-├── main.ts                    # Bootstrap, Swagger, CORS, ValidationPipe
-├── app.module.ts              # Root module — importuje wszystkie moduły
+├── main.ts
+├── app.module.ts              # imports: wszystkie moduły + ThrottlerModule
 ├── database/
-│   ├── db.module.ts           # DatabaseModule — eksportuje PrismaService
+│   ├── db.module.ts
 │   └── prisma.service.ts      # PrismaClient singleton
+│   └── seeds/seed.ts          # Upsert kont testowych — uruchamiany przez CMD
 ├── modules/
 │   ├── auth/
-│   │   ├── auth.controller.ts  # POST /auth/login, /refresh, /logout
-│   │   ├── auth.service.ts     # validateUser, login, refresh, logout
-│   │   ├── auth.module.ts      # imports: DatabaseModule, JwtModule, UsersModule
-│   │   ├── strategies/
-│   │   │   ├── jwt.strategy.ts    # ⚠ WAŻNE: odpytuje DB przy każdym request
-│   │   │   │                      # sprawdza isActive + deletedAt
-│   │   │   └── local.strategy.ts  # email/password validation
-│   │   ├── guards/
-│   │   │   ├── jwt-auth.guard.ts
-│   │   │   └── roles.guard.ts
-│   │   └── decorators/
-│   │       └── roles.decorator.ts  # @Roles(UserRole.SUPER_ADMIN, ...)
+│   │   ├── auth.controller.ts        # POST /auth/login|refresh|logout|azure
+│   │   │                             # GET /auth/azure/check (publiczny, 20/min)
+│   │   ├── auth.service.ts           # validateUser, login, refresh, logout
+│   │   ├── azure-auth.service.ts     # verifyIdToken (JWKS), JIT provisioning
+│   │   ├── strategies/jwt.strategy.ts  # ⚠ odpytuje DB przy każdym request
+│   │   └── guards/jwt-auth.guard.ts, roles.guard.ts
 │   │
-│   ├── users/
-│   │   ├── users.service.ts    # CRUD + soft-delete (retencja min 30 dni)
-│   │   └── users.controller.ts # GET /users, PATCH, DELETE, restore
+│   ├── owner/                 ← NOWY MODUŁ
+│   │   ├── owner.module.ts
+│   │   ├── owner.controller.ts       # GET|POST|PATCH|DELETE /owner/organizations
+│   │   │                             # POST /owner/organizations/:id/impersonate
+│   │   │                             # GET /owner/health|health/:id|stats
+│   │   ├── owner.service.ts          # CRUD org (transakcja), impersonate (JWT 30min + audit)
+│   │   │                             # getStats (metryki platformy)
+│   │   ├── owner-health.service.ts   # getGlobalHealth, getOrgHealth
+│   │   │                             # statusy: healthy / stale / offline
+│   │   │                             # kryterium: gateway > 5min, beacon > 10min
+│   │   ├── guards/owner.guard.ts     # role === 'OWNER'
+│   │   └── dto/create-org.dto.ts, update-org.dto.ts
 │   │
-│   ├── organizations/          # Firmy (warstwa nadrzędna nad Location)
-│   │   └── organizations.service.ts
+│   ├── organizations/
+│   │   └── organizations.service.ts  # getAzureConfig, updateAzureConfig
 │   │
-│   ├── locations/              # "Biura" — podstawowa jednostka w UI
-│   │   ├── locations.service.ts  # findAll, create, update, analytics
-│   │   │                         # getOccupancyAnalytics: 4x count() parallel
-│   │   │                         # getAnalyticsExtended: 1 query 30d + JS aggregation
-│   │   └── locations.controller.ts  # OFFICE_ADMIN: auto-scope do własnej org
+│   ├── locations/
+│   │   ├── locations.service.ts      # findAll scoped do org dla OFFICE_ADMIN
+│   │   └── locations.controller.ts
 │   │
 │   ├── desks/
-│   │   ├── desks.service.ts    # CRUD + getCurrentStatus + getByQrToken
-│   │   └── desks.controller.ts # GET /locations/:id/desks, /desks/qr/:token (public)
+│   │   ├── desks.service.ts          # findAvailable (walidacja startTime<endTime)
+│   │   └── desks.controller.ts       # GET /desks/available (Outlook Add-in)
 │   │
-│   ├── devices/                # Beacony ESP32
-│   │   ├── devices.service.ts  # provision() + _notifyGateway() + heartbeat()
-│   │   │                       # ⚠ provision() automatycznie wywołuje gateway HTTP API
-│   │   └── devices.controller.ts
+│   ├── devices/
+│   │   └── devices.service.ts        # provision() + ConfigService (nie process.env)
 │   │
 │   ├── gateways/
-│   │   ├── gateways.service.ts       # register, authenticate, heartbeat, getSync
-│   │   ├── gateway-setup.service.ts  # ⭐ NOWY: tokeny instalacyjne
-│   │   │                             # createToken, redeemToken, listTokens, revokeToken
-│   │   ├── gateways.controller.ts    # + setup-tokens endpoints
-│   │   └── gateways.module.ts        # imports: DatabaseModule
+│   │   ├── gateways.service.ts
+│   │   ├── gateway-setup.service.ts  # createToken, redeemToken (jednorazowy, 24h)
+│   │   ├── gateways.controller.ts
+│   │   └── install.controller.ts     # GET /install/gateway/:token (POZA /api/v1)
+│   │                                 # GATEWAY_INSTALL_SCRIPT_URL z ConfigService
 │   │
 │   ├── reservations/
-│   │   ├── reservations.service.ts  # findAll (includes checkin), create, cancel, expireOld
+│   │   ├── reservations.service.ts   # @Cron('0 */15 * * * *') expireOld()
+│   │   │                             # findMy: paginacja take=50 (max 100)
+│   │   │                             # ReservationStatus enum (nie string literals)
 │   │   └── reservations.controller.ts
 │   │
 │   └── checkins/
-│       ├── checkins.service.ts  # checkinNfc, checkinQr, walkinQr, checkinManual, checkout
-│       │                        # ⚠ walkinQr: sprawdza godziny biura (openTime/closeTime)
-│       └── checkins.controller.ts
-│
-└── mqtt/
-    ├── mqtt.service.ts    # Połączenie z Mosquitto, publish, registerHandlers
-    ├── mqtt.handlers.ts   # handleCheckin, handleStatus (merged heartbeat), handleGatewayHello
-    └── topics.ts          # Definicje topic stringów
+│       └── checkins.service.ts       # walkinQr: sprawdza openTime/closeTime (lokalny TZ)
 ```
 
 ---
 
-## Kluczowe wzorce
+## Prisma Schema — pełny stan
 
-### Autoryzacja
-
-Każdy chroniony endpoint wymaga:
-```typescript
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-```
-
-`JwtStrategy.validate()` **odpytuje DB przy każdym request** — weryfikuje
-`isActive` i `deletedAt`. Inaczej dezaktywowani użytkownicy mogliby używać
-stale tokenów przez 15 minut.
-
-`JwtStrategy` wymaga `PrismaService` → `DatabaseModule` musi być w `AuthModule`.
-
-### Scoping OFFICE_ADMIN do swojej organizacji
-
-W `LocationsController.findAll`:
-```typescript
-const effectiveOrgId = req.user.role === UserRole.OFFICE_ADMIN
-  ? req.user.organizationId  // zawsze tylko swoja org
-  : orgId;                   // SUPER_ADMIN może filtrować
-```
-
-### Transakcje przy check-in
-
-Każdy check-in zapisuje `checkin` + `reservation.checkedInAt` w jednej transakcji:
-```typescript
-await this.prisma.$transaction([
-  this.prisma.checkin.create({...}),
-  this.prisma.reservation.update({ data: { checkedInAt: now, checkedInMethod: 'QR' } }),
-]);
-```
-
-### ValidationPipe — forbidNonWhitelisted
-
-`main.ts` ma `forbidNonWhitelisted: true`. Każde pole niewymienione w DTO
-powoduje HTTP 400. Przy wysyłaniu requestów z frontendu:
-- Nie wysyłaj pól wewnętrznych (np. `locId` przy tworzeniu biurka)
-- Używaj destrukturyzacji: `(({ locId, ...rest }) => rest)(form)`
-
----
-
-## Model GatewaySetupToken (NOWY — Faza A)
+### Enums
 
 ```prisma
-model GatewaySetupToken {
-  id         String    @id @default(cuid())
-  token      String    @unique @default(cuid())
-  locationId String
-  gatewayId  String?   # uzupełniane po pomyślnej instalacji
-  createdBy  String    # userId admina
-  expiresAt  DateTime  # teraz + 24h
-  usedAt     DateTime? # jednorazowy — po użyciu ustawiane
-  createdAt  DateTime  @default(now())
+enum UserRole {
+  OWNER           ← operator platformy
+  SUPER_ADMIN
+  OFFICE_ADMIN
+  STAFF
+  END_USER
+}
+
+enum EventType {
+  DESK_CREATED | DESK_UPDATED | DESK_STATUS_CHANGED
+  RESERVATION_CREATED | RESERVATION_CANCELLED | RESERVATION_EXPIRED
+  CHECKIN_NFC | CHECKIN_QR | CHECKIN_MANUAL | CHECKOUT
+  DEVICE_ONLINE | DEVICE_OFFLINE | DEVICE_PROVISIONED
+  GATEWAY_ONLINE | GATEWAY_OFFLINE
+  UNAUTHORIZED_SCAN
+  USER_CREATED | USER_UPDATED
+  OWNER_IMPERSONATION   ← audit trail impersonacji
+}
+
+enum ReservationStatus {
+  PENDING | CONFIRMED | CANCELLED | EXPIRED
 }
 ```
 
-### Flow token instalacyjny
-
-```
-1. Admin klika "Dodaj gateway" przy biurze w panelu
-   → POST /gateway/setup-tokens { locationId }
-   → Backend: unieważnia stare tokeny dla tej lokalizacji,
-     tworzy nowy token (24h), zwraca installCmd
-
-2. installCmd: curl -fsSL https://api.domain.pl/install/gateway/TOKEN | bash
-
-3. Skrypt instalacyjny na Raspberry Pi:
-   → POST /gateway/setup/:token { gatewayName }
-   → Backend: waliduje token (exists? used? expired?),
-     tworzy Gateway w DB (auto-name + secret),
-     oznacza token jako usedAt=now,
-     zwraca: { gatewayId, gatewaySecret, locationId,
-               mqttUsername, mqttPassword, serverUrl, provisionKey }
-
-4. Skrypt konfiguruje Mosquitto + Python gateway z tymi danymi
-   → Zero ręcznej edycji .env
+### Organization — nowe pola (Owner Panel)
+```prisma
+model Organization {
+  // ...istniejące...
+  plan           String    @default("starter")
+  planExpiresAt  DateTime?
+  trialEndsAt    DateTime?
+  notes          String?   @db.Text
+  contactEmail   String?
+  createdBy      String?   // userId Ownera
+  // M365:
+  azureTenantId  String?
+  azureEnabled   Boolean   @default(false)
+}
 ```
 
-### Nowe endpointy
-
+### User — pola M365
+```prisma
+model User {
+  // ...istniejące...
+  azureObjectId  String?  @unique
+  azureTenantId  String?
+}
 ```
-POST   /gateway/setup-tokens              JWT: OFFICE_ADMIN+  → { token, installCmd, expiresAt }
-GET    /gateway/setup-tokens/:locationId  JWT: OFFICE_ADMIN+  → lista tokenów
-DELETE /gateway/setup-tokens/:tokenId    JWT: OFFICE_ADMIN+  → { revoked: true }
-POST   /gateway/setup/:token             PUBLIC (jednorazowy) → { gatewayId, gatewaySecret, ... }
+
+### GatewaySetupToken
+```prisma
+model GatewaySetupToken {
+  // ...
+  @@index([locationId])   ← wydajność przy listTokens(locationId)
+}
 ```
 
 ---
 
-## Zmienne środowiskowe backendu
+## Wzorce autoryzacji
+
+### JwtAuthGuard + OwnerGuard (nowy)
+```typescript
+// OwnerGuard — prostszy niż @Roles, jawny
+@Injectable()
+export class OwnerGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    return context.switchToHttp().getRequest().user?.role === 'OWNER';
+  }
+}
+
+// Użycie w OwnerController:
+@UseGuards(JwtAuthGuard, OwnerGuard)
+```
+
+### Scoping OFFICE_ADMIN
+```typescript
+const where = user.role === 'SUPER_ADMIN'
+  ? {}
+  : { organizationId: user.organizationId };
+```
+
+### Rate limiting (ThrottlerModule)
+```typescript
+// Globalne: 100 req / 60s
+// Auth endpoints: 5 req/min (login), 10 req/min (azure)
+@Throttle({ default: { limit: 5, ttl: 60000 } })
+async login(...)
+```
+
+---
+
+## Impersonation — implementacja
+
+```typescript
+// owner.service.ts
+async impersonate(orgId: string, ownerId: string, ip: string) {
+  const admin = await prisma.user.findFirst({
+    where: { organizationId: orgId, role: 'SUPER_ADMIN', isActive: true }
+  });
+  // Audit log
+  await prisma.event.create({
+    data: {
+      type: EventType.OWNER_IMPERSONATION,
+      payload: { ownerId, orgId, orgName, ip, at: new Date().toISOString() }
+    }
+  });
+  // JWT 30 min, nieprzedłużalny
+  const token = jwtService.sign(
+    { sub: admin.id, email: admin.email, role: 'SUPER_ADMIN', orgId, impersonated: true },
+    { secret: config.get('JWT_SECRET'), expiresIn: '30m' }
+  );
+  return { token, expiresAt, adminUrl: `${ADMIN_URL}/auth/impersonate?token=${token}` };
+}
+```
+
+---
+
+## Azure SSO — flow (M1)
+
+```
+POST /auth/azure { idToken }
+  → azure-auth.service.verifyIdToken(idToken)
+    → jwks-rsa pobiera klucze z https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys
+    → jsonwebtoken.verify(idToken, getKey, { algorithms: ['RS256'] })
+    → sprawdź aud === AZURE_CLIENT_ID
+  → JIT provisioning:
+    prisma.user.upsert({ where: { azureObjectId: oid }, ... })
+    → nowy user: passwordHash = 'AZURE_SSO_ONLY' (nie może się zalogować hasłem)
+  → generuj JWT jak przy normalnym login
+```
+
+---
+
+## Seed — CMD przy starcie
+
+```
+Dockerfile CMD:
+  prisma db push --accept-data-loss
+  → node dist/database/seeds/seed.js
+    → node dist/main
+
+Seed tworzy przez upsert (idempotentny):
+  owner@reserti.pl       / Owner1234!  / OWNER    (bez organizationId)
+  superadmin@reserti.pl  / Admin1234!  / SUPER_ADMIN
+  admin@demo-corp.pl     / Admin1234!  / OFFICE_ADMIN
+  staff@demo-corp.pl     / Staff1234!  / STAFF
+  user@demo-corp.pl      / User1234!   / END_USER
+```
+
+---
+
+## Zmienne środowiskowe
 
 ```env
-# Wymagane
-DATABASE_URL=postgresql://user:pass@host:5432/db
-JWT_SECRET=min-32-chars-random
-JWT_REFRESH_SECRET=min-32-chars-random-different
-
-# MQTT
-MQTT_BROKER_URL=mqtt://mosquitto-SERVICE:1883
-
-# CORS
-CORS_ORIGINS=https://admin.domain.pl,https://staff.domain.pl
-
-# Gateway provisioning
-GATEWAY_PROVISION_KEY=random-32-chars  # musi być identyczny w gateway .env
-PUBLIC_API_URL=https://api.domain.pl/api/v1  # używane w installCmd
-
-# Opcjonalne
-PORT=3000
-SWAGGER_ENABLED=true  # włącz Swagger w produkcji
-NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
+MQTT_BROKER_URL=mqtt://mosquitto-NAME:1883
+CORS_ORIGINS=https://admin.prohalw2026.ovh,https://staff.prohalw2026.ovh
+GATEWAY_PROVISION_KEY=...
+PUBLIC_API_URL=https://api.prohalw2026.ovh/api/v1
+ADMIN_URL=https://admin.prohalw2026.ovh
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
+AZURE_REDIRECT_URI=https://api.prohalw2026.ovh/auth/azure/callback
+GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/lewski22/desk-gateway-python/main/install.sh
 ```
 
 ---
 
-## Wydajność — kluczowe decyzje
+## Typowe błędy i naprawki
 
-| Problem | Rozwiązanie |
-|---|---|
-| 7 zapytań per dzień w analytics | 1 zapytanie 30d + agregacja JS |
-| 2 DB write'y na heartbeat beacona | Merged w jedno: `heartbeat(id, rssi, fwVersion)` |
-| `findOne()` przed `update()` | Usunięte — Prisma rzuca P2025 jeśli nie istnieje |
-| Rezerwacje bez limitu | Domyślny `take: 500` |
-| `mousemove` setki razy/s | Debounce 500ms w AdminLayout |
-
----
-
-## Typowe błędy i gotowe naprawki
-
-### `property X should not exist`
-`forbidNonWhitelisted: true` — usuń pole z requestu lub dodaj do DTO.
-
-### `nvs_open failed: NOT_FOUND` (ESP32 log)
-Normalne po `pio run -t erase`. NVS partition tworzy się przy pierwszym zapisie.
-
-### Gateway `ENOTFOUND mosquitto`
-`MQTT_BROKER_URL` wskazuje na zewnętrzny host. Musi być `mqtt://mosquitto:1883`
-(nazwa serwisu Docker Compose).
-
-### `plan does not exist in type OrganizationCreateInput`
-Pole `plan` zostało usunięte ze schematu Organization. Usuń z seed i queries.
-
-### Token setup wygasł
-`POST /gateway/setup-tokens` — wygeneruj nowy. Stary jest automatycznie unieważniany.
-
----
-
-## Endpoint skryptu instalacyjnego (Faza C)
-
-### `GET /install/gateway/:token`
-
-**Nie ma** prefiksu `/api/v1` — wyłączony przez:
-```typescript
-app.setGlobalPrefix('api/v1', {
-  exclude: [{ path: 'install/(.*)', method: RequestMethod.GET }],
-});
-```
-
-**Co robi:**
-Serwuje skrypt bash z tokenem i URL API wstrzykniętymi jako zmienne środowiskowe.
-Token jest sanityzowany (tylko `[a-zA-Z0-9_-]`). Odpowiedź ma `Cache-Control: no-store`.
-
-**Struktura odpowiedzi (text/plain):**
-```bash
-#!/usr/bin/env bash
-export RESERTI_SETUP_TOKEN="cuid_token"
-export RESERTI_API_URL="https://api.domain.pl/api/v1"
-# pobiera install.sh z GitHub i uruchamia
-```
-
-**Plik:** `backend/src/modules/gateways/install.controller.ts`
-**Moduł:** `GatewaysModule` (kontroler `InstallController`)
-
-### Pełny flow end-to-end (Faza A + B + C)
-
-```
-1. Admin Panel → Biura → "+ Gateway"
-   POST /api/v1/gateway/setup-tokens { locationId }
-   ← { token, installCmd, expiresAt }
-   installCmd = "curl -fsSL https://api.domain.pl/install/gateway/TOKEN | bash"
-
-2. Klient uruchamia komendę na Raspberry Pi
-   GET /install/gateway/TOKEN
-   ← skrypt bash z tokenem
-
-3. Skrypt pobiera właściwy install.sh z GitHub i uruchamia go
-
-4. install.sh wywołuje:
-   POST /api/v1/gateway/setup/TOKEN { gatewayName }
-   ← { gatewayId, gatewaySecret, mqttUsername, mqttPassword, ... }
-
-5. install.sh instaluje Python + Mosquitto + generuje .env + systemd
-   → Gateway działa, pojawia się jako Online w panelu
-```
-
----
-
-## Faza D — Integracja i spójność UX
-
-### Co zostało zrobione
-
-**ProvisioningPage — nowy flow gateway:**
-- Przycisk "+ Nowy gateway" teraz wywołuje `createSetupToken()` zamiast `register()`
-- Stary modal "Rejestracja gateway" (ręczne dane .env) usunięty
-- Nowy modal: komenda instalacyjna `curl | bash` z tokenem (identyczny jak OrganizationsPage)
-- Auto-refresh stanu gateway co 15 sekund (bez przeładowania strony)
-- Diagnostyka poprawiona: zamiast "sprawdź Docker" → `journalctl -u reserti-gateway`
-
-**ProvisioningPage — wynik provisioning beacona:**
-- Zamiast surowych wartości MQTT_USER/MQTT_PASS pokazuje gotową komendę `PROVISION:{...}`
-- Komenda zawiera wszystkie wymagane pola: wifi_ssid placeholder, mqtt_user, mqtt_pass, device_id, gateway_id
-- Przycisk ⎘ kopiuje komendę do schowka jednym kliknięciem
-- Opis: "Podmień NAZWA_WIFI, HASLO_WIFI i IP_RASPBERRY"
-
-### Spójność UX po Fazie D
-
-| Akcja | Gdzie | Flow |
+| Błąd | Przyczyna | Rozwiązanie |
 |---|---|---|
-| Dodaj gateway | Biura → "+ Gateway" | Token → curl \| bash |
-| Dodaj gateway | Provisioning → "+ Nowy gateway" | Token → curl \| bash |
-| Dodaj beacon | Provisioning → "+ Provisioning" | Formularz → gotowa komenda PROVISION: |
-| Zmień secret | Provisioning → 🔑 przy gateway | Nowy secret + instrukcja systemctl |
-
-### Znane ograniczenia (do następnych faz)
-
-- `_notifyGateway()` używa wspólnego `GATEWAY_PROVISION_KEY` — wszystkie Pi muszą mieć ten sam klucz
-- Auto-provisioning działa tylko jeśli gateway ma `ipAddress` w DB (ustawiane przy heartbeat)
-- Pierwszy heartbeat musi nastąpić zanim można dodać pierwszy beacon
+| `Cannot find module './seed.ts'` | ts-node w production bez src/ | Uruchom `node dist/database/seeds/seed.js` |
+| `Failed to fetch` przy logowaniu | `checkSso` wywoływany przy keystroke | Usunięty — SSO tylko przez osobny modal |
+| Internal Error przy logowaniu | Brak kolumn Azure w bazie | `prisma db push` w terminalu kontenera |
+| `property X should not exist` | forbidNonWhitelisted=true | Usuń nieznane pola z body requestu |
+| `ENOTFOUND mosquitto` | Race condition Docker | Healthcheck na mosquitto w docker-compose |
+| `0700` Mosquitto passwd | Zły chmod | `chmod 0600 + chown mosquitto:mosquitto` |
+| `ECONNRESET better-sqlite3` | Kompilacja native na ARM | Kopiuj node_modules z builder stage |

@@ -1,15 +1,15 @@
 # Reserti Desk Management — Kontekst dla narzędzi AI
 
-> Ten plik zawiera pełny kontekst systemu dla innych modeli AI.
-> Aktualizuj po każdej większej zmianie architektury.
-> Ostatnia aktualizacja: 2026-03-30
+> Pełny kontekst systemu dla narzędzi AI.
+> Ostatnia aktualizacja: 2026-03-31
 
 ---
 
 ## Czym jest Reserti
 
-SaaS do zarządzania hot-deskami w biurach. Firma rezerwuje biurko przez przeglądarkę
-lub Microsoft Teams, fizycznie przy biurku stoi beacon ESP32 z LED i czytnikiem NFC.
+SaaS do zarządzania hot-deskami w biurach. Pracownicy rezerwują biurka przez
+przeglądarkę lub Microsoft Teams. Przy każdym biurku stoi beacon ESP32 z LEDem
+i czytnikiem NFC — umożliwia check-in przez kartę lub kod QR bez telefonu.
 
 ---
 
@@ -17,8 +17,9 @@ lub Microsoft Teams, fizycznie przy biurku stoi beacon ESP32 z LED i czytnikiem 
 
 | Repo | URL | Opis |
 |---|---|---|
-| `desk-panel` | github.com/lewski22/desk-panel | Backend + Admin Panel + Staff Panel |
-| `desk-gateway` | github.com/lewski22/desk-gateway | MQTT bridge lokalny w biurze |
+| `desk-panel` | github.com/lewski22/desk-panel | Backend + Admin + Staff + Owner + Outlook Add-in |
+| `desk-gateway` | github.com/lewski22/desk-gateway | Node.js MQTT bridge (legacy) |
+| `desk-gateway-python` | github.com/lewski22/desk-gateway-python | Python gateway (aktualny) |
 | `desk-firmware` | github.com/lewski22/desk-firmware | Firmware ESP32 |
 
 ---
@@ -26,289 +27,239 @@ lub Microsoft Teams, fizycznie przy biurku stoi beacon ESP32 z LED i czytnikiem 
 ## Architektura systemu
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    INTERNET / CLOUD                       │
-│                                                           │
-│  ┌──────────────┐    ┌────────────────────────────────┐  │
-│  │ Admin Panel  │    │       desk-panel backend        │  │
-│  │ React/Vite   │◄──►│   NestJS + Prisma + PostgreSQL │  │
-│  │ admin.*      │    │   api.prohalw2026.ovh/api/v1   │  │
-│  └──────────────┘    └────────────────────────────────┘  │
-│  ┌──────────────┐              ▲                          │
-│  │ Staff Panel  │              │ HTTPS sync               │
-│  │ React/Vite   │              │ (co 60s)                 │
-│  │ staff.*      │              ▼                          │
-│  └──────────────┘    ┌────────────────────────────────┐  │
-│                       │   Coolify (Proxmox LXC)        │  │
-│                       │   + Cloudflare Tunnel          │  │
-└───────────────────────┤                                ├──┘
-                        └────────────────────────────────┘
-                                    ▲
-                                    │ HTTPS
-                         ┌──────────┴──────────┐
-                         │  SIEĆ LOKALNA BIURA  │
-                         │                      │
-                         │  ┌────────────────┐  │
-                         │  │ Raspberry Pi   │  │
-                         │  │ desk-gateway   │  │
-                         │  │ + Mosquitto    │  │
-                         │  │ 192.168.x.x    │  │
-                         │  └───────┬────────┘  │
-                         │          │ MQTT 1883  │
-                         │          ▼            │
-                         │  ┌────────────────┐  │
-                         │  │  ESP32 Beacon  │  │
-                         │  │  NFC + LED     │  │
-                         │  └────────────────┘  │
-                         └──────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                       INTERNET / CLOUD                       │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌───────────────────┐   │
+│  │ Owner Panel │  │ Admin Panel │  │   Staff Panel     │   │
+│  │ React/Vite  │  │ React/Vite  │  │   React/Vite      │   │
+│  │ owner.*     │  │ admin.*     │  │   staff.*         │   │
+│  └──────┬──────┘  └──────┬──────┘  └─────────┬─────────┘   │
+│         └────────────────┼──────────────────┘             │
+│                          ▼                                   │
+│              ┌───────────────────────────┐                  │
+│              │    desk-panel backend     │                  │
+│              │  NestJS + Prisma + PG 15  │                  │
+│              │  api.prohalw2026.ovh/v1   │                  │
+│              │  + @nestjs/throttler      │                  │
+│              │  + @nestjs/schedule       │                  │
+│              └───────────────────────────┘                  │
+│                          │                                   │
+│              ┌───────────────────────────┐                  │
+│              │  Coolify (Proxmox LXC)    │                  │
+│              │  + Cloudflare Tunnel      │                  │
+└──────────────┴───────────────────────────┴──────────────────┘
+                           ▲ HTTPS
+            ┌──────────────┴──────────────┐
+            │      SIEĆ LOKALNA BIURA     │
+            │  ┌─────────────────────┐    │
+            │  │   Raspberry Pi 4+   │    │
+            │  │  desk-gateway-python│    │
+            │  │  + Mosquitto MQTT   │    │
+            │  └──────────┬──────────┘    │
+            │             │ MQTT 1883     │
+            │             ▼               │
+            │  ┌─────────────────────┐    │
+            │  │    ESP32 Beacon     │    │
+            │  │    NFC + WS2812     │    │
+            │  └─────────────────────┘    │
+            └─────────────────────────────┘
 ```
 
 ---
 
 ## Stack technologiczny
 
-### Backend (desk-panel/backend)
-- **NestJS** + TypeScript
-- **Prisma ORM** + PostgreSQL 15
-- **JWT auth** (15min access + 7d refresh token rotation)
-- **MQTT** przez bibliotekę `mqtt` (połączenie z lokalnym Mosquitto)
-- Deploy: **Coolify** na Proxmox LXC + Cloudflare Tunnel
+### Backend (`desk-panel/backend`)
+- **NestJS** 10 + TypeScript (strict)
+- **Prisma** 5 + PostgreSQL 15
+- **JWT** (15min access + 7d refresh rotation)
+- **@nestjs/throttler** — rate limiting (global + per endpoint)
+- **@nestjs/schedule** — cron job `expireOld()` co 15 min
+- **jwks-rsa + jsonwebtoken** — weryfikacja Azure JWKS
+- **ConfigService** wszędzie zamiast `process.env`
+- Deploy: Coolify → Proxmox LXC + Cloudflare Tunnel
 
-### Frontend Admin (desk-panel/apps/admin)
+### Frontend Admin (`apps/admin/`)
 - React + Vite + TypeScript + Tailwind CSS
-- Brak zewnętrznych komponentów UI (własne w `ui.tsx`)
+- Własne komponenty w `ui.tsx` (Btn, Modal, Card, Badge…)
 - Recharts dla wykresów
-- Token auth: `localStorage` (`admin_access`, `admin_refresh`, `admin_user`)
+- `tryRefresh()` przy 401 — auto-odnowienie tokenu
+- localStorage: `access_token`, `refresh_token`, `admin_user`
 
-### Frontend Staff (desk-panel/apps/staff)
+### Frontend Staff (`apps/staff/`)
 - React + Vite + TypeScript + Tailwind CSS
-- Token auth: `localStorage` (`access_token`, `refresh_token`, `staff_user`)
-- QR check-in: `/checkin/:token` — działa na mobile bez instalacji
+- `tryRefresh()` przy 401
+- Logowanie przez Entra ID (przycisk "Zaloguj przez Entra ID")
+- localStorage: `access_token`, `refresh_token`, `staff_user`
 
-### Gateway (desk-gateway)
-- Node.js 20 + TypeScript
-- `mqtt` lib dla połączenia z Mosquitto
-- `better-sqlite3` dla lokalnego cache (offline support)
-- HTTP API na porcie 3001 (zarządzanie MQTT users)
-- Deploy: Docker Compose na Raspberry Pi
+### Frontend Owner (`apps/owner/`) ← NOWY
+- React + Vite + TypeScript + Tailwind CSS + Recharts
+- Osobna aplikacja — TYLKO rola OWNER
+- `ownerApi` z `tryRefresh()` — localStorage: `owner_access`, `owner_refresh`, `owner_user`
+- Domena: `owner.prohalw2026.ovh`
 
-### Firmware (desk-firmware)
-- PlatformIO + Arduino framework
-- ESP32 DevKit V1
-- Biblioteki: PubSubClient, Adafruit PN532, Adafruit NeoPixel, ArduinoJson
-- NVS (Preferences) dla persystentnej konfiguracji
-- Offline queue: do 20 zdarzeń w NVS
+### Outlook Add-in (`apps/outlook/`)
+- React + Vite + HTTPS (basicSsl)
+- `@azure/msal-browser` — PKCE flow
+- UUID manifestu: `cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09`
+- Domena: `outlook.prohalw2026.ovh`
+
+### Gateway Python (`desk-gateway-python`) — aktualny
+- Python 3.8+ + paho-mqtt + requests + sqlite3 (stdlib)
+- Systemd service: `reserti-gateway`
+- Instalacja: `curl -fsSL https://api.prohalw2026.ovh/install/gateway/TOKEN | bash`
+- Klasy: `Cache`, `SyncService`, `MqttBridge`, `DeviceMonitor`, `MqttAdmin`, `GatewayApiHandler`
+
+### Firmware (`desk-firmware`)
+- PlatformIO + Arduino, ESP32 DevKit V1
+- PubSubClient, Adafruit PN532, Adafruit NeoPixel, ArduinoJson
+- NVS dla konfiguracji, offline queue do 20 zdarzeń
 
 ---
 
 ## Model danych (kluczowe encje)
 
 ```
-Organization (firma)
-  └── Location / "Biuro" (fizyczne biuro)
-        ├── openTime: "08:00"  ← godziny pracy
-        ├── closeTime: "17:00"
-        ├── Desk[] (biurka)
-        │     ├── qrToken (unikalny, do QR check-in)
+Organization (firma-klient)
+  ├── plan: starter | pro | enterprise
+  ├── planExpiresAt, trialEndsAt
+  ├── notes, contactEmail, createdBy (Owner)
+  ├── azureTenantId, azureEnabled (M365 SSO)
+  └── Location[] / "Biuro"
+        ├── openTime, closeTime
+        ├── Desk[]
+        │     ├── qrToken
         │     └── Device? (beacon ESP32)
-        └── Gateway[] (Raspberry Pi)
+        ├── Gateway[]
+        └── GatewaySetupToken[]   ← tokeny instalacyjne
 
 User
-  ├── role: SUPER_ADMIN | OFFICE_ADMIN | STAFF | END_USER
-  ├── organizationId
+  ├── role: OWNER | SUPER_ADMIN | OFFICE_ADMIN | STAFF | END_USER
+  ├── organizationId (null dla OWNER)
   ├── cardUid (karta NFC)
-  └── azureObjectId (M365 SSO - planowane)
+  ├── azureObjectId (M365 SSO JIT provisioning)
+  └── azureTenantId
 
 Reservation
-  ├── deskId, userId
-  ├── date, startTime, endTime
+  ├── deskId, userId, date, startTime, endTime
   ├── status: PENDING | CONFIRMED | CANCELLED | EXPIRED
-  ├── qrToken (do QR check-in)
-  ├── checkedInAt, checkedInMethod: NFC | QR | MANUAL
+  ├── qrToken
+  └── checkedInAt, checkedInMethod: NFC | QR | MANUAL
 
-Checkin
-  ├── reservationId?, deskId, userId
-  ├── method: NFC | QR | MANUAL
-  └── checkedOutAt?
-
-Gateway
-  ├── locationId, secretHash
-  ├── isOnline, lastSeen, ipAddress
-
-Device (beacon ESP32)
-  ├── hardwareId, gatewayId, deskId?
-  ├── mqttUsername, mqttPasswordHash
-  └── isOnline, lastSeen, rssi, firmwareVersion
+GatewaySetupToken
+  ├── token (cuid, jednorazowy)
+  ├── locationId  ← @@index
+  ├── expiresAt (24h)
+  └── usedAt (null = nie użyty)
 ```
 
 ---
 
-## Role użytkowników
+## Role użytkowników — pełna hierarchia
 
 | Rola | Panel | Uprawnienia |
 |---|---|---|
-| `SUPER_ADMIN` | Admin | Wszystkie organizacje, pełny dostęp |
-| `OFFICE_ADMIN` | Admin | Jedna organizacja, pełny zarząd |
-| `STAFF` | Staff | Podgląd + ręczny check-in/out |
-| `END_USER` | Staff | Własne rezerwacje, QR check-in, tylko wolne biurka |
+| `OWNER` | Owner Panel | Wszystkie organizacje, impersonacja SUPER_ADMIN, metryki platformy |
+| `SUPER_ADMIN` | Admin Panel | Jedna organizacja — pełny dostęp |
+| `OFFICE_ADMIN` | Admin Panel | Jedno biuro — zarządzanie |
+| `STAFF` | Staff Panel | Podgląd + ręczny check-in/out |
+| `END_USER` | Staff Panel | Własne rezerwacje, QR check-in |
 
 ---
 
 ## Kluczowe endpointy API
 
+### Auth
 ```
-Auth:
-POST /auth/login         { email, password } → { accessToken, refreshToken, user }
-POST /auth/refresh       { refreshToken }    → { accessToken, refreshToken, user }
-POST /auth/logout        { refreshToken }
+POST /auth/login             { email, password } → tokens + user
+POST /auth/refresh           { refreshToken }    → tokens
+POST /auth/logout            { refreshToken }
+POST /auth/azure             { idToken }         → tokens + user (JIT provisioning)
+GET  /auth/azure/check       ?email=             → { available, tenantId }
+```
 
-Lokalizacje:
-GET  /locations                     ← OFFICE_ADMIN widzi tylko swoją org
-POST /locations                     { organizationId, name, openTime, closeTime }
-PATCH /locations/:id                { openTime, closeTime, ... }
+### Owner (`/owner/*`) — tylko OWNER
+```
+GET  /owner/organizations               lista firm z metrykami
+POST /owner/organizations               utwórz firmę + SUPER_ADMIN (transakcja)
+GET  /owner/organizations/:id           szczegóły: biura, gateway, beacony, eventy
+PATCH /owner/organizations/:id          plan, status, notatki
+DELETE /owner/organizations/:id         soft delete (isActive=false)
+POST /owner/organizations/:id/impersonate  JWT 30min jako SUPER_ADMIN + audit log
+GET  /owner/health                      globalny stan IoT (gateway + beacony)
+GET  /owner/health/:orgId               stan jednej firmy
+GET  /owner/stats                       metryki: firmy, gateway, beacony, check-iny
+```
 
-Biurka:
-GET  /locations/:id/desks
-POST /locations/:id/desks           { name, code, floor, zone }
-GET  /desks/qr/:token               ← PUBLICZNY (bez auth)
-PATCH /desks/:id/unpair
+### Lokalizacje / Biura
+```
+GET  /locations                         OFFICE_ADMIN: tylko własna org
+POST /locations                         { organizationId, name, openTime, closeTime }
+PATCH /locations/:id
+```
 
-Rezerwacje:
-GET  /reservations                  ?locationId=&userId=&date=&status=
-POST /reservations                  { deskId, date, startTime, endTime }
-DELETE /reservations/:id            (cancel)
+### Gateway
+```
+POST /gateway/setup-tokens              { locationId } → { token, installCmd }
+POST /gateway/setup/:token              { gatewayName } — jednorazowe, 24h ważność
+GET  /install/gateway/:token            bash wrapper z wstrzykniętym tokenem + API URL
+POST /gateway/:id/sync / heartbeat
+```
 
-Check-in:
-POST /checkins/qr                   { deskId, qrToken }          ← JWT required
-POST /checkins/qr/walkin            { deskId }                   ← JWT required
-POST /checkins/manual               { deskId, userId, reservationId? }
-PATCH /checkins/:id/checkout
+### Devices (beacony)
+```
+POST /devices/provision                 { hardwareId, gatewayId, deskId? }
+GET  /devices, PATCH, DELETE
+```
 
-Gateway:
-POST /gateway/register              { locationId, name }         → { gateway, secret }
-POST /gateway/:id/sync              ← wywołane przez gateway
-POST /gateway/:id/heartbeat
-
-Devices:
-POST /devices/provision             { hardwareId, gatewayId, deskId? }
-                                    → { device, mqttUsername, mqttPassword }
+### Outlook Add-in
+```
+GET  /desks/available                   ?locationId&startTime&endTime → wolne biurka
+GET  /reservations/my                   JWT → moje rezerwacje (max 100, domyślnie 50)
 ```
 
 ---
 
-## Zmienne środowiskowe
+## Zmienne środowiskowe backendu
 
-### Backend (.env)
 ```env
 DATABASE_URL=postgresql://...
 JWT_SECRET=...
 JWT_REFRESH_SECRET=...
-MQTT_BROKER_URL=mqtt://mosquitto-SERVICE_NAME:1883
-CORS_ORIGINS=https://admin.domain.pl,https://staff.domain.pl
-GATEWAY_PROVISION_KEY=...   # klucz do gateway HTTP API
-PORT=3000
-```
-
-### Gateway (.env)
-```env
-GATEWAY_ID=...              # ID z panelu Admin
-GATEWAY_SECRET=...          # secret z panelu Admin
-LOCATION_ID=...             # ID biura z panelu Admin
-SERVER_URL=https://api.domain.pl/api/v1
-MQTT_BROKER_URL=mqtt://mosquitto:1883
-MQTT_USERNAME=backend       # WAŻNE: username usera w lokalnym Mosquitto
-MQTT_PASSWORD=...
-CACHE_DB_PATH=./data/cache.db
-GATEWAY_PROVISION_KEY=...   # musi być taki sam jak w backendzie
-```
-
-### Firmware (przez PROVISION: komendę serial)
-```json
-{
-  "wifi_ssid": "...",
-  "wifi_pass": "...",
-  "mqtt_host": "192.168.x.x",    ← IP Raspberry Pi
-  "mqtt_port": 1883,
-  "mqtt_user": "backend",         ← MQTT_USERNAME z gateway .env
-  "mqtt_pass": "...",             ← MQTT_PASSWORD z gateway .env
-  "device_id": "...",             ← dowolny unikalny ID
-  "desk_id": "",                  ← opcjonalnie ID biurka
-  "gateway_id": "..."             ← GATEWAY_ID z gateway .env
-}
-```
-
----
-
-## Znane problemy i decyzje techniczne
-
-### Cloudflare Tunnel nie obsługuje raw TCP
-MQTT (port 1883) **nie może** przechodzić przez Cloudflare Tunnel.
-Beacon MUSI łączyć się z Mosquitto na lokalnym IP (np. `192.168.101.237`).
-
-### Raspberry Pi 1 B+ — NIEKOMPATYBILNY
-ARMv6 architektura. Node.js 20, Docker, better-sqlite3 — **nie działają** na ARMv6.
-Wymagane: RPi 3B+, RPi 4, RPi Zero 2W (wszystkie ARM64/ARMv7).
-
-### better-sqlite3 wymaga kompilacji native
-W Dockerfile musi być `python3 make g++` w builder stage.
-Rozwiązanie: `npm prune --production` w builderze + `COPY node_modules` do production.
-Nie instaluj ponownie w production stage.
-
-### JWT validate musi sprawdzać isActive
-`jwt.strategy.ts` odpytuje DB przy każdym request — inaczej dezaktywowani użytkownicy
-mogą używać stale tokenów.
-
-### Provisioning MQTT users — flow
-1. Admin Panel → + Provisioning → backend generuje `mqttUsername` + `mqttPassword`
-2. Backend wywołuje `POST http://PI_IP:3001/beacon/add` (gateway HTTP API)
-3. Gateway dodaje usera do Mosquitto passwd + ACL + SIGHUP reload
-4. Admin prowizjonuje ESP32 przez monitor serialny z tymi credentials
-
----
-
-## Firmware — komendy serial (115200 baud)
-
-```
-PROVISION:{"wifi_ssid":"...","wifi_pass":"...","mqtt_host":"IP","mqtt_port":1883,
-           "mqtt_user":"backend","mqtt_pass":"...","device_id":"...","gateway_id":"..."}
-RESET           ← czyści NVS, restart w trybie PROVISIONING
-```
-
-Przez MQTT (gdy już połączony):
-```
-REBOOT          ← restart
-IDENTIFY        ← miga białym LED (znajdowanie fizyczne)
-FACTORY_RESET   ← czyści NVS + restart
-```
-
----
-
-## MQTT topics
-
-```
-desk/{deskId}/checkin    beacon → gateway (event NFC scan)
-desk/{deskId}/status     beacon → gateway (heartbeat co 30s)
-desk/{deskId}/command    gateway → beacon (SET_LED, REBOOT, IDENTIFY)
-gateway/{gwId}/hello     gateway → backend (gateway online)
+MQTT_BROKER_URL=mqtt://mosquitto-NAME:1883
+CORS_ORIGINS=https://admin.prohalw2026.ovh,https://staff.prohalw2026.ovh
+GATEWAY_PROVISION_KEY=...
+PUBLIC_API_URL=https://api.prohalw2026.ovh/api/v1
+ADMIN_URL=https://admin.prohalw2026.ovh
+AZURE_CLIENT_ID=...
+AZURE_CLIENT_SECRET=...
+AZURE_REDIRECT_URI=https://api.prohalw2026.ovh/auth/azure/callback
+GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/lewski22/desk-gateway-python/main/install.sh
 ```
 
 ---
 
 ## Deployment (Coolify na Proxmox)
 
-Serwisy w Coolify:
-- `desk-postgres` — PostgreSQL 15
-- `desk-mqtt` — Mosquitto (wewnętrzny broker backendu)
-- `desk-backend` — NestJS API
-- `front-admin` — React Admin Panel (nginx)
-- `front-staff` — React Staff Panel (nginx)
-- `cloudflared` — Cloudflare Tunnel
+### Serwisy
 
-Adresy produkcyjne:
-- API: `https://api.prohalw2026.ovh/api/v1`
-- Admin: `https://admin.prohalw2026.ovh`
-- Staff: `https://staff.prohalw2026.ovh`
-- Swagger: `https://api.prohalw2026.ovh/api/docs`
+| Serwis | Źródło | Domena |
+|---|---|---|
+| `desk-postgres` | PostgreSQL 15 | wewnętrzny |
+| `desk-mqtt` | Mosquitto | wewnętrzny |
+| `desk-backend` | `backend/` | api.prohalw2026.ovh |
+| `front-admin` | `apps/admin/` | admin.prohalw2026.ovh |
+| `front-staff` | `apps/staff/` | staff.prohalw2026.ovh |
+| `front-owner` | `apps/owner/` | owner.prohalw2026.ovh ← NOWY |
+| `front-outlook` | `apps/outlook/` | outlook.prohalw2026.ovh |
+
+### CMD backendu przy starcie kontenera
+```
+prisma db push --accept-data-loss
+  → node dist/database/seeds/seed.js   (upsert — idempotentny)
+    → node dist/main
+```
 
 ---
 
@@ -316,6 +267,7 @@ Adresy produkcyjne:
 
 | Email | Hasło | Rola |
 |---|---|---|
+| `owner@reserti.pl` | `Owner1234!` | OWNER |
 | `superadmin@reserti.pl` | `Admin1234!` | SUPER_ADMIN |
 | `admin@demo-corp.pl` | `Admin1234!` | OFFICE_ADMIN |
 | `staff@demo-corp.pl` | `Staff1234!` | STAFF |
@@ -323,12 +275,67 @@ Adresy produkcyjne:
 
 ---
 
-## Planowane funkcje (roadmap)
+## Logowanie — dwa niezależne flow
 
-1. **M365 integracja** — Entra ID SSO + Outlook Add-in + Teams App
-2. **Gateway QR token** — auto-konfiguracja Pi przez jednorazowy token z panelu
-3. **Dedykowany OS image** — RPi Imager z preinstalowanym gatewayem
-4. **Web Serial provisioning ESP32** — flash config przez przeglądarkę (Chrome Web Serial API)
-5. **Cloud MQTT** — brak potrzeby lokalnego Pi (MQTT over TLS na mqtt.reserti.pl)
+### Email + hasło (domyślny)
+```
+Formularz email/password → POST /auth/login → JWT
+Zero requestów w tle przy wpisywaniu — zero ryzyka "Failed to fetch"
+```
 
-Szczegóły: `docs/gateway-provisioning-roadmap.md`, `docs/roadmap.md`
+### Entra ID SSO (osobny przycisk)
+```
+Klik "Zaloguj przez Entra ID"
+  → Modal: wpisz email firmowy
+    → GET /auth/azure/check?email=...
+      → available: false → komunikat błędu w modalu
+      → available: true  → MSAL loginPopup (tenant-specific)
+        → idToken → POST /auth/azure → JWT
+```
+Przycisk zawsze widoczny — nie pojawia się dynamicznie.
+Błąd z backendu może się pojawić TYLKO w modalu Entra ID.
+
+---
+
+## Impersonation Owner → Admin
+
+```
+Owner: kliknij "Wejdź jako Admin" przy firmie
+  → POST /owner/organizations/:id/impersonate
+    Backend:
+      1. Sprawdź role === OWNER (OwnerGuard)
+      2. Znajdź pierwszego aktywnego SUPER_ADMIN w org
+      3. Zapisz Event(OWNER_IMPERSONATION, { ownerId, orgId, ip, at })
+      4. Generuj JWT 30min { sub, role: SUPER_ADMIN, orgId, impersonated: true }
+    Odpowiedź: { token, expiresAt, adminUrl, orgName }
+  → Owner Panel otwiera admin.prohalw2026.ovh/auth/impersonate?token=...
+    Admin Panel: ImpersonatePage dekoduje JWT, zapisuje admin_impersonated=true
+    AdminLayout: amber baner "Sesja tymczasowa 30 min, wszystko logowane"
+```
+
+---
+
+## Znane ograniczenia i decyzje techniczne
+
+### MQTT nie przechodzi przez Cloudflare Tunnel
+Beacon musi łączyć się bezpośrednio z Mosquitto na IP lokalnym (192.168.x.x).
+
+### Raspberry Pi 1 B+ — niekompatybilny
+ARMv6 — nie obsługuje Node.js 20, Docker, better-sqlite3.
+Wymagane: RPi 3B+, RPi 4, RPi Zero 2W (ARMv7/ARM64).
+
+### prisma db push zamiast migrate deploy
+Brak folderu `migrations/` — schemat synchronizowany przez `db push`.
+`--accept-data-loss` bezpieczny gdy nowe pola są nullable.
+
+### Seed uruchamiany automatycznie przy każdym starcie
+`node dist/database/seeds/seed.js` w CMD Dockerfile.
+Upsert jest idempotentny — nie duplikuje danych.
+
+### ConfigService zamiast process.env
+Wszystkie env vars dostępne przez `this.config.get<string>('KEY')`.
+Dotyczy: DevicesService, InstallController, OwnerService, AzureAuthService.
+
+### ReservationStatus enum zamiast string literals
+`ReservationStatus.CANCELLED`, `.PENDING` itd. zamiast `'CANCELLED'`.
+TypeScript wykryje literówki w czasie kompilacji.

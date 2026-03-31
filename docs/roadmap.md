@@ -1,13 +1,17 @@
 # Roadmap — Reserti Desk Management System
 
-## Aktualny stan (v1.0)
+## Aktualny stan (v0.8.0 — 2026-03-31)
 
 ✅ Firmware ESP32 (NFC + LED + offline queue)  
-✅ Gateway per-biuro (MQTT bridge + SQLite cache)  
+✅ Gateway per-biuro (Python, systemd, auto-install)  
 ✅ Backend NestJS (REST API + MQTT + PostgreSQL)  
 ✅ Panel Admin (biurka, użytkownicy, provisioning, raporty)  
 ✅ Panel Staff (mapa zajętości)  
+✅ Panel Owner (klienci, health, statystyki, impersonacja)  
+✅ M1 — Entra ID SSO (Admin + Staff + Outlook Add-in)  
+✅ M3 — Outlook Add-in  
 ✅ Deploy: Proxmox LXC + Coolify + Cloudflare Tunnel  
+✅ P1-P3 — code review, rate limiting, enum, vite-env, indeksy  
 
 ---
 
@@ -1900,7 +1904,7 @@ function AdminRoute({ user, children }: { user: any; children: ReactNode }) {
 
 > Ostatnia aktualizacja: 2026-03-31
 > Szczegółowy kontekst techniczny: `docs/AI_OWNER_CONTEXT.md`
-> Status: PLANOWANE — żaden plik nie jest jeszcze modyfikowany
+> Status: ✅ ZAIMPLEMENTOWANY — commit e0fcf1d
 
 ### Cel operacyjny
 
