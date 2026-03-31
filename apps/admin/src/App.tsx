@@ -257,9 +257,6 @@ export default function App() {
         <Route path="/login" element={
           user ? <Navigate to="/dashboard" replace /> : <Login onLogin={u => setUser(u)} />
         } />
-        <Route path="/auth/azure/callback" element={
-          <AzureCallback onLogin={u => setUser(u)} />
-        } />
 
         <Route path="/*" element={
           !user
