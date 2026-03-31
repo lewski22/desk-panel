@@ -89,11 +89,18 @@ export function useAuth() {
     return u;
   }, []);
 
+  const loginAzure = useCallback(async (idToken: string) => {
+    const u = await api.auth.loginAzure(idToken);
+    localStorage.setItem('staff_user', JSON.stringify(u));
+    setUser(u);
+    return u;
+  }, []);
+
   const logout = useCallback(() => {
     api.auth.logout();
     localStorage.removeItem('staff_user');
     setUser(null);
   }, []);
 
-  return { user, login, logout };
+  return { user, login, loginAzure, logout };
 }

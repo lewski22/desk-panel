@@ -14,7 +14,7 @@ function ProtectedRoute({ user, children }: { user: any; children: React.ReactNo
 }
 
 export default function App() {
-  const { user, login, logout } = useAuth();
+  const { user, login, loginAzure, logout } = useAuth();
 
   return (
     <BrowserRouter>
@@ -24,7 +24,7 @@ export default function App() {
 
         {/* Public — Login */}
         <Route path="/login"
-          element={user ? <Navigate to="/" replace /> : <LoginPage onLogin={login} />}
+          element={user ? <Navigate to="/" replace /> : <LoginPage onLogin={login} onLoginAzure={loginAzure} />}
         />
 
         {/* Protected */}

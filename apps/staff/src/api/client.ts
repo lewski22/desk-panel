@@ -67,6 +67,23 @@ export const api = {
       // Store accessToken inside user object so QrCheckinPage can read it without hooks
       return { ...data.user, accessToken: data.accessToken };
     },
+
+    async loginAzure(idToken: string) {
+      const data = await request<{ accessToken: string; refreshToken: string; user: any }>(
+        '/auth/azure',
+        { method: 'POST', body: JSON.stringify({ idToken }) },
+      );
+      localStorage.setItem('access_token',  data.accessToken);
+      localStorage.setItem('refresh_token', data.refreshToken);
+      return { ...data.user, accessToken: data.accessToken };
+    },
+
+    async checkSso(email: string): Promise<{ available: boolean; tenantId?: string }> {
+      const res = await fetch(`${BASE}/auth/azure/check?email=${encodeURIComponent(email)}`);
+      if (!res.ok) return { available: false };
+      return res.json();
+    },
+
     logout() {
       const refreshToken = localStorage.getItem('refresh_token');
       if (refreshToken) {

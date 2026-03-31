@@ -6,8 +6,7 @@
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
   xsi:type="MailApp">
 
-  <!-- UWAGA: Podmień GUID przed wdrożeniem produkcyjnym -->
-  <Id>a1b2c3d4-e5f6-7890-abcd-ef1234567890</Id>
+  <Id>cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09</Id>
   <Version>1.0.0</Version>
   <ProviderName>Reserti</ProviderName>
   <DefaultLocale>pl-PL</DefaultLocale>
