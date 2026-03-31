@@ -15,6 +15,18 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class ReservationsController {
   constructor(private svc: ReservationsService) {}
 
+  // M3: Moje rezerwacje — dla Outlook Add-in i Staff Panel
+  @Get('my')
+  @ApiOperation({ summary: 'Moje aktywne rezerwacje (opcjonalnie filtr po dacie, max 50)' })
+  findMy(
+    @Query('date')  date:  string,
+    @Query('limit') limit: string,
+    @Request() req: any,
+  ) {
+    const take = Math.min(parseInt(limit) || 50, 100);
+    return this.svc.findMy(req.user.id, date, take);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List reservations (filterable)' })
   findAll(

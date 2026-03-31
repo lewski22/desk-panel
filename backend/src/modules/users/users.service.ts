@@ -109,13 +109,15 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: {
-        email:        `deleted-${id}@deleted.invalid`,
-        // FIX: anonymize name — was preserving firstName/lastName despite "anonymize" comment
-        firstName:    'Usunięty',
-        lastName:     'Użytkownik',
-        passwordHash: '',
-        cardUid:      null,
-        isActive:     false,
+        email:         `deleted-${id}@deleted.invalid`,
+        firstName:     'Usunięty',
+        lastName:      'Użytkownik',
+        passwordHash:  '',
+        cardUid:       null,
+        // Wyczyść dane Azure SSO — inaczej JIT provisioning znajdzie ten rekord
+        azureObjectId: null,
+        azureTenantId: null,
+        isActive:      false,
       },
       select: USER_SELECT,
     });

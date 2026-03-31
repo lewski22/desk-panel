@@ -68,10 +68,13 @@ model Organization {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
-  // plan removed — not needed in this version
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // M365 / Entra ID SSO (opcjonalne — per firma)
+  azureTenantId  String?          // Tenant ID z Entra ID firmy-klienta
+  azureEnabled   Boolean  @default(false)
 
   locations Location[]
   users     User[]
@@ -194,6 +197,10 @@ model User {
   role           UserRole  @default(END_USER)
   cardUid        String?   @unique
   isActive       Boolean   @default(true)
+
+  // M365 / Entra ID SSO
+  azureObjectId  String?   @unique  // Azure AD object ID (oid z tokenu)
+  azureTenantId  String?            // tenant użytkownika
   // Soft delete — konto dezaktywowane czeka na usunięcie po retentionDays
   deletedAt      DateTime?
   scheduledDeleteAt DateTime?   // data kiedy konto zostanie trwale usunięte

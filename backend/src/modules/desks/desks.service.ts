@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { DeskStatus } from '@prisma/client';
@@ -155,5 +157,56 @@ export class DesksService {
       isOccupied: desk.checkins.length > 0,
       currentReservation: desk.reservations[0] ?? null,
     };
+  }
+
+  // ── M3: Wolne biurka na dany slot czasowy (Outlook Add-in) ───
+  async findAvailable(
+    locationId: string,
+    date:       string,   // YYYY-MM-DD
+    startTime:  string,   // HH:MM
+    endTime:    string,   // HH:MM
+    requestingOrgId?: string, // organizationId zalogowanego użytkownika
+  ) {
+    // Scoping: weryfikuj czy lokalizacja należy do org użytkownika
+    const location = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { id: true, organizationId: true },
+    });
+    if (!location) throw new NotFoundException(`Location ${locationId} not found`);
+    if (requestingOrgId && location.organizationId !== requestingOrgId) {
+      throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+    }
+    const dateObj  = new Date(date);
+    const startDt  = new Date(`${date}T${startTime}:00`);
+    const endDt    = new Date(`${date}T${endTime}:00`);
+
+    if (isNaN(startDt.getTime()) || isNaN(endDt.getTime())) {
+      throw new BadRequestException('Nieprawidłowy format daty lub czasu (oczekiwany: YYYY-MM-DD, HH:MM)');
+    }
+    if (startDt >= endDt) {
+      throw new BadRequestException('startTime musi być wcześniejszy niż endTime');
+    }
+
+    // Wszystkie aktywne biurka w lokalizacji
+    const desks = await this.prisma.desk.findMany({
+      where: { locationId, status: DeskStatus.ACTIVE },
+      select: { id: true, name: true, code: true, floor: true, zone: true },
+    });
+
+    // ID biurek z kolizją rezerwacji w tym oknie
+    const taken = await this.prisma.reservation.findMany({
+      where: {
+        deskId: { in: desks.map(d => d.id) },
+        date:   dateObj,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        // nakładanie się okien: start < endTime AND end > startTime
+        startTime: { lt: endDt },
+        endTime:   { gt: startDt },
+      },
+      select: { deskId: true },
+    });
+
+    const takenIds = new Set(taken.map(r => r.deskId));
+    return desks.filter(d => !takenIds.has(d.id));
   }
 }

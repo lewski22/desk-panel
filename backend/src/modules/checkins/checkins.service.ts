@@ -184,7 +184,7 @@ export class CheckinsService {
       orderBy: { startTime: 'asc' },
     });
 
-    const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+    const startOfDay = new Date(now.toDateString()); // lokalna data, nie UTC midnight
     // End reservation at closeTime OR 5 min before next reservation
     const walkinEnd = nextReservation
       ? new Date(new Date(nextReservation.startTime).getTime() - 5 * 60 * 1000)

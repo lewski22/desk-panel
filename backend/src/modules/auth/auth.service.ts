@@ -16,6 +16,8 @@ export class AuthService {
   async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return null;
+    // Konto Azure SSO — brak hasła, nie pozwól na logowanie email/password
+    if (user.passwordHash === 'AZURE_SSO_ONLY') return null;
     const valid = await bcrypt.compare(password, user.passwordHash);
     return valid ? user : null;
   }

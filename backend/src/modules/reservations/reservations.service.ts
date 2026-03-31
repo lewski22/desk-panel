@@ -3,13 +3,16 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { ReservationStatus } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
   constructor(private prisma: PrismaService) {}
 
   async findAll(filters: {
@@ -120,16 +123,36 @@ export class ReservationsService {
     return { qrToken: reservation.qrToken, deskId: reservation.deskId };
   }
 
-  // Called by scheduled job — marks past CONFIRMED reservations as EXPIRED
+  // Co 15 minut wygasaj przeterminowane rezerwacje CONFIRMED
+  @Cron('0 */15 * * * *')
   async expireOld() {
     const now = new Date();
     const result = await this.prisma.reservation.updateMany({
       where: {
-        status: ReservationStatus.CONFIRMED,
+        status:  ReservationStatus.CONFIRMED,
         endTime: { lt: now },
       },
       data: { status: ReservationStatus.EXPIRED },
     });
+    if (result.count > 0) {
+      this.logger.log(`Expired ${result.count} stale reservation(s)`);
+    }
     return result.count;
+  }
+
+  // M3: Moje rezerwacje — dla Outlook Add-in i Staff Panel
+  async findMy(userId: string, date?: string, take = 50) {
+    return this.prisma.reservation.findMany({
+      where: {
+        userId,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        ...(date ? { date: new Date(date) } : {}),
+      },
+      include: {
+        desk: { select: { id: true, name: true, code: true, floor: true, location: { select: { name: true } } } },
+      },
+      orderBy: { startTime: 'asc' },
+      take,
+    });
   }
 }

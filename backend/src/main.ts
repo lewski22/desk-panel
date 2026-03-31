@@ -1,17 +1,15 @@
-import { NestFactory }       from '@nestjs/core';
-import { ValidationPipe }    from '@nestjs/common';
+import { NestFactory }                   from '@nestjs/core';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule }         from './app.module';
+import { AppModule }                     from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    // FIX: disable verbose logger in production — reduces noise in Coolify logs
     logger: process.env.NODE_ENV === 'production'
       ? ['error', 'warn']
       : ['log', 'error', 'warn', 'debug'],
   });
 
-  // Global validation — strip unknown fields, transform types
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist:            true,
@@ -20,15 +18,16 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
   app.enableCors({
     origin:      process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:5173'],
     credentials: true,
   });
 
-  app.setGlobalPrefix('api/v1');
+  // /install/* serwuje skrypt bash — poza prefixem /api/v1
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'install/(.*)', method: RequestMethod.GET }],
+  });
 
-  // Swagger — only in non-production or when explicitly enabled
   if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true') {
     const config = new DocumentBuilder()
       .setTitle('Desk Beacon API')
@@ -41,6 +40,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? 3000;
   await app.listen(port);
-  console.log(`🚀 Server on http://localhost:${port}/api/v1`);
+  console.log(`🚀  API:     https://api.prohalw2026.ovh/api/v1`);
+  console.log(`📦  Install: https://api.prohalw2026.ovh/install/gateway/:token`);
 }
 bootstrap();

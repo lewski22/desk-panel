@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, UseGuards,
+  Param, Body, Query, UseGuards, Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -15,6 +15,24 @@ import { Roles }        from '../auth/decorators/roles.decorator';
 @Controller()
 export class DesksController {
   constructor(private desks: DesksService) {}
+
+  @Get('desks/available')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Wolne biurka na dany slot — dla Outlook Add-in (M3)' })
+  @ApiQuery({ name: 'locationId', required: true })
+  @ApiQuery({ name: 'date',       required: true, example: '2025-06-15' })
+  @ApiQuery({ name: 'startTime',  required: true, example: '09:00' })
+  @ApiQuery({ name: 'endTime',    required: true, example: '17:00' })
+  findAvailable(
+    @Query('locationId') locationId: string,
+    @Query('date')       date:       string,
+    @Query('startTime')  startTime:  string,
+    @Query('endTime')    endTime:    string,
+    @Request() req: any,
+  ) {
+    return this.desks.findAvailable(locationId, date, startTime, endTime, req.user.organizationId);
+  }
 
   // ── Public — no auth ─────────────────────────────────────────
   @Get('desks/qr/:token')

@@ -1,0 +1,6 @@
+import { IsString } from 'class-validator';
+
+export class AzureLoginDto {
+  @IsString()
+  idToken: string;
+}

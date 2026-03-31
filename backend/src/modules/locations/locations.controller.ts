@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                        from '@nestjs/swagger';
 import { UserRole }                                                    from '@prisma/client';
 import { LocationsService, CreateLocationDto }                         from './locations.service';
@@ -25,8 +25,17 @@ export class LocationsController {
 
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    const loc = await this.svc.findOne(id);
+    // OFFICE_ADMIN i STAFF mogą widzieć tylko lokalizacje swojej organizacji
+    if (
+      req.user.role !== UserRole.SUPER_ADMIN &&
+      req.user.organizationId &&
+      loc?.organizationId !== req.user.organizationId
+    ) {
+      throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+    }
+    return loc;
   }
 
   @Get(':id/analytics/occupancy')
