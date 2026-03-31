@@ -215,7 +215,7 @@ export class OwnerService {
     const inactiveOrgs = await this.prisma.organization.findMany({
       where: {
         isActive: true,
-        events:   { none: { createdAt: { gte: week } } },
+        events:   { none: { ts: { gte: week } } },
       },
       select: { id: true, name: true, slug: true, plan: true, createdAt: true },
       take: 10,
