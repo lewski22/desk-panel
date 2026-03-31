@@ -34,6 +34,6 @@ COPY --from=builder /app/package.json ./
 
 # prisma migrate deploy requires DATABASE_URL — runs at container start
 # when env vars from Coolify are already injected
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/main"]
 
 EXPOSE 3000
