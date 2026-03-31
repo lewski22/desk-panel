@@ -21,7 +21,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 
   useEffect(() => {
     if (!orgId) return;
-    adminApi.organizations.getAzureConfig(orgId)
+    adminApi.orgs.getAzureConfig(orgId)
       .then(c => { setConfig(c); setTenantId(c.azureTenantId ?? ''); setEnabled(c.azureEnabled); })
       .catch(() => {});
   }, [orgId]);
@@ -29,7 +29,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
   const save = async () => {
     setSaving(true); setErr('');
     try {
-      await adminApi.organizations.updateAzureConfig(orgId, { azureTenantId: tenantId || null, azureEnabled: enabled });
+      await adminApi.orgs.updateAzureConfig(orgId, { azureTenantId: tenantId || null, azureEnabled: enabled });
       onClose();
     } catch (e: any) { setErr(e.message); }
     setSaving(false);
@@ -120,6 +120,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 }
 
 function InstallTokenModal({ location, onClose }: { location: any; onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
   const [token,   setToken]   = useState<any>(null);
   const [copied,  setCopied]  = useState(false);
   const [error,   setError]   = useState('');
@@ -223,6 +224,7 @@ export function OrganizationsPage() {
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
   const [installModal, setInstallModal] = useState<any>(null);
+  const [azureModal,   setAzureModal]   = useState<any>(null);
 
   const load = async () => {
     setLoading(true);
@@ -334,6 +336,7 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400">
                   {new Date(loc.createdAt).toLocaleDateString('pl-PL')}
                 </p>
+                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>M365</Btn>
                 <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>+ Gateway</Btn>
                 <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>Edytuj</Btn>
               </div>
