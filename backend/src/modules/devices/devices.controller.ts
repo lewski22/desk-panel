@@ -54,17 +54,6 @@ export class DevicesController {
     return this.svc.assignToDesk(id, deskId);
   }
 
-  @Patch(':hardwareId/heartbeat')
-  @SkipThrottle()
-  @ApiOperation({ summary: 'Device heartbeat — called by gateway (no auth)' })
-  heartbeat(
-    @Param('hardwareId') hardwareId: string,
-    @Body('rssi') rssi?: number,
-    @Body('firmwareVersion') firmwareVersion?: string,
-  ) {
-    return this.svc.heartbeat(hardwareId, rssi, firmwareVersion);
-  }
-
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Delete beacon / device' })

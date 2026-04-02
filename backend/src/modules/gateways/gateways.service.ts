@@ -83,6 +83,18 @@ export class GatewaysService {
     });
   }
 
+  async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string) {
+    return this.prisma.device.update({
+      where: { hardwareId },
+      data: {
+        isOnline:        true,
+        lastSeen:        new Date(),
+        ...(rssi !== undefined && { rssi }),
+        ...(firmwareVersion    && { firmwareVersion }),
+      },
+    });
+  }
+
   async remove(id: string) {
     await this.prisma.gateway.delete({ where: { id } });
     return { deleted: true };

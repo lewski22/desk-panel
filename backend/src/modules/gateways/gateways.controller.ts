@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { GatewaysService }     from './gateways.service';
@@ -93,5 +93,16 @@ export class GatewaysController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   regenerateSecret(@Param('id') id: string) {
     return this.svc.regenerateSecret(id);
+  }
+
+  // ── Device heartbeat (called by gateway, no JWT) ──────────────
+  @Patch('device/:hardwareId/heartbeat')
+  @ApiOperation({ summary: 'Beacon heartbeat — called by gateway, no auth required' })
+  deviceHeartbeat(
+    @Param('hardwareId') hardwareId: string,
+    @Body('rssi') rssi?: number,
+    @Body('firmwareVersion') firmwareVersion?: string,
+  ) {
+    return this.svc.deviceHeartbeat(hardwareId, rssi, firmwareVersion);
   }
 }
