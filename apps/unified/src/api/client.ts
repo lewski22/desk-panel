@@ -83,6 +83,12 @@ export const appApi = {
     user(): any {
       try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
     },
+    changePassword(currentPassword: string, newPassword: string): Promise<void> {
+      return req<void>('/auth/change-password', {
+        method: 'PATCH',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+    },
   },
 
   orgs: {

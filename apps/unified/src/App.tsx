@@ -16,6 +16,7 @@ import { OrganizationsPage }   from './pages/OrganizationsPage';
 import { DeskMapPage }         from './pages/DeskMapPage';
 import { MyReservationsPage }  from './pages/MyReservationsPage';
 import { DevicesPage }         from './pages/DevicesPage';
+import { ChangePasswordPage }  from './pages/ChangePasswordPage';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
@@ -100,6 +101,9 @@ export default function App() {
                   } />
                   <Route path="/devices" element={
                     <Guard user={user} allowed={STAFF_ONLY}><DevicesPage /></Guard>
+                  } />
+                  <Route path="/change-password" element={
+                    <Guard user={user} allowed={ALL_ROLES}><ChangePasswordPage /></Guard>
                   } />
 
                   {/* Fallback */}
