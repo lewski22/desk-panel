@@ -1,14 +1,16 @@
 import {
-  Controller, Post, Get, Body, Query,
+  Controller, Post, Patch, Get, Body, Query,
   UseGuards, Request, HttpCode, HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard }        from '@nestjs/passport';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService }      from './auth.service';
 import { AzureAuthService } from './azure-auth.service';
 import { RefreshTokenDto }  from './dto/refresh-token.dto';
 import { AzureLoginDto }    from './dto/azure-login.dto';
+import { ChangePasswordDto }from './dto/change-password.dto';
+import { JwtAuthGuard }     from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -38,10 +40,21 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @SkipThrottle()  // logout nie potrzebuje limitu
+  @SkipThrottle()
   @ApiOperation({ summary: 'Revoke refresh token' })
   logout(@Body() dto: RefreshTokenDto) {
     return this.auth.logout(dto.refreshToken);
+  }
+
+  // ── Zmiana hasła ──────────────────────────────────────────────
+  @Patch('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } }) // 5 prób/min
+  @ApiOperation({ summary: 'Zmień hasło — wymaga podania aktualnego hasła' })
+  changePassword(@Body() dto: ChangePasswordDto, @Request() req) {
+    return this.auth.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
   }
 
   // ── Microsoft / Entra ID SSO ──────────────────────────────────

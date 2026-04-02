@@ -177,6 +177,7 @@ POST /auth/refresh           { refreshToken }    → tokens
 POST /auth/logout            { refreshToken }
 POST /auth/azure             { idToken }         → tokens + user (JIT provisioning)
 GET  /auth/azure/check       ?email=             → { available, tenantId }
+PATCH /auth/change-password  { currentPassword, newPassword } → 204 (JWT required)
 ```
 
 ### Owner (`/owner/*`) — tylko OWNER
@@ -252,6 +253,7 @@ GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/lewski22/desk-gatew
 | `front-admin` | `apps/admin/` | admin.prohalw2026.ovh |
 | `front-staff` | `apps/staff/` | staff.prohalw2026.ovh |
 | `front-owner` | `apps/owner/` | owner.prohalw2026.ovh ← NOWY |
+| `front-unified` | `apps/unified/` | app.prohalw2026.ovh ← NOWY |
 | `front-outlook` | `apps/outlook/` | outlook.prohalw2026.ovh |
 
 ### CMD backendu przy starcie kontenera

@@ -7,6 +7,7 @@ import { DevicesService, ProvisionDeviceDto } from './devices.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { SkipThrottle } from '@nestjs/throttler';
 
 class SendCommandDto {
   command: 'SET_LED' | 'REBOOT' | 'IDENTIFY';
@@ -51,6 +52,17 @@ export class DevicesController {
   @ApiOperation({ summary: 'Assign beacon to a desk' })
   assign(@Param('id') id: string, @Body('deskId') deskId: string) {
     return this.svc.assignToDesk(id, deskId);
+  }
+
+  @Patch(':hardwareId/heartbeat')
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Device heartbeat — called by gateway (no auth)' })
+  heartbeat(
+    @Param('hardwareId') hardwareId: string,
+    @Body('rssi') rssi?: number,
+    @Body('firmwareVersion') firmwareVersion?: string,
+  ) {
+    return this.svc.heartbeat(hardwareId, rssi, firmwareVersion);
   }
 
   @Delete(':id')

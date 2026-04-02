@@ -2073,3 +2073,88 @@ Uzasadnienie:
 - Owner Panel daje Ci narzędzie do zarządzania klientami na produkcji
 - Scalenie można zrobić stopniowo, Owner Panel to greenfield
 
+
+---
+
+## MFA / 2FA — Plan implementacji
+
+> Status: PLANOWANE — nie zaimplementowane
+> Priorytet: P3 — po stabilizacji produkcji
+
+### Zakres
+
+Dotyczy wyłącznie kont **email + hasło** (nie SSO — Microsoft zarządza MFA samodzielnie przez Entra ID).
+Użytkownicy kont SSO nie widzą żadnych zmian.
+
+### Metody uwierzytelniania (plan)
+
+| Metoda | Trudność | Opis |
+|---|---|---|
+| **TOTP** (Google Authenticator, Authy) | ★★☆ | RFC 6238 — rekomendowane jako pierwsze |
+| Email OTP | ★☆☆ | Jednorazowy 6-cyfrowy kod na email |
+| SMS OTP | ★★★ | Wymaga dostawcy SMS (Twilio, smsapi.pl) |
+
+**Rekomendacja MVP: TOTP** — nie wymaga zewnętrznych serwisów, szeroka adopcja aplikacji.
+
+### Biblioteki backendowe
+
+```
+speakeasy   ← generowanie/weryfikacja TOTP + backup codes
+qrcode      ← generowanie QR code do skanowania przez aplikację
+```
+
+### Zmiany w schemacie
+
+```prisma
+model User {
+  // ...istniejące...
+  mfaEnabled    Boolean  @default(false)
+  mfaSecret     String?  // zaszyfrowany klucz TOTP (AES-256)
+  mfaBackupCodes String[] // 10 jednorazowych kodów zapasowych (bcrypt)
+}
+```
+
+### Flow aktywacji
+
+```
+1. Użytkownik → Profil → Włącz 2FA
+2. Backend generuje secret (speakeasy.generateSecret())
+3. Frontend wyświetla QR code (do zeskanowania przez Authenticator)
+4. Użytkownik wpisuje pierwszy kod TOTP → weryfikacja
+5. Backend: mfaEnabled=true, zapisuje zaszyfrowany secret
+6. Frontend: pokazuje 10 backup codes — "zapisz teraz, nie będą pokazane ponownie"
+```
+
+### Flow logowania z MFA
+
+```
+POST /auth/login → {email, password}
+  → jeśli mfaEnabled: nie zwraca JWT, zwraca { mfaRequired: true, mfaToken: shortJWT(2min) }
+  → Frontend: ekran "Podaj kod z aplikacji"
+POST /auth/mfa → { mfaToken, code }
+  → weryfikacja TOTP lub backup code
+  → jeśli OK: zwraca pełny JWT (access + refresh)
+```
+
+### Nowe endpointy
+
+```
+POST /auth/mfa                    ← weryfikacja kodu TOTP (public, wymaga mfaToken)
+GET  /auth/mfa/setup              ← generuje QR + secret (JWT required)
+POST /auth/mfa/setup/confirm      ← potwierdza i aktywuje MFA
+DELETE /auth/mfa                  ← dezaktywacja MFA (wymaga kodu TOTP)
+GET  /auth/mfa/backup-codes       ← regeneracja kodów zapasowych
+```
+
+### Frontend — zmiany
+
+- Strona logowania: dodatkowy krok "Podaj kod 2FA" gdy backend zwróci `mfaRequired: true`
+- `ChangePasswordPage` / Profil: sekcja "Bezpieczeństwo" → Włącz/Wyłącz 2FA
+- Ekran setup: wyświetl QR, pole weryfikacyjne, backup codes
+
+### Uwagi
+
+- Secret TOTP przechowywać zaszyfrowany (AES-256, klucz w env `MFA_ENCRYPTION_KEY`)
+- Okno czasowe TOTP: ±1 krok (30s) tolerancji
+- Po wyczerpaniu backup codes → użytkownik kontaktuje się z adminem organizacji
+- Admin/SUPER_ADMIN może wymusić MFA dla całej organizacji (pole `Organization.mfaRequired`)

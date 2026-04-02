@@ -4,6 +4,32 @@ Format: `[wersja] — data — opis`
 
 ---
 
+## [0.9.0] — 2026-04-01 — Unified Panel + zmiana hasła
+
+### Nowe funkcje
+
+**Unified Panel (`apps/unified/`) — scalenie Admin + Staff**
+- Jedna aplikacja React pod domeną `app.prohalw2026.ovh`
+- Jeden sidebar dla wszystkich ról (SUPER_ADMIN, OFFICE_ADMIN, STAFF, END_USER)
+- Separator "Pracownik" w sidebarze dla adminów
+- Redirect po zalogowaniu per rola:
+  SUPER_ADMIN/OFFICE_ADMIN/STAFF → /dashboard, END_USER → /my-reservations
+- `MyReservationsPage` — NOWA: aktywne + historyczne rezerwacje per zalogowany user
+- `DeskMapPage` — picker biura z API (nie VITE_LOCATION_ID)
+- `ChangePasswordPage` — link "Zmień hasło" w stopce sidebara
+- Unified localStorage: app_access / app_refresh / app_user
+- QR linki wskazują na ten sam host (window.location.origin)
+
+**Zmiana hasła (`PATCH /auth/change-password`)**
+- Dostępna dla wszystkich ról po zalogowaniu (JWT required)
+- Walidacja: aktualne hasło musi być poprawne
+- Konta SSO (azureObjectId): endpoint zwraca 400 z instrukcją do myaccount.microsoft.com
+- Po zmianie: unieważniane wszystkie refresh tokeny → wymuszone ponowne logowanie
+- Frontend: pasek siły hasła, walidacja inline, obsługa kont SSO
+- Rate limiting: 5 prób/min per IP
+
+---
+
 ## [0.8.0] — 2026-03-31 — Panel Owner + poprawki P3
 
 ### Nowe funkcje

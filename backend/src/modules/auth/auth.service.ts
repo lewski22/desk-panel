@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -69,6 +69,30 @@ export class AuthService {
     // Rotate: delete old, issue new pair
     await this.prisma.refreshToken.delete({ where: { id: record.id } });
     return this.login(record.user);
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
+    // Konta SSO nie mają hasła — nie mogą go zmieniać
+    if (user.passwordHash === 'AZURE_SSO_ONLY') {
+      throw new BadRequestException('Konto SSO — hasło jest zarządzane przez Microsoft/Entra ID.');
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      throw new UnauthorizedException('Aktualne hasło jest nieprawidłowe.');
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('Nowe hasło musi być inne niż aktualne.');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+
+    // Unieważnij wszystkie refresh tokeny — zmuszamy do ponownego logowania
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
   }
 
   async logout(token: string) {
