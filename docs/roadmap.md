@@ -2158,3 +2158,86 @@ GET  /auth/mfa/backup-codes       ← regeneracja kodów zapasowych
 - Okno czasowe TOTP: ±1 krok (30s) tolerancji
 - Po wyczerpaniu backup codes → użytkownik kontaktuje się z adminem organizacji
 - Admin/SUPER_ADMIN może wymusić MFA dla całej organizacji (pole `Organization.mfaRequired`)
+
+
+---
+
+## Beacon Provisioner — desktopowy instalator
+
+> Status: PLANOWANE — nie zaimplementowane  
+> Priorytet: P3 — po stabilizacji produkcji
+
+### Cel
+
+Eliminacja ręcznego kopiowania komendy `PROVISION:{...}` przez technika.  
+Technik podłącza beacon USB, wkleja token z panelu, klika jeden przycisk.
+
+### Stack
+
+- **Python + tkinter** — wbudowany w każdą instalację Pythona, zero dodatkowych zależności GUI
+- **pyserial** — komunikacja z ESP32 przez port COM/ttyUSB
+- **pyinstaller** — dystrybucja jako jeden plik `.exe` (Windows) lub bin (Linux/Mac)
+
+### Interfejs (GUI)
+
+```
+┌─────────────────────────────────────────┐
+│  🔴 Reserti Beacon Provisioner          │
+├─────────────────────────────────────────┤
+│  Komenda PROVISION (wklej z panelu):    │
+│  ┌─────────────────────────────────┐    │
+│  │ PROVISION:{...}                 │    │
+│  └─────────────────────────────────┘    │
+│  Hardware ID:  esp-1  (auto z komendy)  │
+│                                         │
+│  Port:  [COM3 - CP2102  ▼] [Odśwież]   │
+│                                         │
+│  ┌─────────────────────────────────┐    │
+│  │ [23:11] Szukam ESP32...         │    │
+│  │ [23:11] Znaleziono: COM3        │    │
+│  │ [23:12] ✓ MQTT Connected!       │    │
+│  └─────────────────────────────────┘    │
+│         [  Wyślij do beacona  ]         │
+└─────────────────────────────────────────┘
+```
+
+### Flow użytkownika
+
+1. Technik otwiera aplikację
+2. Wkleja komendę `PROVISION:{...}` skopiowaną z panelu Admin → Provisioning
+3. Aplikacja automatycznie wykrywa port ESP32 (CP210x, CH340, FTDI, USB Serial)
+4. Opcjonalnie wybiera port ręcznie z dropdownu
+5. Klika "Wyślij do beacona"
+6. Aplikacja wysyła komendę i czeka na potwierdzenie (`[MQTT] Connected` lub `FREE`)
+7. Po sukcesie: dialog "Beacon skonfigurowany! Dodać kolejny?"
+   - **Tak** → nowa sesja z info o konieczności podłączenia nowego beacona
+   - **Nie** → zamknij aplikację
+
+### Auto-detekcja portu
+
+- Skanuj wszystkie porty COM/ttyUSB
+- Filtruj po opisie: `CP210x`, `CH340`, `FTDI`, `USB Serial`
+- Autoselect pierwszego pasującego
+- Przycisk "Odśwież" reskanuje
+
+### Timeout i błędy
+
+- Czeka 30s na odpowiedź od ESP32
+- Sukces: `[MQTT] Connected` lub `[STATE].*FREE` w logu serialnym
+- Błąd: `Failed` / `Error` w logu → komunikat dla technika
+
+### Pliki do stworzenia
+
+```
+beacon-provisioner/
+├── provisioner.py        ← główna aplikacja GUI
+├── requirements.txt      ← pyserial
+├── build.bat             ← pyinstaller → .exe (Windows)
+├── build.sh              ← pyinstaller → bin (Linux/Mac)
+└── README.md
+```
+
+### Zmiany w panelu Admin
+
+- Po przypisaniu biurka do beacona — przycisk "Kopiuj komendę PROVISION"
+  już istnieje w Provisioning → wystarczy wskazać użytkownikowi
