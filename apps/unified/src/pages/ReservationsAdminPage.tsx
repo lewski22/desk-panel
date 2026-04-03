@@ -90,12 +90,16 @@ export function ReservationsAdminPage() {
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-zinc-100">
+        <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-xl border-y sm:border border-zinc-100">
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">
-              <tr>{['Czas','Biurko','Pracownik','Status','Check-in','Akcje'].map(h =>
-                <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
-              )}</tr>
+              <tr>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Czas</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Biurko / Pracownik</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Status</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">Check-in</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Akcje</th>
+              </tr>
             </thead>
             <tbody>
               {res.map(r => {
@@ -107,16 +111,12 @@ export function ReservationsAdminPage() {
                     </td>
                     <td className="py-3 px-4">
                       <p className="font-medium text-zinc-800">{r.desk?.name ?? r.deskId}</p>
-                      <p className="text-xs text-zinc-400">{r.desk?.code}</p>
-                    </td>
-                    <td className="py-3 px-4">
-                      <p className="text-zinc-800">{r.user?.firstName} {r.user?.lastName}</p>
-                      <p className="text-xs text-zinc-400">{r.user?.email}</p>
+                      <p className="text-xs text-zinc-400">{r.user?.firstName} {r.user?.lastName}</p>
                     </td>
                     <td className="py-3 px-4">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.cls}`}>{meta.label}</span>
                     </td>
-                    <td className="py-3 px-4 text-xs text-zinc-500">
+                    <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
                       {r.checkin ? (
                         <div className="space-y-0.5">
                           <p className="font-medium text-zinc-700">
@@ -127,11 +127,6 @@ export function ReservationsAdminPage() {
                              : r.checkin.method === 'QR' ? '📱 QR kod'
                              : '✋ Ręczny'}
                           </p>
-                          {r.checkin.checkedOutAt && (
-                            <p className="text-zinc-400">
-                              out: {format(new Date(r.checkin.checkedOutAt), 'HH:mm')}
-                            </p>
-                          )}
                         </div>
                       ) : (
                         <span className="text-zinc-300">—</span>
@@ -141,13 +136,13 @@ export function ReservationsAdminPage() {
                       <div className="flex gap-1">
                         {r.status === 'CONFIRMED' && !r.checkin && (
                           <button onClick={() => checkin(r)}
-                            className="text-xs px-2 py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-medium">
+                            className="text-xs px-2 py-1.5 sm:py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-medium">
                             Check-in
                           </button>
                         )}
                         {['CONFIRMED','PENDING'].includes(r.status) && (
                           <button onClick={() => cancel(r.id)}
-                            className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                            className="text-xs px-2 py-1.5 sm:py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                             Anuluj
                           </button>
                         )}
@@ -157,7 +152,7 @@ export function ReservationsAdminPage() {
                 );
               })}
               {res.length === 0 && (
-                <tr><td colSpan={6} className="py-10 text-center text-zinc-400 text-sm">Brak rezerwacji dla wybranych filtrów</td></tr>
+                <tr><td colSpan={5} className="py-10 text-center text-zinc-400 text-sm">Brak rezerwacji dla wybranych filtrów</td></tr>
               )}
             </tbody>
           </table>

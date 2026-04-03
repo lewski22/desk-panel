@@ -55,7 +55,7 @@ export function DeskCard({ desk, onCheckin, onCheckout }: Props) {
 
   return (
     <div className={`
-      relative rounded-xl border p-4 flex flex-col gap-2
+      relative rounded-xl border p-3 sm:p-4 flex flex-col gap-2
       transition-all duration-300 hover:shadow-md
       ${bg}
     `}>
@@ -104,7 +104,7 @@ export function DeskCard({ desk, onCheckin, onCheckout }: Props) {
           {!desk.isOccupied && (
             <button
               onClick={() => onCheckin(desk)}
-              className="flex-1 text-xs py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium"
+              className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium"
             >
               Check-in
             </button>
@@ -112,7 +112,7 @@ export function DeskCard({ desk, onCheckin, onCheckout }: Props) {
           {desk.isOccupied && (
             <button
               onClick={() => onCheckout(desk)}
-              className="flex-1 text-xs py-1 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors border border-white/30 font-medium"
+              className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-white/20 text-white hover:bg-white/30 active:bg-white/40 transition-colors border border-white/30 font-medium"
             >
               Check-out
             </button>

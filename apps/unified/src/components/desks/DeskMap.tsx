@@ -30,7 +30,7 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   const pct = active.length ? Math.round((occupied / active.length) * 100) : 0;
 
   return (
-    <div className="grid grid-cols-4 gap-3 mb-6">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {[
         { label: 'Wolne',        count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'Zarezerwowane', count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
@@ -39,7 +39,7 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
       ].map(({ label, count, color, bg }) => (
         <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
           <p className={`text-2xl font-bold font-mono ${color}`}>{count}</p>
-          <p className="text-xs text-zinc-500 mt-0.5">{label}</p>
+          <p className="text-xs text-zinc-500 mt-0.5 truncate">{label}</p>
         </div>
       ))}
     </div>

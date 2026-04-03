@@ -126,19 +126,19 @@ export function UsersPage() {
 
       {/* Active users table */}
       {tab === 'active' && (
-        <Table headers={['Imię i nazwisko','Email','Rola','Karta NFC','Aktywny','']} empty={!users.length}>
+        <Table headers={['Imię i nazwisko',{label:'Email',hideOnMobile:true},'Rola',{label:'Karta NFC',hideOnMobile:true},{label:'Aktywny',hideOnMobile:true},'']} empty={!users.length}>
           {users.map(u => (
             <TR key={u.id}>
               <TD>{u.firstName} {u.lastName}</TD>
-              <TD mono>{u.email}</TD>
+              <TD mono hideOnMobile>{u.email}</TD>
               <TD><Badge color={ROLE_COLOR[u.role] ?? 'zinc'}>{ROLE_LABEL[u.role] ?? u.role}</Badge></TD>
-              <TD>
+              <TD hideOnMobile>
                 {u.cardUid
                   ? <span className="font-mono text-xs text-zinc-500">{u.cardUid}</span>
                   : <Btn variant="ghost" size="sm" onClick={() => { setTarget(u); setCardUid(''); setModal('card'); }}>+ Karta</Btn>
                 }
               </TD>
-              <TD>
+              <TD hideOnMobile>
                 <span className={`text-xs font-medium ${u.isActive ? 'text-emerald-600' : 'text-zinc-400'}`}>
                   {u.isActive ? 'Tak' : 'Nie'}
                 </span>
@@ -163,7 +163,7 @@ export function UsersPage() {
 
       {/* Deactivated users table */}
       {tab === 'deactivated' && (
-        <Table headers={['Imię i nazwisko','Email','Rola','Dezaktywowany','Usunięcie za','']} empty={!deactivated.length}>
+        <Table headers={['Imię i nazwisko',{label:'Email',hideOnMobile:true},'Rola',{label:'Dezaktywowany',hideOnMobile:true},{label:'Usunięcie za',hideOnMobile:true},'']} empty={!deactivated.length}>
           {deactivated.map(u => {
             const daysLeft = u.scheduledDeleteAt
               ? Math.max(0, Math.ceil((new Date(u.scheduledDeleteAt).getTime() - Date.now()) / 86400000))
@@ -171,10 +171,10 @@ export function UsersPage() {
             return (
               <TR key={u.id}>
                 <TD>{u.firstName} {u.lastName}</TD>
-                <TD mono>{u.email}</TD>
+                <TD mono hideOnMobile>{u.email}</TD>
                 <TD><Badge color={ROLE_COLOR[u.role] ?? 'zinc'}>{ROLE_LABEL[u.role] ?? u.role}</Badge></TD>
-                <TD>{u.deletedAt ? formatDate(u.deletedAt) : '—'}</TD>
-                <TD>
+                <TD hideOnMobile>{u.deletedAt ? formatDate(u.deletedAt) : '—'}</TD>
+                <TD hideOnMobile>
                   {daysLeft !== null
                     ? <span className={`text-xs font-mono ${daysLeft <= 7 ? 'text-red-500' : 'text-zinc-500'}`}>{daysLeft} dni</span>
                     : '—'

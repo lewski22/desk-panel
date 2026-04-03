@@ -166,7 +166,7 @@ export function ChangePasswordPage() {
             )}
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button type="button" onClick={() => navigate(-1)}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
               Anuluj

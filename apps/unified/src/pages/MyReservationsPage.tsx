@@ -80,26 +80,28 @@ export function MyReservationsPage() {
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">Aktywne</h2>
               <div className="space-y-3">
                 {active.map(r => (
-                  <div key={r.id} className="bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-sm shrink-0">
-                      {r.desk?.code ?? '?'}
+                  <div key={r.id} className="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-sm shrink-0">
+                        {r.desk?.code ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-zinc-800">{r.desk?.name ?? 'Biurko'}</p>
+                        <p className="text-xs text-zinc-400 mt-0.5">
+                          {new Date(r.date).toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                          {' '}·{' '}
+                          {new Date(r.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                          –
+                          {new Date(r.endTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <StatusBadge status={r.status} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-zinc-800">{r.desk?.name ?? 'Biurko'}</p>
-                      <p className="text-xs text-zinc-400 mt-0.5">
-                        {new Date(r.date).toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                        {' '}·{' '}
-                        {new Date(r.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                        –
-                        {new Date(r.endTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <StatusBadge status={r.status} />
                     <button
                       onClick={() => cancel(r.id)}
                       disabled={cancelling === r.id}
-                      className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
-                      {cancelling === r.id ? '…' : 'Anuluj'}
+                      className="text-xs px-3 py-2 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:bg-red-50 transition-colors text-zinc-500 disabled:opacity-40 sm:ml-auto w-full sm:w-auto text-center">
+                      {cancelling === r.id ? '…' : 'Anuluj rezerwację'}
                     </button>
                   </div>
                 ))}

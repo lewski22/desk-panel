@@ -68,7 +68,7 @@ function EntraIDModal({ onLogin, onClose }: { onLogin: (u: any) => void; onClose
                 onChange={e => { setEmail(e.target.value); setErr(''); }}
                 onKeyDown={e => e.key === 'Enter' && checkAndProceed()}
                 placeholder="jan@twoja-firma.pl"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
             </div>
             <button onClick={checkAndProceed} disabled={busy || !email}
               className="w-full py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
@@ -137,16 +137,16 @@ export function LoginPage({ onLogin }: Props) {
                 <label className="block text-xs text-zinc-400 mb-1.5 font-medium">Email</label>
                 <input type="email" value={email} required autoFocus
                   onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5 font-medium">Hasło</label>
                 <input type="password" value={password} required
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
               </div>
               <button type="submit" disabled={busy}
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+                className="mt-2 w-full py-3 sm:py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] active:bg-[#8a2659] text-white font-semibold text-sm transition-colors disabled:opacity-50">
                 {busy ? <span className="inline-flex items-center gap-2 justify-center"><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Logowanie…</span> : 'Zaloguj się'}
               </button>
             </form>

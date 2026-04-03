@@ -139,12 +139,12 @@ export function Modal({ open = true, title, onClose, children, wide = false }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-md'} max-h-[90vh] flex flex-col`}>
+      <div className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} max-h-[85vh] sm:max-h-[90vh] flex flex-col`}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 shrink-0">
           <h3 className="font-semibold text-zinc-800">{title}</h3>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );
@@ -166,8 +166,10 @@ export function PageHeader({ title, subtitle, sub, action }: {
 }
 
 // ── Table with headers + empty state ─────────────────────────
+type TableHeader = string | { label: string; hideOnMobile?: boolean };
+
 export function Table({ children, headers, empty }: {
-  children: React.ReactNode; headers?: string[]; empty?: boolean;
+  children: React.ReactNode; headers?: TableHeader[]; empty?: boolean;
 }) {
   if (empty) {
     return (
@@ -178,14 +180,22 @@ export function Table({ children, headers, empty }: {
     );
   }
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-100">
+    <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-xl border-y sm:border border-zinc-100">
       <table className="w-full text-left text-sm">
         {headers && (
           <thead className="bg-zinc-50/80 border-b border-zinc-100">
             <tr>
-              {headers.map(h => (
-                <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider whitespace-nowrap">{h}</th>
-              ))}
+              {headers.map((h, i) => {
+                const label = typeof h === 'string' ? h : h.label;
+                const hide  = typeof h === 'object' && h.hideOnMobile;
+                return (
+                  <th key={i}
+                    className={`py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider whitespace-nowrap
+                      ${hide ? 'hidden sm:table-cell' : ''}`}>
+                    {label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
         )}
@@ -199,8 +209,16 @@ export function Table({ children, headers, empty }: {
 export function TR({ children }: { children: React.ReactNode }) {
   return <tr className="border-b border-zinc-50 hover:bg-zinc-50/60 transition-colors group">{children}</tr>;
 }
-export function TD({ children, mono }: { children?: React.ReactNode; mono?: boolean }) {
-  return <td className={`py-3 px-4 text-zinc-700 ${mono ? 'font-mono text-xs' : 'text-sm'}`}>{children}</td>;
+export function TD({ children, mono, hideOnMobile }: {
+  children?: React.ReactNode; mono?: boolean; hideOnMobile?: boolean;
+}) {
+  return (
+    <td className={`py-3 px-4 text-zinc-700
+      ${mono ? 'font-mono text-xs' : 'text-sm'}
+      ${hideOnMobile ? 'hidden sm:table-cell' : ''}`}>
+      {children}
+    </td>
+  );
 }
 
 // ── Alert ─────────────────────────────────────────────────────
