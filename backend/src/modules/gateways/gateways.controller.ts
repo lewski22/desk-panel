@@ -102,7 +102,8 @@ export class GatewaysController {
     @Param('hardwareId') hardwareId: string,
     @Body('rssi') rssi?: number,
     @Body('firmwareVersion') firmwareVersion?: string,
+    @Body('isOnline') isOnline?: boolean,
   ) {
-    return this.svc.deviceHeartbeat(hardwareId, rssi, firmwareVersion);
+    return this.svc.deviceHeartbeat(hardwareId, rssi, firmwareVersion, isOnline);
   }
 }

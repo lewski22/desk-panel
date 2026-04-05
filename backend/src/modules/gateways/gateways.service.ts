@@ -83,11 +83,12 @@ export class GatewaysService {
     });
   }
 
-  async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string) {
+  async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
+    const online = isOnline === false ? false : true;
     return this.prisma.device.update({
       where: { hardwareId },
       data: {
-        isOnline:        true,
+        isOnline:        online,
         lastSeen:        new Date(),
         ...(rssi !== undefined && { rssi }),
         ...(firmwareVersion    && { firmwareVersion }),
