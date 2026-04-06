@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { MqttService } from '../../mqtt/mqtt.service';
 import { TOPICS } from '../../mqtt/topics';
 import { randomBytes } from 'crypto';
@@ -19,6 +19,7 @@ export class DevicesService {
   constructor(
     private prisma:  PrismaService,
     private config:  ConfigService,
+    @Inject(forwardRef(() => MqttService))
     private mqtt:    MqttService,
   ) {}
 

@@ -1,5 +1,6 @@
 import {
   Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException,
+  Inject, forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CheckinMethod, ReservationStatus, EventType } from '@prisma/client';
@@ -13,6 +14,7 @@ const LED_FREE     = { command: 'SET_LED', params: { color: '#00C800', animation
 export class CheckinsService {
   constructor(
     private prisma: PrismaService,
+    @Inject(forwardRef(() => MqttService))
     private mqtt:   MqttService,
   ) {}
 
