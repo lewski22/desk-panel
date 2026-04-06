@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { MqttService } from '../../mqtt/mqtt.service';
+import { TOPICS } from '../../mqtt/topics';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +19,7 @@ export class DevicesService {
   constructor(
     private prisma:  PrismaService,
     private config:  ConfigService,
+    private mqtt:    MqttService,
   ) {}
 
   async provision(dto: ProvisionDeviceDto) {
@@ -133,8 +136,15 @@ export class DevicesService {
     return this.prisma.device.update({ where: { id }, data: { deskId } });
   }
 
-  buildCommand(command: 'SET_LED' | 'REBOOT' | 'IDENTIFY', params?: object) {
-    return { command, params, ts: Date.now() };
+  async sendCommand(deviceId: string, command: 'SET_LED' | 'REBOOT' | 'IDENTIFY', params?: object) {
+    const device = await this.findOne(deviceId);
+    if (!device.desk?.id) {
+      throw new NotFoundException('Beacon nie jest przypisany do biurka — nie można wysłać komendy MQTT');
+    }
+    const payload = { command, params, ts: Date.now() };
+    this.mqtt.publish(TOPICS.COMMAND(device.desk.id), payload);
+    this.logger.log(`Command → desk/${device.desk.id}: ${command}`);
+    return { sent: true, command, deskId: device.desk.id };
   }
 
   async remove(id: string) {

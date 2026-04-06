@@ -289,3 +289,4 @@ Format: `[wersja] — data — opis`
 - Staff Panel React (mapa zajętości)
 - Firmware ESP32 (NFC + LED + offline queue)
 - Gateway Node.js (MQTT bridge + SQLite cache)
+# Updated: 2026-04-06 — fixes #2 #3 #4 #5 #6

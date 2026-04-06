@@ -2241,3 +2241,68 @@ beacon-provisioner/
 
 - Po przypisaniu biurka do beacona — przycisk "Kopiuj komendę PROVISION"
   już istnieje w Provisioning → wystarczy wskazać użytkownikowi
+
+---
+
+## OTA — zdalna aktualizacja Gateway i Beacon
+
+> Status: PLANOWANE | Priorytet: P2
+
+### Gateway (Raspberry Pi)
+Najprościej przez panel Admin:
+- Przycisk "Aktualizuj gateway" → backend wysyła POST do gateway HTTP API
+- Gateway pobiera nową wersję z GitHub raw i restartuje service
+- Implementacja: nowy endpoint `/gateway/:id/update` w backendzie + `POST /update` na gateway API
+- Szacunek: ~1 dzień
+
+### Beacon (ESP32)
+Wymaga ArduinoOTA lub HTTP OTA:
+- Backend wystawia `GET /firmware/latest` → zwraca URL binarki
+- ESP32 sprawdza wersję przy starcie (heartbeat zawiera `fw_version`)
+- Jeśli wersja < najnowsza → pobiera binkę i flashuje
+- Wymagane zmiany: firmware + backend endpoint + storage dla binarek
+- Szacunek: ~3-4 dni
+
+---
+
+## Bezpieczeństwo autentykacji Gateway — rotacja kluczy
+
+> Status: PLANOWANE | Priorytet: P1
+
+### Problem
+Gateway używa jednego `GATEWAY_SECRET` w `.env`. Brak mechanizmu rotacji bez przerwy w działaniu.
+
+### Plan
+- Backend: nowy endpoint `POST /gateway/:id/rotate-secret`
+  - Generuje nowy secret
+  - Przez 15 minut akceptuje **oba** (stary i nowy) — okno migracji
+  - Po 15 min stary przestaje działać
+- Gateway: nowy endpoint `POST /rotate-secret` — pobiera nowy klucz i zapisuje do `.env`
+- Panel: przycisk "Rotuj secret" w tabeli gateway (zastępuje obecne "Nowy secret")
+- Szacunek: ~1-2 dni
+
+### Dodatkowe
+- Rate limiting na `/gateway/:id/sync` i `/gateway/:id/heartbeat` (DDOS protection)
+- HMAC signature na eventach NFC (opcjonalnie)
+
+---
+
+## Auto-przypisywanie kart NFC
+
+> Status: PLANOWANE | Priorytet: P2
+
+### Problem
+Dziś przypisanie karty NFC do usera = ręczne wpisanie UID w panelu Admin (Users → Edytuj → Karta NFC).
+
+### Planowany flow
+1. Admin wchodzi w Users → kliknięcia "Przypisz kartę NFC" przy userze
+2. Panel wyświetla komunikat "Zbliż kartę do dowolnego beacona w biurze"
+3. Backend otwiera 60-sekundowe okno nasłuchiwania dla `UNAUTHORIZED_SCAN` event z tego gateway
+4. Beacon skanuje kartę → gateway forwarduje event → backend widzi `card_unknown` → zapisuje UID do usera
+5. Panel pokazuje "Karta przypisana!" bez odświeżania strony (WebSocket lub polling co 2s)
+
+### Zmiany
+- Backend: `POST /users/:id/nfc-assign-mode` → otwiera sesję 60s
+- Backend: `GET /users/:id/nfc-assign-status` → polling endpoint
+- Frontend: modal w UsersPage z progress barem 60s
+- Szacunek: ~2-3 dni

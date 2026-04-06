@@ -72,6 +72,15 @@ export class DesksService {
     });
   }
 
+  async hardDelete(id: string) {
+    const desk = await this.findOne(id);
+    if (desk.status !== 'INACTIVE') {
+      throw new Error('Można trwale usunąć tylko dezaktywowane biurko');
+    }
+    await this.prisma.desk.delete({ where: { id } });
+    return { deleted: true };
+  }
+
   async getAvailability(id: string, date: string) {
     await this.findOne(id);
     const reservations = await this.prisma.reservation.findMany({

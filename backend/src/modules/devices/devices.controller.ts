@@ -43,8 +43,7 @@ export class DevicesController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Send command to beacon via MQTT' })
   command(@Param('id') id: string, @Body() dto: SendCommandDto) {
-    // MqttService will pick this up from the response and publish
-    return this.svc.buildCommand(dto.command, dto.params);
+    return this.svc.sendCommand(id, dto.command, dto.params);
   }
 
   @Patch(':id/assign')

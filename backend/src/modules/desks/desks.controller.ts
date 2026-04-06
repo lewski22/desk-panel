@@ -16,6 +16,15 @@ import { Roles }        from '../auth/decorators/roles.decorator';
 export class DesksController {
   constructor(private desks: DesksService) {}
 
+  @Delete('desks/:id/permanent')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Permanently delete INACTIVE desk' })
+  hardDelete(@Param('id') id: string) {
+    return this.desks.hardDelete(id);
+  }
+
   @Get('desks/available')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
@@ -53,6 +62,7 @@ export class DesksController {
   @Get('locations/:locationId/desks/status')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'Real-time occupancy map for location' })
   currentStatus(@Param('locationId') locationId: string) {
     return this.desks.getCurrentStatus(locationId);

@@ -3,10 +3,18 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CheckinMethod, ReservationStatus, EventType } from '@prisma/client';
+import { MqttService } from '../../mqtt/mqtt.service';
+import { TOPICS } from '../../mqtt/topics';
+
+const LED_OCCUPIED = { command: 'SET_LED', params: { color: '#DC0000', animation: 'solid' } };
+const LED_FREE     = { command: 'SET_LED', params: { color: '#00C800', animation: 'solid' } };
 
 @Injectable()
 export class CheckinsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mqtt:   MqttService,
+  ) {}
 
   // ── NFC scan from beacon via MQTT ────────────────────────────
   async checkinNfc(deskId: string, cardUid: string, gatewayId: string) {
@@ -88,6 +96,8 @@ export class CheckinsService {
     ]);
 
     await this.logEvent(EventType.CHECKIN_QR, { deskId, userId, checkinId: checkin.id });
+    // Poinformuj beacon o zmianie stanu LED
+    this.mqtt.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED);
     return checkin;
   }
 
@@ -212,6 +222,9 @@ export class CheckinsService {
     await this.logEvent(EventType.CHECKIN_QR, {
       deskId, userId, checkinId: checkin.id, reservationId: reservation.id, walkin: true,
     });
+
+    // Poinformuj beacon o zmianie stanu LED
+    this.mqtt.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED);
 
     return {
       checkin,
