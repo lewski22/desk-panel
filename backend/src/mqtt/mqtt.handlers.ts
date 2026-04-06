@@ -28,12 +28,22 @@ export class MqttHandlers implements OnModuleInit {
     this.mqtt.registerStatusHandler(this.handleStatus.bind(this));
     this.mqtt.registerGatewayHelloHandler(this.handleGatewayHello.bind(this));
 
-    // Nasłuchuj zdarzeń LED z CheckinsService/ReservationsService
-    this.ledEvents.events$.subscribe(({ deskId, state }) => {
-      const payload = LED_COLORS[state];
-      if (payload) {
-        this.mqtt.publish(TOPICS.COMMAND(deskId), payload);
-        this.logger.debug(`LED event → desk/${deskId}: ${state}`);
+    // Nasłuchuj zdarzeń LED — wyślij przez gateway HTTP API (nie lokalny MQTT)
+    // Backend i beacony mają osobne brokery MQTT. Jedyna droga: backend→gateway HTTP→Pi Mosquitto→beacon
+    this.ledEvents.events$.subscribe(async ({ deskId, state }) => {
+      try {
+        // Znajdź gateway dla tego biurka i wyślij komendę przez HTTP
+        const gatewayId = await this.gateways.findGatewayForDesk(deskId);
+        if (!gatewayId) {
+          this.logger.debug(`LED event: brak beacona dla desk/${deskId} — pomijam`);
+          return;
+        }
+
+        const params = LED_COLORS[state] ? (LED_COLORS[state] as any).params : undefined;
+        await this.gateways.sendBeaconCommand(gatewayId, deskId, 'SET_LED', params);
+        this.logger.debug(`LED → gateway → desk/${deskId}: ${state}`);
+      } catch (err: any) {
+        this.logger.debug(`LED event error: ${err.message}`);
       }
     });
   }
