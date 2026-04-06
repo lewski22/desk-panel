@@ -133,19 +133,42 @@ export class DevicesService {
   }
 
   async assignToDesk(id: string, deskId: string) {
-    // FIX: single update — if device doesn't exist Prisma throws P2025, no pre-fetch needed
-    return this.prisma.device.update({ where: { id }, data: { deskId } });
+    const device = await this.findOne(id);
+    const updated = await this.prisma.device.update({
+      where: { id },
+      data:  { deskId },
+      include: { desk: { select: { id: true } } },
+    });
+
+    // Poinformuj beacon o nowym deskId — subskrybuje aktualnie na desk/{old}/command
+    // Wysyłamy na stary topic (może być pusty) komendę SET_DESK_ID
+    const oldTopic = device.deskId ? `desk/${device.deskId}/command` : 'desk//command';
+    this.mqtt.publish(oldTopic, {
+      command: 'SET_DESK_ID',
+      params:  { desk_id: deskId },
+      ts:      Date.now(),
+    });
+    this.logger.log(`SET_DESK_ID → ${oldTopic}: deskId=${deskId}`);
+
+    return updated;
   }
 
   async sendCommand(deviceId: string, command: 'SET_LED' | 'REBOOT' | 'IDENTIFY', params?: object) {
     const device = await this.findOne(deviceId);
-    if (!device.desk?.id) {
-      throw new NotFoundException('Beacon nie jest przypisany do biurka — nie można wysłać komendy MQTT');
-    }
     const payload = { command, params, ts: Date.now() };
-    this.mqtt.publish(TOPICS.COMMAND(device.desk.id), payload);
-    this.logger.log(`Command → desk/${device.desk.id}: ${command}`);
-    return { sent: true, command, deskId: device.desk.id };
+
+    if (device.desk?.id) {
+      // Beacon ma przypisane biurko — wyślij na desk/{deskId}/command
+      this.mqtt.publish(TOPICS.COMMAND(device.desk.id), payload);
+      this.logger.log(`Command → desk/${device.desk.id}: ${command}`);
+      return { sent: true, command, deskId: device.desk.id };
+    } else {
+      // Beacon bez biurka — subskrybuje desk//command (pusty deskId)
+      // Wysyłamy na pusty topic żeby beacon mógł odpowiedzieć
+      this.mqtt.publish(TOPICS.COMMAND(''), payload);
+      this.logger.warn(`Command → desk//(no desk): ${command} — beacon ${device.hardwareId}`);
+      return { sent: true, command, deskId: null, warning: 'Beacon bez przypisanego biurka' };
+    }
   }
 
   async remove(id: string) {
