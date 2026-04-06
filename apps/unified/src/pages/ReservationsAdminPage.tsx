@@ -1,3 +1,4 @@
+import { localDateStr } from '../utils/date';
 import React, { useEffect, useState } from 'react';
 import { appApi } from '../api/client';
 import { Btn, Card } from '../components/ui';
@@ -17,7 +18,7 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
 export function ReservationsAdminPage() {
   const [res, setRes]         = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate]       = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate]       = useState(localDateStr());
   const [status, setStatus]   = useState('');
 
   const load = async () => {

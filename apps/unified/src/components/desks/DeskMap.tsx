@@ -1,3 +1,4 @@
+import { localDateStr, localDateTimeISO } from '../utils/date';
 import React, { useState } from 'react';
 import { DeskMapItem } from '../../types/index';
 import { DeskCard } from './DeskCard';
@@ -48,7 +49,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   desk: DeskMapItem; onClose: () => void; onSuccess: () => void;
   isEndUser?: boolean; users?: any[];
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateStr();
   const [date,   setDate]   = useState(today);
   const [start,  setStart]  = useState('09:00');
   const [end,    setEnd]    = useState('17:00');
@@ -60,8 +61,8 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
     if (start >= end) { setErr('Godzina zakończenia musi być późniejsza niż startu'); return; }
     setBusy(true); setErr('');
     try {
-      const startISO = `${date}T${start}:00.000Z`;
-      const endISO   = `${date}T${end}:00.000Z`;
+      const startISO = localDateTimeISO(date, start);
+      const endISO   = localDateTimeISO(date, end);
       const body: any = { deskId: desk.id, date, startTime: startISO, endTime: endISO };
       // Staff/Admin mogą rezerwować dla konkretnego usera
       if (!isEndUser && userId) body.targetUserId = userId;
@@ -158,9 +159,10 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
     }
   }, [isEndUser]);
 
-  // END_USER widzi tylko wolne biurka
+  // END_USER widzi WSZYSTKIE aktywne biurka (zajęte też — można rezerwować na inne godziny)
+  // Backend sprawdza konflikty przy tworzeniu rezerwacji
   const visibleDesks = isEndUser
-    ? desks.filter(d => d.status === 'ACTIVE' && !d.isOccupied && !d.currentReservation)
+    ? desks.filter(d => d.status === 'ACTIVE')
     : desks;
 
   const floors = groupByFloor(visibleDesks);
@@ -196,7 +198,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">
-            {isEndUser ? 'Wolne biurka' : 'Mapa zajętości'}
+            {isEndUser ? 'Biurka' : 'Mapa zajętości'}
           </h2>
           {lastUpdated && (
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -216,13 +218,12 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
         </div>
       )}
 
-      {!isEndUser && <Stats desks={desks} />}
+      <Stats desks={desks} />
 
       {isEndUser && visibleDesks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
-          <p className="text-4xl mb-3">🎉</p>
-          <p className="font-medium text-zinc-600">Wszystkie biurka zajęte</p>
-          <p className="text-sm mt-1">Sprawdź później lub zarezerwuj biurko na konkretną godzinę</p>
+          <p className="text-4xl mb-3">🏢</p>
+          <p className="font-medium text-zinc-600">Brak biurek w tej lokalizacji</p>
         </div>
       )}
 

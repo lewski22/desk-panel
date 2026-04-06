@@ -1,3 +1,4 @@
+import { localDateStr } from '../utils/date';
 import React, { useEffect, useState, useCallback } from 'react';
 import { appApi } from '../api/client';
 
@@ -88,7 +89,7 @@ export function MyReservationsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-zinc-800">{r.desk?.name ?? 'Biurko'}</p>
                         <p className="text-xs text-zinc-400 mt-0.5">
-                          {new Date(r.date).toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                          {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                           {' '}·{' '}
                           {new Date(r.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
                           –
@@ -121,7 +122,7 @@ export function MyReservationsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-zinc-600">{r.desk?.name ?? 'Biurko'}</p>
                       <p className="text-xs text-zinc-400">
-                        {new Date(r.date).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />
