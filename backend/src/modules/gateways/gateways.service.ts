@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
@@ -6,6 +7,7 @@ import { EventType } from '@prisma/client';
 
 @Injectable()
 export class GatewaysService {
+  private readonly logger = new Logger(GatewaysService.name);
   constructor(
     private prisma:  PrismaService,
     private config:  ConfigService,

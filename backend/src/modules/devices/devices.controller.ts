@@ -57,7 +57,7 @@ export class DevicesController {
     const deskId = device.desk?.id ?? '';
 
     await this.gateways.sendBeaconCommand(
-      device.gatewayId,
+      device.gatewayId ?? '',
       deskId,
       dto.command,
       dto.params,
@@ -75,7 +75,7 @@ export class DevicesController {
     const device = await this.svc.findOne(id);
     // SET_DESK_ID przez gateway HTTP — beacon zaktualizuje NVS i zrestartuje
     await this.gateways.sendBeaconCommand(
-      device.gatewayId,
+      device.gatewayId ?? '',
       device.deskId ?? '',   // stary deskId (stary topic beacona)
       'SET_DESK_ID',
       { desk_id: result.newDeskId },
