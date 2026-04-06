@@ -1,19 +1,25 @@
 import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  ForbiddenException,
-  Logger,
+  Injectable, NotFoundException, ConflictException,
+  ForbiddenException, Logger, Inject, forwardRef,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService }  from '../../database/prisma.service';
+import { MqttService }    from '../../mqtt/mqtt.service';
+import { TOPICS }         from '../../mqtt/topics';
 import { ReservationStatus } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+
+const LED_FREE     = { command: 'SET_LED', params: { color: '#00C800', animation: 'solid' } };
+const LED_RESERVED = { command: 'SET_LED', params: { color: '#0050DC', animation: 'solid' } };
 
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => MqttService))
+    private mqtt:   MqttService,
+  ) {}
 
   async findAll(filters: {
     locationId?: string;
@@ -109,10 +115,23 @@ export class ReservationsService {
       throw new ConflictException('Reservation already closed');
     }
 
-    return this.prisma.reservation.update({
+    const updated = await this.prisma.reservation.update({
       where: { id },
-      data: { status: ReservationStatus.CANCELLED },
+      data:  { status: ReservationStatus.CANCELLED },
     });
+
+    // Zamknij otwarty checkin jeśli istnieje
+    await this.prisma.checkin.updateMany({
+      where: { reservationId: id, checkedOutAt: null },
+      data:  { checkedOutAt: new Date() },
+    });
+
+    // Poinformuj beacon — ustaw LED na wolne
+    try {
+      this.mqtt.publish(TOPICS.COMMAND(reservation.deskId), LED_FREE);
+    } catch { /* MQTT may be offline */ }
+
+    return updated;
   }
 
   async getQrToken(id: string, actorId: string) {

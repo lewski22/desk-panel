@@ -85,7 +85,7 @@ async function main() {
     },
   });
 
-  const endUser = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'user@demo-corp.pl' },
     update: {},
     create: {
@@ -131,27 +131,7 @@ async function main() {
   });
   console.log(`✔ Gateway: ${gateway.name}`);
 
-  // ── Sample Reservation ────────────────────────────────────
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0);
-
-  const startTime = new Date(tomorrow);
-  startTime.setHours(9, 0, 0, 0);
-  const endTime = new Date(tomorrow);
-  endTime.setHours(17, 0, 0, 0);
-
-  await prisma.reservation.create({
-    data: {
-      deskId: desks[0].id,
-      userId: endUser.id,
-      date: tomorrow,
-      startTime,
-      endTime,
-      status: 'CONFIRMED',
-    },
-  });
-  console.log(`✔ Sample reservation for ${endUser.firstName} on desk ${desks[0].code}`);
+  // Sample Reservation intentionally skipped — created by users during testing
 
   console.log('\n✅ Seed complete!');
   console.log('\nTest accounts:');

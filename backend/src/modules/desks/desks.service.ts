@@ -96,6 +96,7 @@ export class DesksService {
   }
 
   async getCurrentStatus(locationId: string) {
+    const now = new Date();
     const desks = await this.prisma.desk.findMany({
       where: { locationId, status: DeskStatus.ACTIVE },
       include: {
@@ -105,18 +106,41 @@ export class DesksService {
           take: 1,
           orderBy: { checkedInAt: 'desc' },
         },
+        reservations: {
+          where: {
+            status: { in: ['CONFIRMED', 'PENDING'] },
+            startTime: { lte: new Date(now.getTime() + 30 * 60 * 1000) },
+            endTime:   { gte: now },
+          },
+          take: 1,
+          orderBy: { startTime: 'asc' },
+          include: {
+            user: { select: { firstName: true, lastName: true } },
+          },
+        },
       },
     });
 
-    return desks.map((d) => ({
-      id: d.id,
-      name: d.name,
-      code: d.code,
-      floor: d.floor,
-      zone: d.zone,
-      isOnline: d.device?.isOnline ?? false,
-      isOccupied: d.checkins.length > 0,
-    }));
+    return desks.map((d) => {
+      const res = d.reservations[0] ?? null;
+      return {
+        id:         d.id,
+        name:       d.name,
+        code:       d.code,
+        floor:      d.floor,
+        zone:       d.zone,
+        status:     d.status,
+        isOnline:   d.device?.isOnline ?? false,
+        isOccupied: d.checkins.length > 0,
+        currentReservation: res ? {
+          id:        res.id,
+          user:      res.user,
+          startTime: res.startTime.toISOString(),
+          endTime:   res.endTime.toISOString(),
+          qrToken:   (res as any).qrToken,
+        } : null,
+      };
+    });
   }
 
   async activate(id: string) {
