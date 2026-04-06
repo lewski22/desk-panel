@@ -1,27 +1,41 @@
-import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
-import { MqttService }    from './mqtt.service';
-import { CheckinsService } from '../modules/checkins/checkins.service';
-import { DevicesService }  from '../modules/devices/devices.service';
-import { GatewaysService } from '../modules/gateways/gateways.service';
-import { UserEventPayload } from './topics';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { MqttService }     from './mqtt.service';
+import { CheckinsService }  from '../modules/checkins/checkins.service';
+import { GatewaysService }  from '../modules/gateways/gateways.service';
+import { LedEventsService } from '../shared/led-events.service';
+import { UserEventPayload, TOPICS } from './topics';
+
+const LED_COLORS: Record<string, object> = {
+  OCCUPIED: { command: 'SET_LED', params: { color: '#DC0000', animation: 'solid' } },
+  FREE:     { command: 'SET_LED', params: { color: '#00C800', animation: 'solid' } },
+  RESERVED: { command: 'SET_LED', params: { color: '#0050DC', animation: 'solid' } },
+  ERROR:    { command: 'SET_LED', params: { color: '#DC0000', animation: 'blink' } },
+};
 
 @Injectable()
 export class MqttHandlers implements OnModuleInit {
   private readonly logger = new Logger(MqttHandlers.name);
 
   constructor(
-    private mqtt:     MqttService,
-    @Inject(forwardRef(() => CheckinsService))
-    private checkins: CheckinsService,
-    @Inject(forwardRef(() => DevicesService))
-    private devices:  DevicesService,
-    private gateways: GatewaysService,
+    private mqtt:      MqttService,
+    private checkins:  CheckinsService,
+    private gateways:  GatewaysService,
+    private ledEvents: LedEventsService,
   ) {}
 
   onModuleInit() {
     this.mqtt.registerCheckinHandler(this.handleCheckin.bind(this));
     this.mqtt.registerStatusHandler(this.handleStatus.bind(this));
     this.mqtt.registerGatewayHelloHandler(this.handleGatewayHello.bind(this));
+
+    // Nasłuchuj zdarzeń LED z CheckinsService/ReservationsService
+    this.ledEvents.events$.subscribe(({ deskId, state }) => {
+      const payload = LED_COLORS[state];
+      if (payload) {
+        this.mqtt.publish(TOPICS.COMMAND(deskId), payload);
+        this.logger.debug(`LED event → desk/${deskId}: ${state}`);
+      }
+    });
   }
 
   private async handleCheckin(deskId: string, payload: any) {
@@ -56,8 +70,7 @@ export class MqttHandlers implements OnModuleInit {
     if (!device_id) return;
 
     try {
-      // FIX: single DB write instead of 2 — heartbeat now accepts firmwareVersion
-      await this.devices.heartbeat(device_id, rssi, fw_version);
+      await this.gateways.deviceHeartbeat(device_id, rssi, fw_version);
     } catch {
       // device not provisioned yet — ignore
     }

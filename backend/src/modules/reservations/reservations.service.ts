@@ -1,24 +1,21 @@
 import {
   Injectable, NotFoundException, ConflictException,
-  ForbiddenException, Logger, Inject, forwardRef,
+  ForbiddenException, Logger,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService }  from '../../database/prisma.service';
-import { MqttService }    from '../../mqtt/mqtt.service';
-import { TOPICS }         from '../../mqtt/topics';
+import { LedEventsService } from '../../shared/led-events.service';
 import { ReservationStatus } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 
-const LED_FREE     = { command: 'SET_LED', params: { color: '#00C800', animation: 'solid' } };
-const LED_RESERVED = { command: 'SET_LED', params: { color: '#0050DC', animation: 'solid' } };
+
 
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
   constructor(
-    private prisma: PrismaService,
-    @Inject(forwardRef(() => MqttService))
-    private mqtt:   MqttService,
+    private prisma:     PrismaService,
+    private ledEvents:  LedEventsService,
   ) {}
 
   async findAll(filters: {
@@ -33,7 +30,11 @@ export class ReservationsService {
       where: {
         ...(filters.deskId     && { deskId: filters.deskId }),
         ...(filters.userId     && { userId: filters.userId }),
-        ...(filters.date       && { date: new Date(filters.date) }),
+        ...(filters.date && (() => {
+          const d = new Date(filters.date + 'T00:00:00.000Z');
+          const next = new Date(d); next.setUTCDate(next.getUTCDate() + 1);
+          return { date: { gte: d, lt: next } };
+        })()),
         ...(filters.status     && { status: filters.status }),
         ...(filters.locationId && { desk: { locationId: filters.locationId } }),
       },

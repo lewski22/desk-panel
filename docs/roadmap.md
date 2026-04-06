@@ -2329,3 +2329,108 @@ o tym, że biurko jest wolne od teraz do momentu jego pre-rezerwacji.
 - Backend: walidacja w `reservations.service.create()`
 - Frontend: info na karcie biurka + walidacja w ReservationModal
 - Szacunek: ~2 dni
+
+---
+
+## Strefy czasowe per biuro (Location Timezone)
+
+> Status: PLANOWANE | Priorytet: P1
+
+### Problem
+Biura mogą znajdować się w różnych strefach czasowych (Europa, Azja, Ameryka).
+Aktualnie system nie przechowuje strefy czasowej lokalizacji — wszystkie godziny
+są interpretowane jako UTC lub strefa przeglądarki, co powoduje przesunięcia
+przy rezerwacjach między strefami oraz błędne wyświetlanie godzin.
+
+### Plan
+- Prisma: nowe pole `Location.timezone` (string IANA, np. `"Europe/Warsaw"`, `"Asia/Tokyo"`)
+- Super Admin: możliwość ustawienia strefy w edycji lokalizacji (dropdown z IANA tz list)
+- Backend: wszystkie daty rezerwacji `startTime`/`endTime` przechowywane w UTC
+  (bez zmian w schemacie), ale interpretowane relative do `location.timezone` przy:
+  - walidacji konfliktu rezerwacji
+  - wyświetlaniu godzin w raportach i kalendarzach
+  - określaniu "dzisiaj" dla danego biura
+  - oknie walk-in (koniec dnia pracy w lokalnej TZ)
+- Frontend: `ReservationModal` i `ReservationsAdminPage` używają TZ z lokalizacji,
+  nie TZ przeglądarki — `Intl.DateTimeFormat` z `timeZone: location.timezone`
+- Szacunek: ~3 dni (schemat + API + frontend)
+
+### Uwagi
+- Moment/Luxon lub natywny `Intl` — preferowany natywny (brak zależności)
+- `date-fns-tz` jako lekka alternatywa jeśli project już używa date-fns
+
+---
+
+## Poprawka kalendarza i raportów — aktualny dzień
+
+> Status: PLANOWANE (bug) | Priorytet: P1
+
+### Problem
+Kalendarze i raporty nie przestawiają się automatycznie na bieżący dzień.
+Po północy (lub zmianie daty) widok nadal pokazuje poprzedni dzień —
+np. jest już 07.04.2026 a domyślna data filtra to 06.04.2026.
+
+### Przyczyna
+`useState(new Date().toISOString().slice(0, 10))` jest wywołane tylko raz
+przy montowaniu komponentu. Jeśli komponent jest zamontowany przed północą
+i nie odmontowany, stan nie jest aktualizowany.
+
+### Plan
+- Wszystkie domyślne daty w filtrach (`ReservationsAdminPage`, `ReportsPage`,
+  `DashboardPage`) wyliczane dynamicznie przez helper `getTodayForLocation(tz)`
+  który uwzględnia `location.timezone`
+- Auto-refresh lub `useEffect` który wykrywa zmianę dnia (co minutę sprawdza
+  czy `new Date()` przekroczyło poprzednią datę) i aktualizuje domyślny filtr
+- Szacunek: ~0.5 dnia (po implementacji Location Timezone)
+
+---
+
+## Rezerwacja zajętego biurka na inny termin
+
+> Status: PLANOWANE (bug UX) | Priorytet: P1
+
+### Problem
+Biurko z aktywnym check-in (status OCCUPIED) znika z listy dostępnych biurek
+dla END_USER (`DeskMap` filtruje `!d.isOccupied && !d.currentReservation`).
+Użytkownik nie może zarezerwować tego biurka na jutro ani na inną godzinę.
+
+### Oczekiwane zachowanie
+- Biurko OCCUPIED powinno nadal być widoczne na mapie
+- Kliknięcie → `ReservationModal` z informacją "Biurko zajęte teraz — zarezerwuj na inny termin"
+- `ReservationModal` domyślnie ustawia datę na jutro lub najbliższy wolny slot
+- Walidacja konfliktu na backendzie (już istnieje w `reservations.service.create()`)
+  blokuje tylko faktycznie nakładające się sloty
+
+### Plan
+- `DeskMap END_USER`: usuń filtr `&& !d.isOccupied && !d.currentReservation`
+- Zmień na: pokazuj WSZYSTKIE `status === 'ACTIVE'` biurka
+- Na karcie biurka: badge "Zajęte teraz" (czerwony) nadal widoczny
+- `ReservationModal`: gdy biurko zajęte, hint "zajęte do HH:MM, wybierz inny termin"
+  + domyślna data/godzina ustawiona po aktualnym slotcie
+- Szacunek: ~1 dzień
+
+---
+
+## Strefa czasowa per biuro (Location Timezone)
+
+> Status: PLANOWANE | Priorytet: P1
+
+### Problem
+Biura mogą być na różnych kontynentach (Warszawa UTC+2, Londyn UTC+1, Nowy Jork UTC-4).
+Wszystkie godziny rezerwacji, raportów i kalendarzy muszą być wyświetlane
+w strefie czasowej danego biura, nie serwera ani przeglądarki usera.
+
+### Planowane zmiany
+- Prisma: `Location.timezone String @default("Europe/Warsaw")` (IANA tz name)
+- SUPER_ADMIN: możliwość edycji timezone per lokalizacja (select z listą IANA zones)
+- Backend: każda operacja z datą/godziną używa `location.timezone` do konwersji
+  - `reservations.service.ts` — `new Date()` + luxon/date-fns-tz dla strefy
+  - `locations.service.ts` — analytics endpointy
+  - `checkins.service.ts` — walkin closeTime
+- Frontend: wyświetlanie godzin przez `Intl.DateTimeFormat` z `timeZone: location.timezone`
+- Gateway: `LOCATION_TZ` jako env var do poprawnych porównań lokalnych rezerwacji
+
+### Uwagi
+- PostgreSQL przechowuje wszystko jako UTC — konwersja tylko na warstwie aplikacji
+- Beacon nie ma RTC — timestamp w heartbeat to millis() od restartu, nie epoch
+- Szacunek: ~3-4 dni

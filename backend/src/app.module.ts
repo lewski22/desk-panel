@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SharedModule } from './shared/shared.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -26,6 +27,7 @@ import { OwnerModule }          from './modules/owner/owner.module';
       ttl:   60_000,  // 1 minuta
       limit: 30,      // max 30 requestów per IP
     }]),
+    SharedModule,
     DatabaseModule,
     AuthModule,
     UsersModule,

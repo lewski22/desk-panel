@@ -1,5 +1,4 @@
-import { Injectable, NotFoundException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
-import { MqttService } from '../../mqtt/mqtt.service';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { TOPICS } from '../../mqtt/topics';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -19,8 +18,6 @@ export class DevicesService {
   constructor(
     private prisma:  PrismaService,
     private config:  ConfigService,
-    @Inject(forwardRef(() => MqttService))
-    private mqtt:    MqttService,
   ) {}
 
   async provision(dto: ProvisionDeviceDto) {
@@ -140,35 +137,16 @@ export class DevicesService {
       include: { desk: { select: { id: true } } },
     });
 
-    // Poinformuj beacon o nowym deskId — subskrybuje aktualnie na desk/{old}/command
-    // Wysyłamy na stary topic (może być pusty) komendę SET_DESK_ID
     const oldTopic = device.deskId ? `desk/${device.deskId}/command` : 'desk//command';
-    this.mqtt?.publish(oldTopic, {
-      command: 'SET_DESK_ID',
-      params:  { desk_id: deskId },
-      ts:      Date.now(),
-    });
-    this.logger.log(`SET_DESK_ID → ${oldTopic}: deskId=${deskId}`);
+    this.logger.log(`assignToDesk: ${device.hardwareId} → ${deskId}`);
 
-    return updated;
+    return { updated, setDeskIdTopic: oldTopic, newDeskId: deskId };
   }
 
-  async sendCommand(deviceId: string, command: 'SET_LED' | 'REBOOT' | 'IDENTIFY', params?: object) {
+  async getCommandTarget(deviceId: string): Promise<{ topic: string; deskId: string | null }> {
     const device = await this.findOne(deviceId);
-    const payload = { command, params, ts: Date.now() };
-
-    if (device.desk?.id) {
-      // Beacon ma przypisane biurko — wyślij na desk/{deskId}/command
-      this.mqtt?.publish(TOPICS.COMMAND(device.desk.id), payload);
-      this.logger.log(`Command → desk/${device.desk.id}: ${command}`);
-      return { sent: true, command, deskId: device.desk.id };
-    } else {
-      // Beacon bez biurka — subskrybuje desk//command (pusty deskId)
-      // Wysyłamy na pusty topic żeby beacon mógł odpowiedzieć
-      this.mqtt?.publish(TOPICS.COMMAND(''), payload);
-      this.logger.warn(`Command → desk//(no desk): ${command} — beacon ${device.hardwareId}`);
-      return { sent: true, command, deskId: null, warning: 'Beacon bez przypisanego biurka' };
-    }
+    const deskId = device.desk?.id ?? null;
+    return { topic: TOPICS.COMMAND(deskId ?? ''), deskId };
   }
 
   async remove(id: string) {

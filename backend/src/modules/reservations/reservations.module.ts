@@ -1,11 +1,10 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { ScheduleModule } from '@nestjs/schedule';
+import { Module } from '@nestjs/common';
+import { ScheduleModule }        from '@nestjs/schedule';
 import { ReservationsController } from './reservations.controller';
-import { ReservationsService }    from './reservations.service';
-import { MqttModule }             from '../../mqtt/mqtt.module';
+import { ReservationsService }   from './reservations.service';
 
 @Module({
-  imports:     [ScheduleModule.forRoot(), forwardRef(() => MqttModule)],
+  imports:     [ScheduleModule.forRoot()],
   controllers: [ReservationsController],
   providers:   [ReservationsService],
   exports:     [ReservationsService],

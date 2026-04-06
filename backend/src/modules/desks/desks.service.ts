@@ -109,13 +109,19 @@ export class DesksService {
         reservations: {
           where: {
             status: { in: ['CONFIRMED', 'PENDING'] },
-            startTime: { lte: new Date(now.getTime() + 30 * 60 * 1000) },
-            endTime:   { gte: now },
+            // Pokaż rezerwację aktywną LUB zaplanowaną na dziś (bez limitu 30min)
+            // Użytkownik może check-in przez QR o każdej porze dnia
+            endTime: { gte: now },
           },
           take: 1,
           orderBy: { startTime: 'asc' },
-          include: {
-            user: { select: { firstName: true, lastName: true } },
+          select: {
+            id:        true,
+            userId:    true,
+            qrToken:   true,
+            startTime: true,
+            endTime:   true,
+            user:      { select: { firstName: true, lastName: true } },
           },
         },
       },
@@ -134,10 +140,11 @@ export class DesksService {
         isOccupied: d.checkins.length > 0,
         currentReservation: res ? {
           id:        res.id,
+          userId:    res.userId,
           user:      res.user,
           startTime: res.startTime.toISOString(),
           endTime:   res.endTime.toISOString(),
-          qrToken:   (res as any).qrToken,
+          qrToken:   res.qrToken,
         } : null,
       };
     });
