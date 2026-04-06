@@ -255,7 +255,10 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
   const [result,   setResult]   = useState<any>(null);
   const [form,     setForm]     = useState({ hardwareId: '', deskId: '', gatewayId: '', locId: activeLocId });
   const [busy,     setBusy]     = useState(false);
-  const [filterLoc, setFilterLoc] = useState('all');
+  const [filterLoc,    setFilterLoc]    = useState('all');
+  const [assignTarget, setAssignTarget] = useState<any>(null);
+  const [assignDeskId, setAssignDeskId] = useState('');
+  const [assignBusy,   setAssignBusy]   = useState(false);
 
   useEffect(() => { setForm(f => ({ ...f, locId: activeLocId })); }, [activeLocId]);
 
@@ -309,6 +312,17 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       });
 
   // Filter gateways by selected location for beacon form
+  const handleAssign = async () => {
+    if (!assignTarget || !assignDeskId) return;
+    setAssignBusy(true);
+    try {
+      await appApi.devices.assign(assignTarget.id, assignDeskId);
+      await load();
+      setAssignTarget(null);
+    } catch (e: any) { alert(e.message); }
+    setAssignBusy(false);
+  };
+
   const availableGateways = form.locId
     ? gateways.filter(g => g.locationId === form.locId)
     : gateways;
@@ -363,6 +377,10 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                       className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors" title="Zidentyfikuj">💡</button>
                     <button onClick={() => sendCmd(d.id, 'REBOOT')}
                       className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-600 transition-colors" title="Restart">↺</button>
+                    <button onClick={() => { setAssignTarget(d); setAssignDeskId(d.desk?.id ?? ''); }}
+                      className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors font-medium" title="Przypisz do biurka">
+                      Przypisz
+                    </button>
                     {d.desk && (
                       <button onClick={async () => {
                         if (!confirm(`Odparować beacon "${d.hardwareId}" od biurka "${d.desk.name}"?`)) return;
@@ -385,6 +403,43 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
           </tbody>
         </table>
       </div>
+
+      {/* Modal — przypisz beacon do biurka */}
+      {assignTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+              <div>
+                <p className="font-semibold text-zinc-800">Przypisz biurko</p>
+                <p className="text-xs text-zinc-400 mt-0.5">Beacon: {assignTarget.hardwareId}</p>
+              </div>
+              <button onClick={() => setAssignTarget(null)} className="text-zinc-400 hover:text-zinc-700 text-xl w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100">×</button>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Biurko</label>
+                <select value={assignDeskId} onChange={e => setAssignDeskId(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
+                  <option value="">— brak przypisania —</option>
+                  {desks.filter(d => !d.device || d.device.id === assignTarget.id).map((d: any) => (
+                    <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setAssignTarget(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
+                  Anuluj
+                </button>
+                <button onClick={handleAssign} disabled={assignBusy}
+                  className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+                  {assignBusy ? 'Zapisuję…' : 'Zapisz'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Modal open={modal} title="Provisioning beacona" onClose={() => setModal(false)}>
         {!result ? (

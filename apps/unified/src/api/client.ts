@@ -115,6 +115,7 @@ export const appApi = {
     update:      (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     remove:      (id: string)               => req<any>(`/desks/${id}`, { method: 'DELETE' }),
     activate:    (id: string)               => req<any>(`/desks/${id}/activate`, { method: 'PATCH' }),
+    hardDelete:  (id: string)               => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
     unpair:      (id: string)               => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
     availability:(id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
     getAvailable:(locId: string, start: string, end: string) =>

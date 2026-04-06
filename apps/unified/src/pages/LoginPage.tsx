@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { appApi } from '../api/client';
 
 // ── EntraIDModal ─────────────────────────────────────────────
@@ -109,10 +110,18 @@ export function LoginPage({ onLogin }: Props) {
   const [err,       setErr]       = useState('');
   const [busy,      setBusy]      = useState(false);
   const [showEntra, setShowEntra] = useState(false);
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const returnTo  = (location.state as any)?.returnTo as string | undefined;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { onLogin(await appApi.auth.login(email, password)); }
+    try {
+      const user = await appApi.auth.login(email, password);
+      onLogin(user);
+      // Wróć do strony QR check-in jeśli user przyszedł z linku QR
+      if (returnTo) navigate(returnTo, { replace: true });
+    }
     catch (e: any) { setErr(e.message); }
     setBusy(false);
   };

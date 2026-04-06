@@ -21,21 +21,18 @@ function groupByFloor(desks: DeskMapItem[]) {
 }
 
 function Stats({ desks }: { desks: DeskMapItem[] }) {
-  const active  = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
+  const active   = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
   const free     = active.filter(d => !d.isOccupied && !d.currentReservation).length;
   const reserved = active.filter(d => !d.isOccupied && d.currentReservation).length;
   const occupied = active.filter(d => d.isOccupied).length;
   const offline  = desks.filter(d => !d.isOnline).length;
-
-  const pct = active.length ? Math.round((occupied / active.length) * 100) : 0;
-
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {[
-        { label: 'Wolne',        count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: 'Wolne',         count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
         { label: 'Zarezerwowane', count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
-        { label: 'Zajęte',       count: occupied, color: 'text-indigo-600',   bg: 'bg-indigo-50'  },
-        { label: 'Offline',      count: offline,  color: 'text-zinc-400',     bg: 'bg-zinc-50'    },
+        { label: 'Zajęte',        count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+        { label: 'Offline',       count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
       ].map(({ label, count, color, bg }) => (
         <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
           <p className={`text-2xl font-bold font-mono ${color}`}>{count}</p>
@@ -46,48 +43,145 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   );
 }
 
-export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
-  const [checkinTarget, setCheckinTarget] = useState<DeskMapItem | null>(null);
+// ── Modal rezerwacji dla END_USER ─────────────────────────────
+function ReservationModal({
+  desk, onClose, onSuccess,
+}: { desk: DeskMapItem; onClose: () => void; onSuccess: () => void }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [date,  setDate]  = useState(today);
+  const [start, setStart] = useState('09:00');
+  const [end,   setEnd]   = useState('17:00');
+  const [busy,  setBusy]  = useState(false);
+  const [err,   setErr]   = useState('');
 
-  // END_USER sees only free desks
-  const visibleDesks = userRole === 'END_USER'
+  const submit = async () => {
+    if (start >= end) { setErr('Godzina końca musi być późniejsza niż startu'); return; }
+    setBusy(true); setErr('');
+    try {
+      // Buduj ISO datetime zachowując lokalną godzinę — dodaj Z żeby uniknąć podwójnej konwersji TZ
+      // Backend przechowuje w UTC; wyświetlanie przez toLocaleTimeString odwraca to poprawnie
+      const startISO = `${date}T${start}:00.000Z`;
+      const endISO   = `${date}T${end}:00.000Z`;
+      await api.reservations.create({ deskId: desk.id, date, startTime: startISO, endTime: endISO });
+      onSuccess();
+    } catch (e: any) {
+      setErr(e.message ?? 'Błąd rezerwacji');
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+          <div>
+            <p className="font-semibold text-zinc-800">Zarezerwuj biurko</p>
+            <p className="text-xs text-zinc-400 mt-0.5">{desk.name} · {desk.code}</p>
+          </div>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+        </div>
+        <div className="px-5 py-4 flex flex-col gap-4">
+          {err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Data</label>
+            <input type="date" value={date} min={today}
+              onChange={e => setDate(e.target.value)}
+              className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Od</label>
+              <input type="time" value={start} onChange={e => setStart(e.target.value)}
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Do</label>
+              <input type="time" value={end} onChange={e => setEnd(e.target.value)}
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
+              Anuluj
+            </button>
+            <button onClick={submit} disabled={busy}
+              className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+              {busy
+                ? <span className="inline-flex items-center gap-2 justify-center">
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Rezerwuję…
+                  </span>
+                : 'Zarezerwuj'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
+  const [checkinTarget,     setCheckinTarget]     = useState<DeskMapItem | null>(null);
+  const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
+  const [reservedMsg,       setReservedMsg]       = useState('');
+
+  const isEndUser = userRole === 'END_USER';
+
+  // END_USER widzi tylko wolne biurka
+  const visibleDesks = isEndUser
     ? desks.filter(d => d.status === 'ACTIVE' && !d.isOccupied && !d.currentReservation)
     : desks;
 
   const floors = groupByFloor(visibleDesks);
 
+  // Staff/Admin check-in (manual — prompt for userId)
   const handleCheckin = async (desk: DeskMapItem) => {
     setCheckinTarget(desk);
-    // For Staff panel: prompt for userId (simplified - production would have user search)
     const userId = prompt('Podaj ID użytkownika (lub pozostaw puste dla walk-in):');
     if (!userId) { setCheckinTarget(null); return; }
     try {
       await api.checkins.manual(desk.id, userId);
       onRefresh();
-    } catch (e: any) {
-      alert('Błąd check-in: ' + e.message);
-    }
+    } catch (e: any) { alert('Błąd check-in: ' + e.message); }
     setCheckinTarget(null);
   };
 
   const handleCheckout = async (desk: DeskMapItem) => {
-    // Find active checkin via reservation
     if (!desk.currentReservation) return;
     try {
-      // Staff checkout — simplified: uses reservation id to find checkin
       await api.checkins.checkout(desk.currentReservation.id);
       onRefresh();
-    } catch (e: any) {
-      alert('Błąd check-out: ' + e.message);
-    }
+    } catch (e: any) { alert('Błąd check-out: ' + e.message); }
+  };
+
+  // END_USER — kliknięcie biurka otwiera modal rezerwacji
+  const handleUserClick = (desk: DeskMapItem) => {
+    setReservedMsg('');
+    setReservationTarget(desk);
+  };
+
+  const handleReservationSuccess = () => {
+    setReservationTarget(null);
+    setReservedMsg('Biurko zarezerwowane! Sprawdź „Moje rezerwacje".');
+    onRefresh();
+    setTimeout(() => setReservedMsg(''), 5000);
   };
 
   return (
     <div>
+      {reservationTarget && (
+        <ReservationModal
+          desk={reservationTarget}
+          onClose={() => setReservationTarget(null)}
+          onSuccess={handleReservationSuccess}
+        />
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">
-            {userRole === 'END_USER' ? 'Wolne biurka' : 'Mapa zajętości'}
+            {isEndUser ? 'Wolne biurka' : 'Mapa zajętości'}
           </h2>
           {lastUpdated && (
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -95,15 +189,27 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
             </p>
           )}
         </div>
-        <button
-          onClick={onRefresh}
-          className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors font-medium"
-        >
+        <button onClick={onRefresh}
+          className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors font-medium">
           ↻ Odśwież
         </button>
       </div>
 
-      {userRole !== 'END_USER' && <Stats desks={desks} />}
+      {reservedMsg && (
+        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+          ✓ {reservedMsg}
+        </div>
+      )}
+
+      {!isEndUser && <Stats desks={desks} />}
+
+      {isEndUser && visibleDesks.length === 0 && (
+        <div className="text-center py-16 text-zinc-400">
+          <p className="text-4xl mb-3">🎉</p>
+          <p className="font-medium text-zinc-600">Wszystkie biurka zajęte</p>
+          <p className="text-sm mt-1">Sprawdź później lub wybierz inną datę w rezerwacji</p>
+        </div>
+      )}
 
       {floors.map(([floor, floorDesks]) => (
         <div key={floor} className="mb-8">
@@ -117,18 +223,29 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {floorDesks.map(desk => (
-              <DeskCard
-                key={desk.id}
-                desk={desk}
-                onCheckin={handleCheckin}
-                onCheckout={handleCheckout}
-              />
+              isEndUser
+                ? (
+                  // END_USER — kliknięcie karty otwiera modal rezerwacji
+                  <div key={desk.id}
+                    onClick={() => handleUserClick(desk)}
+                    className="cursor-pointer active:scale-95 transition-transform">
+                    <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} />
+                  </div>
+                )
+                : (
+                  <DeskCard
+                    key={desk.id}
+                    desk={desk}
+                    onCheckin={handleCheckin}
+                    onCheckout={handleCheckout}
+                  />
+                )
             ))}
           </div>
         </div>
       ))}
 
-      {desks.length === 0 && (
+      {!isEndUser && desks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🏢</p>
           <p className="font-medium">Brak biurek w tej lokalizacji</p>
