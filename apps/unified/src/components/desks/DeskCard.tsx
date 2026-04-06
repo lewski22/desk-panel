@@ -4,8 +4,9 @@ import { format } from 'date-fns';
 
 interface Props {
   desk: DeskMapItem;
-  onCheckin: (desk: DeskMapItem) => void;
-  onCheckout: (desk: DeskMapItem) => void;
+  onCheckin:   (desk: DeskMapItem) => void;
+  onCheckout:  (desk: DeskMapItem) => void;
+  hideActions?: boolean;   // END_USER — cała karta klikalność, bez przycisków
 }
 
 function statusMeta(desk: DeskMapItem) {
@@ -48,7 +49,7 @@ function cardBg(desk: DeskMapItem) {
   return 'bg-white border-emerald-200';
 }
 
-export function DeskCard({ desk, onCheckin, onCheckout }: Props) {
+export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: Props) {
   const meta = statusMeta(desk);
   const bg   = cardBg(desk);
   const res  = desk.currentReservation;
@@ -98,8 +99,8 @@ export function DeskCard({ desk, onCheckin, onCheckout }: Props) {
         {meta.label}
       </span>
 
-      {/* Action buttons */}
-      {desk.isOnline && desk.status === 'ACTIVE' && (
+      {/* Action buttons — hidden for END_USER (whole card is clickable) */}
+      {!hideActions && desk.isOnline && desk.status === 'ACTIVE' && (
         <div className="flex gap-1 mt-1">
           {!desk.isOccupied && (
             <button

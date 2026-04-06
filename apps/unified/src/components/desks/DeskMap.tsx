@@ -43,30 +43,31 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   );
 }
 
-// ── Modal rezerwacji dla END_USER ─────────────────────────────
-function ReservationModal({
-  desk, onClose, onSuccess,
-}: { desk: DeskMapItem; onClose: () => void; onSuccess: () => void }) {
+// ── Modal rezerwacji — dla END_USER i Staff/Admin ─────────────
+function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [] }: {
+  desk: DeskMapItem; onClose: () => void; onSuccess: () => void;
+  isEndUser?: boolean; users?: any[];
+}) {
   const today = new Date().toISOString().slice(0, 10);
-  const [date,  setDate]  = useState(today);
-  const [start, setStart] = useState('09:00');
-  const [end,   setEnd]   = useState('17:00');
-  const [busy,  setBusy]  = useState(false);
-  const [err,   setErr]   = useState('');
+  const [date,   setDate]   = useState(today);
+  const [start,  setStart]  = useState('09:00');
+  const [end,    setEnd]    = useState('17:00');
+  const [userId, setUserId] = useState('');
+  const [busy,   setBusy]   = useState(false);
+  const [err,    setErr]    = useState('');
 
   const submit = async () => {
-    if (start >= end) { setErr('Godzina końca musi być późniejsza niż startu'); return; }
+    if (start >= end) { setErr('Godzina zakończenia musi być późniejsza niż startu'); return; }
     setBusy(true); setErr('');
     try {
-      // Buduj ISO datetime zachowując lokalną godzinę — dodaj Z żeby uniknąć podwójnej konwersji TZ
-      // Backend przechowuje w UTC; wyświetlanie przez toLocaleTimeString odwraca to poprawnie
       const startISO = `${date}T${start}:00.000Z`;
       const endISO   = `${date}T${end}:00.000Z`;
-      await api.reservations.create({ deskId: desk.id, date, startTime: startISO, endTime: endISO });
+      const body: any = { deskId: desk.id, date, startTime: startISO, endTime: endISO };
+      // Staff/Admin mogą rezerwować dla konkretnego usera
+      if (!isEndUser && userId) body.targetUserId = userId;
+      await api.reservations.create(body);
       onSuccess();
-    } catch (e: any) {
-      setErr(e.message ?? 'Błąd rezerwacji');
-    }
+    } catch (e: any) { setErr(e.message ?? 'Błąd rezerwacji'); }
     setBusy(false);
   };
 
@@ -82,12 +83,29 @@ function ReservationModal({
         </div>
         <div className="px-5 py-4 flex flex-col gap-4">
           {err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
+
+          {/* Staff/Admin — opcjonalny wybór pracownika */}
+          {!isEndUser && (
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">
+                Pracownik <span className="text-zinc-300 font-normal">(puste = rezerwacja dla siebie)</span>
+              </label>
+              <select value={userId} onChange={e => setUserId(e.target.value)}
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
+                <option value="">— rezerwacja dla siebie —</option>
+                {users.filter((u: any) => u.isActive).map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Data</label>
-            <input type="date" value={date} min={today}
-              onChange={e => setDate(e.target.value)}
+            <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)}
               className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Od</label>
@@ -100,6 +118,11 @@ function ReservationModal({
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
+
+          <p className="text-[11px] text-zinc-400 -mt-1">
+            Możesz zarezerwować biurko na dowolną godzinę — np. przyjdź o 8:00 i zarezerwuj od 14:00 do 18:00.
+          </p>
+
           <div className="flex gap-3 pt-1">
             <button onClick={onClose}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
@@ -122,11 +145,18 @@ function ReservationModal({
 }
 
 export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
-  const [checkinTarget,     setCheckinTarget]     = useState<DeskMapItem | null>(null);
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
+  const [users,             setUsers]             = useState<any[]>([]);
 
   const isEndUser = userRole === 'END_USER';
+
+  // Wczytaj listę userów dla Staff/Admin (potrzebna w modalu rezerwacji)
+  React.useEffect(() => {
+    if (!isEndUser) {
+      api.users.list().then(setUsers).catch(() => {});
+    }
+  }, [isEndUser]);
 
   // END_USER widzi tylko wolne biurka
   const visibleDesks = isEndUser
@@ -135,30 +165,13 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
 
   const floors = groupByFloor(visibleDesks);
 
-  // Staff/Admin check-in (manual — prompt for userId)
-  const handleCheckin = async (desk: DeskMapItem) => {
-    setCheckinTarget(desk);
-    const userId = prompt('Podaj ID użytkownika (lub pozostaw puste dla walk-in):');
-    if (!userId) { setCheckinTarget(null); return; }
-    try {
-      await api.checkins.manual(desk.id, userId);
-      onRefresh();
-    } catch (e: any) { alert('Błąd check-in: ' + e.message); }
-    setCheckinTarget(null);
-  };
-
+  // Checkout (Staff/Admin)
   const handleCheckout = async (desk: DeskMapItem) => {
     if (!desk.currentReservation) return;
     try {
       await api.checkins.checkout(desk.currentReservation.id);
       onRefresh();
     } catch (e: any) { alert('Błąd check-out: ' + e.message); }
-  };
-
-  // END_USER — kliknięcie biurka otwiera modal rezerwacji
-  const handleUserClick = (desk: DeskMapItem) => {
-    setReservedMsg('');
-    setReservationTarget(desk);
   };
 
   const handleReservationSuccess = () => {
@@ -173,6 +186,8 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
       {reservationTarget && (
         <ReservationModal
           desk={reservationTarget}
+          isEndUser={isEndUser}
+          users={users}
           onClose={() => setReservationTarget(null)}
           onSuccess={handleReservationSuccess}
         />
@@ -207,7 +222,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🎉</p>
           <p className="font-medium text-zinc-600">Wszystkie biurka zajęte</p>
-          <p className="text-sm mt-1">Sprawdź później lub wybierz inną datę w rezerwacji</p>
+          <p className="text-sm mt-1">Sprawdź później lub zarezerwuj biurko na konkretną godzinę</p>
         </div>
       )}
 
@@ -223,23 +238,22 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {floorDesks.map(desk => (
-              isEndUser
-                ? (
-                  // END_USER — kliknięcie karty otwiera modal rezerwacji
-                  <div key={desk.id}
-                    onClick={() => handleUserClick(desk)}
-                    className="cursor-pointer active:scale-95 transition-transform">
-                    <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} />
-                  </div>
-                )
-                : (
-                  <DeskCard
-                    key={desk.id}
-                    desk={desk}
-                    onCheckin={handleCheckin}
-                    onCheckout={handleCheckout}
-                  />
-                )
+              isEndUser ? (
+                // END_USER — cała karta klikalność = modal rezerwacji, bez przycisków wewnątrz
+                <div key={desk.id}
+                  onClick={() => setReservationTarget(desk)}
+                  className="cursor-pointer active:scale-95 transition-transform select-none">
+                  <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} hideActions />
+                </div>
+              ) : (
+                // Staff/Admin — check-in otwiera modal rezerwacji, check-out działa bezpośrednio
+                <DeskCard
+                  key={desk.id}
+                  desk={desk}
+                  onCheckin={() => setReservationTarget(desk)}
+                  onCheckout={handleCheckout}
+                />
+              )
             ))}
           </div>
         </div>

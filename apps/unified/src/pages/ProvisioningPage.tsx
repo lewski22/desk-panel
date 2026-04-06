@@ -323,6 +323,16 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
     setAssignBusy(false);
   };
 
+  // Otwórz modal przypisania — załaduj desks dla lokalizacji tego gateway
+  const openAssignModal = async (device: any) => {
+    setAssignTarget(device);
+    setAssignDeskId(device.desk?.id ?? '');
+    // Znajdź locId dla gateway tego beacona
+    const gw = gateways.find((g: any) => g.id === device.gatewayId);
+    const locId = gw?.location?.id ?? gw?.locationId ?? activeLocId;
+    await loadDesks(locId);
+  };
+
   const availableGateways = form.locId
     ? gateways.filter(g => g.locationId === form.locId)
     : gateways;
@@ -377,7 +387,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                       className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors" title="Zidentyfikuj">💡</button>
                     <button onClick={() => sendCmd(d.id, 'REBOOT')}
                       className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-600 transition-colors" title="Restart">↺</button>
-                    <button onClick={() => { setAssignTarget(d); setAssignDeskId(d.desk?.id ?? ''); }}
+                    <button onClick={() => openAssignModal(d)}
                       className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors font-medium" title="Przypisz do biurka">
                       Przypisz
                     </button>
@@ -488,11 +498,11 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
               </p>
               <div className="bg-zinc-950 rounded-xl p-3 flex items-start gap-2">
                 <code className="text-emerald-400 text-[10px] font-mono flex-1 break-all leading-relaxed">
-                  {`PROVISION:{"wifi_ssid":"NAZWA_WIFI","wifi_pass":"HASLO_WIFI","mqtt_host":"IP_RASPBERRY","mqtt_port":1883,"mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}","device_id":"${result.device?.hardwareId}","desk_id":"","gateway_id":"${result.device?.gatewayId}"}`}
+                  {`PROVISION:{"wifi_ssid":"NAZWA_WIFI","wifi_pass":"HASLO_WIFI","mqtt_host":"IP_RASPBERRY","mqtt_port":1883,"mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}","device_id":"${result.device?.hardwareId}","desk_id":"${result.device?.deskId ?? ''}","gateway_id":"${result.device?.gatewayId}"}`}
                 </code>
                 <button
                   onClick={() => navigator.clipboard.writeText(
-                    `PROVISION:{"wifi_ssid":"NAZWA_WIFI","wifi_pass":"HASLO_WIFI","mqtt_host":"IP_RASPBERRY","mqtt_port":1883,"mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}","device_id":"${result.device?.hardwareId}","desk_id":"","gateway_id":"${result.device?.gatewayId}"}`
+                    `PROVISION:{"wifi_ssid":"NAZWA_WIFI","wifi_pass":"HASLO_WIFI","mqtt_host":"IP_RASPBERRY","mqtt_port":1883,"mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}","device_id":"${result.device?.hardwareId}","desk_id":"${result.device?.deskId ?? ''}","gateway_id":"${result.device?.gatewayId}"}`
                   )}
                   className="shrink-0 text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
                   title="Kopiuj komendę">⎘</button>

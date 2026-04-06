@@ -252,14 +252,18 @@ export function DesksPage() {
                   <>
                     <Btn variant="secondary" size="sm" onClick={() => handleActivate(d.id)}>Reaktywuj</Btn>
                     <Btn variant="danger" size="sm" onClick={async () => {
-                      if (!confirm(`Trwale usunąć biurko "${d.name}"? Tej operacji nie można cofnąć.`)) return;
+                      if (!confirm(`Trwale usunąć biurko "${d.name}"?\n\nUwaga: ta operacja jest nieodwracalna. Wszystkie dane biurka zostaną usunięte.`)) return;
                       try { await appApi.desks.hardDelete(d.id); await load(); }
                       catch (e: any) { alert(e.message); }
                     }}>Usuń trwale</Btn>
                   </>
                 )}
                 {d.status !== 'INACTIVE' && (
-                  <Btn variant="danger" size="sm" onClick={() => handleDelete(d.id, d.name)}>Dezaktywuj</Btn>
+                  <Btn variant="danger" size="sm"
+                    onClick={() => handleDelete(d.id, d.name)}
+                    title="Dezaktywuje biurko — można je potem trwale usunąć">
+                    Dezaktywuj
+                  </Btn>
                 )}
               </div>
             </TD>
