@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { MqttService }    from './mqtt.service';
 import { CheckinsService } from '../modules/checkins/checkins.service';
 import { DevicesService }  from '../modules/devices/devices.service';
@@ -11,7 +11,9 @@ export class MqttHandlers implements OnModuleInit {
 
   constructor(
     private mqtt:     MqttService,
+    @Inject(forwardRef(() => CheckinsService))
     private checkins: CheckinsService,
+    @Inject(forwardRef(() => DevicesService))
     private devices:  DevicesService,
     private gateways: GatewaysService,
   ) {}
