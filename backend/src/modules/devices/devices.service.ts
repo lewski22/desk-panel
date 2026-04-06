@@ -143,7 +143,7 @@ export class DevicesService {
     // Poinformuj beacon o nowym deskId — subskrybuje aktualnie na desk/{old}/command
     // Wysyłamy na stary topic (może być pusty) komendę SET_DESK_ID
     const oldTopic = device.deskId ? `desk/${device.deskId}/command` : 'desk//command';
-    this.mqtt.publish(oldTopic, {
+    this.mqtt?.publish(oldTopic, {
       command: 'SET_DESK_ID',
       params:  { desk_id: deskId },
       ts:      Date.now(),
@@ -159,13 +159,13 @@ export class DevicesService {
 
     if (device.desk?.id) {
       // Beacon ma przypisane biurko — wyślij na desk/{deskId}/command
-      this.mqtt.publish(TOPICS.COMMAND(device.desk.id), payload);
+      this.mqtt?.publish(TOPICS.COMMAND(device.desk.id), payload);
       this.logger.log(`Command → desk/${device.desk.id}: ${command}`);
       return { sent: true, command, deskId: device.desk.id };
     } else {
       // Beacon bez biurka — subskrybuje desk//command (pusty deskId)
       // Wysyłamy na pusty topic żeby beacon mógł odpowiedzieć
-      this.mqtt.publish(TOPICS.COMMAND(''), payload);
+      this.mqtt?.publish(TOPICS.COMMAND(''), payload);
       this.logger.warn(`Command → desk//(no desk): ${command} — beacon ${device.hardwareId}`);
       return { sent: true, command, deskId: null, warning: 'Beacon bez przypisanego biurka' };
     }

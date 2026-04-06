@@ -2306,3 +2306,26 @@ Dziś przypisanie karty NFC do usera = ręczne wpisanie UID w panelu Admin (User
 - Backend: `GET /users/:id/nfc-assign-status` → polling endpoint
 - Frontend: modal w UsersPage z progress barem 60s
 - Szacunek: ~2-3 dni
+
+---
+
+## Moduł maksymalnego okresu rezerwacji
+
+> Status: PLANOWANE | Priorytet: P2
+
+### Problem
+Użytkownik może przyjść do biura o 8:00, a zarezerwowane mieć biurko od 16:00.
+System powinien informować o maksymalnym czasie ciągłej rezerwacji oraz
+o tym, że biurko jest wolne od teraz do momentu jego pre-rezerwacji.
+
+### Planowane zachowanie
+- Konfiguracja per-biuro/per-lokalizacja: `maxDaysAhead` (np. 7 dni), `maxHoursPerDay` (np. 8h)
+- Na mapie biurek — tooltip/info gdy klikasz wolne biurko: "Wolne do 15:55 (rezerwacja od 16:00)"
+- Blokada tworzenia rezerwacji dłuższych niż `maxHoursPerDay`
+- Blokada tworzenia rezerwacji więcej niż `maxDaysAhead` w przyszłości
+
+### Zmiany
+- Prisma: nowe pola `Location.maxDaysAhead`, `Location.maxHoursPerDay`
+- Backend: walidacja w `reservations.service.create()`
+- Frontend: info na karcie biurka + walidacja w ReservationModal
+- Szacunek: ~2 dni

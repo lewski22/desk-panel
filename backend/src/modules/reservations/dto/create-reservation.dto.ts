@@ -21,4 +21,8 @@ export class CreateReservationDto {
   @ApiPropertyOptional()
   @IsOptional() @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Admin/Staff only — create reservation on behalf of this user' })
+  @IsOptional() @IsString()
+  targetUserId?: string;
 }

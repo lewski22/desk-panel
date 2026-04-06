@@ -62,7 +62,9 @@ export class ReservationsService {
     return r;
   }
 
-  async create(userId: string, dto: CreateReservationDto) {
+  async create(actorId: string, dto: CreateReservationDto) {
+    // Staff/Admin mogą rezerwować dla konkretnego pracownika
+    const userId = dto.targetUserId ?? actorId;
     // Conflict check: same desk, same date, overlapping time, active status
     const conflict = await this.prisma.reservation.findFirst({
       where: {
@@ -128,7 +130,7 @@ export class ReservationsService {
 
     // Poinformuj beacon — ustaw LED na wolne
     try {
-      this.mqtt.publish(TOPICS.COMMAND(reservation.deskId), LED_FREE);
+      this.mqtt?.publish(TOPICS.COMMAND(reservation.deskId), LED_FREE);
     } catch { /* MQTT may be offline */ }
 
     return updated;

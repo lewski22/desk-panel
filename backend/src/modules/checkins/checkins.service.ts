@@ -99,7 +99,7 @@ export class CheckinsService {
 
     await this.logEvent(EventType.CHECKIN_QR, { deskId, userId, checkinId: checkin.id });
     // Poinformuj beacon o zmianie stanu LED
-    this.mqtt.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED);
+    try { this.mqtt?.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED); } catch { /* MQTT offline */ }
     return checkin;
   }
 
@@ -226,7 +226,7 @@ export class CheckinsService {
     });
 
     // Poinformuj beacon o zmianie stanu LED
-    this.mqtt.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED);
+    try { this.mqtt?.publish(TOPICS.COMMAND(deskId), LED_OCCUPIED); } catch { /* MQTT offline */ }
 
     return {
       checkin,
