@@ -4,289 +4,94 @@ Format: `[wersja] — data — opis`
 
 ---
 
+## [0.10.0] — 2026-04-07 — Bugfixes, LED event bus, responsywność
+
+### Naprawione błędy
+
+**LED po QR check-in**
+- `LedEventsService` (rxjs Subject) jako event bus zamiast circular dependency
+- `CheckinsService` / `ReservationsService` emitują zdarzenie LED
+- `MqttHandlers` subskrybuje i publishuje do Mosquitto
+- Dependency graph: ZERO circular (SharedModule @Global)
+
+**Strefa czasowa (+2h offset)**
+- `utils/date.ts`: `localDateStr()` i `localDateTimeISO()`
+- ReservationModal: `.000Z` → `new Date('T...').toISOString()` (czas lokalny)
+- Backend: date filter `exact match` → range `gte/lt` w `findAll()`
+- MyReservationsPage: `new Date(r.date)` → `r.date.slice(0,10)+'T12:00:00'`
+
+**Mapa biurek END_USER**
+- `getCurrentStatus` zwraca `status: d.status` (poprzednio pole brakowało)
+- Filter END_USER: tylko `status === 'ACTIVE'` (zajęte też widoczne i rezerwowalne)
+- `qrToken` dodany do `select` w getCurrentStatus reservations include
+- Okno czasowe `currentReservation`: usunięto limit 30min → `endTime >= now`
+
+**Anulowanie rezerwacji**
+- `cancel()` zamyka otwarty Checkin (`checkedOutAt = now`)
+- `cancel()` emituje `LED_FREE` → beacon zmienia kolor na zielony
+
+**Beacon FREE→OCCUPIED po restarcie**
+- `flushOfflineQueue()`: TTL 1h — eventy starsze niż godzinę pomijane
+- Eliminuje fałszywe OCCUPIED po restarcie beacona z kolejką NVS
+
+**Duplikaty rezerwacji**
+- Usunięto `prisma.reservation.create()` z seed (był nie-idempotentny)
+- Seed teraz w pełni idempotentny (tylko upsert)
+
+**Przyciski Restart/Identyfikuj**
+- `DevicesController.command()` → `getCommandTarget()` + `mqtt.publish()`
+- Działa dla beaconów bez biurka (`desk//command`)
+
+**Provisioning — desk_id pusty**
+- PROVISION command: `"desk_id":"${result.device?.deskId}"` (nie hardcoded pusty)
+
+**QR sesja po logowaniu**
+- `LoginPage` obsługuje `state.returnTo` → wraca do QR checkin po zalogowaniu
+
+### Nowe funkcje
+
+**Mapa biurek — ReservationModal unified**
+- Jeden modal dla END_USER (bez ID) i Staff/Admin (dropdown pracownika + opcjonalnie)
+- Hint: "Możesz przyjść o 8:00 i zarezerwować od 14:00"
+- Staff/Admin: `targetUserId` w DTO — rezerwacja dla innego pracownika
+
+**Reassign beacona**
+- `openAssignModal()` ładuje desks dla lokalizacji gateway tego beacona
+- Guzik "Przypisz" w tabeli beaconów w ProvisioningPage
+
+**Trwałe usuwanie biurka**
+- `DELETE /desks/:id/permanent` (tylko INACTIVE)
+- Przycisk "Usuń trwale" obok "Reaktywuj" z 2-etapowym potwierdzeniem
+
+**Responsywność mobile**
+- AppLayout: hamburger + overlay sidebar drawer (`md:hidden`)
+- Tabele: `hideOnMobile` prop na TD/Table headers
+- DeskCard: prop `hideActions` — brak przycisków Check-in dla END_USER
+- Session warning: pełna szerokość na mobile
+
+**END_USER — dostęp do mapy**
+- `GET /locations` — dodano STAFF + END_USER do `@Roles`
+- `GET /locations/:id/desks/status` — wszystkie role
+
+---
+
 ## [0.9.0] — 2026-04-01 — Unified Panel + zmiana hasła
 
 ### Nowe funkcje
-
-**Unified Panel (`apps/unified/`) — scalenie Admin + Staff**
-- Jedna aplikacja React pod domeną `app.prohalw2026.ovh`
-- Jeden sidebar dla wszystkich ról (SUPER_ADMIN, OFFICE_ADMIN, STAFF, END_USER)
-- Separator "Pracownik" w sidebarze dla adminów
-- Redirect po zalogowaniu per rola:
-  SUPER_ADMIN/OFFICE_ADMIN/STAFF → /dashboard, END_USER → /my-reservations
-- `MyReservationsPage` — NOWA: aktywne + historyczne rezerwacje per zalogowany user
-- `DeskMapPage` — picker biura z API (nie VITE_LOCATION_ID)
+- Unified Panel (`apps/unified/`) — scalenie Admin + Staff + Owner + Outlook w jednej aplikacji
+- `MyReservationsPage` — aktywne + historyczne rezerwacje per zalogowany user
 - `ChangePasswordPage` — link "Zmień hasło" w stopce sidebara
-- Unified localStorage: app_access / app_refresh / app_user
-- QR linki wskazują na ten sam host (window.location.origin)
-
-**Zmiana hasła (`PATCH /auth/change-password`)**
-- Dostępna dla wszystkich ról po zalogowaniu (JWT required)
-- Walidacja: aktualne hasło musi być poprawne
-- Konta SSO (azureObjectId): endpoint zwraca 400 z instrukcją do myaccount.microsoft.com
-- Po zmianie: unieważniane wszystkie refresh tokeny → wymuszone ponowne logowanie
-- Frontend: pasek siły hasła, walidacja inline, obsługa kont SSO
-- Rate limiting: 5 prób/min per IP
+- `DeskMapPage` — picker biura z API (nie VITE_LOCATION_ID)
+- Owner panel — impersonacja SUPER_ADMIN, stats, health per org
+- Outlook Add-in (M3) — check-in z Microsoft Outlook
 
 ---
 
-## [0.8.0] — 2026-03-31 — Panel Owner + poprawki P3
+## [0.8.0] — 2026-03-31 — Gateway Python + provisioning UX
 
 ### Nowe funkcje
-
-**Panel Owner (`apps/owner/`) — nowa aplikacja**
-- Domena: `owner.prohalw2026.ovh` — osobna, izolowana aplikacja
-- `LoginPage` — weryfikacja `role === OWNER` przy logowaniu
-- `ClientsPage` — tabela wszystkich firm z metrykami: gateway online/total,
-  beacony online/total, plan, aktywność; filtr aktywne/nieaktywne; wyszukiwanie
-- `ClientDetailPage` — 4 sekcje: info (plan, daty, kontakt, notatki), gateway
-  (tabela + status online/stale/offline), beacony, ostatnia aktywność (20 zdarzeń)
-  + modal edycji planu/notatek
-- `NewClientPage` — wizard 2-krokowy: dane firmy (auto-slug, plan, trial, notatki)
-  → admin (imię, email); ekran sukcesu z tymczasowym hasłem
-- `HealthPage` — globalny monitoring IoT, auto-refresh co 30s, filtry
-  all/problemy/offline, kolorowe ramki per status firmy (zielony/żółty/czerwony)
-- `StatsPage` — 8 kart metryk + 2 wykresy Recharts (infrastruktura + check-iny)
-  + tabela firm bez aktywności 7+ dni
-- `OwnerLayout` — sidebar + amber baner impersonacji
-
-**Backend — moduł `/owner/*`**
-- Nowa rola `OWNER` w `UserRole` enum (przed SUPER_ADMIN)
-- `EventType.OWNER_IMPERSONATION` — audit trail impersonacji
-- Nowe pola `Organization`: `plan`, `planExpiresAt`, `trialEndsAt`, `notes`,
-  `contactEmail`, `createdBy`
-- `OwnerGuard` — dedykowany guard (sprawdza `role === 'OWNER'`)
-- `OwnerService`: `createOrganization` (transakcja org + user), `impersonate`
-  (JWT 30min + audit Event), `getStats` (metryki platformy)
-- `OwnerHealthService`: `getGlobalHealth`, `getOrgHealth` — statusy
-  `healthy` / `stale` / `offline` na podstawie czasu heartbeatu
-- 9 endpointów `GET/POST/PATCH/DELETE /owner/*`
-- Konto seed: `owner@reserti.pl` / `Owner1234!`
-
-**Impersonation (Owner → Admin)**
-- `POST /owner/organizations/:id/impersonate` → JWT 30min jako SUPER_ADMIN
-- `apps/admin/src/pages/ImpersonatePage.tsx` — odbiera token z URL, zapisuje sesję
-- `AdminLayout` — amber baner informujący o sesji tymczasowej + przycisk "Zakończ"
-
-**Logowanie — rozdzielenie Email/Hasło i Entra ID**
-- Usunięty `checkSso` wywoływany automatycznie przy keystroke → koniec `Failed to fetch`
-- Formularz email/hasło — zero requestów SSO w tle
-- Przycisk "Zaloguj się przez Entra ID" zawsze widoczny statycznie
-- `EntraIDModal`: krok 1 (email) → `GET /auth/azure/check` (dopiero po kliknięciu
-  "Dalej") → krok 2 (MSAL popup)
-- Identyczna zmiana w Admin Panel i Staff Panel
-
-### Poprawki P3
-
-- **P3-A** `manifest.xml`: placeholder GUID → `cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09`
-- **P3-B** `DevicesService`: `process.env` → `ConfigService`
-- **P3-C** `InstallController`: hardcoded GitHub URL → `GATEWAY_INSTALL_SCRIPT_URL` env var
-- **P3-D** `ReservationStatus`: string literals `'CANCELLED'` → `ReservationStatus.CANCELLED` enum
-- **P3-E** `vite-env.d.ts`: dodano do `apps/admin/src/` i `apps/staff/src/`
-- **P3-F** Staff Panel: dodano logowanie przez Entra ID (EntraIDModal, `@azure/msal-browser`)
-- **P3-G** `GatewaySetupToken`: `@@index([locationId])` — zapobiega full table scan
-
-### Infrastruktura
-
-- `Dockerfile` CMD: `migrate deploy` → `db push --accept-data-loss`
-- Seed uruchamiany automatycznie: `node dist/database/seeds/seed.js` w CMD
-- Seed jest idempotentny (upsert) — bezpieczny przy każdym restarcie kontenera
-
----
-
-## [0.7.0] — 2026-03-31 — Poprawki P1 + P2 (Code Review)
-
-### Poprawki
-
-- **P1-A** `@nestjs/throttler` — globalny rate limiting + per endpoint (login 5/min, azure 10/min)
-- **P1-B** Admin Panel `adminApi` — `tryRefresh()` przy 401 (jak Staff Panel)
-- **P1-C** `hardDelete` — czyści `azureObjectId: null, azureTenantId: null`
-- **P2-A** `@Cron('0 */15 * * * *')` na `expireOld()` rezerwacji
-- **P2-B** Walk-in date: `new Date(now.toDateString())` — fix UTC offset dający poprzedni dzień
-- **P2-C** `findAvailable`: walidacja `startTime < endTime`
-- **P2-D** `findMy`: paginacja `take = 50`, max 100
-- **P2-E** Outlook Add-in: `tryRefresh()` z sessionStorage przy 401
-
----
-
-## [0.6.0] — 2026-03-30 — M1 Entra ID SSO + M3 Outlook Add-in
-
-### Nowe funkcje
-
-**M1 — Entra ID SSO**
-- `azure-auth.service.ts` — weryfikacja JWKS, JIT provisioning
-- `POST /auth/azure`, `GET /auth/azure/check`
-- Admin Panel + Staff Panel: `EntraIDModal` (2-krokowy: email → MSAL popup)
-- `OrganizationsPage`: modal konfiguracji Azure (Tenant ID + toggle azureEnabled)
-- Enterprise App model: jeden globalny Client ID, per-firma Tenant ID
-
-**M3 — Outlook Add-in**
-- `apps/outlook/` — kompletna aplikacja React
-- `manifest/manifest.xml` — UUID: `cf93f4bf-3bcb-406b-9a5a-7a3e1294aa09`
-- `LoginPage` — dwukrokowy: email → MSAL popup
-- `TaskpaneApp` — auto-fill dat ze spotkania, wybór biurka, `setItemLocation()`
-- `GET /desks/available`, `GET /reservations/my`
-
----
-
-## [0.5.0] — 2026-03-29 — Fazy A-D: provisioning gateway
-
-### Nowe funkcje
-
-- **Faza A**: `GatewaySetupToken` — jednorazowe tokeny 24h, `InstallTokenModal`
-  w Admin Panel z przyciskiem `+ Gateway` per biuro
-- **Faza B**: Python gateway (`desk-gateway-python`) — `gateway.py` ~666 linii,
-  klasy: `Cache`, `SyncService`, `MqttBridge`, `DeviceMonitor`, `MqttAdmin`,
-  `GatewayApiHandler`
-- **Faza C**: `InstallController` — `GET /install/gateway/:token` serwuje bash
-  wrapper z wstrzykniętym tokenem + URL API
-- **Faza D**: UX provisioningu — auto-refresh co 15s, komenda `PROVISION:{...}`
-  w panelu z przyciskiem kopiowania
-
----
-
-## [0.4.0] — 2026-03-26 — QR check-in, godziny biura, uprawnienia
-
-### Nowe funkcje
-
-**QR Check-in (mobilny)**
-- Strona `/checkin/:token` w Staff Panelu — dostępna bez logowania (auto-redirect do login z returnTo)
-- Scenariusz walk-in: wolne biurko → rezerwacja + check-in w jednej transakcji
-- Scenariusz rezerwacja: moja rezerwacja → potwierdzenie check-inem
-- Scenariusz zajęte: komunikat "zajęte przez kogoś innego" + link do mapy
-- Po zalogowaniu: automatyczny powrót na stronę QR (fix `returnTo`)
-
-**Godziny pracy biura**
-- Nowe pola `Location.openTime` / `Location.closeTime` (domyślnie 08:00–17:00)
-- Super Admin: Biura → ⏰ Godziny — edycja per lokalizacja
-- Walk-in kończy się o `closeTime`, nie o 23:59
-- Walk-in po godzinach pracy: zablokowany (HTTP 400)
-- Walk-in gdy ktoś ma rezerwację → kończy się 5 min przed nią
-
-**Generator QR kodów**
-- Admin Panel → Biurka → przycisk "QR" przy każdym biurku
-- Podgląd kodu QR (api.qrserver.com)
-- Kopiuj URL / Drukuj QR (okno drukowania z layoutem do naklejki)
-
-**Czas i metoda check-inu na rezerwacji**
-- Nowe pola `Reservation.checkedInAt` + `Reservation.checkedInMethod`
-- Zapisywane przy każdym check-inie: NFC, QR, MANUAL
-- Widoczne w tabeli Admin Panel → Rezerwacje
-- Widoczne w tabeli Staff Panel → Rezerwacje
-
-**Rozbudowany Dashboard (Admin)**
-- Wykres słupkowy: check-iny ostatnie 7 dni z trendem tygodniowym
-- Heatmapa godzinowa: rozkład check-inów (godziny 6–20)
-- Strefowy wykres poziomy: zajęte/zarezerwowane/wolne per strefa
-- Top 5 biurek z progress barami (ostatnie 30 dni)
-- Pie chart: podział NFC / QR / Ręczny
-- Siatka biurek z kolorami statusów
-
-### Poprawki
-
-**Odparuj beacon**
-- Admin Panel → Biurka: przycisk "Odparuj" zastąpił niewidoczny `✕`
-- Admin Panel → Provisioning: przycisk "Odparuj" zastąpił emoji `⇄`
-- Oba przyciski: potwierdzenie z nazwą urządzenia + obsługa błędów
-- Backend fix: `devices.findAll` teraz zwraca `desk.id` (było tylko `name`, `code`)
-
-**Uprawnienia END_USER w Staff Panelu**
-- Zakładka "Urządzenia" ukryta (dostęp: STAFF i wyżej)
-- Rezerwacje: END_USER widzi tylko własne (filtr `?userId=` w API)
-- Mapa biurek: END_USER widzi tylko wolne biurka (tytuł "Wolne biurka")
-
-**Akcje w tabeli Rezerwacji (Admin)**
-- Przyciski "Check-in" i "Anuluj" — zawsze widoczne (usunięto `opacity-0 group-hover`)
-- Kolumna Check-in: czas (HH:mm) + metoda (📡/📱/✋) + checkout
-
-**QR flow po logowaniu**
-- `LoginPage` ignorował `state.returnTo` — zawsze redirectował na `/`
-- Naprawiono: `useLocation()` + `navigate(returnTo, {replace:true})`
-- `api.auth.login` zwraca `{...user, accessToken}` — token dostępny poza hookami
-
-### Optymalizacje wydajności (code review)
-
-| Plik | Problem | Naprawiono |
-|---|---|---|
-| `locations.service` | 7 osobnych DB queries w `getAnalyticsExtended` | 1 query + agregacja JS |
-| `locations.service` | `findMany` + filter w `getOccupancyAnalytics` | 4× `count()` równolegle |
-| `devices.service` | 2 DB write'y na heartbeat | 1 write (merged) |
-| `devices.service` | `Math.random()` do haseł | `crypto.randomBytes` |
-| `gateways.service` | `Math.random()` do secretów | `crypto.randomBytes` |
-| `users.service` | `findOne()` przed `update()` | usunięte (Prisma throws P2025) |
-| `AdminLayout` | `mousemove` → `setTimeout` setki razy/s | debounce 500ms |
-| `DashboardPage` | 3 API calls (occupancy redundant) | 2 API calls |
-| `DashboardPage` | `useMemo` po `if (loading) return` | przeniesione przed return |
-| `DashboardPage` | `totalDesks` undefined | usunięte, `desks.length` |
-| `UsersPage` | `myRole()` w module-level function | `useMemo` w komponencie |
-| `staff/hooks` | `const fetch` shadowing global `fetch` | przemianowane |
-
----
-
-## [0.3.0] — 2026-03-25 — Admin Panel v2, Gateway deploy
-
-### Nowe funkcje
-
-**Admin Panel — zarządzanie użytkownikami**
-- Zakładki: Aktywni / Dezaktywowani
-- Edycja użytkowników (imię, email, rola)
-- Dezaktywacja z wyborem okresu retencji (min. 30 dni)
-- Przywracanie kont (zakładka Dezaktywowani → Przywróć)
-- Anonimizacja po upływie retencji (zachowanie aktywności)
-- Super Admin: tylko SUPER_ADMIN może nadać rolę SUPER_ADMIN
-
-**Admin Panel — zarządzanie biurkami**
-- Edycja biurek (nazwa, kod, piętro, strefa)
-- Reaktywacja biurek INACTIVE
-- Odpięcie beacona
-
-**Admin Panel — Gateway**
-- Widoczne ID (skrócone) i firmware version
-- Regeneracja secretu (🔑) z podglądem pierwszych 8 znaków
-- Usuwanie gateway i beaconów
-
-**Provisioning**
-- Odparowanie beacona od biurka
-- Usuwanie beacona
-
-**Session timeout**
-- Automatyczne wylogowanie po 5 minutach braku aktywności
-- Ostrzeżenie 60 sekund przed końcem z przyciskiem "Przedłuż"
-
-**Gateway — Coolify deploy**
-- `Dockerfile` w root repo dla Coolify
-- Jednoetapowy setup: `scripts/setup.sh`
-
-**Organizacje → Biura**
-- Zmieniona nazwa w panelu i nawigacji
-- Dodana edycja istniejących
-
-### Dokumentacja
-
-- `docs/roles.md` — pełna dokumentacja ról (END_USER, STAFF, OFFICE_ADMIN, SUPER_ADMIN)
-- `docs/roadmap.md` — moduł M365 (SSO, Teams App, Outlook Add-in, Graph Sync)
-- `docs/deployment.md` — pełna instrukcja Proxmox + Coolify + Cloudflare
-
----
-
-## [0.2.0] — 2026-03-24 — Produkcyjny deploy
-
-### Nowe funkcje
-
-- Deploy na Proxmox LXC + Coolify + Cloudflare Tunnel
-- `https://api.prohalw2026.ovh/api/docs` — Swagger UI
-- `https://admin.prohalw2026.ovh` — Admin Panel
-- `https://staff.prohalw2026.ovh` — Staff Panel
-- Seed bazy danych (4 konta testowe, biurka, lokalizacja)
-
----
-
-## [0.1.0] — 2026-03-23 — Initial commit
-
-- Backend NestJS + Prisma + PostgreSQL
-- MQTT bridge (Mosquitto)
-- Admin Panel React (biurka, rezerwacje, użytkownicy, provisioning)
-- Staff Panel React (mapa zajętości)
-- Firmware ESP32 (NFC + LED + offline queue)
-- Gateway Node.js (MQTT bridge + SQLite cache)
-# Updated: 2026-04-06 — fixes #2 #3 #4 #5 #6
+- `desk-gateway-python` — pełny przepis Python: Cache, SyncService, MqttBridge, DeviceMonitor
+- Gateway provisioning przez tokeny jednorazowe (24h)
+- InstallController — bash script z tokenem i API URL
+- DeviceMonitor — wykrywa stale beacony + notuje backend `isOnline=false`
+- Panel: `+ Gateway` → `InstallTokenModal` → komenda curl do wklejenia

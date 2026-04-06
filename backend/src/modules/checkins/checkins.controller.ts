@@ -64,13 +64,13 @@ export class CheckinsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Manual check-in (Staff panel)' })
   manual(@Body() dto: ManualCheckinDto, @Request() req) {
-    return this.svc.checkinManual(dto.deskId, dto.userId, dto.reservationId);
+    return this.svc.manual(dto.deskId, dto.userId, dto.reservationId);
   }
 
   @Patch(':id/checkout')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Check out' })
   checkout(@Param('id') id: string, @Request() req) {
-    return this.svc.checkout(id, req.user.id, req.user.role);
+    return this.svc.checkout(id);
   }
 }

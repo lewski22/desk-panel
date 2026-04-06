@@ -131,7 +131,7 @@ export class ReservationsService {
 
     // Poinformuj beacon — ustaw LED na wolne
     try {
-      this.mqtt?.publish(TOPICS.COMMAND(reservation.deskId), LED_FREE);
+      this.ledEvents.emit(reservation.deskId, 'FREE');
     } catch { /* MQTT may be offline */ }
 
     return updated;
