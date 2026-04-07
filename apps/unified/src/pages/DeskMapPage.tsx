@@ -36,7 +36,7 @@ export function DeskMapPage() {
       .finally(() => setLocLoading(false));
   }, []);
 
-  const { desks, loading, error, lastUpdated, refetch } = useDesks(locationId);
+  const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId);
 
   // Get user role from app_user
   const userRole = (() => {
@@ -79,7 +79,7 @@ export function DeskMapPage() {
           <span>⚠</span><span>Problem z połączeniem — dane mogą być nieaktualne</span>
         </div>
       )}
-      <DeskMap desks={desks} lastUpdated={lastUpdated} onRefresh={refetch} userRole={userRole} />
+      <DeskMap desks={desks} locationLimits={locationLimits} lastUpdated={lastUpdated} onRefresh={refetch} userRole={userRole} />
     </div>
   );
 }

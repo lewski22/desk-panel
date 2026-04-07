@@ -1,3 +1,11 @@
+export interface LocationLimits {
+  openTime:       string;
+  closeTime:      string;
+  maxDaysAhead:   number;
+  maxHoursPerDay: number;
+  timezone:       string;
+}
+
 export type DeskStatus = 'FREE' | 'RESERVED' | 'OCCUPIED' | 'MAINTENANCE' | 'OFFLINE';
 
 export interface DeskMapItem {

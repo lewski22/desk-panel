@@ -1,6 +1,6 @@
 import { localDateStr, localDateTimeISO } from '../../utils/date';
 import React, { useState } from 'react';
-import { DeskMapItem } from '../../types/index';
+import { DeskMapItem, LocationLimits } from '../../types/index';
 import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
 
@@ -9,6 +9,7 @@ interface Props {
   lastUpdated: Date | null;
   onRefresh: () => void;
   userRole?: string;
+  locationLimits?: LocationLimits | null;
 }
 
 function groupByFloor(desks: DeskMapItem[]) {
@@ -45,20 +46,36 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
 }
 
 // ── Modal rezerwacji — dla END_USER i Staff/Admin ─────────────
-function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [] }: {
+function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [], limits }: {
   desk: DeskMapItem; onClose: () => void; onSuccess: () => void;
-  isEndUser?: boolean; users?: any[];
+  isEndUser?: boolean; users?: any[]; limits?: LocationLimits | null;
 }) {
-  const today = localDateStr();
+  const today  = localDateStr();
+  const maxDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + (limits?.maxDaysAhead ?? 14));
+    return localDateStr(d);
+  })();
   const [date,   setDate]   = useState(today);
-  const [start,  setStart]  = useState('09:00');
-  const [end,    setEnd]    = useState('17:00');
+  const [start,  setStart]  = useState(limits?.openTime  ?? '09:00');
+  const [end,    setEnd]    = useState(limits?.closeTime ?? '17:00');
   const [userId, setUserId] = useState('');
   const [busy,   setBusy]   = useState(false);
   const [err,    setErr]    = useState('');
 
   const submit = async () => {
     if (start >= end) { setErr('Godzina zakończenia musi być późniejsza niż startu'); return; }
+    if (limits) {
+      const [sh, sm] = start.split(':').map(Number);
+      const [eh, em] = end.split(':').map(Number);
+      const durH = (eh * 60 + em - sh * 60 - sm) / 60;
+      if (durH > limits.maxHoursPerDay) {
+        setErr(`Maksymalna długość rezerwacji to ${limits.maxHoursPerDay}h`); return;
+      }
+      if (date > maxDate) {
+        setErr(`Rezerwacja możliwa maksymalnie ${limits.maxDaysAhead} dni do przodu`); return;
+      }
+    }
     setBusy(true); setErr('');
     try {
       const startISO = localDateTimeISO(date, start);
@@ -103,7 +120,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
 
           <div>
             <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Data</label>
-            <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)}
+            <input type="date" value={date} min={today} max={maxDate} onChange={e => setDate(e.target.value)}
               className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
           </div>
 
@@ -121,7 +138,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
           </div>
 
           <p className="text-[11px] text-zinc-400 -mt-1">
-            Możesz zarezerwować biurko na dowolną godzinę — np. przyjdź o 8:00 i zarezerwuj od 14:00 do 18:00.
+{limits ? `Biuro czynne ${limits.openTime}–${limits.closeTime} · max ${limits.maxHoursPerDay}h · do ${limits.maxDaysAhead} dni do przodu` : 'Możesz zarezerwować biurko na dowolną godzinę dnia.'}
           </p>
 
           <div className="flex gap-3 pt-1">
@@ -145,7 +162,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   );
 }
 
-export function DeskMap({ desks, lastUpdated, onRefresh, userRole }: Props) {
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits }: Props) {
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
   const [users,             setUsers]             = useState<any[]>([]);

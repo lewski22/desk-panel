@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { appApi } from '../api/client';
+import { NfcCardModal } from '../components/users/NfcCardModal';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
 
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
@@ -70,14 +71,6 @@ export function UsersPage() {
     setBusy(false);
   };
 
-  const handleAssignCard = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('');
-    try {
-      await appApi.users.assignCard(target.id, cardUid);
-      setModal(null); setCardUid(''); await load();
-    } catch(e:any) { setErr(e.message); }
-    setBusy(false);
-  };
 
   const handleDeactivate = async () => {
     setBusy(true);
@@ -247,17 +240,10 @@ export function UsersPage() {
 
       {/* Card modal */}
       {modal === 'card' && target && (
-        <Modal title={`Karta NFC — ${target.firstName} ${target.lastName}`} onClose={() => setModal(null)}>
-          <form onSubmit={handleAssignCard} className="flex flex-col gap-3">
-            <Input label="UID karty (format AA:BB:CC:DD)" placeholder="AA:BB:CC:DD" required
-              value={cardUid} onChange={e => setCardUid(e.target.value.toUpperCase())} />
-            {err && <p className="text-xs text-red-500">{err}</p>}
-            <div className="flex gap-2 pt-1">
-              <Btn type="submit" loading={busy} className="flex-1">Zapisz</Btn>
-              <Btn variant="secondary" onClick={() => setModal(null)} type="button">Anuluj</Btn>
-            </div>
-          </form>
-        </Modal>
+        <NfcCardModal
+          user={target}
+          onClose={() => { setModal(null); load(); }}
+        />
       )}
 
       {/* Deactivate modal — with retention days */}

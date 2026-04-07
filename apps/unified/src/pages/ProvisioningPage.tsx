@@ -27,6 +27,7 @@ function useLocations() {
 // ── GatewaySection ────────────────────────────────────────────
 function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
   const [gateways,     setGateways]     = useState<any[]>([]);
+  const [latestFw,    setLatestFw]    = useState<any>(null);
   const [modal,        setModal]        = useState<'install'|'secret'|null>(null);
   const [locId,        setLocId]        = useState(activeLocId);
   const [tokenResult,  setTokenResult]  = useState<any>(null);
@@ -36,7 +37,10 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
 
   useEffect(() => { setLocId(activeLocId); }, [activeLocId]);
 
-  const load = () => appApi.gateways.list().then(setGateways).catch(() => {});
+  const load = () => {
+    appApi.gateways.list().then(setGateways).catch(() => {});
+    appApi.devices.firmwareLatest().then(setLatestFw).catch(() => {});
+  };
   useEffect(() => {
     load();
     // Auto-refresh co 15s — aktualizuje status Online/Offline bez przeładowania
@@ -63,14 +67,49 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
     catch (e: any) { alert(e.message); }
   };
 
+  const handleUpdate = async (id: string, name: string) => {
+    if (!confirm(`Zaktualizować gateway "${name}" do najnowszej wersji?
+
+Gateway uruchomi się ponownie (~15s).`)) return;
+    try {
+      const r = await appApi.gateways.triggerUpdate(id);
+      alert(`Aktualizacja uruchomiona: ${r.oldVersion} → ${r.newVersion}
+Gateway restartuje się.`);
+      setTimeout(load, 18_000);  // odśwież po restarcie
+    } catch (e: any) {
+      alert(`Błąd aktualizacji: ${e.message ?? e}`);
+    }
+  };
+
+  const handleOta = async (deviceId: string, hwId: string, currentFw: string) => {
+    if (!latestFw) return;
+    const msg = `Zaktualizować beacon "${hwId}"?\n\nAktualna: ${currentFw ?? '—'}\nNowa: ${latestFw.version}\n\nBeacon uruchomi się ponownie (~30s).`;
+    if (!confirm(msg)) return;
+    try {
+      await appApi.devices.triggerOta(deviceId);
+      alert(`OTA uruchomione → ${latestFw.version}\nBeacon restartuje się i flashuje nowy firmware.`);
+    } catch (e: any) {
+      alert(`Błąd OTA: ${e.message ?? e}`);
+    }
+  };
+
   const handleRegenSecret = async (id: string) => {
-    if (!confirm('Wygenerować nowy secret? Stary przestanie działać.')) return;
+    // Legacy alias — delegates to handleRotateSecret
+    handleRotateSecret(id);
+  };
+
+  const handleRotateSecret = async (id: string) => {
+    if (!confirm(
+      'Rotacja klucza gateway\n\n' +
+      'Nowy klucz zostanie wygenerowany i wysłany do gateway automatycznie.\n' +
+      'Stary klucz pozostaje ważny przez 15 minut — okno na ewentualną ręczną aktualizację.'
+    )) return;
     setBusy(true);
     try {
-      const r = await appApi.gateways.regenerateSecret(id);
+      const r = await appApi.gateways.rotateSecret(id);
       setSecretResult(r);
       setModal('secret');
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { alert(e.message ?? 'Błąd rotacji'); }
     setBusy(false);
   };
 
@@ -90,7 +129,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Nazwa','ID','Biuro','IP','Urządzenia','Status','Ostatni kontakt',''].map(h =>
+            <tr>{['Nazwa','ID','Biuro','IP','Wersja','Urządzenia','Status','Ostatni kontakt',''].map(h =>
               <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
           </thead>
@@ -133,6 +172,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
                   <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.ipAddress ?? '—'}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-zinc-500">{gw.version ?? '—'}</td>
                   <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${healthy ? 'bg-emerald-100 text-emerald-700' : stale ? 'bg-amber-100 text-amber-700' : 'bg-zinc-100 text-zinc-500'}`}>
@@ -144,9 +184,14 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleRegenSecret(gw.id)}
+                      {gw.ipAddress && (
+                        <button onClick={() => handleUpdate(gw.id, gw.name)}
+                          className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-sky-100 text-zinc-600 hover:text-sky-700 transition-colors"
+                          title="Zaktualizuj gateway do najnowszej wersji">↑ Update</button>
+                      )}
+                      <button onClick={() => handleRotateSecret(gw.id)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-700 transition-colors"
-                        title="Wygeneruj nowy secret">🔑</button>
+                        title="Rotuj klucz (15min okno)">🔑 Rotuj</button>
                       <button onClick={() => handleDelete(gw.id, gw.name)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors"
                         title="Usuń gateway">Usuń</button>
@@ -230,15 +275,28 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       <Modal open={modal === 'secret'} title="Nowy secret gateway" onClose={() => { setModal(null); setSecretResult(null); }}>
         {secretResult && (
           <div className="space-y-3">
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
-              🔑 Nowy secret wygenerowany. Zaktualizuj na gateway i zrestartuj.
-            </div>
+            {secretResult.gatewayReached ? (
+              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+                ✓ Gateway zaktualizowany automatycznie — uruchomi się ponownie za ~2s
+              </div>
+            ) : (
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+                ⚠ Nie można połączyć z gateway — zaktualizuj ręcznie przed upływem okna
+              </div>
+            )}
             <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1">
-              <p><span className="text-zinc-500">GATEWAY_ID=</span>{secretResult.gateway.id}</p>
+              <p><span className="text-zinc-500">GATEWAY_ID=</span>{secretResult.gateway?.id}</p>
               <p><span className="text-zinc-500">GATEWAY_SECRET=</span><span className="text-amber-400">{secretResult.secret}</span></p>
             </div>
-            <p className="text-xs text-zinc-500">Na Pi: edytuj <code className="bg-zinc-100 px-1 rounded">/opt/reserti-gateway/.env</code> i uruchom <code className="bg-zinc-100 px-1 rounded">systemctl restart reserti-gateway</code></p>
-            <p className="text-xs text-red-500">⚠ Stary secret przestał działać natychmiast.</p>
+            <div className="flex gap-4 text-xs">
+              <div className="flex-1 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
+                ✓ Nowy klucz aktywny od teraz
+              </div>
+              <div className="flex-1 p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-600">
+                ⏱ Stary klucz wygasa: {secretResult.expiresAt ? new Date(secretResult.expiresAt).toLocaleTimeString('pl-PL') : '—'}
+              </div>
+            </div>
+            <p className="text-xs text-zinc-400">Ręcznie: edytuj <code className="bg-zinc-100 px-1 rounded">/opt/reserti-gateway/.env</code> i uruchom <code className="bg-zinc-100 px-1 rounded">systemctl restart reserti-gateway</code></p>
             <div className="flex justify-end"><Btn onClick={() => { setModal(null); setSecretResult(null); }}>Zamknij</Btn></div>
           </div>
         )}
@@ -356,6 +414,17 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
+          {latestFw && (
+            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-sky-50 border border-sky-200 mb-3">
+              <span className="text-sky-600 text-sm">📦</span>
+              <div className="flex-1">
+                <span className="text-sm text-sky-800 font-medium">Najnowszy firmware: v{latestFw.version}</span>
+                <span className="text-xs text-sky-600 ml-2">
+                  ({(latestFw.size / 1024).toFixed(0)} KB · {new Date(latestFw.publishedAt).toLocaleDateString('pl-PL')})
+                </span>
+              </div>
+            </div>
+          )}
             <tr>{['Hardware ID','ID urządzenia','MQTT user','Biuro','Biurko','Status','Fw','Akcje'].map(h =>
               <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
@@ -391,6 +460,13 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                       className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors font-medium" title="Przypisz do biurka">
                       Przypisz
                     </button>
+                    {latestFw && d.firmwareVersion !== latestFw.version && (
+                      <button onClick={() => handleOta(d.id, d.hardwareId, d.firmwareVersion)}
+                        className="text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors font-medium"
+                        title={`Aktualizuj FW: ${d.firmwareVersion ?? '—'} → v${latestFw.version}`}>
+                        ↑ FW
+                      </button>
+                    )}
                     {d.desk && (
                       <button onClick={async () => {
                         if (!confirm(`Odparować beacon "${d.hardwareId}" od biurka "${d.desk.name}"?`)) return;

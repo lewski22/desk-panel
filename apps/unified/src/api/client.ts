@@ -110,7 +110,7 @@ export const appApi = {
 
   desks: {
     list:        (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
-    status:      (locId: string)            => req<any[]>(`/locations/${locId}/desks/status`),
+    status:      (locId: string)            => req<{ locationLimits: any; desks: any[] }>(`/locations/${locId}/desks/status`),
     create:      (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify((({ locId: _l, ...rest }) => rest)(d)) }),
     update:      (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     remove:      (id: string)               => req<any>(`/desks/${id}`, { method: 'DELETE' }),
@@ -136,6 +136,8 @@ export const appApi = {
     register:         (locId: string, name: string) => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
     remove:           (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
     regenerateSecret: (id: string)                  => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
+    rotateSecret:      (id: string)                         => req<any>(`/gateway/${id}/rotate-secret`, { method: 'POST' }),
+    triggerUpdate:     (id: string, channel = 'main')      => req<any>(`/gateway/${id}/update`, { method: 'POST', body: JSON.stringify({ channel }) }),
     createSetupToken: (locationId: string)          => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
     listSetupTokens:  (locationId: string)          => req<any[]>(`/gateway/setup-tokens/${locationId}`),
     revokeSetupToken: (tokenId: string)             => req<any>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
@@ -147,6 +149,10 @@ export const appApi = {
     create:         (d: any)                             => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
     update:         (id: string, d: any)                 => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     assignCard:     (id: string, uid: string)            => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
+    firmwareLatest: ()                                   => req<any>('/devices/firmware/latest'),
+    triggerOta:     (id: string)                         => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
+    nfcScanStart:   (id: string)                         => req<any>(`/users/${id}/nfc-scan-start`, { method: 'POST' }),
+    nfcScanStatus:  (id: string)                         => req<{ status: string; cardUid?: string; secondsLeft?: number }>(`/users/${id}/nfc-scan-status`),
     deactivate:     (id: string, retentionDays?: number) => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
     restore:        (id: string)                         => req<any>(`/users/${id}/restore`, { method: 'PATCH' }),
     hardDelete:     (id: string)                         => req<any>(`/users/${id}/permanent`, { method: 'DELETE' }),

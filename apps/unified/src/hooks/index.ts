@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { appApi } from '../api/client';
-import { DeskMapItem, Reservation } from '../types/index';
+import { DeskMapItem, LocationLimits, Reservation } from '../types/index';
 
 // locationId: pobierany z API lub fallback na env var
 // Używany przez useDesks i useReservations — przekazywany jako argument
@@ -8,16 +8,18 @@ import { DeskMapItem, Reservation } from '../types/index';
 
 // ── useDesks: polls desk status every 15s ────────────────────
 export function useDesks(locationId: string) {
-  const [desks,       setDesks]       = useState<DeskMapItem[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [desks,          setDesks]          = useState<DeskMapItem[]>([]);
+  const [locationLimits, setLocationLimits] = useState<LocationLimits | null>(null);
+  const [loading,        setLoading]        = useState(true);
+  const [error,          setError]          = useState<string | null>(null);
+  const [lastUpdated,    setLastUpdated]    = useState<Date | null>(null);
 
   const loadDesks = useCallback(async () => {
     if (!locationId) return;
     try {
-      const data = await appApi.desks.status(locationId);
-      setDesks(data);
+      const { desks, locationLimits: limits } = await appApi.desks.status(locationId);
+      setDesks(desks);
+      setLocationLimits(limits);
       setLastUpdated(new Date());
       setError(null);
     } catch (e: any) {
@@ -33,7 +35,7 @@ export function useDesks(locationId: string) {
     return () => clearInterval(id);
   }, [loadDesks]);
 
-  return { desks, loading, error, lastUpdated, refetch: loadDesks };
+  return { desks, locationLimits, loading, error, lastUpdated, refetch: loadDesks };
 }
 
 // ── useReservations: today, refetch on demand ─────────────────

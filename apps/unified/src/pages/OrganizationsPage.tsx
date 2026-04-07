@@ -219,7 +219,7 @@ export function OrganizationsPage() {
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
-    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '',
+    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8,
   });
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
@@ -241,7 +241,7 @@ export function OrganizationsPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00',
+    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8,
       organizationId: isSuperAdmin ? '' : (user?.organizationId ?? '') });
     setErr('');
     setModal('create');
@@ -252,6 +252,7 @@ export function OrganizationsPage() {
     setForm({
       name: loc.name, address: loc.address ?? '', city: loc.city ?? '',
       openTime: loc.openTime ?? '08:00', closeTime: loc.closeTime ?? '17:00',
+      maxDaysAhead: loc.maxDaysAhead ?? 14, maxHoursPerDay: loc.maxHoursPerDay ?? 8,
       organizationId: loc.organizationId,
     });
     setErr('');
@@ -266,12 +267,14 @@ export function OrganizationsPage() {
         await appApi.locations.create(orgId, {
           name: form.name, address: form.address, city: form.city,
           openTime: form.openTime, closeTime: form.closeTime,
+          maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
           organizationId: orgId,
         });
       } else if (target) {
         await appApi.locations.update(target.id, {
           name: form.name, address: form.address, city: form.city,
           openTime: form.openTime, closeTime: form.closeTime,
+          maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
         });
       }
       setModal(null);
@@ -325,12 +328,15 @@ export function OrganizationsPage() {
                   >⎘</button>
                 </div>
               </div>
-              {/* Godziny */}
+              {/* Godziny i limity */}
               <div className="shrink-0 text-center px-4 border-l border-zinc-100">
                 <p className="text-sm font-mono font-semibold text-zinc-700">
                   {loc.openTime ?? '08:00'} – {loc.closeTime ?? '17:00'}
                 </p>
                 <p className="text-xs text-zinc-400 mt-0.5">godziny pracy</p>
+                <p className="text-xs text-zinc-500 mt-1 font-medium">
+                  max {loc.maxDaysAhead ?? 14}d · {loc.maxHoursPerDay ?? 8}h
+                </p>
               </div>
               <div className="shrink-0 flex items-center gap-2">
                 <p className="text-xs text-zinc-400">
@@ -396,9 +402,24 @@ export function OrganizationsPage() {
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
+          {/* Limity rezerwacji */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max dni do przodu</label>
+              <input type="number" min={1} max={365} value={form.maxDaysAhead}
+                onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max godzin / rezerwacja</label>
+              <input type="number" min={1} max={24} value={form.maxHoursPerDay}
+                onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            </div>
+          </div>
           <p className="text-xs text-zinc-400">
-            Godziny pracy określają, kiedy użytkownicy mogą rezerwować biurka. Walk-in przez QR
-            kończy się automatycznie o godzinie zamknięcia.
+            Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka.
+            Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.
           </p>
           <div className="flex gap-2 mt-1 justify-end">
             <Btn variant="secondary" onClick={() => setModal(null)}>Anuluj</Btn>
