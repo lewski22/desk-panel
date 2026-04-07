@@ -128,7 +128,9 @@ export const appApi = {
     assign:    (id: string, deskId: string) => req<any>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
     command:   (id: string, cmd: string, params?: any) =>
       req<any>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command: cmd, params }) }),
-    remove:    (id: string)                 => req<any>(`/devices/${id}`, { method: 'DELETE' }),
+    remove:         (id: string)                 => req<any>(`/devices/${id}`, { method: 'DELETE' }),
+    firmwareLatest: ()                           => req<any>('/devices/firmware/latest'),
+    triggerOta:     (id: string)                 => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
   },
 
   gateways: {
@@ -149,8 +151,6 @@ export const appApi = {
     create:         (d: any)                             => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
     update:         (id: string, d: any)                 => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     assignCard:     (id: string, uid: string)            => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
-    firmwareLatest: ()                                   => req<any>('/devices/firmware/latest'),
-    triggerOta:     (id: string)                         => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
     nfcScanStart:   (id: string)                         => req<any>(`/users/${id}/nfc-scan-start`, { method: 'POST' }),
     nfcScanStatus:  (id: string)                         => req<{ status: string; cardUid?: string; secondsLeft?: number }>(`/users/${id}/nfc-scan-status`),
     deactivate:     (id: string, retentionDays?: number) => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
