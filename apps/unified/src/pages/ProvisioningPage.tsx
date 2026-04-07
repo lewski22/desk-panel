@@ -27,7 +27,6 @@ function useLocations() {
 // ── GatewaySection ────────────────────────────────────────────
 function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
   const [gateways,     setGateways]     = useState<any[]>([]);
-  const [latestFw,    setLatestFw]    = useState<any>(null);
   const [modal,        setModal]        = useState<'install'|'secret'|null>(null);
   const [locId,        setLocId]        = useState(activeLocId);
   const [tokenResult,  setTokenResult]  = useState<any>(null);
@@ -39,7 +38,6 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
 
   const load = () => {
     appApi.gateways.list().then(setGateways).catch(() => {});
-    appApi.devices.firmwareLatest().then(setLatestFw).catch(() => {});
   };
   useEffect(() => {
     load();
@@ -81,17 +79,6 @@ Gateway restartuje się.`);
     }
   };
 
-  const handleOta = async (deviceId: string, hwId: string, currentFw: string) => {
-    if (!latestFw) return;
-    const msg = `Zaktualizować beacon "${hwId}"?\n\nAktualna: ${currentFw ?? '—'}\nNowa: ${latestFw.version}\n\nBeacon uruchomi się ponownie (~30s).`;
-    if (!confirm(msg)) return;
-    try {
-      await appApi.devices.triggerOta(deviceId);
-      alert(`OTA uruchomione → ${latestFw.version}\nBeacon restartuje się i flashuje nowy firmware.`);
-    } catch (e: any) {
-      alert(`Błąd OTA: ${e.message ?? e}`);
-    }
-  };
 
   const handleRegenSecret = async (id: string) => {
     // Legacy alias — delegates to handleRotateSecret
@@ -317,6 +304,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
   const [assignTarget, setAssignTarget] = useState<any>(null);
   const [assignDeskId, setAssignDeskId] = useState('');
   const [assignBusy,   setAssignBusy]   = useState(false);
+  const [latestFw,     setLatestFw]     = useState<any>(null);
 
   useEffect(() => { setForm(f => ({ ...f, locId: activeLocId })); }, [activeLocId]);
 
@@ -335,7 +323,20 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
     setDesks(d);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    appApi.devices.firmwareLatest().then(setLatestFw).catch(() => {});
+  }, []);
+
+  const handleOta = async (deviceId: string, hwId: string, currentFw: string) => {
+    if (!latestFw) return;
+    const msg = `Zaktualizować beacon "${hwId}"?\n\nAktualna: ${currentFw ?? '—'}\nNowa: ${latestFw.version}\n\nBeacon uruchomi się ponownie (~30s).`;
+    if (!confirm(msg)) return;
+    try {
+      await appApi.devices.triggerOta(deviceId);
+      alert(`OTA uruchomione → ${latestFw.version}\nBeacon restartuje się i flashuje nowy firmware.`);
+    } catch (e: any) { alert((e as any).message ?? 'Błąd OTA'); }
+  };
   useEffect(() => { loadDesks(form.locId); }, [form.locId]);
 
   const provision = async () => {

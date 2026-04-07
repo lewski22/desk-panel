@@ -41,7 +41,7 @@ export function DashboardPage() {
           appApi.locations.extended(LOCATION_ID),
           appApi.desks.status(LOCATION_ID),
         ]);
-        setExt(e); setDesks(d);
+        setExt(e); setDesks(d?.desks ?? d);
       } catch (e) { console.error(e); }
       setLoading(false);
     })();
