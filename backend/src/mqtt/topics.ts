@@ -53,39 +53,3 @@ export const LED_HEX = {
 
 // ── LED state → MQTT command payloads ─────────────────────────
 // Per spec: command=set_status, color=#HEX, animation=solid|blink
-export const LED_COMMANDS = {
-  FREE:        { command: 'SET_LED', params: { color: LED_HEX.GREEN,  animation: 'solid' } },
-  RESERVED:    { command: 'SET_LED', params: { color: LED_HEX.BLUE,   animation: 'solid' } },
-  OCCUPIED:    { command: 'SET_LED', params: { color: LED_HEX.RED,    animation: 'solid' } },
-  ERROR:       { command: 'SET_LED', params: { color: LED_HEX.RED,    animation: 'blink' } },
-  DENIED:      { command: 'SET_LED', params: { color: LED_HEX.RED,    animation: 'blink', duration: 3000 } },
-  PROVISIONING:{ command: 'SET_LED', params: { color: LED_HEX.YELLOW, animation: 'pulse' } },
-  IDENTIFY:    { command: 'IDENTIFY' },
-} as const;
-
-export type LedState = keyof typeof LED_COMMANDS;
-
-// ── User event types ─────────────────────────────────────────
-export type UserEventType =
-  | 'checkin_confirmed'
-  | 'checkin_denied'
-  | 'reservation_reminder'
-  | 'reservation_cancelled';
-
-export interface UserEventPayload {
-  type:        UserEventType;
-  userId:      string;
-  deskId?:     string;
-  deskName?:   string;
-  message?:    string;
-  ts:          number;
-}
-
-// ── System broadcast types ────────────────────────────────────
-export type BroadcastType = 'maintenance' | 'info' | 'emergency';
-
-export interface BroadcastPayload {
-  type:    BroadcastType;
-  message: string;
-  ts:      number;
-}

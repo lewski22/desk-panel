@@ -4,7 +4,7 @@
 
 ---
 
-## Stan aktualny (v0.10.0 — 2026-04-07)
+## Stan aktualny (v0.10.1 — 2026-04-07)
 
 ### ✅ Zrealizowane (produkcja)
 
@@ -58,7 +58,7 @@
 
 ## P1 — Pilne (< 2 tygodnie)
 
-### 1. Location.timezone — strefa czasowa per biuro
+### ✅ 1. Location.timezone — strefa czasowa per biuro (zrealizowane v0.10.1)
 
 **Problem:** Wszystko w UTC. Biuro w Nowym Jorku (UTC-4) widzi godziny przesunięte.
 
@@ -69,11 +69,11 @@
 - Frontend: `Intl.DateTimeFormat` z `timeZone: location.timezone`
 - Gateway: `LOCATION_TZ` env var
 
-**Szacunek:** 3-4 dni
+**Zrealizowane:** `endOfWorkInTz()` w checkins.service.ts — Intl.DateTimeFormat, bez zewnętrznych bibliotek.
 
 ---
 
-### 2. QR LED backup przez gateway
+### ✅ 2. QR LED backup przez gateway (zrealizowane v0.10.2)
 
 **Problem:** Gdy backend MQTT nie może publishować (rozłączenie), LED nie reaguje na QR check-in.
 
@@ -85,7 +85,7 @@
 
 ## P2 — Ten miesiąc
 
-### 3. OTA aktualizacje gateway
+### ✅ 3. OTA aktualizacje gateway (zrealizowane v0.10.2)
 
 **Problem:** Aktualizacja gateway = SSH na Pi i ręczna zmiana pliku.
 
@@ -112,7 +112,7 @@
 
 ---
 
-### 5. Auto-przypisywanie kart NFC
+### ✅ 5. Auto-przypisywanie kart NFC (zrealizowane v0.10.2)
 
 **Problem:** Admin musi ręcznie wpisać UID karty. Wolne i podatne na błędy.
 
@@ -127,7 +127,7 @@
 
 ---
 
-### 6. Moduł maksymalnego okresu rezerwacji
+### ✅ 6. Moduł limitów rezerwacji — maxDaysAhead, maxHoursPerDay (zrealizowane v0.10.2)
 
 **Problem:** User może zarezerwować biurko na miesiąc do przodu bez limitu.
 
@@ -142,7 +142,7 @@
 
 ---
 
-### 7. Przełączanie Prisma migrate (zamiast db push)
+### ✅ 7. Prisma migrate deploy — bezpieczne migracje (zrealizowane v0.10.2)
 
 **Problem:** `prisma db push --accept-data-loss` niszczy dane przy niezgodności schematu.
 
@@ -155,33 +155,120 @@ Każda zmiana schematu musi mieć migrację (`prisma migrate dev`).
 
 ## P3 — Roadmapa daleka
 
-### 8. Rotacja kluczy gateway
+### 8. OTA aktualizacje firmware beacon (ESP32)
+
+**Problem:** Flash beacona = kabel USB + PlatformIO ręcznie. Przy 10+ beaconach niemożliwe.
+
+**Architektura:**
+- Storage: GitHub Releases (`.bin` skompilowany przez GitHub Actions CI)
+- `GET /firmware/latest?board=esp32dev` — zwraca `{ version, url, sha256 }`
+- `POST /devices/:id/ota` — wysyła komendę `OTA_UPDATE` przez gateway → beacon
+- Firmware: nowy handler `OTA_UPDATE { url, version, checksum }`:
+  - Porównuje `version` z `FW_VERSION` — pomija jeśli już aktualne
+  - LED żółty pulsujący podczas pobierania
+  - `HTTPUpdate.update(url)` — ESP32 Arduino wbudowana biblioteka
+  - ESP32 automatyczny rollback jeśli nowa partycja nie boota
+  - Po sukcesie: `ESP.restart()`
+- Panel: kolumna "Firmware" w tabeli beaconów + przycisk "Aktualizuj" + "Aktualizuj wszystkie"
+
+**Wyzwania:**
+- HTTPS na ESP32 wymaga certyfikatu root CA lub `setInsecure()` — używamy root CA
+  zakodowany w firmware (GitHub/Cloudflare CA, aktualizacja co ~rok)
+- PlatformIO CI (GitHub Actions) musi buildować `.bin` i uploadować do Releases
+- `min_spiffs.csv` już skonfigurowane — OTA partycja gotowa
+
+**Szacunek:** 4-5 dni
+
+---
+
+### 9. Grafana — monitoring i analityka (Owner + Client)
+
+**Problem:** Brak widoczności co dzieje się w systemie. Operacyjnie niewidomy.
+
+**Architektura:**
+
+```
+NestJS /metrics → Prometheus → Grafana
+RPi Gateway /metrics:9100 → Prometheus
+```
+
+**Stack:**
+- Backend: `prom-client` + `@willsoto/nestjs-prometheus`
+- Gateway: `prometheus_client` (Python)
+- Infrastruktura: Prometheus + Grafana w Coolify (osobny stos Docker)
+- Endpoint `/metrics` — bez JWT, chroniony IP whitelist middleware
+
+**Metryki — Grupa Owner (operator platformy)**
+
+System:
+- `reserti_api_request_duration_p99{route, method, status}` — latencja HTTP
+- `reserti_db_query_duration_p99{model, operation}` — latencja Prisma
+- `reserti_mqtt_events_total{type}` — NFC scans, heartbeats, errors
+- `reserti_active_websockets` — jeśli dodamy WS w przyszłości
+
+Multi-tenant overview:
+- `reserti_orgs_active_total` — liczba aktywnych organizacji
+- `reserti_gateways_online_ratio` — % gateway online globalnie
+- `reserti_provisioning_errors_total{org_id}` — błędy instalacji gateway/beacon
+- `reserti_beacon_firmware_outdated_total{org_id}` — beacony z nieaktualnym FW
+
+**Metryki — Grupa Client (SUPER_ADMIN / OFFICE_ADMIN per firma)**
+
+Dostępność biurek:
+- `reserti_desk_occupancy_pct{location_id}` — % biurek zajętych teraz
+- `reserti_desks_online_total{location_id}` / `reserti_desks_total{location_id}`
+
+Aktywność:
+- `reserti_checkins_total{location_id, method}` — NFC/QR/MANUAL per dzień
+- `reserti_reservations_total{location_id, status}` — created/cancelled/expired
+- `reserti_checkin_nfc_latency_ms{gateway_id}` — czas od NFC do LED feedback
+
+Zdrowie IoT:
+- `reserti_beacon_rssi_avg{location_id}` — średnia siła sygnału WiFi beaconów
+- `reserti_beacon_uptime_hours{device_id}` — czas od ostatniego restartu
+- `reserti_gateway_sync_lag_seconds{gateway_id}` — czas od ostatniego sync
+- `reserti_gateway_offline_events_queued{gateway_id}` — eventy czekające w SQLite
+
+**Metryki z gateway.py (Prometheus exporter na :9100):**
+- `gateway_mqtt_publishes_total{type}` — LED commands, NFC forwards
+- `gateway_http_errors_total{endpoint}` — błędy do backendu
+- `gateway_beacon_last_seen_seconds{hardware_id}` — sekundy od ostatniego heartbeat
+- `gateway_sync_duration_seconds` — czas trwania sync
+
+**Dashboardy Grafana:**
+1. **Owner: System Health** — SLO latencji API, DB, MQTT throughput, error rate
+2. **Owner: Fleet Overview** — mapa org → gateway → beacon health
+3. **Client: Desk Analytics** — wykres zajętości w ciągu dnia, top biurka, check-in metody
+4. **Client: IoT Health** — RSSI trend, uptime beaconów, sync lag
+
+**Separacja dostępu:**
+- Grafana organizacje: `Reserti Internal` (Owner) + osobna per klient (opcjonalnie)
+- Lub: jeden Grafana, dwa foldery z row-level security (Grafana Enterprise)
+- Uproszczone MVP: dwa osobne datasources z filtered queries (`org_id` label)
+
+**Szacunek:** 5-7 dni (2 dni backend metrics + 1 dzień gateway metrics + 2-3 dni Grafana dashboards)
+
+---
+
+### 10. Rotacja kluczy gateway
 
 **Opis:** Nowy endpoint `POST /gateway/:id/rotate-secret`. Przez 15min akceptuje stary i nowy klucz (okno migracji). Gateway pobiera nowy klucz przez swój `/rotate-secret` endpoint.
 
 ---
 
-### 9. M2 — Microsoft Teams App
+### 11. M2 — Microsoft Teams App
 
 **Opis:** Aplikacja Teams do rezerwacji biurek bezpośrednio z Teams (zakładka, personal app).
 
 ---
 
-### 10. M4 — Microsoft Graph Sync
+### 12. M4 — Microsoft Graph Sync
 
 **Opis:** Synchronizacja rezerwacji z kalendarzem Outlook (dwukierunkowa).
 
 ---
 
-### 11. Metryki SRE
 
-**Opis:** `provisioning_success_total`, `beacon_uptime`, `checkin_latency_ms`, dashboard SRE.
-
----
-
-### 12. Minimalny dashboard SRE
-
-**Opis:** Online gatewaye, provisioning error rate, czas ostatniego sync per gateway.
 
 ---
 
@@ -190,6 +277,7 @@ Każda zmiana schematu musi mieć migrację (`prisma migrate dev`).
 | Bug | Priorytet | Opis |
 |-----|-----------|------|
 | Beacon timestamp bez RTC | niski | `millis()/1000` reset przy restarcie — TTL queue niedokładne |
+| Entra ID SSO — STAFF/END_USER | niski | Aktualnie tylko OFFICE_ADMIN może logować przez SSO |
 | `prisma db push` w produkcji | średni | Powinno być `migrate deploy` |
 | Session warning na mobile | niski | `inset-x-2` nie testowane na wszystkich urządzeniach |
 | `date @db.Date` filtr | niski | Naprawione range filter, ale warto dodać indeks |

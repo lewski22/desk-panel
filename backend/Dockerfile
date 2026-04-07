@@ -24,8 +24,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
-# OpenSSL required at runtime by Prisma
-RUN apk add --no-cache openssl
+# OpenSSL required by Prisma, postgresql-client for migration baseline check
+RUN apk add --no-cache openssl postgresql-client
 
 COPY --from=builder /app/dist         ./dist
 COPY --from=builder /app/node_modules ./node_modules
@@ -33,6 +33,7 @@ COPY --from=builder /app/prisma       ./prisma
 COPY --from=builder /app/package.json ./
 
 # Seed uruchamiany raz przy starcie — upsert jest idempotentny
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/database/seeds/seed.js && node dist/main"]
+COPY entrypoint.sh ./entrypoint.sh
+CMD ["sh", "entrypoint.sh"]
 
 EXPOSE 3000

@@ -3,13 +3,42 @@ import {
 } from '@nestjs/common';
 import { PrismaService }    from '../../database/prisma.service';
 import { LedEventsService } from '../../shared/led-events.service';
+import { NfcScanService }   from '../../shared/nfc-scan.service';
 import { CheckinMethod, ReservationStatus, EventType } from '@prisma/client';
+
+/**
+ * Oblicza koniec dnia pracy w strefie czasowej biura.
+ * Używa Intl.DateTimeFormat (Node 20, bez zewnętrznych bibliotek).
+ *
+ * Algorytm: pobiera lokalną datę (YYYY-MM-DD) w danej strefie,
+ * buduje string 'YYYY-MM-DDTHH:MM:00' i parsuje go jako czas lokalny
+ * przez różnicę między UTC a strefą biura w tym momencie.
+ */
+function endOfWorkInTz(closeTime: string, timezone: string, now: Date): Date {
+  const [closeH, closeM] = closeTime.split(':').map(Number);
+
+  // Pobierz lokalną datę biura jako YYYY-MM-DD
+  const localDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: timezone })
+    .format(now);  // np. '2026-04-07'
+
+  // Zbuduj czas zamknięcia jako string ISO w strefie biura
+  const localCloseStr = `${localDateStr}T${String(closeH).padStart(2,'0')}:${String(closeM).padStart(2,'0')}:00`;
+
+  // Oblicz przesunięcie strefy biura przez porównanie dwóch Date.toLocaleString
+  const utcMs   = Date.parse(new Date(now).toLocaleString('en-US', { timeZone: 'UTC' }));
+  const localMs = Date.parse(new Date(now).toLocaleString('en-US', { timeZone: timezone }));
+  const offsetMs = localMs - utcMs;  // np. +7200000 dla UTC+2
+
+  // Czas zamknięcia jako UTC
+  return new Date(Date.parse(localCloseStr) - offsetMs);
+}
 
 @Injectable()
 export class CheckinsService {
   constructor(
     private prisma:     PrismaService,
     private ledEvents:  LedEventsService,
+    private nfcScan:    NfcScanService,
   ) {}
 
   // ── NFC scan from beacon via MQTT ────────────────────────────
@@ -19,6 +48,8 @@ export class CheckinsService {
     const user = await this.prisma.user.findUnique({ where: { cardUid } });
     if (!user || !user.isActive) {
       await this.logEvent(EventType.UNAUTHORIZED_SCAN, { deskId, cardUid, gatewayId });
+      // Jeśli admin czeka na skan (tryb auto-assign), przechwytujemy kartę
+      this.nfcScan.notifyScan(cardUid);
       return { authorized: false, reason: 'card_not_registered' };
     }
 
@@ -43,14 +74,13 @@ export class CheckinsService {
     const existing = await this.prisma.checkin.findUnique({ where: { reservationId: reservation.id } });
     if (existing && !existing.checkedOutAt) return { authorized: true, alreadyCheckedIn: true, checkin: existing };
 
-    const now2 = new Date();
     const [checkin] = await this.prisma.$transaction([
       this.prisma.checkin.create({
         data: { reservationId: reservation.id, deskId, userId: user.id, method: CheckinMethod.NFC, cardUid },
       }),
       this.prisma.reservation.update({
         where: { id: reservation.id },
-        data:  { checkedInAt: now2, checkedInMethod: 'NFC' },
+        data:  { checkedInAt: now, checkedInMethod: 'NFC' },
       }),
     ]);
 
@@ -104,13 +134,12 @@ export class CheckinsService {
     });
     if (!desk || desk.status !== 'ACTIVE') throw new NotFoundException('Biurko niedostępne');
 
-    const closeTime = desk.location?.closeTime ?? '22:00';
-    const [closeH, closeM] = closeTime.split(':').map(Number);
-    const endOfWork = new Date(now);
-    endOfWork.setHours(closeH, closeM, 0, 0);
+    const closeTime = desk.location?.closeTime ?? '17:00';
+    const timezone  = desk.location?.timezone  ?? 'Europe/Warsaw';
+    const endOfWork = endOfWorkInTz(closeTime, timezone, now);
 
     if (now > endOfWork) {
-      throw new BadRequestException(`Biuro zamknięte o ${closeTime}. Walk-in niemożliwy.`);
+      throw new BadRequestException(`Biuro zamknięte o ${closeTime} (${timezone}). Walk-in niemożliwy.`);
     }
 
     const activeCheckin = await this.prisma.checkin.findFirst({
@@ -176,8 +205,20 @@ export class CheckinsService {
   }
 
   // ── Manual check-in via Staff panel ─────────────────────────
-  async manual(deskId: string, userId: string, reservationId?: string) {
+  async manual(deskId: string, userId: string, reservationId?: string, actorOrgId?: string) {
     const now = new Date();
+
+    // Weryfikacja: biurko musi należeć do organizacji aktora (STAFF nie może robić checkin w obcej org)
+    if (actorOrgId) {
+      const desk = await this.prisma.desk.findFirst({
+        where: { id: deskId },
+        include: { location: { select: { organizationId: true } } },
+      });
+      if (!desk) throw new NotFoundException('Biurko nie istnieje');
+      if (desk.location.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Biurko należy do innej organizacji');
+      }
+    }
 
     let reservation = reservationId
       ? await this.prisma.reservation.findUnique({ where: { id: reservationId } })
@@ -202,10 +243,16 @@ export class CheckinsService {
   }
 
   // ── Checkout ─────────────────────────────────────────────────
-  async checkout(reservationId: string) {
+  async checkout(reservationId: string, actorId: string, actorRole: string) {
     const checkin = await this.prisma.checkin.findUnique({ where: { reservationId } });
     if (!checkin) throw new NotFoundException('Brak aktywnego check-in');
     if (checkin.checkedOutAt) throw new ConflictException('Already checked out');
+
+    // Tylko właściciel lub STAFF/ADMIN może zrobić checkout
+    const elevated = ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'].includes(actorRole);
+    if (!elevated && checkin.userId !== actorId) {
+      throw new ForbiddenException('Nie możesz zrobić checkout dla innego użytkownika');
+    }
 
     const updated = await this.prisma.checkin.update({
       where: { reservationId },

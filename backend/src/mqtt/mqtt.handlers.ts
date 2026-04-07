@@ -3,7 +3,7 @@ import { MqttService }     from './mqtt.service';
 import { CheckinsService }  from '../modules/checkins/checkins.service';
 import { GatewaysService }  from '../modules/gateways/gateways.service';
 import { LedEventsService } from '../shared/led-events.service';
-import { UserEventPayload, TOPICS } from './topics';
+import { TOPICS } from './topics';
 
 const LED_COLORS: Record<string, object> = {
   OCCUPIED: { command: 'SET_LED', params: { color: '#DC0000', animation: 'solid' } },
@@ -56,22 +56,17 @@ export class MqttHandlers implements OnModuleInit {
       const result = await this.checkins.checkinNfc(deskId, card_uid, device_id ?? '');
 
       if (result.authorized) {
-        this.mqtt.sendLedCommand(deskId, 'OCCUPIED');
+        // Emituj przez LedEventsService → gateway HTTP → Pi Mosquitto → beacon
+        // (nie mqtt.publish — backend i Pi mają osobne brokery Mosquitto)
+        this.ledEvents.emit(deskId, 'OCCUPIED');
         this.logger.log(`Check-in OK: desk=${deskId}`, { offline });
-
-        if (result.checkin?.userId) {
-          const event: UserEventPayload = {
-            type: 'checkin_confirmed', userId: result.checkin.userId, deskId, ts: Date.now(),
-          };
-          this.mqtt.notifyUser(result.checkin.userId, event);
-        }
       } else {
-        this.mqtt.sendLedCommand(deskId, 'DENIED');
+        this.ledEvents.emit(deskId, 'ERROR');
         this.logger.warn(`Check-in DENIED: desk=${deskId}`, { reason: result.reason });
       }
     } catch (err: any) {
       this.logger.error(`Check-in error: desk=${deskId}`, err.message);
-      this.mqtt.sendLedCommand(deskId, 'ERROR');
+      this.ledEvents.emit(deskId, 'ERROR');
     }
   }
 

@@ -19,7 +19,16 @@ export class DesksService {
       where: { locationId },
       include: {
         device:   { select: { id: true, hardwareId: true, isOnline: true, lastSeen: true } },
-        location: { select: { name: true } },
+        location: {
+          select: {
+            name:           true,
+            openTime:       true,
+            closeTime:      true,
+            maxDaysAhead:   true,
+            maxHoursPerDay: true,
+            timezone:       true,
+          },
+        },
         _count:   { select: { reservations: true } },
       },
       orderBy: [{ floor: 'asc' }, { name: 'asc' }],
@@ -127,7 +136,18 @@ export class DesksService {
       },
     });
 
-    return desks.map((d) => {
+    // Limity z lokalizacji — takie same dla wszystkich biurek w tej lokalizacji
+    // Zwracamy je raz na poziomie odpowiedzi żeby frontend nie musiał robić osobnego zapytania
+    const firstDesk = desks[0];
+    const locationLimits = firstDesk ? {
+      openTime:       firstDesk.location?.openTime       ?? '08:00',
+      closeTime:      firstDesk.location?.closeTime      ?? '17:00',
+      maxDaysAhead:   firstDesk.location?.maxDaysAhead   ?? 14,
+      maxHoursPerDay: firstDesk.location?.maxHoursPerDay ?? 8,
+      timezone:       firstDesk.location?.timezone       ?? 'Europe/Warsaw',
+    } : null;
+
+    const mapped = desks.map((d) => {
       const res = d.reservations[0] ?? null;
       return {
         id:         d.id,
@@ -148,6 +168,8 @@ export class DesksService {
         } : null,
       };
     });
+
+    return { locationLimits, desks: mapped };
   }
 
   async activate(id: string) {

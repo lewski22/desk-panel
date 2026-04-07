@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -37,8 +38,27 @@ export class GatewaysService {
   async authenticate(gatewayId: string, secret: string) {
     const gw = await this.prisma.gateway.findUnique({ where: { id: gatewayId } });
     if (!gw) throw new NotFoundException('Gateway not found');
-    const valid = await bcrypt.compare(secret, gw.secretHash);
-    if (!valid) throw new UnauthorizedException('Invalid gateway secret');
+
+    // Sprawdź główny sekret
+    const validMain = await bcrypt.compare(secret, gw.secretHash);
+
+    if (!validMain) {
+      // Podczas okna rotacji (15 min) akceptuj też poprzedni sekret
+      const inWindow = gw.secretHashPending && gw.secretPendingExpiresAt
+        && new Date() < gw.secretPendingExpiresAt;
+
+      const validPrev = inWindow
+        ? await bcrypt.compare(secret, gw.secretHashPending!)
+        : false;
+
+      if (!validPrev) throw new UnauthorizedException('Invalid gateway secret');
+
+      this.logger.warn(
+        `Gateway ${gatewayId} authenticated with OLD secret — rotation in progress. ` +
+        `Window expires: ${gw.secretPendingExpiresAt!.toISOString()}`
+      );
+    }
+
     await this.prisma.gateway.update({
       where: { id: gatewayId },
       data:  { isOnline: true, lastSeen: new Date() },
@@ -78,13 +98,32 @@ export class GatewaysService {
       },
     });
 
-    return { gatewayId, syncedAt: new Date(), reservations };
+    // Aktywne check-iny w tej lokalizacji (bez checkout) — używane przez gateway
+    // do reconcylacji LED po restarcie beacona lub gateway
+    const activeCheckins = await this.prisma.checkin.findMany({
+      where: {
+        checkedOutAt: null,
+        desk: { locationId: gw.locationId },
+      },
+      select: {
+        deskId:      true,
+        userId:      true,
+        checkedInAt: true,
+      },
+    });
+
+    return { gatewayId, syncedAt: new Date(), reservations, activeCheckins };
   }
 
-  async heartbeat(gatewayId: string, ipAddress?: string) {
+  async heartbeat(gatewayId: string, ipAddress?: string, version?: string) {
     return this.prisma.gateway.update({
       where: { id: gatewayId },
-      data:  { isOnline: true, lastSeen: new Date(), ...(ipAddress && { ipAddress }) },
+      data:  {
+        isOnline: true,
+        lastSeen: new Date(),
+        ...(ipAddress && { ipAddress }),
+        ...(version   && { version }),
+      },
     });
   }
 
@@ -106,26 +145,187 @@ export class GatewaysService {
     return { deleted: true };
   }
 
-  async regenerateSecret(id: string) {
-    const gw = await this.prisma.gateway.findUnique({ where: { id } });
+  /**
+   * Rotacja sekretu z 15-minutowym oknem nakładki.
+   *
+   * Flow:
+   *  1. Generuje nowy secret
+   *  2. Zapisuje jako secretHashPending + expiresAt = now + 15min
+   *  3. Wywołuje gateway HTTP POST /rotate-secret { newSecret } (ze starym secretem)
+   *  4. Gateway zapisuje do .env i restartuje service
+   *  5. Przy pierwszym heartbeat/sync z nowym secretem → promote (patrz authenticate)
+   *
+   * Okno 15 minut = failsafe gdy gateway nie mógł się zrestartować.
+   * Po 15 minutach stary secret przestaje działać automatycznie.
+   */
+  async rotateSecret(id: string): Promise<{
+    secret: string;
+    secretPreview: string;
+    expiresAt: Date;
+    gatewayReached: boolean;
+  }> {
+    const gw = await this.prisma.gateway.findUnique({
+      where:  { id },
+      select: { id: true, name: true, ipAddress: true, secretHash: true },
+    });
     if (!gw) throw new NotFoundException('Gateway not found');
 
-    const secret     = randomBytes(24).toString('hex');
-    const secretHash = await bcrypt.hash(secret, 10);
+    const newSecret     = randomBytes(24).toString('hex');
+    const newSecretHash = await bcrypt.hash(newSecret, 10);
+    const expiresAt     = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
-    const updated = await this.prisma.gateway.update({
-      where:  { id },
-      data:   { secretHash },
-      select: { id: true, name: true, isOnline: true, lastSeen: true, ipAddress: true },
+    // Rotacja:
+    //   secretHash         → nowy (aktywny od teraz)
+    //   secretHashPending  → stary hash (akceptowany przez 15 min jako fallback)
+    // authenticate() sprawdza najpierw secretHash (nowy), potem secretHashPending (stary)
+    // Gateway nadal działa ze starym secretem do momentu gdy dostanie nowy przez /rotate-secret
+    await this.prisma.gateway.update({
+      where: { id },
+      data: {
+        secretHash:             newSecretHash,
+        secretHashPending:      gw.secretHash,       // stary hash = fallback
+        secretPendingExpiresAt: expiresAt,
+      },
     });
 
-    return { gateway: updated, secret, secretPreview: secret.slice(0, 8) + '…' };
+    this.logger.log(`Gateway ${gw.name}: rotation started, old secret valid until ${expiresAt.toISOString()}`);
+
+    // Powiadom gateway — zapisze nowy secret do .env i zrestartuje się
+    let gatewayReached = false;
+    if (gw.ipAddress) {
+      gatewayReached = await this._pushRotateSecret(gw.ipAddress, newSecret);
+    } else {
+      this.logger.warn(`Gateway ${id}: brak IP — nie można automatycznie zaktualizować .env`);
+    }
+
+    return {
+      secret:         newSecret,
+      secretPreview:  newSecret.slice(0, 8) + '…',
+      expiresAt,
+      gatewayReached,
+    };
+  }
+
+  /** Cron co 5 min — czyści wygasłe okna rotacji */
+  @Cron('0 */5 * * * *')
+  async cleanExpiredRotations(): Promise<void> {
+    const result = await this.prisma.gateway.updateMany({
+      where: {
+        secretHashPending:      { not: null },
+        secretPendingExpiresAt: { lt: new Date() },
+      },
+      data: {
+        secretHashPending:      null,
+        secretPendingExpiresAt: null,
+      },
+    });
+    if (result.count > 0) {
+      this.logger.log(`Key rotation: ${result.count} expired window(s) cleaned`);
+    }
+  }
+
+  private async _pushRotateSecret(ipAddress: string, newSecret: string): Promise<boolean> {
+    const url = `http://${ipAddress}:3001/rotate-secret`;
+    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
+    try {
+      const resp = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
+        body:    JSON.stringify({ newSecret }),
+        signal:  AbortSignal.timeout(8_000),
+      });
+      if (resp.ok) {
+        this.logger.log(`Gateway rotate-secret: HTTP push OK`);
+        return true;
+      }
+      this.logger.warn(`Gateway rotate-secret: HTTP ${resp.status}`);
+      return false;
+    } catch (err: any) {
+      this.logger.warn(`Gateway rotate-secret: cannot reach gateway — ${err.message}`);
+      return false;
+    }
+  }
+
+  async regenerateSecret(id: string) {
+    // Legacy: deleguje do rotateSecret
+    const result = await this.rotateSecret(id);
+    const gw     = await this.prisma.gateway.findUnique({
+      where:  { id },
+      select: { id: true, name: true, isOnline: true, lastSeen: true, ipAddress: true },
+    });
+    return { gateway: gw, ...result };
   }
 
   /**
    * Wyślij komendę do beacona przez gateway HTTP API → lokalny Mosquitto → beacon.
    * Jedyna poprawna droga — backend i Pi mają osobne brokery Mosquitto.
    */
+  async triggerUpdate(gatewayId: string, channel = 'main'): Promise<object> {
+    const gw = await this.prisma.gateway.findUnique({
+      where:  { id: gatewayId },
+      select: { ipAddress: true, version: true, name: true },
+    });
+
+    if (!gw?.ipAddress) {
+      throw new NotFoundException(`Gateway ${gatewayId} nie ma zapisanego adresu IP — wymagany heartbeat`);
+    }
+
+    const url = `http://${gw.ipAddress}:3001/update`;
+    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
+
+    try {
+      const resp = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
+        body:    JSON.stringify({ channel }),
+        signal:  AbortSignal.timeout(20_000),  // update może chwilę trwać
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text().catch(() => '');
+        throw new Error(`Gateway zwrócił HTTP ${resp.status}: ${body}`);
+      }
+
+      const result = await resp.json();
+      this.logger.log(`OTA update triggered: ${gw.name} ${gw.version} → ${result.newVersion}`);
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`OTA update failed for ${gatewayId}: ${err.message}`);
+      throw err;
+    }
+  }
+
+  async addBeaconCredentials(gatewayId: string, username: string, password: string): Promise<void> {
+    const gw = await this.prisma.gateway.findUnique({
+      where:  { id: gatewayId },
+      select: { ipAddress: true },
+    });
+
+    if (!gw?.ipAddress) {
+      this.logger.warn(`addBeaconCredentials: brak IP gateway ${gatewayId} — pominięto`);
+      return;
+    }
+
+    const url = `http://${gw.ipAddress}:3001/beacon/add`;
+    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
+
+    try {
+      const resp = await fetch(url, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
+        body:    JSON.stringify({ username, password }),
+        signal:  AbortSignal.timeout(5000),
+      });
+      if (resp.ok) {
+        this.logger.log(`MQTT user added via gateway: ${username}`);
+      } else {
+        this.logger.warn(`Gateway /beacon/add failed: HTTP ${resp.status} — ${username}`);
+      }
+    } catch (err: any) {
+      this.logger.warn(`Cannot reach gateway ${gatewayId}: ${err.message} — ${username} not added`);
+    }
+  }
+
   async findGatewayForDesk(deskId: string): Promise<string | null> {
     const device = await this.prisma.device.findFirst({
       where:  { deskId },

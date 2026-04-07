@@ -14,7 +14,10 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private svc: UsersService) {}
+  constructor(
+    private svc:     UsersService,
+    private nfcScan: NfcScanService,
+  ) {}
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
@@ -71,6 +74,42 @@ export class UsersController {
     @Body('retentionDays') retentionDays?: number,
   ) {
     return this.svc.softDelete(id, retentionDays ?? 30);
+  }
+
+  @Post(':id/nfc-scan-start')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Start 60s NFC scan session — next unknown card scan will be assigned' })
+  async nfcScanStart(@Param('id') id: string, @Request() req: any) {
+    // Start sesji asynchronicznie — nie blokuj HTTP
+    this.nfcScan.startSession(req.user.id, 60_000)
+      .then(async (cardUid: string) => {
+        try {
+          await this.svc.updateCardUid(id, cardUid);
+        } catch { /* race condition — ignore */ }
+      })
+      .catch(() => { /* timeout or cancelled — ignore */ });
+
+    return { status: 'waiting', message: 'Zbliż kartę NFC do dowolnego beacona w biurze (60s)' };
+  }
+
+  @Get(':id/nfc-scan-status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Poll NFC scan session status' })
+  async nfcScanStatus(@Param('id') id: string, @Request() req: any) {
+    const isWaiting = this.nfcScan.hasActiveSession(req.user.id);
+    // Pobierz aktualny cardUid z DB — jeśli sesja się zakończyła, UID już jest zapisany
+    const user = await this.svc.findOne(id);
+    if (user.cardUid && !isWaiting) {
+      return { status: 'found', cardUid: user.cardUid };
+    }
+    if (isWaiting) {
+      const age = this.nfcScan.getSessionAge(req.user.id) ?? 0;
+      return { status: 'waiting', secondsLeft: Math.max(0, Math.round((60_000 - age) / 1000)) };
+    }
+    return { status: 'timeout' };
   }
 
   @Delete(':id/permanent')

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { GatewaysService }     from './gateways.service';
@@ -70,15 +70,27 @@ export class GatewaysController {
   // ── Standard endpoints ───────────────────────────────────────
 
   @Post(':id/sync')
-  @ApiOperation({ summary: 'Sync reservations — called by gateway' })
-  sync(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Sync reservations — called by gateway (x-gateway-secret required)' })
+  async sync(
+    @Param('id') id: string,
+    @Headers('x-gateway-secret') secret?: string,
+  ) {
+    if (!secret) throw new UnauthorizedException('Missing x-gateway-secret');
+    await this.svc.authenticate(id, secret);
     return this.svc.getSync(id);
   }
 
   @Post(':id/heartbeat')
-  @ApiOperation({ summary: 'Gateway heartbeat' })
-  heartbeat(@Param('id') id: string, @Body('ipAddress') ipAddress?: string) {
-    return this.svc.heartbeat(id, ipAddress);
+  @ApiOperation({ summary: 'Gateway heartbeat (x-gateway-secret required)' })
+  async heartbeat(
+    @Param('id') id: string,
+    @Headers('x-gateway-secret') secret?: string,
+    @Body('ipAddress') ipAddress?: string,
+    @Body('version')   version?:   string,
+  ) {
+    if (!secret) throw new UnauthorizedException('Missing x-gateway-secret');
+    await this.svc.authenticate(id, secret);
+    return this.svc.heartbeat(id, ipAddress, version);
   }
 
   @Delete(':id')
@@ -88,22 +100,45 @@ export class GatewaysController {
     return this.svc.remove(id);
   }
 
+  @Post(':id/rotate-secret')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Rotate gateway secret — 15min overlap window, auto-push to gateway' })
+  rotateSecret(@Param('id') id: string) {
+    return this.svc.rotateSecret(id);
+  }
+
   @Post(':id/regenerate-secret')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Legacy — delegates to rotate-secret' })
   regenerateSecret(@Param('id') id: string) {
     return this.svc.regenerateSecret(id);
   }
 
-  // ── Device heartbeat (called by gateway, no JWT) ──────────────
+  @Post(':id/update')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Trigger OTA update of gateway software' })
+  update(
+    @Param('id') id: string,
+    @Body('channel') channel?: string,
+  ) {
+    return this.svc.triggerUpdate(id, channel ?? 'main');
+  }
+
+  // ── Device heartbeat (x-gateway-provision-key required) ───────
   @Patch('device/:hardwareId/heartbeat')
-  @ApiOperation({ summary: 'Beacon heartbeat — called by gateway, no auth required' })
-  deviceHeartbeat(
+  @ApiOperation({ summary: 'Beacon heartbeat — GATEWAY_PROVISION_KEY required' })
+  async deviceHeartbeat(
     @Param('hardwareId') hardwareId: string,
+    @Headers('x-gateway-provision-key') provKey?: string,
     @Body('rssi') rssi?: number,
     @Body('firmwareVersion') firmwareVersion?: string,
     @Body('isOnline') isOnline?: boolean,
   ) {
+    const expected = process.env.GATEWAY_PROVISION_KEY ?? '';
+    if (!expected || provKey !== expected) throw new UnauthorizedException('Invalid provision key');
     return this.svc.deviceHeartbeat(hardwareId, rssi, firmwareVersion, isOnline);
   }
 }

@@ -66,6 +66,65 @@ export class ReservationsService {
   async create(actorId: string, dto: CreateReservationDto) {
     // Staff/Admin mogą rezerwować dla konkretnego pracownika
     const userId = dto.targetUserId ?? actorId;
+
+    // ── Pobierz biurko + limity lokalizacji ──────────────────
+    const desk = await this.prisma.desk.findUnique({
+      where: { id: dto.deskId },
+      include: {
+        location: {
+          select: {
+            openTime:       true,
+            closeTime:      true,
+            maxDaysAhead:   true,
+            maxHoursPerDay: true,
+            timezone:       true,
+          },
+        },
+      },
+    });
+    if (!desk) throw new NotFoundException('Biurko nie istnieje');
+
+    const loc  = desk.location;
+    const now  = new Date();
+    const resDate    = new Date(dto.date + 'T00:00:00.000Z');
+    const startTime  = new Date(dto.startTime);
+    const endTime    = new Date(dto.endTime);
+
+    // ── Walidacja 1: Nie dalej niż maxDaysAhead dni ──────────
+    const maxDate = new Date(now);
+    maxDate.setUTCDate(maxDate.getUTCDate() + loc.maxDaysAhead);
+    maxDate.setUTCHours(23, 59, 59, 999);
+    if (resDate > maxDate) {
+      throw new ConflictException(
+        `Rezerwacja możliwa maksymalnie ${loc.maxDaysAhead} dni do przodu`
+      );
+    }
+
+    // ── Walidacja 2: Długość rezerwacji ≤ maxHoursPerDay ─────
+    const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    if (durationHours > loc.maxHoursPerDay) {
+      throw new ConflictException(
+        `Rezerwacja nie może trwać dłużej niż ${loc.maxHoursPerDay} godzin`
+      );
+    }
+    if (durationHours <= 0) {
+      throw new ConflictException('Czas zakończenia musi być późniejszy niż startu');
+    }
+
+    // ── Walidacja 3: Godziny pracy biura ─────────────────────
+    // Porównujemy HH:MM stringa z czasem lokalnym rezerwacji
+    const [openH,  openM]  = loc.openTime.split(':').map(Number);
+    const [closeH, closeM] = loc.closeTime.split(':').map(Number);
+    const startHHMM = startTime.getUTCHours() * 60 + startTime.getUTCMinutes();
+    const endHHMM   = endTime.getUTCHours()   * 60 + endTime.getUTCMinutes();
+    const openMin   = openH  * 60 + openM;
+    const closeMin  = closeH * 60 + closeM;
+    if (startHHMM < openMin || endHHMM > closeMin) {
+      throw new ConflictException(
+        `Rezerwacja musi mieścić się w godzinach pracy biura (${loc.openTime}–${loc.closeTime})`
+      );
+    }
+
     // Conflict check: same desk, same date, overlapping time, active status
     const conflict = await this.prisma.reservation.findFirst({
       where: {

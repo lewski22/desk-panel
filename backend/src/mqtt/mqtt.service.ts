@@ -5,10 +5,6 @@ import {
   TOPICS,
   extractDeskId,
   extractGatewayId,
-  LED_COMMANDS,
-  LedState,
-  UserEventPayload,
-  BroadcastPayload,
 } from './topics';
 
 @Injectable()
@@ -87,24 +83,8 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  // ── Send LED command to a specific desk beacon ──────────────
-  sendLedCommand(deskId: string, state: LedState) {
-    const cmd = LED_COMMANDS[state];
-    this.publish(TOPICS.COMMAND(deskId), cmd);
-    this.logger.debug(`LED → desk/${deskId}: ${state}`);
-  }
 
-  // ── Send event to a specific user (mobile / PWA) ───────────
-  notifyUser(userId: string, event: UserEventPayload) {
-    this.publish(TOPICS.USER_EVENT(userId), event, 1);
-    this.logger.debug(`User event → user/${userId}: ${event.type}`);
-  }
 
-  // ── System-wide broadcast ───────────────────────────────────
-  broadcast(payload: BroadcastPayload) {
-    this.publish(TOPICS.BROADCAST, payload, 0);   // QoS 0 — best effort
-    this.logger.log(`Broadcast: ${payload.type} — ${payload.message}`);
-  }
 
   // ── Handler registration ────────────────────────────────────
   registerCheckinHandler(fn: (deskId: string, payload: any) => void) {

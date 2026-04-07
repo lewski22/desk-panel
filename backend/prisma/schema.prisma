@@ -104,6 +104,8 @@ model Location {
   // Godziny pracy biura (format HH:mm) — używane przy walk-in QR i walidacji rezerwacji
   openTime       String   @default("08:00")
   closeTime      String   @default("17:00")
+  maxDaysAhead   Int      @default(14)   // Max N dni do przodu przy rezerwacji
+  maxHoursPerDay Int      @default(8)    // Max długość jednej rezerwacji w godzinach
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -164,7 +166,9 @@ model Gateway {
   id           String    @id @default(cuid())
   locationId   String
   name         String
-  secretHash   String
+  secretHash              String
+  secretHashPending       String?   // nowy secret w trakcie rotacji (okno 15min)
+  secretPendingExpiresAt  DateTime? // kiedy wygasa okno migracji
   ipAddress    String?
   lastSeen     DateTime?
   isOnline     Boolean   @default(false)

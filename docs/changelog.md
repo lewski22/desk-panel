@@ -4,6 +4,61 @@ Format: `[wersja] — data — opis`
 
 ---
 
+## [0.10.1] — 2026-04-07 — Code review fixes
+
+### Bugs naprawione
+
+**#1 NFC check-in LED — zły broker MQTT**
+- `mqtt.handlers.ts`: `handleCheckin()` używał `mqtt.sendLedCommand()` (Docker Mosquitto, izolowany)
+- Zamieniono na `ledEvents.emit()` — ta sama ścieżka co QR: LedEventsService → gateway HTTP → Pi Mosquitto → beacon
+
+**#2 Checkout bez weryfikacji właściciela**
+- `checkout(id, actorId, actorRole)` — END_USER nie może zamknąć cudzej sesji
+- STAFF / ADMIN może checkout dowolne biurko
+
+**#3 GET /reservations bez @Roles**
+- `GET /` i `GET /:id` chronione przez `@Roles(STAFF+)`
+- END_USER nie ma dostępu do listy cudzych rezerwacji
+
+**#4 sync/heartbeat gateway bez autentykacji**
+- `POST /:id/sync` i `POST /:id/heartbeat` — wymagają `x-gateway-secret` (bcrypt compare z DB)
+- `PATCH /device/:id/heartbeat` — wymaga `x-gateway-provision-key`
+- gateway.py: dodano nagłówki do `_forward_device_heartbeat` i `_notify_backend_offline`
+
+### Refaktoryzacja (dead code)
+
+- Usunięto: `markOffline()`, `getCommandTarget()` z `DevicesService`
+- Usunięto: `sendLedCommand()`, `notifyUser()`, `broadcast()` z `MqttService`
+- Usunięto: `TOPICS` import z `devices.controller.ts` i `devices.service.ts`
+- Usunięto: `MqttService` z `DevicesController` i `DevicesModule`
+- Usunięto: osierocone typy z `topics.ts`
+
+### Jakość kodu
+
+**#9 closeTime — strefa czasowa per biuro**
+- `endOfWorkInTz(closeTime, timezone, now)` — pure TypeScript, `Intl.DateTimeFormat`, bez bibliotek
+- `walkinQr()` używa `Location.timezone` (IANA, np. `Europe/Warsaw`) zamiast `setHours()` (UTC serwera)
+- Poprawne zachowanie dla biur w strefie innej niż serwer
+
+**#10 manual() bez weryfikacji organizacji**
+- `manual(deskId, userId, reservationId, actorOrgId?)` — STAFF nie może checkin w obcej org
+- Kontroler przekazuje `req.user.organizationId`
+
+**#11 Duplikacja HTTP gateway**
+- `GatewaysService.addBeaconCredentials()` — nowa ujednolicona metoda dla `/beacon/add`
+- `DevicesService._notifyGateway()` usunięta (40 linii duplikatu)
+- `ConfigService` usunięty z `DevicesService`
+
+**#12 now vs now2**
+- `checkinNfc()` — usunięto `now2 = new Date()` tworzone 200ms po `now`
+- Transakcja używa `now` z początku metody
+
+**#13 SendCommandDto bez walidacji**
+- `@IsIn(['REBOOT', 'IDENTIFY', 'SET_LED'])` — backend odrzuca nieznane komendy
+- `@ApiProperty({ enum })` dla Swagger
+
+---
+
 ## [0.10.0] — 2026-04-07 — Bugfixes, LED event bus, responsywność
 
 ### Naprawione błędy

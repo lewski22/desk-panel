@@ -179,6 +179,24 @@ Po `assignToDesk` backend wysyła `SET_DESK_ID` na stary topic → beacon restar
 
 ---
 
+## Kluczowe problemy rozwiązane (code review 2026-04-07)
+
+| Problem | Rozwiązanie |
+|---------|-------------|
+| NFC LED → zły broker MQTT | `ledEvents.emit()` zamiast `sendLedCommand()` |
+| checkout bez auth | `checkout(id, actorId, actorRole)` — weryfikacja właściciela |
+| GET /reservations bez @Roles | `@Roles(STAFF+)` na GET / i GET /:id |
+| sync/heartbeat gateway publiczne | `x-gateway-secret` + `x-gateway-provision-key` |
+| Dead code: markOffline, getCommandTarget | Usunięte z DevicesService |
+| Dead code: sendLedCommand, notifyUser, broadcast | Usunięte z MqttService |
+| closeTime UTC vs local | `endOfWorkInTz(closeTime, timezone, now)` — Intl, bez bibliotek |
+| manual() bez weryfikacji org | Sprawdzanie `location.organizationId === actorOrgId` |
+| Duplikacja HTTP gateway code | `GatewaysService.addBeaconCredentials()` — jeden punkt |
+| now vs now2 w checkinNfc | Jedno `now` z początku metody |
+| SendCommandDto bez walidacji | `@IsIn(['REBOOT','IDENTIFY','SET_LED'])` |
+
+---
+
 ## Kluczowe problemy rozwiązane w sesji 2026-04-07
 
 | Problem | Rozwiązanie |
@@ -261,8 +279,7 @@ Szczegóły: `docs/roadmap.md`
 
 ## Znane ograniczenia / TODO
 
-1. **Strefa czasowa** — wszystko w UTC. Użytkownicy w innych strefach widzą błędne godziny.
-   Fix: `Location.timezone` per biuro → roadmap P1.
+1. **Strefa czasowa** — ✅ `walkinQr()` używa `endOfWorkInTz()` (Intl, IANA). Rezerwacje panelowe nadal UTC — `localDateTimeISO()` w frontendzie jako workaround.
 
 2. **QR check-in LED** — LED zmienia się przez backend MQTT publish. Jeśli backend MQTT
    jest rozłączony, LED nie reaguje. Backup: gateway mógłby słuchać checkin eventów.
