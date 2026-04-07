@@ -49,7 +49,7 @@ export class DevicesService {
   }
 
 
-  async findAll  async findAll(gatewayId?: string) {
+  async findAll(gatewayId?: string) {
     return this.prisma.device.findMany({
       where: gatewayId ? { gatewayId } : undefined,
       include: { desk: { select: { id: true, name: true, code: true } } },

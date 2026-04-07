@@ -109,7 +109,8 @@ export class DesksService {
     const desks = await this.prisma.desk.findMany({
       where: { locationId, status: DeskStatus.ACTIVE },
       include: {
-        device: { select: { isOnline: true } },
+        device:   { select: { isOnline: true } },
+        location: { select: { openTime: true, closeTime: true, maxDaysAhead: true, maxHoursPerDay: true, timezone: true } },
         checkins: {
           where: { checkedOutAt: null },
           take: 1,
