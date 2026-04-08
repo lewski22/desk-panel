@@ -2,38 +2,28 @@
   "name": "desk-panel",
   "version": "0.1.0",
   "private": true,
-  "description": "Reserti Desk Panel — monorepo: backend + admin + staff",
+  "description": "Reserti Desk Panel — backend + unified app",
   "scripts": {
-    "setup":           "bash scripts/setup.sh",
-    "dev":             "concurrently \"npm run dev:backend\" \"npm run dev:admin\" \"npm run dev:staff\"",
-    "dev:backend":     "cd backend && npm run start:dev",
-    "dev:admin":       "cd apps/admin && npm run dev",
-    "dev:staff":       "cd apps/staff && npm run dev",
-    "build":           "npm run build:backend && npm run build:admin && npm run build:staff",
-    "build:backend":   "cd backend && npm run build",
-    "build:admin":     "cd apps/admin && npm run build",
-    "build:staff":     "cd apps/staff && npm run build",
-    "install:all":     "npm install && cd backend && npm install && cd ../apps/admin && npm install && cd ../staff && npm install",
-    "db:migrate":      "cd backend && npx prisma migrate dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:app\"",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:app": "cd apps/unified && npm run dev",
+    "build:backend": "cd backend && npm run build",
+    "build:app": "cd apps/unified && npm run build",
+    "db:migrate": "cd backend && npx prisma migrate dev",
     "db:migrate:prod": "cd backend && npx prisma migrate deploy",
-    "db:seed":         "cd backend && npm run db:seed",
-    "db:generate":     "cd backend && npx prisma generate",
-    "db:studio":       "cd backend && npx prisma studio",
-    "docker:up":       "docker-compose up -d",
-    "docker:down":     "docker-compose down",
-    "docker:logs":     "docker-compose logs -f backend",
-    "test:backend":    "cd backend && npm run test"
+    "db:seed": "cd backend && npm run db:seed",
+    "db:generate": "cd backend && npx prisma generate",
+    "db:studio": "cd backend && npx prisma studio",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f backend",
+    "test:backend": "cd backend && npm run test"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
   },
   "engines": {
     "node": ">=20.0.0",
-    "npm":  ">=9.0.0"
-  },
-  "workspaces": [
-    "backend",
-    "apps/admin",
-    "apps/staff"
-  ]
+    "npm": ">=9.0.0"
+  }
 }

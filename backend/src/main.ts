@@ -25,7 +25,11 @@ async function bootstrap() {
 
   // /install/* serwuje skrypt bash — poza prefixem /api/v1
   app.setGlobalPrefix('api/v1', {
-    exclude: [{ path: 'install/(.*)', method: RequestMethod.GET }],
+    exclude: [
+      { path: 'install/{*path}', method: RequestMethod.GET },
+      { path: 'metrics',      method: RequestMethod.GET },  // Prometheus scraper
+      { path: 'health',       method: RequestMethod.GET },  // health check
+    ],
   });
 
   if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true') {

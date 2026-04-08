@@ -1,10 +1,11 @@
 // ============================================================
 // Desk Beacon System — Prisma Schema
-// PostgreSQL 15 · Prisma 5.x
+// PostgreSQL 15 · Prisma 7.x
 // ============================================================
 
 generator client {
   provider = "prisma-client-js"
+  // Prisma 7: output path opcjonalny, generator pozostaje prisma-client-js dla CommonJS
 }
 
 datasource db {

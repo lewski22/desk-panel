@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { MqttService }     from './mqtt.service';
 import { CheckinsService }  from '../modules/checkins/checkins.service';
 import { GatewaysService }  from '../modules/gateways/gateways.service';
+import { MetricsService }    from '../metrics/metrics.service';
 import { LedEventsService } from '../shared/led-events.service';
 import { TOPICS } from './topics';
 
@@ -71,6 +72,7 @@ export class MqttHandlers implements OnModuleInit {
   }
 
   private async handleStatus(deskId: string, payload: any) {
+    this.metrics?.incrementMqttReceived('status');
     const { device_id, rssi, fw_version } = payload;
     if (!device_id) return;
 

@@ -2,7 +2,9 @@ import { Module } from '@nestjs/common';
 import { SharedModule } from './shared/shared.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { HttpMetricsInterceptor } from './metrics/http-metrics.interceptor';
 import { DatabaseModule }       from './database/db.module';
 import { AuthModule }           from './modules/auth/auth.module';
 import { UsersModule }          from './modules/users/users.module';
@@ -15,6 +17,7 @@ import { ReservationsModule }   from './modules/reservations/reservations.module
 import { CheckinsModule }       from './modules/checkins/checkins.module';
 import { MqttModule }           from './mqtt/mqtt.module';
 import { OwnerModule }          from './modules/owner/owner.module';
+import { MetricsModule }        from './metrics/metrics.module';
 
 @Module({
   imports: [
@@ -27,6 +30,7 @@ import { OwnerModule }          from './modules/owner/owner.module';
       ttl:   60_000,  // 1 minuta
       limit: 30,      // max 30 requestów per IP
     }]),
+    ScheduleModule.forRoot(),
     SharedModule,
     DatabaseModule,
     AuthModule,
@@ -40,10 +44,13 @@ import { OwnerModule }          from './modules/owner/owner.module';
     CheckinsModule,
     MqttModule,
     OwnerModule,
+    MetricsModule,
   ],
   providers: [
     // ThrottlerGuard globalnie — działa na wszystkich endpointach
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD,       useClass: ThrottlerGuard },
+    // HttpMetricsInterceptor — mierzy czas i zlicza żądania HTTP
+    { provide: APP_INTERCEPTOR, useClass: HttpMetricsInterceptor },
   ],
 })
 export class AppModule {}

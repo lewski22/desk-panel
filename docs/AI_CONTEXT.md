@@ -12,6 +12,17 @@ Beacon ESP32 przy każdym biurku: LED status + check-in kartą NFC lub QR kodem.
 
 ---
 
+## Monitoring (Prometheus + Grafana)
+
+Backend wystawia `GET /metrics` (prom-client, poza /api/v1).
+Gateway Python wystawia `GET /metrics` na porcie 9100 (prometheus_client).
+Konfiguracja: env `METRICS_ALLOWED_IPS` dla backendu, `GATEWAY_METRICS_PORT` dla gateway.
+Szczegóły: `docs/metrics.md`.
+
+Pliki: `backend/src/metrics/` (registry, service, controller, interceptor, module).
+
+---
+
 ## Repozytoria
 
 | Repo | Branch | Opis |

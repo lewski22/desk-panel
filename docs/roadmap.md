@@ -181,7 +181,7 @@ Każda zmiana schematu musi mieć migrację (`prisma migrate dev`).
 
 ---
 
-### 9. Grafana — monitoring i analityka (Owner + Client)
+### ✅ 9. Grafana — monitoring i analityka (Owner + Client) — metryki gotowe, wdrożenie Grafany osobno
 
 **Problem:** Brak widoczności co dzieje się w systemie. Operacyjnie niewidomy.
 
