@@ -22,6 +22,7 @@ export class MqttHandlers implements OnModuleInit {
     private checkins:  CheckinsService,
     private gateways:  GatewaysService,
     private ledEvents: LedEventsService,
+    private metrics:   MetricsService,
   ) {}
 
   onModuleInit() {
