@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package*.json tsconfig.json nest-cli.json prisma.config.ts ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 COPY prisma ./prisma
 
