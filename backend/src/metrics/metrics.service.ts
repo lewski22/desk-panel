@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import {
+  dbQueryDuration, dbErrorsTotal,
   ownerOrgsTotal, ownerGatewaysTotal, ownerBeaconsTotal,
   ownerBeaconsFwOutdated, ownerProvisioningErrors,
   clientDesksTotal, clientDesksOccupied, clientReservationsToday,
@@ -19,9 +20,27 @@ export class MetricsService implements OnModuleInit {
     // Pierwsze zasilenie metryk przy starcie (bez czekania na cron)
     this._collectOwnerMetrics().catch(() => {});
     this._collectClientMetrics().catch(() => {});
+    this._registerPrismaMiddleware();
   }
 
-  // DB query middleware usunięte — Prisma 7 $extends nie wspiera reassignment na istniejący instance
+  // ── Prisma middleware — mierzy każde zapytanie DB ─────────────
+  private _registerPrismaMiddleware() {
+    // @ts-ignore — $use dostępne w Prisma 5
+    this.prisma.$use(async (params: any, next: any) => {
+      const start = Date.now();
+      const model = params.model ?? 'unknown';
+      const op    = params.action ?? 'unknown';
+      try {
+        const result = await next(params);
+        dbQueryDuration.observe({ model, operation: op }, (Date.now() - start) / 1000);
+        return result;
+      } catch (err) {
+        dbQueryDuration.observe({ model, operation: op }, (Date.now() - start) / 1000);
+        dbErrorsTotal.inc({ model, operation: op });
+        throw err;
+      }
+    });
+  }
 
   // ── Owner — globalne agregaty (co 30s) ───────────────────────
 

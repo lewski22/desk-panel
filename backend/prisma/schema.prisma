@@ -5,12 +5,11 @@
 
 generator client {
   provider = "prisma-client-js"
-  // Prisma 7: output path opcjonalny, generator pozostaje prisma-client-js dla CommonJS
-}
+  }
 
 datasource db {
   provider = "postgresql"
-  // url przeniesiony do prisma.config.ts (wymagane przez Prisma 7)
+  url      = env("DATABASE_URL")
 }
 
 // ─── Enums ───────────────────────────────────────────────────
