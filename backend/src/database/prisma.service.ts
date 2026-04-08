@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import { Pool } from 'pg';
 
 /**
  * PrismaService — singleton klient bazy danych.
@@ -13,7 +13,7 @@ import pg from 'pg';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor() {
-    const pool = new pg.Pool({
+    const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max:              parseInt(process.env.DB_POOL_SIZE ?? '10', 10),
     });

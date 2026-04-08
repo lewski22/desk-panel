@@ -1,7 +1,12 @@
 import { PrismaClient, UserRole } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
 
-const prisma = new PrismaClient();
+// Prisma 7 wymaga driver adaptera — nie można używać new PrismaClient() bez adaptera
+const pool   = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaPg(pool);
+const prisma  = new PrismaClient({ adapter } as any);
 
 async function main() {
   console.log('🌱 Seeding database...');

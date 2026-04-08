@@ -7,7 +7,6 @@ import {
   clientDesksTotal, clientDesksOccupied, clientReservationsToday,
   clientBeaconRssi, clientBeaconLastSeen,
   clientGatewayLastSeen, clientGatewayVersionInfo,
-  dbQueryDuration, dbErrorsTotal,
 } from './metrics.registry';
 
 @Injectable()
@@ -20,41 +19,9 @@ export class MetricsService implements OnModuleInit {
     // Pierwsze zasilenie metryk przy starcie (bez czekania na cron)
     this._collectOwnerMetrics().catch(() => {});
     this._collectClientMetrics().catch(() => {});
-    this._registerPrismaMiddleware();
   }
 
-  // ── Prisma $extends — mierzy każde zapytanie DB (Prisma 7) ────────────
-  // Prisma 7 usunęło $use middleware — używamy $extends z query interceptor.
-  // $extends zwraca nowy klient — reassignujemy przez Object.assign żeby
-  // zachować kompatybilność z wstrzykniętym PrismaService.
-  private _registerPrismaMiddleware() {
-    const extended = this.prisma.$extends({
-      query: {
-        $allModels: {
-          async $allOperations({ model, operation, args, query }: any) {
-            const start = Date.now();
-            try {
-              const result = await query(args);
-              dbQueryDuration.observe(
-                { model: model ?? 'unknown', operation },
-                (Date.now() - start) / 1000,
-              );
-              return result;
-            } catch (err) {
-              dbQueryDuration.observe(
-                { model: model ?? 'unknown', operation },
-                (Date.now() - start) / 1000,
-              );
-              dbErrorsTotal.inc({ model: model ?? 'unknown', operation });
-              throw err;
-            }
-          },
-        },
-      },
-    });
-    // Przenieś rozszerzone metody query na ten serwis (zachowaj referencję)
-    Object.assign(this.prisma, extended);
-  }
+  // DB query middleware usunięte — Prisma 7 $extends nie wspiera reassignment na istniejący instance
 
   // ── Owner — globalne agregaty (co 30s) ───────────────────────
 
