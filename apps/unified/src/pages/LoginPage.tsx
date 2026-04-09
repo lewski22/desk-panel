@@ -118,9 +118,15 @@ export function LoginPage({ onLogin }: Props) {
     e.preventDefault(); setBusy(true); setErr('');
     try {
       const user = await appApi.auth.login(email, password);
-      onLogin(user);
-      // Wróć do strony QR check-in jeśli user przyszedł z linku QR
-      if (returnTo) navigate(returnTo, { replace: true });
+      // Navigate PRZED onLogin — bo onLogin triggeruje re-render App.tsx
+      // który nadpisuje routing zanim navigate() zdąży zadziałać
+      if (returnTo) {
+        // Zapisz zalogowanego użytkownika przed nawigacją
+        onLogin(user);
+        navigate(returnTo, { replace: true });
+      } else {
+        onLogin(user);
+      }
     }
     catch (e: any) { setErr(e.message); }
     setBusy(false);

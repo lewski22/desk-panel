@@ -54,7 +54,14 @@ export function QrCheckinPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        // Occupied by someone else
+        if (res.status === 401 || res.status === 403) {
+          // Token wygasł — wyczyść i wróć do logowania
+          localStorage.removeItem('app_access');
+          localStorage.removeItem('app_refresh');
+          localStorage.removeItem('app_user');
+          setStep('login-required');
+          return;
+        }
         if (res.status === 409) { setStep('occupied'); return; }
         throw new Error(data.message ?? 'Błąd check-in');
       }
