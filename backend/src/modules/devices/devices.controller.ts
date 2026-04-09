@@ -95,16 +95,15 @@ export class DevicesController {
         { desk_id: deskId, gateway_update: true },
       );
       this.logger.log(
-        \`SET_DESK_ID via gateway: ${deviceBefore.hardwareId} \n\` +
-        \`  old topic: desk/\${oldDeskId}/command\n\` +
-        \`  new deskId: \${deskId}\`
+        `SET_DESK_ID via gateway: ${deviceBefore.hardwareId}` +
+        ` | old: desk/${oldDeskId}/command` +
+        ` | new deskId: ${deskId}`
       );
     } else {
       // Beacon nie miał przypisanego biurka — nie możemy wysłać komendy MQTT
       // Trzeba będzie przeprovisionować fizycznie przez Serial
       this.logger.warn(
-        \`Beacon \${deviceBefore.hardwareId} nie miał deskId — SET_DESK_ID przez MQTT niemożliwe. \` +
-        \`Reprovisioning przez Serial wymagany.\`
+        `Beacon ${deviceBefore.hardwareId} nie miał deskId — SET_DESK_ID przez MQTT niemożliwe. Reprovisioning przez Serial wymagany.`
       );
     }
 
