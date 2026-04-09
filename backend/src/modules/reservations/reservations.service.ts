@@ -5,6 +5,7 @@ import {
 import { Cron } from '@nestjs/schedule';
 import { PrismaService }  from '../../database/prisma.service';
 import { LedEventsService } from '../../shared/led-events.service';
+import { GatewaysService }   from '../gateways/gateways.service';
 import { ReservationStatus } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 
@@ -16,6 +17,7 @@ export class ReservationsService {
   constructor(
     private prisma:     PrismaService,
     private ledEvents:  LedEventsService,
+    private gateways:   GatewaysService,
   ) {}
 
   async findAll(filters: {
@@ -146,7 +148,7 @@ export class ReservationsService {
       );
     }
 
-    return this.prisma.reservation.create({
+    const reservation = await this.prisma.reservation.create({
       data: {
         deskId: dto.deskId,
         userId,
@@ -160,6 +162,12 @@ export class ReservationsService {
         desk: { select: { name: true, code: true } },
       },
     });
+
+    // Powiadom beacon o nowej rezerwacji — SET_RESERVATION z czasami
+    // Beacon użyje tych danych do lokalnego timera: FREE→RESERVED 15 min przed startem
+    this._notifyBeaconReservation(dto.deskId, reservation.startTime, reservation.endTime).catch(() => {});
+
+    return reservation;
   }
 
   async cancel(id: string, actorId: string, actorRole: string) {
@@ -191,6 +199,8 @@ export class ReservationsService {
     // Poinformuj beacon — ustaw LED na wolne
     try {
       this.ledEvents.emit(reservation.deskId, 'FREE');
+      // Powiadom beacon — wyczyść lokalny timer rezerwacji
+      this._notifyBeaconReservation(reservation.deskId, null, null).catch(() => {});
     } catch { /* MQTT may be offline */ }
 
     return updated;
@@ -235,5 +245,17 @@ export class ReservationsService {
       orderBy: { startTime: 'asc' },
       take,
     });
+  }
+  private async _notifyBeaconReservation(deskId: string, startTime: Date | null, endTime: Date | null) {
+    try {
+      const gatewayId = await this.gateways.findGatewayForDesk(deskId);
+      if (!gatewayId) return;
+      await this.gateways.sendBeaconCommand(gatewayId, deskId, 'SET_RESERVATION', {
+        start_unix: startTime ? Math.floor(startTime.getTime() / 1000) : 0,
+        end_unix:   endTime   ? Math.floor(endTime.getTime()   / 1000) : 0,
+      });
+    } catch {
+      // niestety gateway niedostępny — beacon użyje request_sync przy następnym połączeniu
+    }
   }
 }

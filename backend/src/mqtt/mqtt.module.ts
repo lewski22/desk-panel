@@ -4,6 +4,7 @@ import { MqttHandlers }   from './mqtt.handlers';
 import { CheckinsModule } from '../modules/checkins/checkins.module';
 import { GatewaysModule } from '../modules/gateways/gateways.module';
 import { MetricsModule }  from '../metrics/metrics.module';
+import { DatabaseModule } from '../database/db.module';
 
 /**
  * Dependency graph (BRAK circular):
@@ -13,7 +14,7 @@ import { MetricsModule }  from '../metrics/metrics.module';
  *   SharedModule (global)        → dostępny wszędzie (LedEventsService)
  */
 @Module({
-  imports:   [CheckinsModule, GatewaysModule, MetricsModule],
+  imports:   [CheckinsModule, GatewaysModule, MetricsModule, DatabaseModule],
   providers: [MqttService, MqttHandlers],
   exports:   [MqttService],
 })
