@@ -1,6 +1,7 @@
 import {
-  Injectable, NotFoundException, ForbiddenException, ConflictException, BadRequestException,
+  Injectable, Logger, NotFoundException, ForbiddenException, ConflictException, BadRequestException,
 } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService }    from '../../database/prisma.service';
 import { LedEventsService } from '../../shared/led-events.service';
 import { NfcScanService }   from '../../shared/nfc-scan.service';
@@ -35,6 +36,7 @@ function endOfWorkInTz(closeTime: string, timezone: string, now: Date): Date {
 
 @Injectable()
 export class CheckinsService {
+  private readonly logger = new Logger(CheckinsService.name);
   constructor(
     private prisma:     PrismaService,
     private ledEvents:  LedEventsService,
@@ -261,6 +263,57 @@ export class CheckinsService {
 
     this.ledEvents.emit(checkin.deskId, 'FREE');
     return updated;
+  }
+
+
+  /**
+   * Co 15 minut — auto-checkout dla check-inów bez checkout:
+   *   1. Zakończono rezerwację (endTime < now) — checkout natychmiastowy
+   *   2. Brak rezerwacji + checkin starszy niż 12h (walk-in bez check-out)
+   * Emituje LED FREE dla każdego zwolnionego biurka.
+   */
+  @Cron('0 */15 * * * *')
+  async autoCheckout() {
+    const now = new Date();
+    const staleWalkin = new Date(now.getTime() - 12 * 60 * 60 * 1000); // 12h temu
+
+    // Checkins gdzie rezerwacja wygasła
+    const expiredCheckins = await this.prisma.checkin.findMany({
+      where: {
+        checkedOutAt: null,
+        reservation: { endTime: { lt: now } },
+      },
+      select: { id: true, deskId: true, reservationId: true },
+    });
+
+    // Walk-in checkins (brak rezerwacji) starsze niż 12h
+    const staleCheckins = await this.prisma.checkin.findMany({
+      where: {
+        checkedOutAt:  null,
+        reservationId: null,
+        checkedInAt:   { lt: staleWalkin },
+      },
+      select: { id: true, deskId: true },
+    });
+
+    const toClose = [...expiredCheckins, ...staleCheckins];
+    if (toClose.length === 0) return;
+
+    const ids = toClose.map(c => c.id);
+    await this.prisma.checkin.updateMany({
+      where: { id: { in: ids } },
+      data:  { checkedOutAt: now },
+    });
+
+    // Powiadom beacon: biurko wolne
+    const deskIds = [...new Set(toClose.map(c => c.deskId))];
+    for (const deskId of deskIds) {
+      this.ledEvents.emit(deskId, 'FREE');
+    }
+
+    this.logger.log(
+      `Auto-checkout: ${expiredCheckins.length} expired-reservation + ${staleCheckins.length} stale walk-in`
+    );
   }
 
   // ── Helpers ──────────────────────────────────────────────────

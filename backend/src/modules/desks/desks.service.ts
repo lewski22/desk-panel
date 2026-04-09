@@ -82,10 +82,23 @@ export class DesksService {
   }
 
   async hardDelete(id: string) {
-    const desk = await this.findOne(id);
-    if (desk.status !== 'INACTIVE') {
-      throw new Error('Można trwale usunąć tylko dezaktywowane biurko');
-    }
+    await this.findOne(id);
+
+    // Przed usunięciem: anuluj/zakończ wszystkie aktywne rezerwacje i checkout otwarte checkins
+    // (CASCADE usunie rekordy, ale chcemy mieć spójny stan dla audytu)
+    const now = new Date();
+    await this.prisma.reservation.updateMany({
+      where: {
+        deskId: id,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+      },
+      data: { status: 'CANCELLED' },
+    });
+    await this.prisma.checkin.updateMany({
+      where: { deskId: id, checkedOutAt: null },
+      data:  { checkedOutAt: now },
+    });
+
     await this.prisma.desk.delete({ where: { id } });
     return { deleted: true };
   }
@@ -195,14 +208,20 @@ export class DesksService {
         qrToken: true,
         device: { select: { isOnline: true } },
         checkins: {
-          where: { checkedOutAt: null },
+          // Tylko checkins z aktywną rezerwacją (endTime > now) lub walk-in z ostatnich 12h
+          where: {
+            checkedOutAt: null,
+            OR: [
+              { reservation: { endTime: { gte: new Date() } } },
+              { reservationId: null, checkedInAt: { gte: new Date(Date.now() - 12 * 3600 * 1000) } },
+            ],
+          },
           select: { id: true, userId: true, checkedInAt: true },
           take: 1,
         },
         reservations: {
           where: {
-            status: 'CONFIRMED',
-            date: { gte: new Date(new Date().setHours(0,0,0,0)) },
+            status: { in: ['CONFIRMED', 'PENDING'] },
             endTime: { gte: new Date() },
           },
           orderBy: { startTime: 'asc' },
