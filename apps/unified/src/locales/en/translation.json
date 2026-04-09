@@ -1,0 +1,55 @@
+{
+  "table": { "empty": "No data" },
+  "btn": { "save": "Save", "cancel": "Cancel" },
+  "login": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in…",
+    "or": "or",
+    "test_accounts": "Test accounts:"
+  },
+  "entra": {
+    "title": "Sign in with Entra ID",
+    "subtitle": "Microsoft 365 / Azure AD",
+    "work_email": "Work email",
+    "placeholder_email": "joe@your-company.com",
+    "check": "Continue",
+    "checking": "Checking…",
+    "login_button": "Sign in with Microsoft",
+    "logging_in": "Signing in…",
+    "change_email": "← Change email",
+    "errors": {
+      "invalid_email": "Please enter a valid email address.",
+      "sso_not_configured": "Entra ID login is not configured for this domain.",
+      "sso_check_failed": "Unable to check SSO configuration. Check your connection.",
+      "missing_client": "VITE_AZURE_CLIENT_ID is not configured.",
+      "no_token": "No token received from Microsoft.",
+      "login_failed": "Sign in failed."
+    }
+  },
+  "changePassword": {
+    "title": "Change password",
+    "sso_managed_title": "Account managed by Entra ID / Microsoft",
+    "sso_managed_text": "Your password is managed by Microsoft 365. To change it, go to",
+    "changed": "Password changed",
+    "logging_out": "You'll be signed out shortly…",
+    "intro": "After changing your password you'll be signed out and asked to sign in again.",
+    "current_label": "Current password",
+    "new_label": "New password",
+    "confirm_label": "Confirm new password",
+    "min_chars": "Minimum 8 characters.",
+    "cancel": "Cancel",
+    "submit": "Change password",
+    "saving": "Saving…",
+    "errors": {
+      "required_current": "Enter your current password.",
+      "min_length": "New password must be at least 8 characters.",
+      "different": "New password must be different from the current one.",
+      "mismatch": "New password and confirmation do not match.",
+      "not_identical": "Passwords do not match."
+    },
+    "strength": { "weak": "Weak", "medium": "Medium", "good": "Good", "strong": "Strong" }
+  }
+}

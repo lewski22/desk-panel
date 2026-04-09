@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 const SESSION_TIMEOUT_MS   = 5 * 60 * 1000;
 const SESSION_WARNING_MS   = 60 * 1000;
@@ -174,6 +175,9 @@ export function AppLayout({ user, onLogout, children }: Props) {
               {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
             </p>
             <p className="text-[10px] text-zinc-600 leading-tight mt-0.5">{ROLE_LABEL[user.role] ?? user.role}</p>
+            <div className="mt-2">
+              <LanguageSwitcher />
+            </div>
             <Link to="/change-password"
               onClick={mobile ? () => setMobileOpen(false) : undefined}
               className="text-[10px] text-zinc-600 hover:text-zinc-300 transition-colors mt-0.5 block">

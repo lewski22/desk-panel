@@ -1,0 +1,55 @@
+{
+  "table": { "empty": "Brak danych" },
+  "btn": { "save": "Zapisz", "cancel": "Anuluj" },
+  "login": {
+    "title": "Zaloguj się",
+    "email": "Email",
+    "password": "Hasło",
+    "submit": "Zaloguj się",
+    "submitting": "Logowanie…",
+    "or": "lub",
+    "test_accounts": "Konta testowe:"
+  },
+  "entra": {
+    "title": "Logowanie przez Entra ID",
+    "subtitle": "Microsoft 365 / Azure AD",
+    "work_email": "Email firmowy",
+    "placeholder_email": "jan@twoja-firma.pl",
+    "check": "Dalej",
+    "checking": "Sprawdzanie…",
+    "login_button": "Zaloguj przez Microsoft",
+    "logging_in": "Logowanie…",
+    "change_email": "← Zmień email",
+    "errors": {
+      "invalid_email": "Podaj prawidłowy adres email",
+      "sso_not_configured": "Logowanie przez Entra ID nie jest skonfigurowane dla tej domeny.",
+      "sso_check_failed": "Nie można sprawdzić konfiguracji SSO. Sprawdź połączenie.",
+      "missing_client": "VITE_AZURE_CLIENT_ID nie jest skonfigurowany.",
+      "no_token": "Brak tokenu od Microsoft.",
+      "login_failed": "Logowanie nie powiodło się."
+    }
+  },
+  "changePassword": {
+    "title": "Zmiana hasła",
+    "sso_managed_title": "Konto zarządzane przez Entra ID / Microsoft",
+    "sso_managed_text": "Twoje hasło jest zarządzane przez Microsoft 365. Aby je zmienić, przejdź do",
+    "changed": "Hasło zmienione",
+    "logging_out": "Za chwilę zostaniesz wylogowany…",
+    "intro": "Po zmianie hasła zostaniesz wylogowany i poproszony o ponowne zalogowanie.",
+    "current_label": "Aktualne hasło",
+    "new_label": "Nowe hasło",
+    "confirm_label": "Potwierdź nowe hasło",
+    "min_chars": "Minimum 8 znaków.",
+    "cancel": "Anuluj",
+    "submit": "Zmień hasło",
+    "saving": "Zapisywanie…",
+    "errors": {
+      "required_current": "Podaj aktualne hasło.",
+      "min_length": "Nowe hasło musi mieć co najmniej 8 znaków.",
+      "different": "Nowe hasło musi być inne niż aktualne.",
+      "mismatch": "Nowe hasło i potwierdzenie nie są identyczne.",
+      "not_identical": "Hasła nie są identyczne."
+    },
+    "strength": { "weak": "Słabe", "medium": "Średnie", "good": "Dobre", "strong": "Silne" }
+  }
+}

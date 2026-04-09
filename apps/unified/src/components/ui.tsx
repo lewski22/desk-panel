@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // ── Button ────────────────────────────────────────────────────
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -171,11 +172,12 @@ type TableHeader = string | { label: string; hideOnMobile?: boolean };
 export function Table({ children, headers, empty }: {
   children: React.ReactNode; headers?: TableHeader[]; empty?: boolean;
 }) {
+  const { t } = useTranslation();
   if (empty) {
     return (
       <div className="text-center py-16 text-zinc-400">
         <p className="text-3xl mb-2">📭</p>
-        <p className="text-sm">Brak danych</p>
+        <p className="text-sm">{t('table.empty')}</p>
       </div>
     );
   }
