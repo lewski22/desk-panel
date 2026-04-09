@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { appApi }              from './api/client';
 import { AppLayout }           from './components/layout/AppLayout';
 import { LoginPage }           from './pages/LoginPage';
@@ -42,7 +42,6 @@ function Guard({ user, allowed, children }: { user: any; allowed: string[]; chil
 }
 
 export default function App() {
-  const location = useLocation();
   const [user, setUser] = useState<any>(() => {
     const u = appApi.auth.user();
     return u;
@@ -58,9 +57,7 @@ export default function App() {
       <Routes>
         {/* Publiczne */}
         <Route path="/login" element={
-          user
-            ? <Navigate to={(location as any)?.state?.returnTo ?? homeFor(user.role)} replace />
-            : <LoginPage onLogin={setUser} />
+          user ? <Navigate to={homeFor(user.role)} replace /> : <LoginPage onLogin={setUser} />
         } />
         <Route path="/auth/impersonate" element={<ImpersonatePage onLogin={setUser} />} />
         <Route path="/checkin/:token"   element={<QrCheckinPage />} />
