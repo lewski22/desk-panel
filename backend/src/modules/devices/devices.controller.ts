@@ -76,16 +76,38 @@ export class DevicesController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Assign beacon to a desk — sends SET_DESK_ID via gateway' })
   async assign(@Param('id') id: string, @Body('deskId') deskId: string) {
+    // Pobierz stary deskId PRZED update — komenda musi iść na STARY topic
+    // (beacon słucha na desk/{oldDeskId}/command dopóki nie zrestartuje z nowym NVS)
+    const deviceBefore = await this.svc.findOne(id);
+    const oldDeskId    = deviceBefore.deskId ?? '';   // stary topic beacona
+    const gatewayId    = deviceBefore.gatewayId ?? '';
+
+    // Aktualizuj DB
     const result = await this.svc.assignToDesk(id, deskId);
-    const device = await this.svc.findOne(id);
-    // SET_DESK_ID przez gateway HTTP — beacon zaktualizuje NVS i zrestartuje
-    await this.gateways.sendBeaconCommand(
-      device.gatewayId ?? '',
-      device.deskId ?? '',   // stary deskId (stary topic beacona)
-      'SET_DESK_ID',
-      { desk_id: result.newDeskId },
-    );
-    this.logger.log(`SET_DESK_ID via gateway: ${device.hardwareId} → desk/${result.newDeskId}`);
+
+    if (oldDeskId) {
+      // Wyślij SET_DESK_ID na STARY topic — beacon zrestartuje i zacznie słuchać nowego
+      // Gateway jednocześnie zaktualizuje swój SQLite cache (desk_id) przez /command handler
+      await this.gateways.sendBeaconCommand(
+        gatewayId,
+        oldDeskId,      // ← stary topic, na którym beacon aktualnie słucha
+        'SET_DESK_ID',
+        { desk_id: deskId, gateway_update: true },
+      );
+      this.logger.log(
+        \`SET_DESK_ID via gateway: ${deviceBefore.hardwareId} \n\` +
+        \`  old topic: desk/\${oldDeskId}/command\n\` +
+        \`  new deskId: \${deskId}\`
+      );
+    } else {
+      // Beacon nie miał przypisanego biurka — nie możemy wysłać komendy MQTT
+      // Trzeba będzie przeprovisionować fizycznie przez Serial
+      this.logger.warn(
+        \`Beacon \${deviceBefore.hardwareId} nie miał deskId — SET_DESK_ID przez MQTT niemożliwe. \` +
+        \`Reprovisioning przez Serial wymagany.\`
+      );
+    }
+
     return result.updated;
   }
 
