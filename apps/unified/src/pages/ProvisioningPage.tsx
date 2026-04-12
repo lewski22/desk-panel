@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { Btn, Modal, FormField, Input } from '../components/ui';
 
@@ -26,6 +27,7 @@ function useLocations() {
 
 // ── GatewaySection ────────────────────────────────────────────
 function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
+  const { t } = useTranslation();
   const [gateways,     setGateways]     = useState<any[]>([]);
   const [modal,        setModal]        = useState<'install'|'secret'|null>(null);
   const [locId,        setLocId]        = useState(activeLocId);
@@ -109,16 +111,24 @@ Gateway restartuje się.`);
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-zinc-700">Gateway'e</h2>
-        <Btn onClick={openInstall}>+ Nowy gateway</Btn>
+        <h2 className="font-semibold text-zinc-700">{t('provisioning.gateways_title')}</h2>
+        <Btn onClick={openInstall}>{t('provisioning.new_gateway')}</Btn>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Nazwa','ID','Biuro','IP','Wersja','Urządzenia','Status','Ostatni kontakt',''].map(h =>
-              <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
-            )}</tr>
+            <tr>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.name')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.id')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.location')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.ip')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.version')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.devices')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.status')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.last_seen')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.actions')}</th>
+            </tr>
           </thead>
           <tbody>
             {gateways.map(gw => {
@@ -154,7 +164,7 @@ Gateway restartuje się.`);
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
-                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title={t('provisioning.copy_id')}>⎘</button>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
@@ -163,25 +173,25 @@ Gateway restartuje się.`);
                   <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${healthy ? 'bg-emerald-100 text-emerald-700' : stale ? 'bg-amber-100 text-amber-700' : 'bg-zinc-100 text-zinc-500'}`}>
-                      {healthy ? 'Online' : stale ? 'Problem' : 'Offline'}
+                      {healthy ? t('provisioning.status.online') : stale ? t('provisioning.status.problem') : t('provisioning.status.offline')}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-400">
-                    {lastSeenMs ? (minutesSince === 0 ? 'przed chwilą' : `${minutesSince} min temu`) : '—'}
+                    {lastSeenMs ? (minutesSince === 0 ? t('provisioning.last_seen.now') : t('provisioning.last_seen.minutes', { minutes: minutesSince })) : '—'}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {gw.ipAddress && (
                         <button onClick={() => handleUpdate(gw.id, gw.name)}
                           className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-sky-100 text-zinc-600 hover:text-sky-700 transition-colors"
-                          title="Zaktualizuj gateway do najnowszej wersji">↑ Update</button>
+                          title={t('provisioning.update_title')}>{t('provisioning.update_button')}</button>
                       )}
                       <button onClick={() => handleRotateSecret(gw.id)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-700 transition-colors"
-                        title="Rotuj klucz (15min okno)">🔑 Rotuj</button>
+                        title={t('provisioning.rotate_title')}>{t('provisioning.rotate_button')}</button>
                       <button onClick={() => handleDelete(gw.id, gw.name)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors"
-                        title="Usuń gateway">Usuń</button>
+                        title={t('provisioning.delete_title')}>{t('provisioning.delete_button')}</button>
                     </div>
                   </td>
                 </tr>
@@ -203,7 +213,7 @@ Gateway restartuje się.`);
             })}
             {gateways.length === 0 && (
               <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">
-                Brak gateway'ów — kliknij "+ Nowy gateway" aby wygenerować komendę instalacyjną
+                {t('provisioning.no_gateways')}
               </td></tr>
             )}
           </tbody>
@@ -211,7 +221,7 @@ Gateway restartuje się.`);
       </div>
 
       {/* Modal: token instalacyjny */}
-      <Modal open={modal === 'install'} title="Dodaj gateway" onClose={() => setModal(null)}>
+      <Modal open={modal === 'install'} title={t('provisioning.modal.add_gateway')} onClose={() => setModal(null)}>
         {busy && !tokenResult && (
           <div className="flex justify-center py-8">
             <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
@@ -220,15 +230,15 @@ Gateway restartuje się.`);
         {tokenResult && (
           <div className="space-y-4">
             <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-              <p className="text-sm font-semibold text-zinc-700 mb-2">Jak zainstalować gateway:</p>
+              <p className="text-sm font-semibold text-zinc-700 mb-2">{t('provisioning.install.title')}</p>
               <ol className="text-sm text-zinc-600 space-y-1.5 list-decimal list-inside">
-                <li>Włącz Raspberry Pi (lub inne urządzenie z Linuksem)</li>
-                <li>Otwórz terminal (SSH lub lokalnie)</li>
-                <li>Wklej poniższą komendę i naciśnij Enter</li>
+                <li>{t('provisioning.install.step1')}</li>
+                <li>{t('provisioning.install.step2')}</li>
+                <li>{t('provisioning.install.step3')}</li>
               </ol>
             </div>
             <div>
-              <p className="text-xs text-zinc-400 mb-1.5 font-medium">Komenda instalacyjna (ważna 24h, jednorazowa)</p>
+              <p className="text-xs text-zinc-400 mb-1.5 font-medium">{t('provisioning.install.cmd_label')}</p>
               <div className="bg-zinc-950 rounded-xl p-4 flex items-start gap-3">
                 <code className="text-emerald-400 text-xs font-mono flex-1 break-all leading-relaxed">{tokenResult.installCmd}</code>
                 <button onClick={() => copy(tokenResult.installCmd)}
@@ -259,7 +269,7 @@ Gateway restartuje się.`);
       </Modal>
 
       {/* Regenerate secret modal */}
-      <Modal open={modal === 'secret'} title="Nowy secret gateway" onClose={() => { setModal(null); setSecretResult(null); }}>
+      <Modal open={modal === 'secret'} title={t('provisioning.modal.secret_title')} onClose={() => { setModal(null); setSecretResult(null); }}>
         {secretResult && (
           <div className="space-y-3">
             {secretResult.gatewayReached ? (
@@ -293,6 +303,7 @@ Gateway restartuje się.`);
 }
 // ── BeaconSection ─────────────────────────────────────────────
 function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
+  const { t } = useTranslation();
   const [desks,    setDesks]    = useState<any[]>([]);
   const [devices,  setDevices]  = useState<any[]>([]);
   const [gateways, setGateways] = useState<any[]>([]);
@@ -400,15 +411,15 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <h2 className="font-semibold text-zinc-700">Beacony (urządzenia)</h2>
+          <h2 className="font-semibold text-zinc-700">{t('provisioning.beacons_title')}</h2>
           <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
             className="text-xs border border-zinc-200 rounded-lg px-2 py-1 text-zinc-600 focus:outline-none focus:ring-1 focus:ring-[#B53578]/30">
-            <option value="all">Wszystkie biura</option>
+            <option value="all">{t('provisioning.all_locations')}</option>
             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
         <Btn onClick={() => { setModal(true); setResult(null); setForm({ hardwareId:'', deskId:'', gatewayId:'', locId: activeLocId }); }}>
-          + Provisioning
+          {t('provisioning.provision_button')}
         </Btn>
       </div>
 
@@ -419,16 +430,23 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
             <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-sky-50 border border-sky-200 mb-3">
               <span className="text-sky-600 text-sm">📦</span>
               <div className="flex-1">
-                <span className="text-sm text-sky-800 font-medium">Najnowszy firmware: v{latestFw.version}</span>
+                <span className="text-sm text-sky-800 font-medium">{t('provisioning.latest_firmware', { version: latestFw.version })}</span>
                 <span className="text-xs text-sky-600 ml-2">
-                  ({(latestFw.size / 1024).toFixed(0)} KB · {new Date(latestFw.publishedAt).toLocaleDateString('pl-PL')})
+                  ({(latestFw.size / 1024).toFixed(0)} KB · {new Date(latestFw.publishedAt).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pl-PL')})
                 </span>
               </div>
             </div>
           )}
-            <tr>{['Hardware ID','ID urządzenia','MQTT user','Biuro','Biurko','Status','Fw','Akcje'].map(h =>
-              <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
-            )}</tr>
+            <tr>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.hardware')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.id')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.mqtt_user')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.location')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.desk')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.status')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.fw')}</th>
+              <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('provisioning.table.actions')}</th>
+            </tr>
           </thead>
           <tbody>
             {filteredDevices.map(d => (
@@ -437,7 +455,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                 <td className="py-3 px-4">
                   <div className="flex items-center gap-1">
                     <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
-                    <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                    <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title={t('provisioning.copy_id')}>⎘</button>
                   </div>
                 </td>
                 <td className="py-3 px-4 font-mono text-xs text-zinc-400">{d.mqttUsername}</td>
@@ -454,38 +472,40 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                 <td className="py-3 px-4">
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => sendCmd(d.id, 'IDENTIFY')}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors" title="Zidentyfikuj">💡</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors" title={t('provisioning.identify')}>💡</button>
                     <button onClick={() => sendCmd(d.id, 'REBOOT')}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-600 transition-colors" title="Restart">↺</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-600 transition-colors" title={t('provisioning.restart')}>↺</button>
                     <button onClick={() => openAssignModal(d)}
-                      className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors font-medium" title="Przypisz do biurka">
-                      Przypisz
+                      className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors font-medium" title={t('provisioning.assign_to_desk')}>
+                      {t('provisioning.assign')}
                     </button>
                     {latestFw && d.firmwareVersion !== latestFw.version && (
                       <button onClick={() => handleOta(d.id, d.hardwareId, d.firmwareVersion)}
                         className="text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors font-medium"
-                        title={`Aktualizuj FW: ${d.firmwareVersion ?? '—'} → v${latestFw.version}`}>
-                        ↑ FW
+                        title={t('provisioning.update_fw_title', { from: d.firmwareVersion ?? '—', to: latestFw.version })}>
+                        {t('provisioning.update_fw')}
+                      
+                      </button>
                       </button>
                     )}
                     {d.desk && (
                       <button onClick={async () => {
-                        if (!confirm(`Odparować beacon "${d.hardwareId}" od biurka "${d.desk.name}"?`)) return;
+                        if (!confirm(t('provisioning.unpair_confirm', { hw: d.hardwareId, desk: d.desk.name }))) return;
                         try { await appApi.desks.unpair(d.desk.id); await load(); }
                         catch(e:any) { alert(e.message); }
                       }}
                         className="text-xs px-2 py-1 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-600 hover:text-orange-700 transition-colors font-medium">
-                        Odparuj
+                        {t('provisioning.unpair')}
                       </button>
                     )}
                     <button onClick={() => handleDelete(d.id, d.hardwareId)}
-                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors" title="Usuń">🗑</button>
+                      className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors" title={t('provisioning.delete_button')}>🗑</button>
                   </div>
                 </td>
               </tr>
             ))}
             {filteredDevices.length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">Brak urządzeń</td></tr>
+              <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">{t('provisioning.no_devices')}</td></tr>
             )}
           </tbody>
         </table>
@@ -528,7 +548,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
         </div>
       )}
 
-      <Modal open={modal} title="Provisioning beacona" onClose={() => setModal(false)}>
+      <Modal open={modal} title={t('provisioning.modal.provision_title')} onClose={() => setModal(false)}>
         {!result ? (
           <div className="flex flex-col gap-3">
             <FormField label="Biuro">
@@ -582,7 +602,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                     `PROVISION:{"wifi_ssid":"NAZWA_WIFI","wifi_pass":"HASLO_WIFI","mqtt_host":"IP_RASPBERRY","mqtt_port":1883,"mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}","device_id":"${result.device?.hardwareId}","desk_id":"${result.device?.deskId ?? ''}","gateway_id":"${result.device?.gatewayId}"}`
                   )}
                   className="shrink-0 text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
-                  title="Kopiuj komendę">⎘</button>
+                  title={t('provisioning.copy_cmd')}>⎘</button>
               </div>
               <p className="text-[10px] text-zinc-400 mt-1">
                 Podmień <span className="font-mono bg-zinc-100 px-0.5 rounded">NAZWA_WIFI</span>,{' '}
@@ -608,13 +628,14 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
 
 // ── Main ──────────────────────────────────────────────────────
 export function ProvisioningPage() {
+  const { t } = useTranslation();
   const { locations, activeLocId, setLoc } = useLocations();
 
   return (
     <div className="flex flex-col gap-10">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-800">Provisioning</h1>
+          <h1 className="text-xl font-semibold text-zinc-800">{t('pages.provisioning.title')}</h1>
           <p className="text-xs text-zinc-400 mt-0.5">Rejestracja i zarządzanie gateway'ami i beaconami</p>
         </div>
         {/* Biuro switcher */}

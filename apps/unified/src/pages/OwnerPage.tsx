@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
 
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
+  const { t } = useTranslation();
   const [name, setName]         = useState('');
   const [slug, setSlug]         = useState('');
   const [plan, setPlan]         = useState('basic');
@@ -30,27 +32,27 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
   };
 
   if (result) return (
-    <Modal title="✅ Firma utworzona" onClose={onClose}>
-      <p className="text-green-600 font-semibold mb-3">Firma <strong>{result.org?.name}</strong> gotowa.</p>
-      <p className="text-xs text-zinc-500 mb-2">Konto admina:</p>
+    <Modal title={t('owner.create_done_title')} onClose={onClose}>
+      <p className="text-green-600 font-semibold mb-3">{t('owner.create_done_msg', { name: result.org?.name })}</p>
+      <p className="text-xs text-zinc-500 mb-2">{t('owner.admin_account')}</p>
       <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 font-mono text-sm space-y-1">
         <div>📧 {result.user?.email}</div>
         <div>🔑 {result.temporaryPassword}</div>
       </div>
-      <p className="text-xs text-red-500 mt-2">⚠️ Skopiuj hasło — nie będzie widoczne ponownie.</p>
-      <div className="mt-4"><Btn onClick={onClose}>Zamknij</Btn></div>
+      <p className="text-xs text-red-500 mt-2">{t('owner.copy_password_warning')}</p>
+      <div className="mt-4"><Btn onClick={onClose}>{t('btn.cancel')}</Btn></div>
     </Modal>
   );
 
   return (
-    <Modal title="Nowa firma" onClose={onClose}>
+    <Modal title={t('owner.create_title')} onClose={onClose}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Nazwa firmy *" value={name} onChange={e => setName(e.target.value)} placeholder="Acme Corp" />
-          <Input label="Slug (URL) *" value={slug} onChange={e => setSlug(e.target.value)} placeholder="acme-corp" />
+          <Input label={t('owner.form.name')} value={name} onChange={e => setName(e.target.value)} placeholder="Acme Corp" />
+          <Input label={t('owner.form.slug')} value={slug} onChange={e => setSlug(e.target.value)} placeholder="acme-corp" />
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
+          <label className="block text-xs text-zinc-500 mb-1 font-medium">{t('owner.form.plan')}</label>
           <select value={plan} onChange={e => setPlan(e.target.value)}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="basic">Basic</option>
@@ -58,18 +60,18 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
             <option value="enterprise">Enterprise</option>
           </select>
         </div>
-        <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-100">Konto SUPER_ADMIN (hasło tymczasowe):</p>
+        <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-100">{t('owner.create_hint')}</p>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Imię *" value={firstName} onChange={e => setFirst(e.target.value)} placeholder="Jan" />
-          <Input label="Nazwisko *" value={lastName} onChange={e => setLast(e.target.value)} placeholder="Kowalski" />
+          <Input label={t('owner.form.firstName')} value={firstName} onChange={e => setFirst(e.target.value)} placeholder="Jan" />
+          <Input label={t('owner.form.lastName')} value={lastName} onChange={e => setLast(e.target.value)} placeholder="Kowalski" />
         </div>
-        <Input label="Email admina *" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@firma.pl" />
+        <Input label={t('owner.form.email')} value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@firma.pl" />
         {err && <p className="text-sm text-red-500">{err}</p>}
         <div className="flex gap-2 justify-end pt-2">
-          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
+          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
           <Btn onClick={submit} loading={saving}
             disabled={!name || !slug || !email || !firstName || !lastName}>
-            Utwórz firmę
+            {t('owner.create_action')}
           </Btn>
         </div>
       </div>
@@ -79,6 +81,7 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
 
 // ─── Modal: edycja firmy ──────────────────────────────────────
 function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
+  const { t } = useTranslation();
   const [name,  setName]  = useState(org.name);
   const [plan,  setPlan]  = useState(org.plan ?? 'basic');
   const [notes, setNotes] = useState(org.notes ?? '');
@@ -95,11 +98,11 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   };
 
   return (
-    <Modal title={`Edytuj: ${org.name}`} onClose={onClose}>
+    <Modal title={t('owner.edit_title', { name: org.name })} onClose={onClose}>
       <div className="space-y-3">
-        <Input label="Nazwa firmy" value={name} onChange={e => setName(e.target.value)} />
+        <Input label={t('owner.form.name')} value={name} onChange={e => setName(e.target.value)} />
         <div>
-          <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
+          <label className="block text-xs text-zinc-500 mb-1 font-medium">{t('owner.form.plan')}</label>
           <select value={plan} onChange={e => setPlan(e.target.value)}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="basic">Basic</option>
@@ -108,14 +111,14 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           </select>
         </div>
         <div>
-          <label className="block text-xs text-zinc-500 mb-1 font-medium">Notatki</label>
+          <label className="block text-xs text-zinc-500 mb-1 font-medium">{t('owner.form.notes')}</label>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-y focus:outline-none" />
         </div>
         {err && <p className="text-sm text-red-500">{err}</p>}
         <div className="flex gap-2 justify-end">
-          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
-          <Btn onClick={submit} loading={saving}>Zapisz</Btn>
+          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
+          <Btn onClick={submit} loading={saving}>{t('btn.save')}</Btn>
         </div>
       </div>
     </Modal>
@@ -124,6 +127,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
 
 // ─── Główna strona ────────────────────────────────────────────
 export function OwnerPage() {
+  const { t } = useTranslation();
   const [stats, setStats]     = useState<any>(null);
   const [orgs,  setOrgs]      = useState<any[]>([]);
   const [search, setSearch]   = useState('');
@@ -186,9 +190,9 @@ export function OwnerPage() {
   return (
     <div>
       <PageHeader
-        title="Panel Operatora"
-        subtitle="Zarządzanie firmami i infrastrukturą platformy Reserti"
-        action={<Btn onClick={() => setShowCreate(true)}>+ Nowa firma</Btn>}
+        title={t('pages.owner.title')}
+        subtitle={t('owner.subtitle')}
+        action={<Btn onClick={() => setShowCreate(true)}>{t('owner.new_org')}</Btn>}
       />
 
       {err && (
@@ -220,31 +224,34 @@ export function OwnerPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Szukaj firmy..."
+          placeholder={t('owner.search_placeholder')}
           className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none min-w-[200px]"
         />
         <button onClick={load}
           className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg text-zinc-500 hover:bg-zinc-50">
-          ↺ Odśwież
+          {t('btn.refresh')}
         </button>
-        <span className="text-xs text-zinc-400 ml-auto">{filtered.length} firm</span>
+        <span className="text-xs text-zinc-400 ml-auto">{t('owner.count', { count: filtered.length })}</span>
       </div>
 
       {/* Tabela */}
       <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-zinc-400 text-sm">Ładowanie...</div>
+          <div className="py-16 text-center text-zinc-400 text-sm">{t('owner.loading')}</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-zinc-400 text-sm">
-            {err ? 'Błąd ładowania danych' : 'Brak firm'}
+            {err ? t('owner.load_error') : t('owner.no_orgs')}
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-zinc-100">
-                {['Firma', 'Slug', 'Plan', 'Użytkownicy', 'Status', 'Akcje'].map(h => (
-                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
-                ))}
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.name')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.slug')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.plan')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.users')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.status')}</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('owner.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -269,19 +276,19 @@ export function OwnerPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded ${org.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                      {org.isActive ? 'aktywna' : 'nieaktywna'}
+                      {org.isActive ? t('owner.status.active') : t('owner.status.inactive')}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1.5 flex-wrap">
                       <Btn size="sm" onClick={() => handleImpersonate(org)}
                         loading={impersonating === org.id}>
-                        🔑 Wejdź
+                        {t('owner.actions.impersonate')}
                       </Btn>
-                      <Btn size="sm" variant="secondary" onClick={() => setEditOrg(org)}>Edytuj</Btn>
+                      <Btn size="sm" variant="secondary" onClick={() => setEditOrg(org)}>{t('owner.actions.edit')}</Btn>
                       {org.isActive
-                        ? <Btn size="sm" variant="danger" onClick={() => handleDeactivate(org)}>Deaktywuj</Btn>
-                        : <Btn size="sm" variant="secondary" onClick={() => handleActivate(org)}>Aktywuj</Btn>
+                        ? <Btn size="sm" variant="danger" onClick={() => handleDeactivate(org)}>{t('owner.actions.deactivate')}</Btn>
+                        : <Btn size="sm" variant="secondary" onClick={() => handleActivate(org)}>{t('owner.actions.activate')}</Btn>
                       }
                     </div>
                   </td>

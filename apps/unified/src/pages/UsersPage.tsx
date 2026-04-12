@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { NfcCardModal } from '../components/users/NfcCardModal';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
+import { useTranslation } from 'react-i18next';
 
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
   SUPER_ADMIN: 'purple', OFFICE_ADMIN: 'blue', STAFF: 'zinc', END_USER: 'green',
@@ -15,6 +17,7 @@ const ORG_ID = import.meta.env.VITE_ORG_ID ?? '';
 type TabType = 'active' | 'deactivated';
 
 export function UsersPage() {
+  const { t, i18n } = useTranslation();
   const [users,       setUsers]      = useState<any[]>([]);
   const [deactivated, setDeactivated] = useState<any[]>([]);
   const [tab,         setTab]        = useState<TabType>('active');
@@ -102,9 +105,9 @@ export function UsersPage() {
   return (
     <div>
       <PageHeader
-        title="Użytkownicy"
+        title={t('pages.users.title')}
         sub={`${users.length} aktywnych · ${deactivated.length} dezaktywowanych`}
-        action={<Btn onClick={() => setModal('create')}>+ Nowy użytkownik</Btn>}
+        action={<Btn onClick={() => setModal('create')}>{t('pages.users.new')}</Btn>}
       />
 
       {/* Tabs */}
@@ -268,7 +271,7 @@ export function UsersPage() {
             <Btn variant="danger" loading={busy} onClick={handleDeactivate} className="flex-1">Dezaktywuj</Btn>
             <Btn variant="secondary" onClick={() => setModal(null)}>Anuluj</Btn>
           </div>
-        </Modal>
+                new Date(d).toLocaleDateString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US', { day:'2-digit', month:'2-digit', year:'numeric' });
       )}
     </div>
   );

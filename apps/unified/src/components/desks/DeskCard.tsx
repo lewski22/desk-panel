@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { DeskMapItem } from '../../types/index';
 import { format } from 'date-fns';
 
@@ -12,7 +13,7 @@ interface Props {
 function statusMeta(desk: DeskMapItem) {
   if (!desk.isOnline || desk.status === 'MAINTENANCE') {
     return {
-      label: desk.status === 'MAINTENANCE' ? 'Serwis' : 'Offline',
+      labelKey: desk.status === 'MAINTENANCE' ? 'maintenance' : 'offline',
       dot: 'bg-zinc-400',
       ring: 'ring-zinc-200',
       badge: 'bg-zinc-100 text-zinc-500',
@@ -20,7 +21,7 @@ function statusMeta(desk: DeskMapItem) {
   }
   if (desk.isOccupied) {
     return {
-      label: 'Zajęte',
+      labelKey: 'occupied',
       dot: 'bg-white',
       ring: 'ring-white/40',
       badge: 'bg-white/20 text-white',
@@ -28,14 +29,14 @@ function statusMeta(desk: DeskMapItem) {
   }
   if (desk.currentReservation) {
     return {
-      label: 'Zarezerwowane',
+      labelKey: 'reserved',
       dot: 'bg-sky-300',
       ring: 'ring-sky-200',
       badge: 'bg-sky-100 text-sky-700',
     };
   }
   return {
-    label: 'Wolne',
+    labelKey: 'free',
     dot: 'bg-emerald-400',
     ring: 'ring-emerald-200',
     badge: 'bg-emerald-50 text-emerald-700',
@@ -50,6 +51,7 @@ function cardBg(desk: DeskMapItem) {
 }
 
 export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: Props) {
+  const { t } = useTranslation();
   const meta = statusMeta(desk);
   const bg   = cardBg(desk);
   const res  = desk.currentReservation;
@@ -78,7 +80,7 @@ export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: P
       {/* Zone / floor */}
       {(desk.zone || desk.floor) && (
         <p className={`text-xs ${desk.isOccupied ? 'text-indigo-200' : 'text-zinc-400'}`}>
-          {[desk.zone, desk.floor && `Piętro ${desk.floor}`].filter(Boolean).join(' · ')}
+          {[desk.zone, desk.floor && t('desks.floor', { floor: desk.floor })].filter(Boolean).join(' · ')}
         </p>
       )}
 
@@ -96,7 +98,7 @@ export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: P
 
       {/* Status badge */}
       <span className={`self-start text-xs px-2 py-0.5 rounded-full font-medium mt-auto ${meta.badge}`}>
-        {meta.label}
+        {t(`desks.status.${meta.labelKey}`)}
       </span>
 
       {/* Action buttons — hidden for END_USER (whole card is clickable) */}
@@ -107,7 +109,7 @@ export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: P
               onClick={() => onCheckin(desk)}
               className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium"
             >
-              Check-in
+              {t('desks.actions.checkin')}
             </button>
           )}
           {desk.isOccupied && (
@@ -115,7 +117,7 @@ export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: P
               onClick={() => onCheckout(desk)}
               className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-white/20 text-white hover:bg-white/30 active:bg-white/40 transition-colors border border-white/30 font-medium"
             >
-              Check-out
+              {t('desks.actions.checkout')}
             </button>
           )}
         </div>

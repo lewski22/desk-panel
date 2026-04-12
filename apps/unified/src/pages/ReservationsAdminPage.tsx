@@ -1,5 +1,6 @@
 import { localDateStr } from '../utils/date';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { Btn, Card } from '../components/ui';
 import { format } from 'date-fns';
@@ -7,15 +8,16 @@ import { pl } from 'date-fns/locale';
 
 const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? '';
 
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  CONFIRMED: { label: 'Potwierdzona', cls: 'bg-emerald-100 text-emerald-700' },
-  PENDING:   { label: 'Oczekuje',     cls: 'bg-amber-100  text-amber-700'   },
-  CANCELLED: { label: 'Anulowana',    cls: 'bg-zinc-100   text-zinc-500'    },
-  EXPIRED:   { label: 'Wygasła',      cls: 'bg-red-100    text-red-600'     },
-  COMPLETED: { label: 'Zakończona',   cls: 'bg-sky-100    text-sky-700'     },
+const STATUS_META: Record<string, { cls: string }> = {
+  CONFIRMED: { cls: 'bg-emerald-100 text-emerald-700' },
+  PENDING:   { cls: 'bg-amber-100  text-amber-700'   },
+  CANCELLED: { cls: 'bg-zinc-100   text-zinc-500'    },
+  EXPIRED:   { cls: 'bg-red-100    text-red-600'     },
+  COMPLETED: { cls: 'bg-sky-100    text-sky-700'     },
 };
 
 export function ReservationsAdminPage() {
+  const { t, i18n } = useTranslation();
   const [res, setRes]         = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate]       = useState(localDateStr());
@@ -32,7 +34,7 @@ export function ReservationsAdminPage() {
   useEffect(() => { load(); }, [date, status]);
 
   const cancel = async (id: string) => {
-    if (!confirm('Anulować rezerwację?')) return;
+    if (!confirm(t('reservations.confirm_cancel_simple'))) return;
     await appApi.reservations.cancel(id);
     await load();
   };
@@ -47,24 +49,24 @@ export function ReservationsAdminPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-zinc-800">Rezerwacje</h1>
-          <p className="text-xs text-zinc-400 mt-0.5">Przegląd i zarządzanie rezerwacjami</p>
+          <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reservations.title')}</h1>
+          <p className="text-xs text-zinc-400 mt-0.5">{t('pages.reservations.sub', { defaultValue: 'Overview and management of reservations' })}</p>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-5 flex-wrap">
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Data</label>
+          <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.date')}</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
             className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1">Status</label>
+          <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.status')}</label>
           <select value={status} onChange={e => setStatus(e.target.value)}
             className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
-            <option value="">Wszystkie</option>
-            {Object.keys(STATUS_META).map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
+            <option value="">{t('reservations.filter.all')}</option>
+            {Object.keys(STATUS_META).map(s => <option key={s} value={s}>{t(`reservations.status.${s.toLowerCase()}`)}</option>)}
           </select>
         </div>
         <div className="self-end">
@@ -74,12 +76,13 @@ export function ReservationsAdminPage() {
 
       {/* Stats row */}
       <div className="grid grid-cols-5 gap-2 mb-5">
-        {Object.entries(STATUS_META).map(([s, m]) => {
+        {Object.keys(STATUS_META).map(s => {
+          const m = STATUS_META[s];
           const count = res.filter(r => r.status === s).length;
           return (
             <div key={s} className="bg-white border border-zinc-100 rounded-xl p-3 text-center">
               <p className="text-lg font-bold font-mono text-zinc-700">{count}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{m.label}</p>
+              <p className="text-[10px] text-zinc-400 mt-0.5">{t(`reservations.status.${s.toLowerCase()}`)}</p>
             </div>
           );
         })}
@@ -95,11 +98,11 @@ export function ReservationsAdminPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Czas</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Biurko / Pracownik</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Status</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">Check-in</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">Akcje</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.time')}</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.desk')} / {t('reservations.table.user')}</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.status')}</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">{t('reservations.table.checkin')}</th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -124,9 +127,9 @@ export function ReservationsAdminPage() {
                             {format(new Date(r.checkin.checkedInAt), 'HH:mm')}
                           </p>
                           <p className="text-zinc-400">
-                            {r.checkin.method === 'NFC' ? '📡 NFC'
-                             : r.checkin.method === 'QR' ? '📱 QR kod'
-                             : '✋ Ręczny'}
+                              {r.checkin.method === 'NFC' ? t('reservations.method.nfc')
+                               : r.checkin.method === 'QR' ? t('reservations.method.qr')
+                               : t('reservations.method.manual')}
                           </p>
                         </div>
                       ) : (
@@ -138,13 +141,13 @@ export function ReservationsAdminPage() {
                         {r.status === 'CONFIRMED' && !r.checkin && (
                           <button onClick={() => checkin(r)}
                             className="text-xs px-2 py-1.5 sm:py-1 rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors font-medium">
-                            Check-in
+                            {t('desks.actions.checkin')}
                           </button>
                         )}
                         {['CONFIRMED','PENDING'].includes(r.status) && (
                           <button onClick={() => cancel(r.id)}
                             className="text-xs px-2 py-1.5 sm:py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                            Anuluj
+                            {t('reservations.cancel')}
                           </button>
                         )}
                       </div>

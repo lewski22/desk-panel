@@ -1,6 +1,6 @@
 {
   "table": { "empty": "No data" },
-  "btn": { "save": "Save", "cancel": "Cancel" },
+  "btn": { "save": "Save", "cancel": "Cancel", "refresh": "↺ Refresh", "retry": "Try again" },
   "login": {
     "title": "Sign in",
     "email": "Email",
@@ -52,4 +52,410 @@
     },
     "strength": { "weak": "Weak", "medium": "Medium", "good": "Good", "strong": "Strong" }
   }
+  ,
+  "pages": {
+    "dashboard": { "title": "Dashboard" },
+    "desks": { "title": "Desks", "new": "+ New desk" },
+    "users": { "title": "Users", "new": "+ New user" },
+    "reports": { "title": "Reports", "sub": "Location statistics" },
+    "organizations": { "title": "Offices" },
+    "owner": { "title": "Operator Panel" },
+    "provisioning": { "title": "Provisioning" },
+    "reservations": { "title": "Reservations" },
+    "reservationsAdmin": { "title": "Reservations" },
+    "myReservations": { "title": "My reservations" },
+    "deskMap": { "title": "Desk map" },
+    "devices": { "title": "Devices" },
+    "qrCheckin": { "title": "QR Check-in" },
+    "impersonate": { "title": "Impersonate" }
+  }
+
+  ,
+  "deskmap": {
+    "location_label": "Office:",
+    "loading": "Loading desk map…",
+    "conn_error": "Connection error",
+    "stale_warning": "Connection issue — data may be outdated"
+  }
+
+  ,
+  "impersonate": {
+    "back_to_login": "Back to login",
+    "authenticating": "Authenticating…",
+    "errors": {
+      "missing_token": "No impersonation token provided.",
+      "not_impersonation": "Token is not an owner impersonation.",
+      "invalid_token": "Invalid impersonation token."
+    }
+  }
+
+  ,
+  "qr": {
+    "invalid_qr": "Invalid QR code",
+    "not_found": "Desk not found or inactive",
+    "no_connection": "Unable to reach server",
+    "error_checkin": "Check-in failed",
+    "error_reservation": "Reservation failed",
+    "unknown_error": "An unexpected error occurred",
+    "error_checkout": "Checkout failed",
+    "processing": "Processing…",
+    "occupied_title": "Desk occupied",
+    "occupied_desc": "This desk is occupied by someone else. Choose another desk.",
+    "back_to_map": "Back to desk map",
+    "error_title": "Something went wrong",
+    "back_to_panel": "Back to dashboard",
+    "login_prompt": "Sign in to reserve or check in",
+    "login": "Sign in",
+    "success_reserved": "Desk reserved!",
+    "reservation_checkin_info": "Reservation for today · check-in recorded",
+    "success_checkin": "Check-in successful!",
+    "success_checkout": "Check-out recorded",
+    "status": { "free": "Free", "reserved": "Reserved", "occupied": "Occupied" },
+    "your_reservation": "Your reservation",
+    "reserved_by": "Reserved by",
+    "occupied_since": "Occupied since",
+    "reserve_and_checkin": "Reserve and check-in",
+    "confirm_checkin": "Check-in — confirm reservation",
+    "occupied_other_desc": "This desk is already occupied by someone else. Choose another desk."
+  }
+
+  ,
+  "provisioning": {
+    "gateways_title": "Gateways",
+    "new_gateway": "+ New gateway",
+    "table": {
+      "name": "Name",
+      "id": "ID",
+      "location": "Office",
+      "ip": "IP",
+      "version": "Version",
+      "devices": "Devices",
+      "status": "Status",
+      "last_seen": "Last seen",
+      "actions": ""
+    },
+    "status": { "online": "Online", "problem": "Problem", "offline": "Offline" },
+    "last_seen": { "now": "just now", "minutes": "{{minutes}} min ago" },
+    "no_gateways": "No gateways — click \"+ New gateway\" to generate an install command",
+    "modal": { "add_gateway": "Add gateway" },
+    "install": { "title": "How to install a gateway:", "step1": "Power on a Raspberry Pi (or other Linux device)", "step2": "Open a terminal (SSH or local)", "step3": "Paste the command below and press Enter" , "cmd_label": "Install command (valid 24h, one-time)" },
+    "beacons_title": "Beacons (devices)",
+    "all_locations": "All locations",
+    "provision_button": "+ Provision device"
+    ,
+    "copy_id": "Copy ID",
+    "update_title": "Update gateway to latest version",
+    "update_button": "Update",
+    "rotate_title": "Rotate gateway key (15min window)",
+    "rotate_button": "Rotate",
+    "delete_title": "Remove gateway",
+    "delete_button": "Delete",
+    "identify": "Identify",
+    "restart": "Restart",
+    "assign_to_desk": "Assign to desk",
+    "modal": {
+      "secret_title": "New gateway secret",
+      "provision_title": "Provision device"
+    },
+    "copy_cmd": "Copy command"
+  }
+
+  ,
+  "provisioning_extra": {
+    "copy_id": "Copy ID",
+    "update_title": "Update gateway to latest version",
+    "update_button": "Update",
+    "rotate_title": "Rotate gateway key (15min window)",
+    "rotate_button": "Rotate",
+    "delete_title": "Remove gateway",
+    "delete_button": "Delete",
+    "identify": "Identify",
+    "restart": "Restart",
+    "assign_to_desk": "Assign to desk",
+    "modal": {
+      "secret_title": "New gateway secret",
+      "provision_title": "Provision device"
+    },
+    "copy_cmd": "Copy command"
+  }
+
+  ,
+  "owner": {
+    "create_title": "New organization",
+    "create_action": "Create organization",
+    "create_done_title": "✅ Organization created",
+    "create_done_msg": "Organization {{name}} is ready.",
+    "admin_account": "Admin account:",
+    "copy_password_warning": "⚠️ Copy the password — it won't be shown again.",
+    "form": {
+      "name": "Organization name *",
+      "slug": "Slug (URL) *",
+      "plan": "Plan",
+      "firstName": "First name *",
+      "lastName": "Last name *",
+      "email": "Admin email *",
+      "notes": "Notes"
+    },
+    "edit_title": "Edit: {{name}}",
+    "search_placeholder": "Search organization...",
+    "count": "{{count}} orgs",
+    "loading": "Loading...",
+    "load_error": "Failed loading data",
+    "no_orgs": "No organizations",
+    "table": {
+      "name": "Organization",
+      "slug": "Slug",
+      "plan": "Plan",
+      "users": "Users",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": { "active": "active", "inactive": "inactive" },
+    "actions": { "impersonate": "🔑 Enter", "edit": "Edit", "deactivate": "Deactivate", "activate": "Activate" }
+  }
+
+  ,
+  "orgs": {
+    "azure": {
+      "howto_title": "How to configure (your IT admin):",
+      "step1": "1. Open the link in a browser signed in as a Global Admin Entra ID:",
+      "step2": "2. Click \"Accept\" → Copy the Tenant ID from the URL or Azure Portal",
+      "step3": "3. Paste the Tenant ID below and enable SSO",
+      "tenant_label": "Azure Tenant ID",
+      "test": "Test",
+      "test_ok": "✓ Tenant ID valid — Entra ID responds",
+      "test_fail": "✗ Unable to connect to this tenant ID",
+      "hint": "Find it in: Azure Portal → Azure Active Directory → Overview → Tenant ID"
+    }
+  }
+
+  ,
+  "organizations": {
+    "form": {
+      "closeTime": "Close time",
+      "maxDaysAhead": "Max days ahead",
+      "maxHoursPerDay": "Max hours / reservation"
+    },
+    "form": {
+      "closeTime": "Close time",
+      "maxDaysAhead": "Max days ahead",
+      "maxHoursPerDay": "Max hours / reservation"
+    },
+    "hours_hint": "Working hours and limits control when and how long users can reserve desks. Walk-in via QR ends automatically at closing time.",
+    "create_action": "Create"
+  }
 }
+
+,
+  "desks": {
+    "stats": {
+      "free": "Free",
+      "reserved": "Reserved",
+      "occupied": "Occupied",
+      "offline": "Offline"
+    },
+    "actions": {
+      "checkin": "Check-in",
+      "checkout": "Check-out"
+    },
+    "reserve": {
+      "title": "Reserve desk",
+      "staff_label": "Employee",
+      "staff_helper": "(empty = reserve for yourself)",
+      "for_self": "— reserve for yourself —",
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "open_hours": "Open {{open}}–{{close}} · max {{maxHours}}h · up to {{maxDays}} days ahead",
+      "any_time": "You can reserve a desk for any time of the day.",
+      "submitting": "Reserving…",
+      "action": "Reserve",
+      "success": "Desk reserved! Check My reservations.",
+      "errors": {
+        "end_after_start": "End time must be after the start time.",
+        "max_length": "Maximum reservation length is {{maxHours}}h.",
+        "max_days": "Reservations can be made up to {{days}} days ahead.",
+        "failed": "Reservation failed."
+      }
+    },
+    "updated": "Updated",
+    "refresh": "Refresh",
+    "none_in_location": "No desks in this location",
+    "floor_prefix": "Floor",
+    "floor": "Floor {{floor}}",
+    "count": "{{count}} desks"
+  }
+
+  ,
+  "users": {
+    "nfcModal": {
+      "title": "NFC card — {{name}}",
+      "current_card": "Currently assigned card",
+      "scan_auto": "Scan card automatically ({{seconds}}s)",
+      "or_manual": "or enter manually",
+      "manual_button": "Enter UID manually",
+      "waiting_title": "Waiting for card…",
+      "waiting_desc_prefix": "Bring the NFC card close to",
+      "waiting_desc_strong": "any beacon",
+      "waiting_desc_suffix": "in the office",
+      "seconds": "{{seconds}}s",
+      "assigned": "Card assigned!",
+      "done": "Done",
+      "label_uid": "Card UID (format AA:BB:CC:DD)",
+      "placeholder_uid": "AA:BB:CC:DD",
+      "back": "Back",
+      "save": "Save",
+      "saving": "Saving…",
+      "errors": {
+        "start_failed": "Failed starting scan session.",
+        "timeout": "Time ran out. Try again.",
+        "save_failed": "Failed to save card."
+      }
+    }
+  }
+  
+  ,
+  "dashboard": {
+    "trend": {
+      "no_change": "no change",
+      "vs_prev": "vs previous week"
+    },
+    "kpi": {
+      "occupancy_now": "Occupancy now",
+      "occupied_desks": "Occupied desks",
+      "of_active": "of {{count}} active",
+      "checkins_today": "Check-ins today",
+      "beacons_online": "Beacons online",
+      "registered_of": "of {{count}} registered"
+    },
+    "checkins_title": "Check-ins — last 7 days",
+    "checkins": "Check-ins",
+    "hourly": {
+      "title": "Hourly distribution (30 days)",
+      "peaks": "Peaks"
+    },
+    "zone": {
+      "title": "Occupancy by zone",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "free": "Free"
+    },
+    "no_data": "No data",
+    "top": {
+      "title": "Top desks (30 days)",
+      "checkins_suffix": "check-ins"
+    },
+    "methods": { "title": "Check-in methods (30 days)" },
+    "state": { "title": "Desk state" },
+    "legend": { "free": "Free", "reserved": "Reserved", "occupied": "Occupied", "offline": "Offline" }
+  },
+  "methods": { "NFC": "NFC", "QR": "QR", "MANUAL": "Manual", "NO_CHECKIN": "No check-in" }
+
+  ,
+  "reports": {
+    "kpi": {
+      "occ_today": "Occupancy today",
+      "total": "Total reservations",
+      "with_checkin": "With check-in",
+      "no_show": "No-show rate"
+    },
+    "chart_title": "Reservations — last 14 days",
+    "series": { "confirmed": "Confirmed", "completed": "Completed", "cancelled": "Cancelled" },
+    "methods_title": "Check-in methods"
+  }
+
+  ,
+  "users": {
+    "sub": "{{active}} active · {{deactivated}} deactivated",
+    "tabs": {
+      "active": "Active ({{count}})",
+      "deactivated": "Deactivated ({{count}})"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "card": "NFC card",
+      "active": "Active",
+      "deactivated": "Deactivated",
+      "remove_in": "Remove in"
+    },
+    "actions": {
+      "add_card": "+ Card",
+      "edit": "Edit",
+      "card": "Card",
+      "deactivate": "Deactivate",
+      "restore": "Restore",
+      "delete_data": "Delete data",
+      "create": "Create",
+      "save": "Save"
+    },
+    "yes": "Yes",
+    "no": "No",
+    "form": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "password": "Password",
+      "role": "Role"
+    },
+    "roles": {
+      "SUPER_ADMIN": "Super Admin",
+      "OFFICE_ADMIN": "Office Admin",
+      "STAFF": "Staff",
+      "END_USER": "User"
+    },
+    "modals": {
+      "create_title": "New user",
+      "edit_title": "Edit: {{name}}",
+      "deactivate_title": "Deactivate: {{name}}",
+      "deactivate_text": "The account will be deactivated. After the retention period personal data will be anonymized, but historical activity (reservations, check-ins) will remain with the account name preserved.",
+      "retention_label": "Retention period (minimum 30 days)",
+      "will_be_anonymized_on": "Account will be anonymized on: {{date}}"
+    }
+  }
+
+,
+  "reservations": {
+    "confirm_cancel": "Cancel reservation {{code}}?",
+    "today_title": "Reservations for today",
+    "all": "All ({{count}})",
+    "none_today": "No reservations for today",
+    "cancel": "Cancel",
+    "location": "Office:",
+    "filter": {
+      "date": "Date",
+      "status": "Status",
+      "all": "All"
+    },
+    "none_filters": "No reservations for selected filters",
+    "table": {
+      "time": "Time",
+      "desk": "Desk",
+      "user": "User",
+      "checkin": "Check-in",
+      "status": "Status",
+      "actions": ""
+    },
+    "confirm_cancel_simple": "Cancel reservation?",
+    "none": "No reservations",
+    "none_hint": "Go to the desk map to create a reservation",
+    "active": "Active",
+    "history": "History",
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "method": {
+      "nfc": "📡 NFC",
+      "qr": "📷 QR",
+      "manual": "✋ Manual"
+    }
+  }
+
+
+
+

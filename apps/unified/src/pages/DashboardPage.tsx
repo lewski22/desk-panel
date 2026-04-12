@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, PieChart, Pie, Cell,
@@ -13,16 +14,18 @@ const C_FREE      = '#34d399';
 const C_OFFLINE   = '#d4d4d8';
 
 function TrendBadge({ pct }: { pct: number }) {
-  if (pct === 0) return <span className="text-xs text-zinc-400">bez zmian</span>;
+  const { t } = useTranslation();
+  if (pct === 0) return <span className="text-xs text-zinc-400">{t('dashboard.trend.no_change')}</span>;
   const up = pct > 0;
   return (
     <span className={`text-xs font-medium ${up ? 'text-emerald-600' : 'text-red-500'}`}>
-      {up ? '↑' : '↓'} {Math.abs(pct)}% vs poprzedni tydzień
+      {up ? '↑' : '↓'} {Math.abs(pct)}% {t('dashboard.trend.vs_prev')}
     </span>
   );
 }
 
 export function DashboardPage() {
+  const { t, i18n } = useTranslation();
   // FIX: read inside component — module-level read is stale after location switch
   const LOCATION_ID =
     localStorage.getItem('desks_loc') ??
@@ -91,26 +94,26 @@ export function DashboardPage() {
     <div>
       <div className="mb-6">
 
-        <h1 className="text-xl font-semibold text-zinc-800">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-zinc-800">{t('pages.dashboard.title')}</h1>
         <p className="text-sm text-zinc-400 mt-0.5">
-          {now.toLocaleDateString('pl-PL', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+          {now.toLocaleDateString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
         </p>
       </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Stat label="Zajętość teraz"     value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`} accent />
-        <Stat label="Zajęte biurka"      value={occupiedDesks}
-          sub={`z ${desks.length} aktywnych`} />
-        <Stat label="Check-iny dziś"     value={todayCheckins} />
-        <Stat label="Beacony online"     value={onlineCount}
-          sub={`z ${desks.length} zarejestrowanych`} />
+        <Stat label={t('dashboard.kpi.occupancy_now')} value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`} accent />
+        <Stat label={t('dashboard.kpi.occupied_desks')} value={occupiedDesks}
+          sub={t('dashboard.kpi.of_active', { count: desks.length })} />
+        <Stat label={t('dashboard.kpi.checkins_today')} value={todayCheckins} />
+        <Stat label={t('dashboard.kpi.beacons_online')} value={onlineCount}
+          sub={t('dashboard.kpi.registered_of', { count: desks.length })} />
       </div>
 
       {/* 7-day check-in trend */}
       <Card className="p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-zinc-700">Check-iny — ostatnie 7 dni</p>
+          <p className="text-sm font-semibold text-zinc-700">{t('dashboard.checkins_title')}</p>
           {ext && <TrendBadge pct={ext.weekTrend} />}
         </div>
         <ResponsiveContainer width="100%" height={180}>
@@ -122,7 +125,7 @@ export function DashboardPage() {
               contentStyle={{ borderRadius:8, border:'1px solid #e4e4e7', fontSize:12 }}
               cursor={{ fill:'#f9f9f9' }}
             />
-            <Bar dataKey="checkins" name="Check-iny" fill={ACCENT} radius={[4,4,0,0]} />
+            <Bar dataKey="checkins" name={t('dashboard.checkins')} fill={ACCENT} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -133,10 +136,10 @@ export function DashboardPage() {
         {/* Hourly heatmap */}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-zinc-700">Rozkład godzinowy (30 dni)</p>
+            <p className="text-sm font-semibold text-zinc-700">{t('dashboard.hourly.title')}</p>
             {peakHours.length > 0 && (
               <span className="text-xs text-zinc-400">
-                Szczyty: <span className="text-zinc-600 font-medium">{peakHours.join(', ')}</span>
+                {t('dashboard.hourly.peaks')}: <span className="text-zinc-600 font-medium">{peakHours.join(', ')}</span>
               </span>
             )}
           </div>
@@ -161,7 +164,7 @@ export function DashboardPage() {
 
         {/* Zone occupancy */}
         <Card className="p-5">
-          <p className="text-sm font-semibold text-zinc-700 mb-3">Zajętość wg strefy</p>
+          <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.zone.title')}</p>
           {zoneData.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={zoneData} barCategoryGap="30%" layout="vertical">
@@ -170,13 +173,13 @@ export function DashboardPage() {
                   axisLine={false} tickLine={false} width={60} />
                 <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #e4e4e7', fontSize:11 }}
                   cursor={{ fill:'#f9f9f9' }} />
-                <Bar dataKey="occupied"  name="Zajęte"         fill={C_OCCUPIED} radius={[0,3,3,0]} stackId="a" />
-                <Bar dataKey="reserved"  name="Zarezerwowane"  fill={C_RESERVED} radius={[0,0,0,0]} stackId="a" />
-                <Bar dataKey="free"      name="Wolne"           fill={C_FREE}     radius={[0,3,3,0]} stackId="a" />
+                <Bar dataKey="occupied"  name={t('dashboard.zone.occupied')}         fill={C_OCCUPIED} radius={[0,3,3,0]} stackId="a" />
+                <Bar dataKey="reserved"  name={t('dashboard.zone.reserved')}         fill={C_RESERVED} radius={[0,0,0,0]} stackId="a" />
+                <Bar dataKey="free"      name={t('dashboard.zone.free')}             fill={C_FREE}     radius={[0,3,3,0]} stackId="a" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-zinc-300 py-12 text-center">Brak danych</p>
+            <p className="text-sm text-zinc-300 py-12 text-center">{t('dashboard.no_data')}</p>
           )}
         </Card>
       </div>
@@ -186,7 +189,7 @@ export function DashboardPage() {
 
         {/* Top 5 desks */}
         <Card className="p-5">
-          <p className="text-sm font-semibold text-zinc-700 mb-3">Top biurka (30 dni)</p>
+          <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.top.title')}</p>
           <div className="space-y-2">
             {(ext?.topDesks ?? []).map((d: any, i: number) => {
               const max = ext?.topDesks?.[0]?._count?.checkins ?? 1;
@@ -195,7 +198,7 @@ export function DashboardPage() {
                 <div key={d.id}>
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xs font-medium text-zinc-700">{d.name}</span>
-                    <span className="text-xs text-zinc-400">{d._count.checkins} check-inów</span>
+                    <span className="text-xs text-zinc-400">{d._count.checkins} {t('dashboard.top.checkins_suffix')}</span>
                   </div>
                   <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all"
@@ -205,14 +208,14 @@ export function DashboardPage() {
               );
             })}
             {(!ext?.topDesks || ext.topDesks.length === 0) && (
-              <p className="text-xs text-zinc-300 py-4 text-center">Brak danych</p>
+              <p className="text-xs text-zinc-300 py-4 text-center">{t('dashboard.no_data')}</p>
             )}
           </div>
         </Card>
 
         {/* Method breakdown */}
         <Card className="p-5">
-          <p className="text-sm font-semibold text-zinc-700 mb-3">Metody check-in (30 dni)</p>
+          <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.methods.title')}</p>
           {methodData.length > 0 ? (
             <div className="flex flex-col items-center">
               <ResponsiveContainer width="100%" height={130}>
@@ -231,20 +234,20 @@ export function DashboardPage() {
                 {methodData.map((m: any) => (
                   <div key={m.name} className="flex items-center gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: m.color }} />
-                    <span className="text-xs text-zinc-500">{m.name}</span>
+                    <span className="text-xs text-zinc-500">{t(`methods.${m.name}`)}</span>
                     <span className="text-xs font-medium text-zinc-700">{m.value}</span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="text-xs text-zinc-300 py-8 text-center">Brak danych</p>
+            <p className="text-xs text-zinc-300 py-8 text-center">{t('dashboard.no_data')}</p>
           )}
         </Card>
 
         {/* Desk grid */}
         <Card className="p-5">
-          <p className="text-sm font-semibold text-zinc-700 mb-3">Stan biurek</p>
+          <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.state.title')}</p>
           <div className="flex flex-wrap gap-1.5 mb-3">
             {desks.map(d => (
               <div key={d.id}
@@ -262,17 +265,20 @@ export function DashboardPage() {
             ))}
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {[
-              { color: C_FREE,     label: 'Wolne' },
-              { color: C_RESERVED, label: 'Rezerwacja' },
-              { color: C_OCCUPIED, label: 'Zajęte' },
-              { color: C_OFFLINE,  label: 'Offline' },
-            ].map(({ color, label }) => (
-              <span key={label} className="flex items-center gap-1 text-xs text-zinc-400">
-                <span className="w-2.5 h-2.5 rounded" style={{ background: color }} />
-                {label}
-              </span>
-            ))}
+            {
+              const legend = [
+                { color: C_FREE,     key: 'free' },
+                { color: C_RESERVED, key: 'reserved' },
+                { color: C_OCCUPIED, key: 'occupied' },
+                { color: C_OFFLINE,  key: 'offline' },
+              ];
+              legend.map(({ color, key }) => (
+                <span key={key} className="flex items-center gap-1 text-xs text-zinc-400">
+                  <span className="w-2.5 h-2.5 rounded" style={{ background: color }} />
+                  {t(`dashboard.legend.${key}`)}
+                </span>
+              ))
+            }
           </div>
         </Card>
       </div>

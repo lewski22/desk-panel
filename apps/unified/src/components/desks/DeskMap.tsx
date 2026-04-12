@@ -1,5 +1,6 @@
 import { localDateStr, localDateTimeISO } from '../../utils/date';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DeskMapItem, LocationLimits } from '../../types/index';
 import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
@@ -23,6 +24,7 @@ function groupByFloor(desks: DeskMapItem[]) {
 }
 
 function Stats({ desks }: { desks: DeskMapItem[] }) {
+  const { t } = useTranslation();
   const active   = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
   const free     = active.filter(d => !d.isOccupied && !d.currentReservation).length;
   const reserved = active.filter(d => !d.isOccupied && d.currentReservation).length;
@@ -31,14 +33,14 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {[
-        { label: 'Wolne',         count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { label: 'Zarezerwowane', count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
-        { label: 'Zajęte',        count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
-        { label: 'Offline',       count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
-      ].map(({ label, count, color, bg }) => (
-        <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
+        { labelKey: 'free',     count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { labelKey: 'reserved', count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
+        { labelKey: 'occupied', count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+        { labelKey: 'offline',  count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
+      ].map(({ labelKey, count, color, bg }) => (
+        <div key={labelKey} className={`${bg} rounded-xl p-3 text-center`}>
           <p className={`text-2xl font-bold font-mono ${color}`}>{count}</p>
-          <p className="text-xs text-zinc-500 mt-0.5 truncate">{label}</p>
+          <p className="text-xs text-zinc-500 mt-0.5 truncate">{t(`desks.stats.${labelKey}`)}</p>
         </div>
       ))}
     </div>
@@ -50,6 +52,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   desk: DeskMapItem; onClose: () => void; onSuccess: () => void;
   isEndUser?: boolean; users?: any[]; limits?: LocationLimits | null;
 }) {
+  const { t } = useTranslation();
   const today  = localDateStr();
   const maxDate = (() => {
     const d = new Date();
@@ -64,16 +67,16 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   const [err,    setErr]    = useState('');
 
   const submit = async () => {
-    if (start >= end) { setErr('Godzina zakończenia musi być późniejsza niż startu'); return; }
+    if (start >= end) { setErr(t('desks.reserve.errors.end_after_start')); return; }
     if (limits) {
       const [sh, sm] = start.split(':').map(Number);
       const [eh, em] = end.split(':').map(Number);
       const durH = (eh * 60 + em - sh * 60 - sm) / 60;
       if (durH > limits.maxHoursPerDay) {
-        setErr(`Maksymalna długość rezerwacji to ${limits.maxHoursPerDay}h`); return;
+        setErr(t('desks.reserve.errors.max_length', { maxHours: limits.maxHoursPerDay })); return;
       }
       if (date > maxDate) {
-        setErr(`Rezerwacja możliwa maksymalnie ${limits.maxDaysAhead} dni do przodu`); return;
+        setErr(t('desks.reserve.errors.max_days', { days: limits.maxDaysAhead })); return;
       }
     }
     setBusy(true); setErr('');
@@ -85,7 +88,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
       if (!isEndUser && userId) body.targetUserId = userId;
       await api.reservations.create(body);
       onSuccess();
-    } catch (e: any) { setErr(e.message ?? 'Błąd rezerwacji'); }
+    } catch (e: any) { setErr(e.message ?? t('desks.reserve.errors.failed')); }
     setBusy(false);
   };
 
@@ -94,7 +97,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
           <div>
-            <p className="font-semibold text-zinc-800">Zarezerwuj biurko</p>
+            <p className="font-semibold text-zinc-800">{t('desks.reserve.title')}</p>
             <p className="text-xs text-zinc-400 mt-0.5">{desk.name} · {desk.code}</p>
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
@@ -106,11 +109,11 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
           {!isEndUser && (
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">
-                Pracownik <span className="text-zinc-300 font-normal">(puste = rezerwacja dla siebie)</span>
+                {t('desks.reserve.staff_label')} <span className="text-zinc-300 font-normal">{t('desks.reserve.staff_helper')}</span>
               </label>
               <select value={userId} onChange={e => setUserId(e.target.value)}
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
-                <option value="">— rezerwacja dla siebie —</option>
+                <option value="">{t('desks.reserve.for_self')}</option>
                 {users.filter((u: any) => u.isActive).map((u: any) => (
                   <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
                 ))}
@@ -119,41 +122,41 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
           )}
 
           <div>
-            <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Data</label>
+            <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.date')}</label>
             <input type="date" value={date} min={today} max={maxDate} onChange={e => setDate(e.target.value)}
               className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Od</label>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.from')}</label>
               <input type="time" value={start} onChange={e => setStart(e.target.value)}
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Do</label>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.to')}</label>
               <input type="time" value={end} onChange={e => setEnd(e.target.value)}
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
 
           <p className="text-[11px] text-zinc-400 -mt-1">
-{limits ? `Biuro czynne ${limits.openTime}–${limits.closeTime} · max ${limits.maxHoursPerDay}h · do ${limits.maxDaysAhead} dni do przodu` : 'Możesz zarezerwować biurko na dowolną godzinę dnia.'}
+{limits ? t('desks.reserve.open_hours', { open: limits.openTime, close: limits.closeTime, maxHours: limits.maxHoursPerDay, maxDays: limits.maxDaysAhead }) : t('desks.reserve.any_time')}
           </p>
 
           <div className="flex gap-3 pt-1">
             <button onClick={onClose}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
-              Anuluj
+              {t('btn.cancel')}
             </button>
             <button onClick={submit} disabled={busy}
               className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
               {busy
                 ? <span className="inline-flex items-center gap-2 justify-center">
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Rezerwuję…
+                    {t('desks.reserve.submitting')}
                   </span>
-                : 'Zarezerwuj'}
+                : t('desks.reserve.action')}
             </button>
           </div>
         </div>
@@ -163,6 +166,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
 }
 
 export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits }: Props) {
+  const { t, i18n } = useTranslation();
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
   const [users,             setUsers]             = useState<any[]>([]);
@@ -195,7 +199,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
 
   const handleReservationSuccess = () => {
     setReservationTarget(null);
-    setReservedMsg('Biurko zarezerwowane! Sprawdź „Moje rezerwacje".');
+    setReservedMsg(t('desks.reserve.success'));
     onRefresh();
     setTimeout(() => setReservedMsg(''), 5000);
   };
@@ -215,17 +219,17 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">
-            {isEndUser ? 'Biurka' : 'Mapa zajętości'}
+            {isEndUser ? t('pages.desks.title') : t('pages.deskMap.title')}
           </h2>
           {lastUpdated && (
             <p className="text-xs text-zinc-400 mt-0.5">
-              Aktualizacja: {lastUpdated.toLocaleTimeString('pl-PL')}
+              {t('desks.updated')}: {lastUpdated.toLocaleTimeString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US')}
             </p>
           )}
         </div>
         <button onClick={onRefresh}
           className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors font-medium">
-          ↻ Odśwież
+          ↻ {t('desks.refresh')}
         </button>
       </div>
 
@@ -240,7 +244,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       {isEndUser && visibleDesks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🏢</p>
-          <p className="font-medium text-zinc-600">Brak biurek w tej lokalizacji</p>
+          <p className="font-medium text-zinc-600">{t('desks.none_in_location')}</p>
         </div>
       )}
 
@@ -248,10 +252,10 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
         <div key={floor} className="mb-8">
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              Piętro {floor}
+              {t('desks.floor_prefix')} {floor}
             </span>
             <div className="flex-1 h-px bg-zinc-100" />
-            <span className="text-xs text-zinc-400">{floorDesks.length} biurek</span>
+            <span className="text-xs text-zinc-400">{t('desks.count', { count: floorDesks.length })}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -280,7 +284,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       {!isEndUser && desks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🏢</p>
-          <p className="font-medium">Brak biurek w tej lokalizacji</p>
+          <p className="font-medium">{t('desks.none_in_location')}</p>
         </div>
       )}
     </div>

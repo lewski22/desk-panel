@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import {
   PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Spinner,
@@ -82,6 +83,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
 }
 
 export function DesksPage() {
+  const { t } = useTranslation();
   const [locations, setLocations] = useState<any[]>([]);
   const [locId,     setLocId]     = useState(() =>
     localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? ''
@@ -180,9 +182,9 @@ export function DesksPage() {
   return (
     <div>
       <PageHeader
-        title="Biurka"
+        title={t('pages.desks.title')}
         sub={`${desks.filter(d => d.status === 'ACTIVE').length} aktywnych z ${desks.length}`}
-        action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>+ Nowe biurko</Btn>}
+        action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>{t('pages.desks.new')}</Btn>}
       />
 
       {/* Biuro switcher */}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi as api } from '../api/client';
 
 interface Device {
@@ -26,6 +27,7 @@ function RssiBar({ rssi }: { rssi: number | null }) {
 }
 
 export function DevicesPage() {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,8 +54,8 @@ export function DevicesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-800">Urządzenia (beacony)</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Stan połączenia każdego beacona</p>
+          <h2 className="text-lg font-semibold text-zinc-800">{t('pages.devices.title')}</h2>
+          <p className="text-xs text-zinc-400 mt-0.5">{t('pages.devices.sub', { defaultValue: 'Stan połączenia każdego beacona' })}</p>
         </div>
         <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
           ↻ Odśwież

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Card, Modal, Input } from '../components/ui';
 
@@ -51,19 +52,19 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
       <div className="space-y-4">
         {/* Instrukcja */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
-          <p className="font-semibold">Jak skonfigurować (IT Admin firmy):</p>
-          <p>1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:</p>
+          <p className="font-semibold">{t('orgs.azure.howto_title')}</p>
+          <p>{t('orgs.azure.step1')}</p>
           <code className="block bg-blue-100 rounded px-2 py-1 text-[10px] break-all">
             {`https://login.microsoftonline.com/organizations/adminconsent?client_id=${import.meta.env.VITE_AZURE_CLIENT_ID ?? 'CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin)}`}
           </code>
-          <p>2. Kliknij "Akceptuj" → Skopiuj <strong>Tenant ID</strong> z URL lub Azure Portal</p>
-          <p>3. Wklej Tenant ID poniżej i włącz SSO</p>
+          <p>{t('orgs.azure.step2')}</p>
+          <p>{t('orgs.azure.step3')}</p>
         </div>
 
         {err && <p className="text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
 
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Azure Tenant ID</label>
+          <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('orgs.azure.tenant_label')}</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -77,13 +78,13 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
               disabled={testing || !tenantId}
               className="text-xs px-3 py-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-600 disabled:opacity-40 transition-colors whitespace-nowrap"
             >
-              {testing ? '…' : 'Testuj'}
+              {testing ? '…' : t('orgs.azure.test')}
             </button>
           </div>
-          {testResult === 'ok'   && <p className="text-xs text-emerald-600 mt-1">✓ Tenant ID poprawny — Entra ID odpowiada</p>}
-          {testResult === 'fail' && <p className="text-xs text-red-500 mt-1">✗ Nie można połączyć z tym tenant ID</p>}
+          {testResult === 'ok'   && <p className="text-xs text-emerald-600 mt-1">{t('orgs.azure.test_ok')}</p>}
+          {testResult === 'fail' && <p className="text-xs text-red-500 mt-1">{t('orgs.azure.test_fail')}</p>}
           <p className="text-[10px] text-zinc-400 mt-1">
-            Znajdziesz w: Azure Portal → Azure Active Directory → Overview → Tenant ID
+            {t('orgs.azure.hint')}
           </p>
         </div>
 
@@ -111,8 +112,8 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
         </div>
 
         <div className="flex gap-2 justify-end">
-          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
-          <Btn onClick={save} loading={saving} disabled={enabled && !tenantId}>Zapisz</Btn>
+          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
+          <Btn onClick={save} loading={saving} disabled={enabled && !tenantId}>{t('btn.save')}</Btn>
         </div>
       </div>
     </Modal>
@@ -210,6 +211,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 }
 
 export function OrganizationsPage() {
+  const { t } = useTranslation();
   const user = getUser();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
@@ -286,7 +288,7 @@ export function OrganizationsPage() {
   return (
     <div>
       <PageHeader
-        title="Biura"
+        title={t('pages.organizations.title')}
         sub="Fizyczne biura — godziny pracy, adresy, lokalizacje"
         action={<Btn onClick={openCreate}>+ Nowe biuro</Btn>}
       />
@@ -295,10 +297,10 @@ export function OrganizationsPage() {
         <div className="flex justify-center py-16">
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
         </div>
-      ) : (
-        <div className="grid gap-3">
-          {locations.map(loc => (
-            <Card key={loc.id} className="flex items-center gap-4">
+      <PageHeader
+        title={t('pages.organizations.title')}
+        subtitle={t('organizations.subtitle')}
+        action={isSuperAdmin ? <Btn onClick={openCreate}>{t('organizations.new_location')}</Btn> : null}
               <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-lg shrink-0">
                 {loc.name[0].toUpperCase()}
               </div>
@@ -396,7 +398,7 @@ export function OrganizationsPage() {
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Zamknięcie</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.closeTime')}</label>
               <input type="time" value={form.closeTime}
                 onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
@@ -405,26 +407,25 @@ export function OrganizationsPage() {
           {/* Limity rezerwacji */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max dni do przodu</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.maxDaysAhead')}</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
                 onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max godzin / rezerwacja</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.maxHoursPerDay')}</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
                 onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
           <p className="text-xs text-zinc-400">
-            Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka.
-            Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.
+            {t('organizations.form.hours_hint')}
           </p>
           <div className="flex gap-2 mt-1 justify-end">
-            <Btn variant="secondary" onClick={() => setModal(null)}>Anuluj</Btn>
+            <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}>
-              {modal === 'create' ? 'Utwórz' : 'Zapisz'}
+              {modal === 'create' ? t('organizations.create_action') : t('btn.save')}
             </Btn>
           </div>
         </div>
