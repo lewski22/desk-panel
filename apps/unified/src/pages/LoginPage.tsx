@@ -112,6 +112,7 @@ export function LoginPage({ onLogin }: Props) {
   const [err,       setErr]       = useState('');
   const [busy,      setBusy]      = useState(false);
   const [showEntra, setShowEntra] = useState(false);
+  const { t } = useTranslation();
   const navigate  = useNavigate();
   const location  = useLocation();
   const returnTo  = (location.state as any)?.returnTo as string | undefined;
