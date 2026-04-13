@@ -147,7 +147,7 @@ export function OwnerPage() {
       setStats(s);
       setOrgs(Array.isArray(o) ? o : []);
     } catch (e: any) {
-      setErr(e.message || 'Błąd połączenia z API');
+      setErr(e.message || t('owner.api_error'));
     }
     setLoading(false);
   }, []);
@@ -160,27 +160,27 @@ export function OwnerPage() {
       const r = await appApi.owner.impersonate(org.id);
       const url = r.adminUrl || `${window.location.origin}/auth/impersonate?token=${r.token}`;
       window.open(url, '_blank');
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { alert(e.message || t('owner.impersonate_failed')); }
     setImpersonating(null);
   };
 
   const handleDeactivate = async (org: any) => {
-    if (!confirm(`Dezaktywować firmę "${org.name}"?`)) return;
+    if (!confirm(t('owner.confirm_deactivate', { name: org.name }))) return;
     try { await appApi.owner.deactivateOrg(org.id); load(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { alert(e.message || t('owner.deactivate_failed')); }
   };
 
   const handleActivate = async (org: any) => {
     try { await appApi.owner.updateOrg(org.id, { isActive: true }); load(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { alert(e.message || t('owner.activate_failed')); }
   };
 
   // stats z API: { orgsTotal, orgsActive, orgsInactive, gatewaysTotal, gatewaysOnline, beaconsTotal, beaconsOnline, checkinsToday, checkinsWeek }
   const statCards = stats ? [
-    { label: 'Firmy aktywne',   val: stats.orgsActive,     sub: `${stats.orgsTotal} łącznie`,              icon: '🏢' },
-    { label: 'Gateway online',  val: stats.gatewaysOnline,  sub: `${stats.gatewaysTotal} łącznie`,           icon: '📡' },
-    { label: 'Beacony online',  val: stats.beaconsOnline,   sub: `${stats.beaconsTotal} łącznie`,            icon: '🔵' },
-    { label: 'Check-iny dziś',  val: stats.checkinsToday,   sub: `${stats.checkinsWeek} w tygodniu`,         icon: '✅' },
+    { label: t('owner.stats.active'),   val: stats.orgsActive,     sub: t('owner.stats.total', { total: stats.orgsTotal }),              icon: '🏢' },
+    { label: t('owner.stats.gateways_online'),  val: stats.gatewaysOnline,  sub: t('owner.stats.total', { total: stats.gatewaysTotal }),           icon: '📡' },
+    { label: t('owner.stats.beacons_online'),  val: stats.beaconsOnline,   sub: t('owner.stats.total', { total: stats.beaconsTotal }),            icon: '🔵' },
+    { label: t('owner.stats.checkins_today'),  val: stats.checkinsToday,   sub: t('owner.stats.week_count', { count: stats.checkinsWeek }),         icon: '✅' },
   ] : [];
 
   const filtered = orgs.filter(o =>

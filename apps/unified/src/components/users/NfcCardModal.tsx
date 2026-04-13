@@ -61,7 +61,7 @@ export function NfcCardModal({ user, onClose }: Props) {
     try {
       await appApi.users.assignCard(user.id, cardUid.trim().toUpperCase());
       onClose();
-    } catch (e: any) { setErr(e.message ?? 'Błąd zapisu'); }
+    } catch (e: any) { setErr(e.message ?? t('users.nfcModal.errors.save_failed')); }
     setBusy(false);
   };
 

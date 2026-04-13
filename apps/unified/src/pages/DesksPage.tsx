@@ -11,7 +11,7 @@ const STATUS_COLOR: Record<string, 'green'|'amber'|'red'|'zinc'> = {
   ACTIVE: 'green', INACTIVE: 'zinc', MAINTENANCE: 'amber',
 };
 const STATUS_LABEL: Record<string, string> = {
-  ACTIVE: 'Aktywne', INACTIVE: 'Dezaktywowane', MAINTENANCE: 'Serwis',
+  ACTIVE: 'ACTIVE', INACTIVE: 'INACTIVE', MAINTENANCE: 'MAINTENANCE',
 };
 
 function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
@@ -50,14 +50,14 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
   };
 
   return (
-    <Modal title={`Kod QR — ${desk.name}`} onClose={onClose}>
+    <Modal title={t('desks.qr.title', { name: desk.name })} onClose={onClose}>
       <div className="flex flex-col items-center gap-4">
         <div className="p-3 bg-white rounded-xl border border-zinc-100 shadow-sm">
           <img src={imgSrc} width={200} height={200} alt="QR kod" className="rounded" />
         </div>
 
         <div className="w-full">
-          <p className="text-xs text-zinc-400 mb-1 font-medium">URL check-in</p>
+          <p className="text-xs text-zinc-400 mb-1 font-medium">{t('desks.qr.url_label')}</p>
           <div className="flex gap-2">
             <code className="flex-1 text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-600 break-all">
               {qrUrl}
@@ -67,16 +67,14 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
 
         <div className="flex gap-2 w-full">
           <Btn variant="secondary" className="flex-1" onClick={copy}>
-            {copied ? '✓ Skopiowano' : 'Kopiuj URL'}
+            {copied ? t('btn.copied') : t('btn.copy')}
           </Btn>
           <Btn className="flex-1" onClick={print}>
-            Drukuj QR
+            {t('btn.print')}
           </Btn>
         </div>
 
-        <p className="text-xs text-zinc-400 text-center">
-          Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in
-        </p>
+        <p className="text-xs text-zinc-400 text-center">{t('desks.qr.print_hint')}</p>
       </div>
     </Modal>
   );
@@ -183,14 +181,14 @@ export function DesksPage() {
     <div>
       <PageHeader
         title={t('pages.desks.title')}
-        sub={`${desks.filter(d => d.status === 'ACTIVE').length} aktywnych z ${desks.length}`}
+        sub={t('desks.sub_active', { active: desks.filter(d => d.status === 'ACTIVE').length, total: desks.length })}
         action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>{t('pages.desks.new')}</Btn>}
       />
 
       {/* Biuro switcher */}
       {locations.length > 1 && (
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-xs text-zinc-400">Biuro:</span>
+          <span className="text-xs text-zinc-400">{t('desks.location_label')}</span>
           {locations.map(l => (
             <button key={l.id} onClick={() => switchLoc(l.id)}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
@@ -215,7 +213,7 @@ export function DesksPage() {
             <TD>
               <div className="flex items-center gap-1">
                 <code className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
-                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title="Kopiuj ID">⎘</button>
+                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title={t('btn.copy_id')}>⎘</button>
               </div>
             </TD>
             <TD>{d.floor ?? '—'}</TD>
@@ -235,29 +233,29 @@ export function DesksPage() {
                   </button>
                 </div>
               ) : (
-                <span className="text-xs text-zinc-300">Brak beacona</span>
+                <span className="text-xs text-zinc-300">{t('desks.no_beacon')}</span>
               )}
             </TD>
-            <TD><Badge color={STATUS_COLOR[d.status] ?? 'zinc'}>{STATUS_LABEL[d.status] ?? d.status}</Badge></TD>
+            <TD><Badge color={STATUS_COLOR[d.status] ?? 'zinc'}>{t(`desks.status.${STATUS_LABEL[d.status] ?? d.status}`) ?? (STATUS_LABEL[d.status] ?? d.status)}</Badge></TD>
             <TD>
               <div className="flex gap-1 flex-wrap">
-                <Btn variant="ghost" size="sm" onClick={() => openEdit(d)}>Edytuj</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => openQr(d)} title="Generuj kod QR">QR</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openEdit(d)}>{t('btn.edit')}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openQr(d)} title={t('desks.qr.generate_title')}>QR</Btn>
 
                 {d.status === 'ACTIVE' && (
-                  <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'MAINTENANCE')}>Serwis</Btn>
+                  <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'MAINTENANCE')}>{t('desks.actions.maintenance')}</Btn>
                 )}
                 {d.status === 'MAINTENANCE' && (
-                  <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'ACTIVE')}>Aktywuj</Btn>
+                  <Btn variant="secondary" size="sm" onClick={() => handleStatus(d.id, 'ACTIVE')}>{t('desks.actions.activate')}</Btn>
                 )}
                 {d.status === 'INACTIVE' && (
                   <>
-                    <Btn variant="secondary" size="sm" onClick={() => handleActivate(d.id)}>Reaktywuj</Btn>
+                    <Btn variant="secondary" size="sm" onClick={() => handleActivate(d.id)}>{t('desks.actions.reactivate')}</Btn>
                     <Btn variant="danger" size="sm" onClick={async () => {
-                      if (!confirm(`Trwale usunąć biurko "${d.name}"?\n\nUwaga: ta operacja jest nieodwracalna. Wszystkie dane biurka zostaną usunięte.`)) return;
+                      if (!confirm(t('desks.confirm.delete_permanent', { name: d.name }))) return;
                       try { await appApi.desks.hardDelete(d.id); await load(); }
                       catch (e: any) { alert(e.message); }
-                    }}>Usuń trwale</Btn>
+                    }}>{t('desks.actions.delete_permanent')}</Btn>
                   </>
                 )}
                 {d.status !== 'INACTIVE' && (

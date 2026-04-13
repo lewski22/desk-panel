@@ -27,7 +27,7 @@ function RssiBar({ rssi }: { rssi: number | null }) {
 }
 
 export function DevicesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,9 +57,9 @@ export function DevicesPage() {
           <h2 className="text-lg font-semibold text-zinc-800">{t('pages.devices.title')}</h2>
           <p className="text-xs text-zinc-400 mt-0.5">{t('pages.devices.sub', { defaultValue: 'Stan połączenia każdego beacona' })}</p>
         </div>
-        <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-          ↻ Odśwież
-        </button>
+          <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
+            {t('btn.refresh')}
+          </button>
       </div>
 
       {/* Summary */}
@@ -85,7 +85,7 @@ export function DevicesPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                {['Status', 'Hardware ID', 'Biurko', 'Firmware', 'RSSI', 'Ostatni kontakt'].map(h => (
+                {['Status', 'Hardware ID', t('devices.table.desk'), 'Firmware', 'RSSI', t('devices.table.last_seen')].map(h => (
                   <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
@@ -98,7 +98,7 @@ export function DevicesPage() {
                   <td className="py-3 px-4">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${d.isOnline ? 'text-emerald-600' : 'text-zinc-400'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${d.isOnline ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
-                      {d.isOnline ? 'Online' : 'Offline'}
+                      {d.isOnline ? t('devices.status.online') : t('devices.status.offline')}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -108,7 +108,7 @@ export function DevicesPage() {
                     {d.desk ? (
                       <span>{d.desk.name} <span className="text-zinc-400 text-xs">({d.desk.code})</span></span>
                     ) : (
-                      <span className="text-zinc-300 text-xs">Nieprzypisany</span>
+                      <span className="text-zinc-300 text-xs">{t('devices.unassigned')}</span>
                     )}
                   </td>
                   <td className="py-3 px-4">
@@ -119,7 +119,7 @@ export function DevicesPage() {
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-500">
                     {d.lastSeen
-                      ? new Date(d.lastSeen).toLocaleString('pl-PL', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+                      ? new Date(d.lastSeen).toLocaleString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
                       : '—'}
                   </td>
                 </tr>

@@ -194,7 +194,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
     try {
       await api.checkins.checkout(desk.currentReservation.id);
       onRefresh();
-    } catch (e: any) { alert('Błąd check-out: ' + e.message); }
+    } catch (e: any) { alert(t('desks.checkout_error', { msg: e?.message })); }
   };
 
   const handleReservationSuccess = () => {

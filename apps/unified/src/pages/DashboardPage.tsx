@@ -67,10 +67,10 @@ export function DashboardPage() {
   const onlineCount = useMemo(() => desks.filter(d => d.isOnline).length, [desks]);
 
   const methodData = useMemo(() => (ext?.methods ?? []).map((m: any) => ({
-    name:  m.method === 'NFC' ? 'NFC' : m.method === 'QR' ? 'QR kod' : 'Ręczny',
+    name: t(`methods.${m.method}`),
     value: m._count,
     color: m.method === 'NFC' ? '#6366f1' : m.method === 'QR' ? '#38bdf8' : '#a78bfa',
-  })), [ext?.methods]);
+  })), [ext?.methods, t]);
 
   const hourlyFiltered = useMemo(() =>
     (ext?.hourly ?? []).filter((_: any, i: number) => i >= 6 && i <= 20),
@@ -251,7 +251,7 @@ export function DashboardPage() {
           <div className="flex flex-wrap gap-1.5 mb-3">
             {desks.map(d => (
               <div key={d.id}
-                title={`${d.name} · ${d.isOccupied ? 'Zajęte' : d.currentReservation ? 'Zarezerwowane' : 'Wolne'}`}
+                title={`${d.name} · ${d.isOccupied ? t('dashboard.legend.occupied') : d.currentReservation ? t('dashboard.legend.reserved') : t('dashboard.legend.free')}`}
                 className="w-7 h-7 rounded-md text-[10px] font-mono flex items-center justify-center cursor-default select-none"
                 style={{
                   background: !d.isOnline ? C_OFFLINE

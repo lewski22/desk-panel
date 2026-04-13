@@ -59,10 +59,10 @@ export function ChangePasswordPage() {
     if (/[A-Z]/.test(pwd)) score++;
     if (/[0-9]/.test(pwd)) score++;
     if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    if (score <= 1) return { label: 'Słabe',    color: 'bg-red-500',    width: 'w-1/4' };
-    if (score <= 2) return { label: 'Średnie',  color: 'bg-amber-400',  width: 'w-2/4' };
-    if (score <= 3) return { label: 'Dobre',    color: 'bg-blue-400',   width: 'w-3/4' };
-    return               { label: 'Silne',    color: 'bg-emerald-500', width: 'w-full' };
+    if (score <= 1) return { label: t('changePassword.strength.weak'),    color: 'bg-red-500',    width: 'w-1/4' };
+    if (score <= 2) return { label: t('changePassword.strength.medium'),  color: 'bg-amber-400',  width: 'w-2/4' };
+    if (score <= 3) return { label: t('changePassword.strength.good'),    color: 'bg-blue-400',   width: 'w-3/4' };
+    return               { label: t('changePassword.strength.strong'),    color: 'bg-emerald-500', width: 'w-full' };
   };
 
   const str = strength(form.newPassword);

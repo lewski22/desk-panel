@@ -48,7 +48,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
   };
 
   return (
-    <Modal title={`Microsoft 365 SSO — ${location.name}`} onClose={onClose}>
+    <Modal title={`${t('orgs.azure.title', 'Microsoft 365 SSO')} — ${location.name}`} onClose={onClose}>
       <div className="space-y-4">
         {/* Instrukcja */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
@@ -90,9 +90,9 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 
         <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-zinc-50">
           <div>
-            <p className="text-sm font-medium text-zinc-700">Logowanie przez Microsoft</p>
+            <p className="text-sm font-medium text-zinc-700">{t('orgs.azure.login_label', 'Logowanie przez Microsoft')}</p>
             <p className="text-xs text-zinc-400 mt-0.5">
-              {enabled ? 'Przycisk "Zaloguj przez Microsoft" widoczny na stronie logowania' : 'Wyłączone — tylko email i hasło'}
+              {enabled ? t('orgs.azure.enabled_desc', 'Sign-in button visible on login page') : t('orgs.azure.disabled_desc', 'Disabled — only email and password')}
             </p>
           </div>
           <button
@@ -105,10 +105,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
           <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
-          <p className="text-xs text-amber-700">
-            Logowanie hasłem pozostaje aktywne — użytkownicy mogą używać obu metod.
-            Wyłączenie hasła planowane w przyszłej wersji.
-          </p>
+          <p className="text-xs text-amber-700">{t('orgs.azure.password_warning', 'Password sign-in remains active — users can use both methods. Password removal planned for a future release.')}</p>
         </div>
 
         <div className="flex gap-2 justify-end">
@@ -139,7 +136,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
   };
 
   return (
-    <Modal title={`Dodaj gateway — ${location.name}`} onClose={onClose}>
+    <Modal title={`${t('provisioning.modal.add_gateway')} — ${location.name}`} onClose={onClose}>
       {loading && (
         <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
@@ -152,18 +149,18 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
         <div className="space-y-5">
           {/* Instrukcja */}
           <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-            <p className="text-sm font-semibold text-zinc-700 mb-2">Jak zainstalować gateway:</p>
+            <p className="text-sm font-semibold text-zinc-700 mb-2">{t('provisioning.install.title')}</p>
             <ol className="text-sm text-zinc-600 space-y-1.5 list-decimal list-inside">
-              <li>Włącz Raspberry Pi i połącz z internetem</li>
-              <li>Otwórz terminal (SSH lub lokalnie)</li>
-              <li>Wklej poniższą komendę i naciśnij Enter</li>
-              <li>Skrypt zapyta tylko o nazwę WiFi (jeśli na kablu — pomija)</li>
+              <li>{t('provisioning.install.step1')}</li>
+              <li>{t('provisioning.install.step2')}</li>
+              <li>{t('provisioning.install.step3')}</li>
+              <li>{t('provisioning.install.step4', 'The script will ask for WiFi name (skipped for wired connections)')}</li>
             </ol>
           </div>
 
           {/* Komenda instalacyjna */}
           <div>
-            <p className="text-xs text-zinc-400 mb-1.5 font-medium">Komenda instalacyjna (ważna 24h, jednorazowa)</p>
+            <p className="text-xs text-zinc-400 mb-1.5 font-medium">{t('provisioning.install.cmd_label')}</p>
             <div className="bg-zinc-950 rounded-xl p-4 flex items-start gap-3">
               <code className="text-emerald-400 text-xs font-mono flex-1 break-all leading-relaxed">
                 {token.installCmd}
@@ -171,6 +168,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
               <button
                 onClick={() => copy(token.installCmd)}
                 className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors font-medium"
+                title={t('provisioning.copy_cmd')}
               >
                 {copied ? '✓' : '⎘'}
               </button>
@@ -180,11 +178,11 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
           {/* Informacje */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="bg-zinc-50 rounded-lg p-3">
-              <p className="text-zinc-400 mb-0.5">Biuro</p>
+              <p className="text-zinc-400 mb-0.5">{t('organizations.label_office', 'Office')}</p>
               <p className="font-medium text-zinc-700">{token.location?.name}</p>
             </div>
             <div className="bg-zinc-50 rounded-lg p-3">
-              <p className="text-zinc-400 mb-0.5">Ważny do</p>
+              <p className="text-zinc-400 mb-0.5">{t('organizations.valid_until', 'Valid until')}</p>
               <p className="font-medium text-zinc-700">
                 {new Date(token.expiresAt).toLocaleString('pl-PL', {
                   day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -195,14 +193,11 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
             <span className="text-amber-500 shrink-0">⚠</span>
-            <p className="text-xs text-amber-700">
-              Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie,
-              wróć tutaj i wygeneruj nowy.
-            </p>
+            <p className="text-xs text-amber-700">{t('provisioning.install.token_warning', 'Token is one-time — it expires after use. If installation fails, come back and generate a new one.')}</p>
           </div>
 
           <div className="flex justify-end">
-            <Btn onClick={onClose}>Zamknij</Btn>
+            <Btn onClick={onClose}>{t('btn.cancel')}</Btn>
           </div>
         </div>
       )}
@@ -289,8 +284,8 @@ export function OrganizationsPage() {
     <div>
       <PageHeader
         title={t('pages.organizations.title')}
-        sub="Fizyczne biura — godziny pracy, adresy, lokalizacje"
-        action={<Btn onClick={openCreate}>+ Nowe biuro</Btn>}
+        sub={t('organizations.subtitle')}
+        action={<Btn onClick={openCreate}>{t('organizations.new_location')}</Btn>}
       />
 
       {loading ? (
@@ -308,7 +303,7 @@ export function OrganizationsPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-semibold text-zinc-800 truncate">{loc.name}</p>
                   {!loc.isActive && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">Nieaktywne</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">{t('organizations.inactive')}</span>
                   )}
                   {isSuperAdmin && loc.organization && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 font-medium">
@@ -316,17 +311,17 @@ export function OrganizationsPage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  {[loc.address, loc.city].filter(Boolean).join(', ') || 'Brak adresu'}
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                  {[loc.address, loc.city].filter(Boolean).join(', ') || t('organizations.no_address')}
                 </p>
                 {/* ID do prowizjonowania */}
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">ID:</span>
+                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">{t('organizations.id_label', 'ID:')}</span>
                   <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{loc.id}</code>
                   <button
                     onClick={() => { navigator.clipboard.writeText(loc.id); }}
                     className="text-[10px] text-zinc-400 hover:text-[#B53578] transition-colors"
-                    title="Kopiuj ID"
+                    title={t('provisioning.copy_id')}
                   >⎘</button>
                 </div>
               </div>
@@ -344,16 +339,16 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400">
                   {new Date(loc.createdAt).toLocaleDateString('pl-PL')}
                 </p>
-                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>M365</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>+ Gateway</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>Edytuj</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>{t('organizations.m365_button','M365')}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>{t('provisioning.new_gateway')}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>{t('organizations.edit')}</Btn>
               </div>
             </Card>
           ))}
-          {locations.length === 0 && (
+                  {locations.length === 0 && (
             <div className="text-center py-16 text-zinc-400">
               <p className="text-3xl mb-2">🏢</p>
-              <p className="text-sm">Brak biur — dodaj pierwsze biuro</p>
+              <p className="text-sm">{t('organizations.no_locations')}</p>
             </div>
           )}
         </div>
@@ -362,7 +357,7 @@ export function OrganizationsPage() {
       {/* Create / Edit modal */}
       <Modal
         open={modal !== null}
-        title={modal === 'create' ? 'Nowe biuro' : `Edytuj: ${target?.name}`}
+        title={modal === 'create' ? t('organizations.new_title','New office') : t('organizations.edit_title', { name: target?.name })}
         onClose={() => setModal(null)}
       >
         {err && <p className="mb-3 text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
@@ -381,18 +376,18 @@ export function OrganizationsPage() {
               </select>
             </div>
           )}
-          <Input label="Nazwa biura" value={form.name}
+          <Input label={t('organizations.form.name', 'Office name')} value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="Warszawa HQ" />
-          <Input label="Adres" value={form.address}
+          <Input label={t('organizations.form.address', 'Address')} value={form.address}
             onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
             placeholder="ul. Marszałkowska 1" />
-          <Input label="Miasto" value={form.city}
+          <Input label={t('organizations.form.city', 'City')} value={form.city}
             onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
             placeholder="Warszawa" />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Otwarcie</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.openTime')}</label>
               <input type="time" value={form.openTime}
                 onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />

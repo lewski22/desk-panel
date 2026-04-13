@@ -1,6 +1,34 @@
 {
   "table": { "empty": "Brak danych" },
   "btn": { "save": "Zapisz", "cancel": "Anuluj", "refresh": "↺ Odśwież", "retry": "Spróbuj ponownie" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "desks": "Biurka",
+    "reservations": "Rezerwacje",
+    "users": "Użytkownicy",
+    "provisioning": "Provisioning",
+    "reports": "Raporty",
+    "organizations": "Biura",
+    "owner": "Panel Operatora",
+    "change_password": "Zmień hasło",
+    "map": "Mapa biurek",
+    "my_reservations": "Moje rezerwacje",
+    "devices": "Urządzenia"
+  },
+  "layout": {
+    "staff": "Pracownik",
+    "change_password": "Zmień hasło",
+    "logout": "Wyloguj",
+    "impersonation_banner": "Sesja tymczasowa (30 min) — każda akcja jest logowana",
+    "impersonation_end": "Zakończ"
+  },
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "OFFICE_ADMIN": "Office Admin",
+    "STAFF": "Staff",
+    "OWNER": "Owner",
+    "END_USER": "Użytkownik"
+  },
   "login": {
     "title": "Zaloguj się",
     "email": "Email",
@@ -120,6 +148,30 @@
   }
 
   ,
+  "devices": {
+    "table": { "desk": "Biurko", "last_seen": "Ostatni kontakt" },
+    "status": { "online": "Online", "offline": "Offline" },
+    "unassigned": "Nieprzypisany",
+    "summary": { "all": "Wszystkich", "online": "Online", "offline": "Offline" }
+  }
+
+  ,
+  "desks": {
+    "qr": { "title": "Kod QR — {{name}}", "url_label": "URL check-in", "print_hint": "Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in", "generate_title": "Generuj kod QR" },
+    "location_label": "Biuro:",
+    "sub_active": "{{active}} aktywnych z {{total}}",
+    "no_beacon": "Brak beacona",
+    "actions": {
+      "maintenance": "Serwis",
+      "activate": "Aktywuj",
+      "reactivate": "Reaktywuj",
+      "delete_permanent": "Usuń trwale"
+    },
+    "confirm": { "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna." },
+    "checkout_error": "Błąd check-out: {{msg}}"
+  }
+
+  ,
   "provisioning": {
     "gateways_title": "Gateway'e",
     "new_gateway": "+ Nowy gateway",
@@ -138,7 +190,7 @@
     "last_seen": { "now": "przed chwilą", "minutes": "{{minutes}} min temu" },
     "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną",
     "modal": { "add_gateway": "Dodaj gateway" },
-    "install": { "title": "Jak zainstalować gateway:", "step1": "Włącz Raspberry Pi (lub inne urządzenie z Linuksem)", "step2": "Otwórz terminal (SSH lub lokalnie)", "step3": "Wklej poniższą komendę i naciśnij Enter", "cmd_label": "Komenda instalacyjna (ważna 24h, jednorazowa)" },
+    "install": { "title": "Jak zainstalować gateway:", "step1": "Włącz Raspberry Pi (lub inne urządzenie z Linuksem)", "step2": "Otwórz terminal (SSH lub lokalnie)", "step3": "Wklej poniższą komendę i naciśnij Enter", "step4": "Skrypt zapyta tylko o nazwę WiFi (jeśli na kablu — pomija)", "cmd_label": "Komenda instalacyjna (ważna 24h, jednorazowa)" },
     "beacons_title": "Beacony (urządzenia)",
     "all_locations": "Wszystkie biura",
     "provision_button": "+ Provisioning"
@@ -158,6 +210,24 @@
       "provision_title": "Provisioning urządzenia"
     },
     "copy_cmd": "Kopiuj komendę"
+  ,
+    "install_failed": "Błąd wygenerowania tokenu instalacyjnego.",
+    "install": {
+      "token_warning": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
+    },
+    "confirm_delete_gateway": "Usunąć gateway \"{{name}}\"?",
+    "delete_failed": "Nie udało się usunąć gateway'a.",
+    "confirm_update_gateway": "Zaktualizować gateway \"{{name}}\" do najnowszej wersji?",
+    "update_started": "Aktualizacja uruchomiona: {{old}} → {{new}}. Gateway się restartuje.",
+    "update_failed": "Aktualizacja gateway nie powiodła się: {{msg}}",
+    "confirm_rotate": "Rotacja klucza gateway: nowy klucz zostanie wygenerowany i wysłany do gateway. Stary klucz pozostaje ważny przez 15 minut.",
+    "rotate_failed": "Rotacja klucza nie powiodła się.",
+    "confirm_ota": "Zaktualizować beacon \"{{hw}}\"?\nAktualna: {{current}}\nNowa: {{version}}\nBeacon uruchomi się ponownie (~30s).",
+    "ota_started": "OTA uruchomione → {{version}}. Beacon restartuje się.",
+    "ota_failed": "OTA nie powiodło się.",
+    "provision_failed": "Provisioning nie powiódł się.",
+    "confirm_delete_beacon": "Usunąć beacon \"{{hw}}\"?",
+    "assign_failed": "Nie udało się przypisać urządzenia do biurka."
   }
 
   ,
@@ -213,6 +283,22 @@
     "status": { "active": "aktywna", "inactive": "nieaktywna" },
     "actions": { "impersonate": "🔑 Wejdź", "edit": "Edytuj", "deactivate": "Deaktywuj", "activate": "Aktywuj" }
   }
+  ,
+  "owner": {
+    "api_error": "Błąd połączenia z API.",
+    "impersonate_failed": "Nie udało się wejść jako firma.",
+    "confirm_deactivate": "Dezaktywować firmę \"{{name}}\"?",
+    "deactivate_failed": "Nie udało się dezaktywować firmy.",
+    "activate_failed": "Nie udało się aktywować firmy.",
+    "stats": {
+      "active": "Firmy aktywne",
+      "gateways_online": "Gateway'e online",
+      "beacons_online": "Beacony online",
+      "checkins_today": "Check-iny dziś",
+      "total": "{{total}} łącznie",
+      "week_count": "{{count}} w tygodniu"
+    }
+  }
 
   ,
   "orgs": {
@@ -221,6 +307,11 @@
       "step1": "1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:",
       "step2": "2. Kliknij \"Akceptuj\" → Skopiuj Tenant ID z URL lub Azure Portal",
       "step3": "3. Wklej Tenant ID poniżej i włącz SSO",
+      "title": "Microsoft 365 SSO",
+      "login_label": "Logowanie przez Microsoft",
+      "enabled_desc": "Przycisk 'Zaloguj przez Microsoft' widoczny na stronie logowania",
+      "disabled_desc": "Wyłączone — tylko email i hasło",
+      "password_warning": "Logowanie hasłem pozostaje aktywne — użytkownicy mogą używać obu metod. Wyłączenie hasła planowane w przyszłej wersji.",
       "tenant_label": "Azure Tenant ID",
       "test": "Testuj",
       "test_ok": "✓ Tenant ID poprawny — Entra ID odpowiada",
@@ -233,11 +324,30 @@
   "organizations": {
     "form": {
       "closeTime": "Zamknięcie",
+      "openTime": "Otwarcie",
+      "name": "Nazwa biura",
+      "address": "Adres",
+      "city": "Miasto",
       "maxDaysAhead": "Max dni do przodu",
       "maxHoursPerDay": "Max godzin / rezerwacja"
     },
     "hours_hint": "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.",
-    "create_action": "Utwórz"
+    "create_action": "Utwórz",
+    "subtitle": "Fizyczne biura — godziny pracy, adresy, lokalizacje",
+    "new_location": "+ Nowe biuro",
+    "no_locations": "Brak biur — dodaj pierwsze biuro",
+    "inactive": "Nieaktywne",
+    "label_office": "Biuro",
+    "valid_until": "Ważny do"
+    ,"no_address": "Brak adresu"
+    ,"id_label": "ID:"
+,
+  }
+  ,"organizations_extra": {
+    "m365_button": "M365",
+    "edit": "Edytuj",
+    "new_title": "Nowe biuro",
+    "edit_title": "Edytuj: {{name}}"
   }
 }
 

@@ -57,27 +57,26 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
     try {
       const r = await appApi.gateways.createSetupToken(activeLocId);
       setTokenResult(r);
-    } catch (e: any) { alert(e.message); setModal(null); }
+    } catch (e: any) { alert(e.message || t('provisioning.install_failed')); setModal(null); }
     setBusy(false);
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Usunąć gateway "${name}"?`)) return;
+    if (!confirm(t('provisioning.confirm_delete_gateway', { name }))) return;
     try { await appApi.gateways.remove(id); await load(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { alert(e.message || t('provisioning.delete_failed')); }
   };
 
   const handleUpdate = async (id: string, name: string) => {
-    if (!confirm(`Zaktualizować gateway "${name}" do najnowszej wersji?
+    if (!confirm(t('provisioning.confirm_update_gateway', { name }))) return;
 
 Gateway uruchomi się ponownie (~15s).`)) return;
     try {
       const r = await appApi.gateways.triggerUpdate(id);
-      alert(`Aktualizacja uruchomiona: ${r.oldVersion} → ${r.newVersion}
-Gateway restartuje się.`);
+      alert(t('provisioning.update_started', { old: r.oldVersion, new: r.newVersion }));
       setTimeout(load, 18_000);  // odśwież po restarcie
     } catch (e: any) {
-      alert(`Błąd aktualizacji: ${e.message ?? e}`);
+      alert(e.message ?? t('provisioning.update_failed', { msg: e.message ?? e }));
     }
   };
 
@@ -341,12 +340,12 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
 
   const handleOta = async (deviceId: string, hwId: string, currentFw: string) => {
     if (!latestFw) return;
-    const msg = `Zaktualizować beacon "${hwId}"?\n\nAktualna: ${currentFw ?? '—'}\nNowa: ${latestFw.version}\n\nBeacon uruchomi się ponownie (~30s).`;
+    const msg = t('provisioning.confirm_ota', { hw: hwId, current: currentFw ?? '—', version: latestFw.version });
     if (!confirm(msg)) return;
     try {
       await appApi.devices.triggerOta(deviceId);
-      alert(`OTA uruchomione → ${latestFw.version}\nBeacon restartuje się i flashuje nowy firmware.`);
-    } catch (e: any) { alert((e as any).message ?? 'Błąd OTA'); }
+      alert(t('provisioning.ota_started', { version: latestFw.version }));
+    } catch (e: any) { alert((e as any).message ?? t('provisioning.ota_failed')); }
   };
   useEffect(() => { loadDesks(form.locId); }, [form.locId]);
 
@@ -356,16 +355,16 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       const r = await appApi.devices.provision({ hardwareId: form.hardwareId, deskId: form.deskId || undefined, gatewayId: form.gatewayId });
       setResult(r);
       await load();
-    } catch(e:any) { alert(e.message); }
+    } catch(e:any) { alert(e.message ?? t('provisioning.provision_failed')); }
     setBusy(false);
   };
 
   const sendCmd = (deviceId: string, cmd: string) => appApi.devices.command(deviceId, cmd);
 
   const handleDelete = async (id: string, hwId: string) => {
-    if (!confirm(`Usunąć beacon "${hwId}"?`)) return;
+    if (!confirm(t('provisioning.confirm_delete_beacon', { hw: hwId }))) return;
     try { await appApi.devices.remove(id); await load(); }
-    catch(e:any) { alert(e.message); }
+    catch(e:any) { alert(e.message ?? t('provisioning.delete_failed')); }
   };
 
   // Find location name for a device via its gateway
@@ -389,7 +388,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       await appApi.devices.assign(assignTarget.id, assignDeskId);
       await load();
       setAssignTarget(null);
-    } catch (e: any) { alert(e.message); }
+    } catch (e: any) { alert(e.message ?? t('provisioning.assign_failed')); }
     setAssignBusy(false);
   };
 

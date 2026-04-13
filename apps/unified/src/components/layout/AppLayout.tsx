@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
 
 const SESSION_TIMEOUT_MS   = 5 * 60 * 1000;
@@ -13,18 +14,18 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { to: '/dashboard',        icon: '⬡', label: 'Dashboard',           roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'] },
-  { to: '/desks',            icon: '🪑', label: 'Biurka',              roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
-  { to: '/reservations',     icon: '📋', label: 'Wszystkie rezerwacje', roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'] },
-  { to: '/users',            icon: '👥', label: 'Użytkownicy',         roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
-  { to: '/provisioning',     icon: '📡', label: 'Provisioning',        roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
-  { to: '/reports',          icon: '📊', label: 'Raporty',             roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
-  { to: '/organizations',    icon: '🏢', label: 'Biura',               roles: ['SUPER_ADMIN'] },
-  { to: '/owner',            icon: '⚙️', label: 'Panel Operatora',      roles: ['OWNER'] },
-  { to: '/change-password',  icon: '🔒', label: 'Zmień hasło',           roles: ['OWNER'] },
-  { to: '/map',              icon: '⬡', label: 'Mapa biurek',         roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] },
-  { to: '/my-reservations',  icon: '📅', label: 'Moje rezerwacje',     roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] },
-  { to: '/devices',          icon: '🔌', label: 'Urządzenia',          roles: ['STAFF'] },
+  { to: '/dashboard',        icon: '⬡', label: 'nav.dashboard',           roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'] },
+  { to: '/desks',            icon: '🪑', label: 'nav.desks',               roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
+  { to: '/reservations',     icon: '📋', label: 'nav.reservations',        roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'] },
+  { to: '/users',            icon: '👥', label: 'nav.users',               roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
+  { to: '/provisioning',     icon: '📡', label: 'nav.provisioning',        roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
+  { to: '/reports',          icon: '📊', label: 'nav.reports',             roles: ['SUPER_ADMIN', 'OFFICE_ADMIN'] },
+  { to: '/organizations',    icon: '🏢', label: 'nav.organizations',       roles: ['SUPER_ADMIN'] },
+  { to: '/owner',            icon: '⚙️', label: 'nav.owner',              roles: ['OWNER'] },
+  { to: '/change-password',  icon: '🔒', label: 'nav.change_password',    roles: ['OWNER'] },
+  { to: '/map',              icon: '⬡', label: 'nav.map',                roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] },
+  { to: '/my-reservations',  icon: '📅', label: 'nav.my_reservations',     roles: ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] },
+  { to: '/devices',          icon: '🔌', label: 'nav.devices',            roles: ['STAFF'] },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
@@ -38,6 +39,7 @@ const STAFF_SECTION = ['/map', '/my-reservations', '/devices'];
 function NavItem({ to, icon, label, collapsed, onClick }: {
   to: string; icon: string; label: string; collapsed?: boolean; onClick?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <NavLink key={to} to={to} onClick={onClick}
       className={({ isActive }) =>
@@ -50,12 +52,13 @@ function NavItem({ to, icon, label, collapsed, onClick }: {
       title={collapsed ? label : undefined}
     >
       <span className="shrink-0 text-base">{icon}</span>
-      {!collapsed && <span>{label}</span>}
+      {!collapsed && <span>{t(label)}</span>}
     </NavLink>
   );
 }
 
 export function AppLayout({ user, onLogout, children }: Props) {
+  const { t } = useTranslation();
   // Desktop: collapsed sidebar | Mobile: open/closed overlay
   const [collapsed,    setCollapsed]    = useState(false);
   const [mobileOpen,   setMobileOpen]   = useState(false);
@@ -123,10 +126,10 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className={`flex items-center gap-2.5 border-b border-zinc-800
         ${(collapsed && !mobile) ? 'justify-center py-5' : 'px-4 py-5'}`}>
         <span className="text-[#B53578] font-black text-xl tracking-tight select-none shrink-0">R</span>
-        {(!collapsed || mobile) && (
+            {(!collapsed || mobile) && (
           <div>
             <p className="text-sm font-bold leading-none text-white">RESERTI</p>
-            <p className="text-[10px] text-zinc-500 leading-none mt-0.5">{ROLE_LABEL[user.role] ?? user.role}</p>
+            <p className="text-[10px] text-zinc-500 leading-none mt-0.5">{t(`roles.${user.role}`, { defaultValue: ROLE_LABEL[user.role] ?? user.role })}</p>
           </div>
         )}
         {/* Close button — mobile only */}
@@ -152,7 +155,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
           <div className={`my-2 ${(collapsed && !mobile) ? 'mx-2' : 'mx-2'}`}>
             {(!collapsed || mobile) && (
               <p className="text-[10px] uppercase tracking-widest text-zinc-700 px-0.5 py-1 font-semibold">
-                Pracownik
+                {t('layout.staff')}
               </p>
             )}
             {collapsed && !mobile && <div className="border-t border-zinc-800" />}
@@ -181,15 +184,15 @@ export function AppLayout({ user, onLogout, children }: Props) {
             <Link to="/change-password"
               onClick={mobile ? () => setMobileOpen(false) : undefined}
               className="text-[10px] text-zinc-600 hover:text-zinc-300 transition-colors mt-0.5 block">
-              Zmień hasło
+              {t('layout.change_password')}
             </Link>
           </div>
         )}
         <div className={`flex gap-1 ${(collapsed && !mobile) ? 'flex-col items-center' : ''}`}>
-          <button onClick={doLogout} title="Wyloguj"
+          <button onClick={doLogout} title={t('layout.logout')}
             className={`text-xs text-zinc-500 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-zinc-800
               ${(collapsed && !mobile) ? '' : 'flex-1 text-left'}`}>
-            {(collapsed && !mobile) ? '↩' : '↩ Wyloguj'}
+            {(collapsed && !mobile) ? '↩' : `↩ ${t('layout.logout')}`}
           </button>
           {/* Collapse toggle — desktop only */}
           {!mobile && (
@@ -207,12 +210,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
   return (
     <div className="flex flex-col h-screen bg-zinc-50 overflow-hidden" style={{ fontFamily: "'DM Sans',sans-serif" }}>
       {/* Baner impersonacji */}
-      {isImpersonated && (
+            {isImpersonated && (
         <div className="bg-amber-500 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
-          <span className="truncate">👁 Sesja tymczasowa (30 min) — każda akcja jest logowana</span>
+          <span className="truncate">👁 {t('layout.impersonation_banner')}</span>
           <button onClick={() => { localStorage.removeItem('app_impersonated'); doLogout(); }}
             className="ml-2 shrink-0 underline hover:no-underline">
-            Zakończ
+            {t('layout.impersonation_end')}
           </button>
         </div>
       )}
