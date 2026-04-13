@@ -46,7 +46,7 @@
       "will_expire_in_minute": "Your session will expire in one minute",
       "click_anywhere": "Click anywhere to extend",
       "extend_button": "Extend session"
-    }
+    },
     "submit": "Sign in",
     "submitting": "Signing in…",
     "or": "or",
@@ -279,7 +279,7 @@
     "serial_replace_hint": "Replace NAZWA_WIFI, HASLO_WIFI and IP_RASPBERRY with real values",
     "mqtt_password_warning": "⚠ MQTT password will not be shown again",
     "subtitle": "Registration and management of gateways and beacons",
-    "active_office_label": "Active office:"
+    "active_office_label": "Active office:",
     "install_failed": "Failed to generate install token.",
     "install": {
       "token_warning": "Token is one-time — it expires after use. If installation fails, come back and generate a new one."
@@ -350,7 +350,7 @@
       "actions": "Actions"
     },
     "status": { "active": "active", "inactive": "inactive" },
-    "actions": { "impersonate": "🔑 Enter", "edit": "Edit", "deactivate": "Deactivate", "activate": "Activate" }
+    "actions": { "impersonate": "🔑 Enter", "edit": "Edit", "deactivate": "Deactivate", "activate": "Activate" },
     "api_error": "API connection error.",
     "impersonate_failed": "Failed to impersonate organization.",
     "confirm_deactivate": "Deactivate organization \"{{name}}\"?",
@@ -419,11 +419,7 @@
     "new_title": "New office",
     "edit_title": "Edit: {{name}}",
     "m365_label": "M365"
-  }
-  }
-}
-
-,
+  },
   "desks": {
     "stats": {
       "free": "Free",
@@ -590,11 +586,9 @@
       "retention_label": "Retention period (minimum 30 days)",
       "will_be_anonymized_on": "Account will be anonymized on: {{date}}",
           "confirm_hard_delete": "Permanently delete account \"{{name}}\"? Activity will be preserved."
-    }
-  }
-      "days": "{{count}} days"
-
-,
+    },
+    "days": "{{count}} days"
+  },
   "reservations": {
     "confirm_cancel": "Cancel reservation {{code}}?",
     "today_title": "Reservations for today",
@@ -634,7 +628,4 @@
       "manual": "✋ Manual"
     }
   }
-
-
-
-
+}

@@ -267,6 +267,7 @@ export function UsersPage() {
             <Btn variant="danger" loading={busy} onClick={handleDeactivate} className="flex-1">{t('users.actions.deactivate')}</Btn>
             <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
           </div>
+        </Modal>
       )}
     </div>
   );

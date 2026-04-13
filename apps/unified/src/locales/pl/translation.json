@@ -274,7 +274,7 @@
     "serial_replace_hint": "Podmień NAZWA_WIFI, HASLO_WIFI i IP_RASPBERRY na rzeczywiste wartości",
     "mqtt_password_warning": "⚠ Hasło MQTT nie będzie wyświetlone ponownie",
     "subtitle": "Rejestracja i zarządzanie gateway'ami i beaconami",
-    "active_office_label": "Aktywne biuro:"
+    "active_office_label": "Aktywne biuro:",
     "install_failed": "Błąd wygenerowania tokenu instalacyjnego.",
     "install": {
       "token_warning": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
@@ -405,17 +405,13 @@
     "valid_until": "Ważny do"
     ,"no_address": "Brak adresu"
     ,"id_label": "ID:"
-,
-  }
-  ,"organizations_extra": {
+  },
+  "organizations_extra": {
     "m365_button": "M365",
     "edit": "Edytuj",
     "new_title": "Nowe biuro",
     "edit_title": "Edytuj: {{name}}"
-  }
-}
-
-,
+  },
   "reservations": {
     "confirm_cancel": "Anulować rezerwację {{code}}?",
     "today_title": "Rezerwacje na dziś",
@@ -622,10 +618,8 @@
           "retention_label": "Okres retencji (minimum 30 dni)",
           "will_be_anonymized_on": "Konto zostanie trwale zanonimizowane: {{date}}",
           "confirm_hard_delete": "Trwale usunąć dane konta \"{{name}}\"? Aktywności zostaną zachowane."
-        }
+        },
+        "days": "{{count}} dni"
       }
-
-      ,
-      "days": "{{count}} dni"
   }
-
+}

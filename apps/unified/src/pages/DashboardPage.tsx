@@ -265,20 +265,17 @@ export function DashboardPage() {
             ))}
           </div>
           <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {
-              const legend = [
-                { color: C_FREE,     key: 'free' },
-                { color: C_RESERVED, key: 'reserved' },
-                { color: C_OCCUPIED, key: 'occupied' },
-                { color: C_OFFLINE,  key: 'offline' },
-              ];
-              legend.map(({ color, key }) => (
-                <span key={key} className="flex items-center gap-1 text-xs text-zinc-400">
-                  <span className="w-2.5 h-2.5 rounded" style={{ background: color }} />
-                  {t(`dashboard.legend.${key}`)}
-                </span>
-              ))
-            }
+            {[
+              { color: C_FREE,     key: 'free' },
+              { color: C_RESERVED, key: 'reserved' },
+              { color: C_OCCUPIED, key: 'occupied' },
+              { color: C_OFFLINE,  key: 'offline' },
+            ].map(({ color, key }) => (
+              <span key={key} className="flex items-center gap-1 text-xs text-zinc-400">
+                <span className="w-2.5 h-2.5 rounded" style={{ background: color }} />
+                {t(`dashboard.legend.${key}`)}
+              </span>
+            ))}
           </div>
         </Card>
       </div>

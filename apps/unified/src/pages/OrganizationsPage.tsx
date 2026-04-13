@@ -292,10 +292,10 @@ export function OrganizationsPage() {
         <div className="flex justify-center py-16">
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
         </div>
-      <PageHeader
-        title={t('pages.organizations.title')}
-        subtitle={t('organizations.subtitle')}
-        action={isSuperAdmin ? <Btn onClick={openCreate}>{t('organizations.new_location')}</Btn> : null}
+      ) : (
+        <div className="flex flex-col gap-3">
+          {locations.map(loc => (
+            <Card key={loc.id} className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-lg shrink-0">
                 {loc.name[0].toUpperCase()}
               </div>

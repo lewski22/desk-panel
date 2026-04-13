@@ -477,8 +477,6 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                         className="text-xs px-2 py-1 rounded-lg bg-violet-50 hover:bg-violet-100 text-violet-600 transition-colors font-medium"
                         title={t('provisioning.update_fw_title', { from: d.firmwareVersion ?? '—', to: latestFw.version })}>
                         {t('provisioning.update_fw')}
-                      
-                      </button>
                       </button>
                     )}
                     {d.desk && (
