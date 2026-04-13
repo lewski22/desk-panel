@@ -171,7 +171,13 @@
 
   ,
   "desks": {
-    "qr": { "title": "QR — {{name}}", "url_label": "Check-in URL", "print_hint": "Print and place on the desk — users scan with their phone to check-in", "generate_title": "Generate QR" },
+    "qr": {
+      "title": "QR — {{name}}",
+      "url_label": "Check-in URL",
+      "print_hint": "Print and place on the desk — users scan with their phone to check-in",
+      "generate_title": "Generate QR",
+      "alt": "QR code"
+    },
     "location_label": "Office:",
     "sub_active": "{{active}} active of {{total}}",
     "no_beacon": "No beacon",
@@ -182,9 +188,15 @@
       "delete_permanent": "Delete permanently",
       "unpair": "Unpair",
       "unpair_title": "Unpair beacon from desk",
-      "deactivate": "Deactivate"
+      "deactivate": "Deactivate",
+      "checkin": "Check-in",
+      "checkout": "Check-out"
     },
-    "confirm": { "delete_permanent": "Permanently delete desk \"{{name}}\"? This operation is irreversible." },
+    "confirm": {
+      "delete_permanent": "Permanently delete desk \"{{name}}\"? This operation is irreversible.",
+      "unpair": "Unpair beacon \"{{hw}}\" from desk \"{{name}}\"?",
+      "deactivate": "Deactivate desk \"{{name}}\"?"
+    },
     "col": {
       "location": "Office",
       "code": "Code",
@@ -196,17 +208,12 @@
       "status": "Status",
       "actions": ""
     },
-    "qr": { "alt": "QR code" },
     "actions_extra": {
       "unpair": "Unpair",
       "unpair_title": "Unpair beacon from desk",
       "deactivate": "Deactivate"
     },
     "deactivate_hint": "Deactivates the desk — it can be permanently deleted later.",
-    "confirm": {
-      "unpair": "Unpair beacon \"{{hw}}\" from desk \"{{name}}\"?",
-      "deactivate": "Deactivate desk \"{{name}}\"?"
-    },
     "modals": { "create_title": "New desk", "edit_title": "Edit: {{name}}" },
     "form": {
       "label": {
@@ -218,7 +225,39 @@
       },
       "select_placeholder": "— choose office —"
     },
-    "checkout_error": "Check-out error: {{msg}}"
+    "checkout_error": "Check-out error: {{msg}}",
+    "stats": {
+      "free": "Free",
+      "reserved": "Reserved",
+      "occupied": "Occupied",
+      "offline": "Offline"
+    },
+    "reserve": {
+      "title": "Reserve desk",
+      "staff_label": "Employee",
+      "staff_helper": "(empty = reserve for yourself)",
+      "for_self": "— reserve for yourself —",
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "open_hours": "Open {{open}}–{{close}} · max {{maxHours}}h · up to {{maxDays}} days ahead",
+      "any_time": "You can reserve a desk for any time of the day.",
+      "submitting": "Reserving…",
+      "action": "Reserve",
+      "success": "Desk reserved! Check My reservations.",
+      "errors": {
+        "end_after_start": "End time must be after the start time.",
+        "max_length": "Maximum reservation length is {{maxHours}}h.",
+        "max_days": "Reservations can be made up to {{days}} days ahead.",
+        "failed": "Reservation failed."
+      }
+    },
+    "updated": "Updated",
+    "refresh": "Refresh",
+    "none_in_location": "No desks in this location",
+    "floor_prefix": "Floor",
+    "floor": "Floor {{floor}}",
+    "count": "{{count}} desks"
   }
 
   ,
@@ -234,7 +273,11 @@
       "devices": "Devices",
       "status": "Status",
       "last_seen": "Last seen",
-      "actions": ""
+      "actions": "",
+      "hardware": "Hardware ID",
+      "mqtt_user": "MQTT user",
+      "desk": "Desk",
+      "fw": "Firmware"
     },
     "status": { "online": "Online", "problem": "Problem", "offline": "Offline" },
     "last_seen": { "now": "just now", "minutes": "{{minutes}} min ago" },
@@ -420,46 +463,6 @@
     "edit_title": "Edit: {{name}}",
     "m365_label": "M365"
   },
-  "desks": {
-    "stats": {
-      "free": "Free",
-      "reserved": "Reserved",
-      "occupied": "Occupied",
-      "offline": "Offline"
-    },
-    "actions": {
-      "checkin": "Check-in",
-      "checkout": "Check-out"
-    },
-    "reserve": {
-      "title": "Reserve desk",
-      "staff_label": "Employee",
-      "staff_helper": "(empty = reserve for yourself)",
-      "for_self": "— reserve for yourself —",
-      "date": "Date",
-      "from": "From",
-      "to": "To",
-      "open_hours": "Open {{open}}–{{close}} · max {{maxHours}}h · up to {{maxDays}} days ahead",
-      "any_time": "You can reserve a desk for any time of the day.",
-      "submitting": "Reserving…",
-      "action": "Reserve",
-      "success": "Desk reserved! Check My reservations.",
-      "errors": {
-        "end_after_start": "End time must be after the start time.",
-        "max_length": "Maximum reservation length is {{maxHours}}h.",
-        "max_days": "Reservations can be made up to {{days}} days ahead.",
-        "failed": "Reservation failed."
-      }
-    },
-    "updated": "Updated",
-    "refresh": "Refresh",
-    "none_in_location": "No desks in this location",
-    "floor_prefix": "Floor",
-    "floor": "Floor {{floor}}",
-    "count": "{{count}} desks"
-  }
-
-  ,
   "users": {
     "nfcModal": {
       "title": "NFC card — {{name}}",

@@ -166,7 +166,13 @@
 
   ,
   "desks": {
-    "qr": { "title": "Kod QR — {{name}}", "url_label": "URL check-in", "print_hint": "Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in", "generate_title": "Generuj kod QR" },
+    "qr": {
+      "title": "Kod QR — {{name}}",
+      "url_label": "URL check-in",
+      "print_hint": "Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in",
+      "generate_title": "Generuj kod QR",
+      "alt": "QR kod"
+    },
     "location_label": "Biuro:",
     "sub_active": "{{active}} aktywnych z {{total}}",
     "no_beacon": "Brak beacona",
@@ -177,9 +183,15 @@
       "delete_permanent": "Usuń trwale",
       "unpair": "Odparuj",
       "unpair_title": "Odparuj beacon od biurka",
-      "deactivate": "Dezaktywuj"
+      "deactivate": "Dezaktywuj",
+      "checkin": "Check-in",
+      "checkout": "Check-out"
     },
-    "confirm": { "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna." },
+    "confirm": {
+      "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna.",
+      "unpair": "Odparować beacon \"{{hw}}\" od biurka \"{{name}}\"?",
+      "deactivate": "Dezaktywować biurko \"{{name}}\"?"
+    },
     "col": {
       "location": "Biuro",
       "code": "Kod",
@@ -191,17 +203,12 @@
       "status": "Status",
       "actions": ""
     },
-    "qr": { "alt": "QR kod" },
     "actions_extra": {
       "unpair": "Odparuj",
       "unpair_title": "Odparuj beacon od biurka",
       "deactivate": "Dezaktywuj"
     },
     "deactivate_hint": "Dezaktywuje biurko — można je potem trwale usunąć.",
-    "confirm": {
-      "unpair": "Odparować beacon \"{{hw}}\" od biurka \"{{name}}\"?",
-      "deactivate": "Dezaktywować biurko \"{{name}}\"?"
-    },
     "modals": { "create_title": "Nowe biurko", "edit_title": "Edytuj: {{name}}" },
     "form": {
       "label": {
@@ -213,7 +220,39 @@
       },
       "select_placeholder": "— wybierz biuro —"
     },
-    "checkout_error": "Błąd check-out: {{msg}}"
+    "checkout_error": "Błąd check-out: {{msg}}",
+    "stats": {
+      "free": "Wolne",
+      "reserved": "Zarezerwowane",
+      "occupied": "Zajęte",
+      "offline": "Offline"
+    },
+    "reserve": {
+      "title": "Zarezerwuj biurko",
+      "staff_label": "Pracownik",
+      "staff_helper": "(puste = rezerwacja dla siebie)",
+      "for_self": "— rezerwacja dla siebie —",
+      "date": "Data",
+      "from": "Od",
+      "to": "Do",
+      "open_hours": "Biuro czynne {{open}}–{{close}} · max {{maxHours}}h · do {{maxDays}} dni do przodu",
+      "any_time": "Możesz zarezerwować biurko na dowolną godzinę dnia.",
+      "submitting": "Rezerwuję…",
+      "action": "Zarezerwuj",
+      "success": "Biurko zarezerwowane! Sprawdź Moje rezerwacje.",
+      "errors": {
+        "end_after_start": "Godzina zakończenia musi być późniejsza niż startu.",
+        "max_length": "Maksymalna długość rezerwacji to {{maxHours}}h.",
+        "max_days": "Rezerwacja możliwa maksymalnie {{days}} dni do przodu.",
+        "failed": "Błąd rezerwacji."
+      }
+    },
+    "updated": "Aktualizacja",
+    "refresh": "Odśwież",
+    "none_in_location": "Brak biurek w tej lokalizacji",
+    "floor_prefix": "Piętro",
+    "floor": "Piętro {{floor}}",
+    "count": "{{count}} biurek"
   }
 
   ,
@@ -229,7 +268,11 @@
       "devices": "Urządzenia",
       "status": "Status",
       "last_seen": "Ostatni kontakt",
-      "actions": ""
+      "actions": "",
+      "hardware": "Hardware ID",
+      "mqtt_user": "Użytkownik MQTT",
+      "desk": "Biurko",
+      "fw": "Firmware"
     },
     "status": { "online": "Online", "problem": "Problem", "offline": "Offline" },
     "last_seen": { "now": "przed chwilą", "minutes": "{{minutes}} min temu" },
@@ -450,46 +493,6 @@
       "qr": "📷 QR",
       "manual": "✋ Ręczny"
     }
-  }
-
-  ,
-  "desks": {
-    "stats": {
-      "free": "Wolne",
-      "reserved": "Zarezerwowane",
-      "occupied": "Zajęte",
-      "offline": "Offline"
-    },
-    "actions": {
-      "checkin": "Check-in",
-      "checkout": "Check-out"
-    },
-    "reserve": {
-      "title": "Zarezerwuj biurko",
-      "staff_label": "Pracownik",
-      "staff_helper": "(puste = rezerwacja dla siebie)",
-      "for_self": "— rezerwacja dla siebie —",
-      "date": "Data",
-      "from": "Od",
-      "to": "Do",
-      "open_hours": "Biuro czynne {{open}}–{{close}} · max {{maxHours}}h · do {{maxDays}} dni do przodu",
-      "any_time": "Możesz zarezerwować biurko na dowolną godzinę dnia.",
-      "submitting": "Rezerwuję…",
-      "action": "Zarezerwuj",
-      "success": "Biurko zarezerwowane! Sprawdź Moje rezerwacje.",
-      "errors": {
-        "end_after_start": "Godzina zakończenia musi być późniejsza niż startu.",
-        "max_length": "Maksymalna długość rezerwacji to {{maxHours}}h.",
-        "max_days": "Rezerwacja możliwa maksymalnie {{days}} dni do przodu.",
-        "failed": "Błąd rezerwacji."
-      }
-    },
-    "updated": "Aktualizacja",
-    "refresh": "Odśwież",
-    "none_in_location": "Brak biurek w tej lokalizacji",
-    "floor_prefix": "Piętro",
-    "floor": "Piętro {{floor}}",
-    "count": "{{count}} biurek"
   }
 
   ,
