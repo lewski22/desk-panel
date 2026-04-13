@@ -187,6 +187,54 @@ npm run dev     # → http://localhost:5175
 
 ---
 
+## Localization / i18n
+
+This project includes built-in internationalization support using `i18next` and `react-i18next`.
+
+- Default locale: `pl` (Polish). English (`en`) is available.
+- Locale files are located at `apps/unified/src/locales/{en,pl}/translation.json`.
+- i18n is initialized in `apps/unified/src/i18n.ts` and loaded from `main.tsx`.
+
+How to add or update translations:
+
+1. Add new keys to both `apps/unified/src/locales/en/translation.json` and `apps/unified/src/locales/pl/translation.json` (or only one for a quick change).
+2. In React components, use `useTranslation()` from `react-i18next`:
+
+```tsx
+import { useTranslation } from 'react-i18next';
+const { t, i18n } = useTranslation();
+return <h1>{t('pages.dashboard.title')}</h1>;
+```
+
+3. For fallback text during development, pass a default value to `t()`:
+
+```ts
+t('organizations.new_title', 'New office')
+```
+
+Language switcher and runtime:
+
+- A language switcher component is provided at `apps/unified/src/components/LanguageSwitcher.tsx` and placed in the left sidebar (`AppLayout`).
+- To change the default language for development, edit `apps/unified/src/i18n.ts` (`lng` option) or call `i18n.changeLanguage('en')` at runtime.
+
+Testing translations locally:
+
+```bash
+cd apps/unified
+npm install
+npm run dev
+# open http://localhost:5175 and use the language switcher in the sidebar
+```
+
+Contribution guidelines for translators:
+
+- Keep keys stable: avoid renaming keys that are already in use.
+- Use interpolation tokens (e.g. `{{name}}`) rather than concatenating strings in code.
+- If you add pluralization or nested namespaces, follow the existing JSON structure.
+
+See `docs/localization.md` for more detailed guidance and examples.
+
+
 ## Deploy produkcyjny (Coolify)
 
 1. Wgraj zmiany do `main` na GitHub

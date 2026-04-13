@@ -1,6 +1,6 @@
 {
   "table": { "empty": "No data" },
-  "btn": { "save": "Save", "cancel": "Cancel", "refresh": "↺ Refresh", "retry": "Try again" },
+  "btn": { "save": "Save", "create": "Create", "cancel": "Cancel", "saving": "Saving…", "refresh": "↺ Refresh", "retry": "Try again" },
   "nav": {
     "dashboard": "Dashboard",
     "desks": "Desks",
@@ -19,8 +19,17 @@
     "staff": "Employee",
     "change_password": "Change password",
     "logout": "Log out",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu",
+    "expand": "Expand",
+    "collapse": "Collapse",
     "impersonation_banner": "Temporary impersonation session (30 min) — actions are logged",
     "impersonation_end": "End"
+  },
+  "session": {
+    "will_expire_in_minute": "Session will expire in one minute",
+    "click_anywhere": "Click anywhere to extend",
+    "extend_button": "Extend"
   },
   "roles": {
     "SUPER_ADMIN": "Super Admin",
@@ -33,6 +42,11 @@
     "title": "Sign in",
     "email": "Email",
     "password": "Password",
+    "session": {
+      "will_expire_in_minute": "Your session will expire in one minute",
+      "click_anywhere": "Click anywhere to extend",
+      "extend_button": "Extend session"
+    }
     "submit": "Sign in",
     "submitting": "Signing in…",
     "or": "or",
@@ -165,9 +179,45 @@
       "maintenance": "Service",
       "activate": "Activate",
       "reactivate": "Reactivate",
-      "delete_permanent": "Delete permanently"
+      "delete_permanent": "Delete permanently",
+      "unpair": "Unpair",
+      "unpair_title": "Unpair beacon from desk",
+      "deactivate": "Deactivate"
     },
     "confirm": { "delete_permanent": "Permanently delete desk \"{{name}}\"? This operation is irreversible." },
+    "col": {
+      "location": "Office",
+      "code": "Code",
+      "name": "Name",
+      "desk_id": "Desk ID",
+      "floor": "Floor",
+      "zone": "Zone",
+      "beacon": "Beacon",
+      "status": "Status",
+      "actions": ""
+    },
+    "qr": { "alt": "QR code" },
+    "actions_extra": {
+      "unpair": "Unpair",
+      "unpair_title": "Unpair beacon from desk",
+      "deactivate": "Deactivate"
+    },
+    "deactivate_hint": "Deactivates the desk — it can be permanently deleted later.",
+    "confirm": {
+      "unpair": "Unpair beacon \"{{hw}}\" from desk \"{{name}}\"?",
+      "deactivate": "Deactivate desk \"{{name}}\"?"
+    },
+    "modals": { "create_title": "New desk", "edit_title": "Edit: {{name}}" },
+    "form": {
+      "label": {
+        "location": "Office",
+        "name": "Name",
+        "code": "Code (unique within location)",
+        "floor": "Floor",
+        "zone": "Zone"
+      },
+      "select_placeholder": "— choose office —"
+    },
     "checkout_error": "Check-out error: {{msg}}"
   }
 
@@ -211,6 +261,25 @@
     },
     "copy_cmd": "Copy command"
   ,
+    "form": {
+      "label": {
+        "desk": "Desk",
+        "location": "Office",
+        "gateway": "Gateway"
+      },
+      "select_placeholder": "— choose office —",
+      "select_gateway_placeholder": "— choose gateway —",
+      "assign_optional": "Assign to desk (optional)",
+      "none": "— none —",
+      "hardware_label": "Hardware ID (unique ESP32 ID)"
+    },
+    "provision_button": "Provision device",
+    "provisioned_success": "✓ Beacon registered — MQTT user added to the gateway automatically",
+    "serial_instructions": "Paste into ESP32 serial monitor (115200 baud):",
+    "serial_replace_hint": "Replace NAZWA_WIFI, HASLO_WIFI and IP_RASPBERRY with real values",
+    "mqtt_password_warning": "⚠ MQTT password will not be shown again",
+    "subtitle": "Registration and management of gateways and beacons",
+    "active_office_label": "Active office:"
     "install_failed": "Failed to generate install token.",
     "install": {
       "token_warning": "Token is one-time — it expires after use. If installation fails, come back and generate a new one."
@@ -519,9 +588,11 @@
       "deactivate_title": "Deactivate: {{name}}",
       "deactivate_text": "The account will be deactivated. After the retention period personal data will be anonymized, but historical activity (reservations, check-ins) will remain with the account name preserved.",
       "retention_label": "Retention period (minimum 30 days)",
-      "will_be_anonymized_on": "Account will be anonymized on: {{date}}"
+      "will_be_anonymized_on": "Account will be anonymized on: {{date}}",
+          "confirm_hard_delete": "Permanently delete account \"{{name}}\"? Activity will be preserved."
     }
   }
+      "days": "{{count}} days"
 
 ,
   "reservations": {

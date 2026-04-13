@@ -15,6 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
+  const { t } = useTranslation();
   const qrUrl = `${STAFF_URL}/checkin/${desk.qrToken}`;
   const imgSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrUrl)}&size=240x240&margin=12&format=png`;
   const [copied, setCopied] = useState(false);
@@ -30,7 +31,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
     const w = window.open('', '_blank');
     if (!w) return;
     w.document.write(`
-      <html><head><title>QR — ${desk.name}</title>
+      <html><head><title>${t('desks.qr.title', { name: desk.name })}</title>
       <style>
         body { font-family: sans-serif; text-align: center; padding: 40px; }
         h2 { font-size: 22px; margin-bottom: 4px; }
@@ -39,7 +40,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
         code { font-size: 11px; color: #888; word-break: break-all; }
       </style></head><body>
         <h2>${desk.name}</h2>
-        <p>${desk.code}${desk.floor ? ` · Piętro ${desk.floor}` : ''}${desk.zone ? ` · ${desk.zone}` : ''}</p>
+        <p>${desk.code}${desk.floor ? ` · ${t('desks.floor_prefix')} ${desk.floor}` : ''}${desk.zone ? ` · ${desk.zone}` : ''}</p>
         <img src="${imgSrc}" width="200" height="200" />
         <code>${qrUrl}</code>
       </body></html>
@@ -53,7 +54,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
     <Modal title={t('desks.qr.title', { name: desk.name })} onClose={onClose}>
       <div className="flex flex-col items-center gap-4">
         <div className="p-3 bg-white rounded-xl border border-zinc-100 shadow-sm">
-          <img src={imgSrc} width={200} height={200} alt="QR kod" className="rounded" />
+          <img src={imgSrc} width={200} height={200} alt={t('desks.qr.alt')} className="rounded" />
         </div>
 
         <div className="w-full">
@@ -74,7 +75,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
           </Btn>
         </div>
 
-        <p className="text-xs text-zinc-400 text-center">{t('desks.qr.print_hint')}</p>
+          <p className="text-xs text-zinc-400 text-center">{t('desks.qr.print_hint')}</p>
       </div>
     </Modal>
   );
@@ -159,18 +160,18 @@ export function DesksPage() {
   };
 
   const handleUnpair = async (desk: any) => {
-    if (!confirm(`Odparować beacon "${desk.device?.hardwareId ?? ''}" od biurka "${desk.name}"?`)) return;
+    if (!confirm(t('desks.confirm.unpair', { hw: desk.device?.hardwareId ?? '', name: desk.name }))) return;
     try {
       const result = await appApi.desks.unpair(desk.id);
       if (result?.unlinked === false) {
-        alert('Brak beacona przypisanego do tego biurka');
+        alert(t('desks.no_beacon'));
       }
       await load();
     } catch (e: any) { alert(e.message); }
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Dezaktywować biurko "${name}"?`)) return;
+    if (!confirm(t('desks.confirm.deactivate', { name }))) return;
     try { await appApi.desks.remove(id); await load(); }
     catch (e: any) { alert(e.message); }
   };
@@ -202,7 +203,7 @@ export function DesksPage() {
         </div>
       )}
 
-      <Table headers={['Biuro','Kod','Nazwa','ID biurka','Piętro','Strefa','Beacon','Status','']} empty={!desks.length}>
+      <Table headers={[t('desks.col.location'), t('desks.col.code'), t('desks.col.name'), t('desks.col.desk_id'), t('desks.col.floor'), t('desks.col.zone'), t('desks.col.beacon'), t('desks.col.status'), t('desks.col.actions')]} empty={!desks.length}>
         {desks.map(d => (
           <TR key={d.id}>
             <TD>
@@ -213,7 +214,7 @@ export function DesksPage() {
             <TD>
               <div className="flex items-center gap-1">
                 <code className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
-                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title={t('btn.copy_id')}>⎘</button>
+                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title={t('provisioning.copy_id')}>⎘</button>
               </div>
             </TD>
             <TD>{d.floor ?? '—'}</TD>
@@ -222,14 +223,14 @@ export function DesksPage() {
               {d.device ? (
                 <div className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.device.isOnline ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
-                  <span className="text-xs text-zinc-500">{d.device.isOnline ? 'Online' : 'Offline'}</span>
+                  <span className="text-xs text-zinc-500">{d.device.isOnline ? t('devices.status.online') : t('devices.status.offline')}</span>
                   <span className="text-xs text-zinc-300 font-mono">{d.device.hardwareId}</span>
                   <button
                     onClick={() => handleUnpair(d)}
                     className="text-xs px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors font-medium"
-                    title="Odparuj beacon od biurka"
+                    title={t('desks.actions.unpair_title')}
                   >
-                    Odparuj
+                    {t('desks.actions.unpair')}
                   </button>
                 </div>
               ) : (
@@ -261,8 +262,8 @@ export function DesksPage() {
                 {d.status !== 'INACTIVE' && (
                   <Btn variant="danger" size="sm"
                     onClick={() => handleDelete(d.id, d.name)}
-                    title="Dezaktywuje biurko — można je potem trwale usunąć">
-                    Dezaktywuj
+                    title={t('desks.deactivate_hint')}>
+                    {t('desks.actions.deactivate')}
                   </Btn>
                 )}
               </div>
@@ -274,14 +275,14 @@ export function DesksPage() {
       {/* Create / Edit modal */}
       {(modal === 'create' || modal === 'edit') && (
         <Modal
-          title={modal === 'create' ? 'Nowe biurko' : `Edytuj: ${target?.name}`}
+          title={modal === 'create' ? t('desks.modals.create_title') : t('desks.modals.edit_title', { name: target?.name })}
           onClose={() => setModal(null)}
         >
           <form onSubmit={modal === 'create' ? handleCreate : handleEdit} className="flex flex-col gap-3">
             {/* Biuro selector — always shown on create */}
             {modal === 'create' && (
               <div>
-                <label className="block text-xs text-zinc-400 mb-1 font-medium">Biuro</label>
+                <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('desks.form.label.location')}</label>
                 {locations.length > 1 ? (
                   <select
                     value={form.locId}
@@ -289,7 +290,7 @@ export function DesksPage() {
                     className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
                     required
                   >
-                    <option value="">— wybierz biuro —</option>
+                    <option value="">{t('desks.form.select_placeholder')}</option>
                     {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 ) : (
@@ -299,22 +300,22 @@ export function DesksPage() {
                 )}
               </div>
             )}
-            <Input label="Nazwa" placeholder="Desk A-01" required value={form.name}
+            <Input label={t('desks.form.label.name')} placeholder="Desk A-01" required value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <Input label="Kod (unikalny w lokalizacji)" placeholder="A-01" required value={form.code}
+            <Input label={t('desks.form.label.code')} placeholder="A-01" required value={form.code}
               onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Piętro" placeholder="1" value={form.floor}
+              <Input label={t('desks.form.label.floor')} placeholder="1" value={form.floor}
                 onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} />
-              <Input label="Strefa" placeholder="Open Space" value={form.zone}
+              <Input label={t('desks.form.label.zone')} placeholder="Open Space" value={form.zone}
                 onChange={e => setForm(f => ({ ...f, zone: e.target.value }))} />
             </div>
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">
-                {modal === 'create' ? 'Utwórz' : 'Zapisz'}
+                {modal === 'create' ? t('btn.create') : t('btn.save')}
               </Btn>
-              <Btn variant="secondary" onClick={() => setModal(null)} type="button">Anuluj</Btn>
+              <Btn variant="secondary" onClick={() => setModal(null)} type="button">{t('btn.cancel')}</Btn>
             </div>
           </form>
         </Modal>

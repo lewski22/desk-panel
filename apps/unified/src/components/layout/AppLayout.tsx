@@ -136,7 +136,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
             className="ml-auto text-zinc-500 hover:text-zinc-200 p-1 rounded transition-colors"
-            aria-label="Zamknij menu">
+            aria-label={t('layout.close_menu')}>
             ✕
           </button>
         )}
@@ -177,7 +177,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
             <p className="text-xs font-medium text-zinc-300 leading-tight truncate">
               {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
             </p>
-            <p className="text-[10px] text-zinc-600 leading-tight mt-0.5">{ROLE_LABEL[user.role] ?? user.role}</p>
+            <p className="text-[10px] text-zinc-600 leading-tight mt-0.5">{t(`roles.${user.role}`, { defaultValue: ROLE_LABEL[user.role] ?? user.role })}</p>
             <div className="mt-2">
               <LanguageSwitcher />
             </div>
@@ -198,7 +198,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
           {!mobile && (
             <button onClick={() => setCollapsed(c => !c)}
               className="text-xs text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-              title={collapsed ? 'Rozwiń' : 'Zwiń'}>
+              title={collapsed ? t('layout.expand') : t('layout.collapse')}>
               {collapsed ? '›' : '‹'}
             </button>
           )}
@@ -224,7 +224,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0 z-30">
         <button onClick={() => setMobileOpen(true)}
           className="text-zinc-400 hover:text-zinc-100 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
-          aria-label="Otwórz menu">
+          aria-label={t('layout.open_menu')}>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
             <rect x="2" y="4"  width="16" height="2" rx="1"/>
             <rect x="2" y="9"  width="16" height="2" rx="1"/>
@@ -258,12 +258,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
             flex items-center gap-3 sm:max-w-sm">
             <span className="text-amber-500 text-lg shrink-0">⏱</span>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-amber-800">Sesja wygaśnie za minutę</p>
-              <p className="text-xs text-amber-600 mt-0.5">Kliknij gdziekolwiek aby przedłużyć</p>
+              <p className="text-sm font-medium text-amber-800">{t('session.will_expire_in_minute')}</p>
+              <p className="text-xs text-amber-600 mt-0.5">{t('session.click_anywhere')}</p>
             </div>
             <button onClick={resetTimer}
               className="shrink-0 text-xs px-2 py-1 bg-amber-200 hover:bg-amber-300 rounded-lg text-amber-800 transition-colors">
-              Przedłuż
+              {t('session.extend_button')}
             </button>
           </div>
         )}

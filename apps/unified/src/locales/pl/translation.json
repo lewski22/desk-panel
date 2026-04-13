@@ -1,6 +1,6 @@
 {
   "table": { "empty": "Brak danych" },
-  "btn": { "save": "Zapisz", "cancel": "Anuluj", "refresh": "↺ Odśwież", "retry": "Spróbuj ponownie" },
+  "btn": { "save": "Zapisz", "create": "Utwórz", "cancel": "Anuluj", "saving": "Zapisuję…", "refresh": "↺ Odśwież", "retry": "Spróbuj ponownie" },
   "nav": {
     "dashboard": "Dashboard",
     "desks": "Biurka",
@@ -19,8 +19,17 @@
     "staff": "Pracownik",
     "change_password": "Zmień hasło",
     "logout": "Wyloguj",
+    "open_menu": "Otwórz menu",
+    "close_menu": "Zamknij menu",
+    "expand": "Rozwiń",
+    "collapse": "Zwiń",
     "impersonation_banner": "Sesja tymczasowa (30 min) — każda akcja jest logowana",
     "impersonation_end": "Zakończ"
+  },
+  "session": {
+    "will_expire_in_minute": "Sesja wygaśnie za minutę",
+    "click_anywhere": "Kliknij gdziekolwiek aby przedłużyć",
+    "extend_button": "Przedłuż"
   },
   "roles": {
     "SUPER_ADMIN": "Super Admin",
@@ -165,9 +174,45 @@
       "maintenance": "Serwis",
       "activate": "Aktywuj",
       "reactivate": "Reaktywuj",
-      "delete_permanent": "Usuń trwale"
+      "delete_permanent": "Usuń trwale",
+      "unpair": "Odparuj",
+      "unpair_title": "Odparuj beacon od biurka",
+      "deactivate": "Dezaktywuj"
     },
     "confirm": { "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna." },
+    "col": {
+      "location": "Biuro",
+      "code": "Kod",
+      "name": "Nazwa",
+      "desk_id": "ID biurka",
+      "floor": "Piętro",
+      "zone": "Strefa",
+      "beacon": "Beacon",
+      "status": "Status",
+      "actions": ""
+    },
+    "qr": { "alt": "QR kod" },
+    "actions_extra": {
+      "unpair": "Odparuj",
+      "unpair_title": "Odparuj beacon od biurka",
+      "deactivate": "Dezaktywuj"
+    },
+    "deactivate_hint": "Dezaktywuje biurko — można je potem trwale usunąć.",
+    "confirm": {
+      "unpair": "Odparować beacon \"{{hw}}\" od biurka \"{{name}}\"?",
+      "deactivate": "Dezaktywować biurko \"{{name}}\"?"
+    },
+    "modals": { "create_title": "Nowe biurko", "edit_title": "Edytuj: {{name}}" },
+    "form": {
+      "label": {
+        "location": "Biuro",
+        "name": "Nazwa",
+        "code": "Kod (unikalny w lokalizacji)",
+        "floor": "Piętro",
+        "zone": "Strefa"
+      },
+      "select_placeholder": "— wybierz biuro —"
+    },
     "checkout_error": "Błąd check-out: {{msg}}"
   }
 
@@ -211,6 +256,25 @@
     },
     "copy_cmd": "Kopiuj komendę"
   ,
+    "form": {
+      "label": {
+        "desk": "Biurko",
+        "location": "Biuro",
+        "gateway": "Gateway"
+      },
+      "select_placeholder": "— wybierz biuro —",
+      "select_gateway_placeholder": "— wybierz gateway —",
+      "assign_optional": "Przypisz do biurka (opcjonalnie)",
+      "none": "— brak przypisania —",
+      "hardware_label": "Hardware ID (unikalny ID ESP32)"
+    },
+    "provision_button": "Provisioning",
+    "provisioned_success": "✓ Beacon zarejestrowany — MQTT user dodany do gateway automatycznie",
+    "serial_instructions": "Wklej w monitorze serialnym ESP32 (115200 baud):",
+    "serial_replace_hint": "Podmień NAZWA_WIFI, HASLO_WIFI i IP_RASPBERRY na rzeczywiste wartości",
+    "mqtt_password_warning": "⚠ Hasło MQTT nie będzie wyświetlone ponownie",
+    "subtitle": "Rejestracja i zarządzanie gateway'ami i beaconami",
+    "active_office_label": "Aktywne biuro:"
     "install_failed": "Błąd wygenerowania tokenu instalacyjnego.",
     "install": {
       "token_warning": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
@@ -556,8 +620,12 @@
           "deactivate_title": "Dezaktywuj: {{name}}",
           "deactivate_text": "Konto zostanie dezaktywowane. Po upływie okresu retencji dane osobowe zostaną anonimizowane, jednak wszystkie aktywności (rezerwacje, check-iny) pozostaną zachowane z zachowaną nazwą konta.",
           "retention_label": "Okres retencji (minimum 30 dni)",
-          "will_be_anonymized_on": "Konto zostanie trwale zanonimizowane: {{date}}"
+          "will_be_anonymized_on": "Konto zostanie trwale zanonimizowane: {{date}}",
+          "confirm_hard_delete": "Trwale usunąć dane konta \"{{name}}\"? Aktywności zostaną zachowane."
         }
       }
+
+      ,
+      "days": "{{count}} dni"
   }
 

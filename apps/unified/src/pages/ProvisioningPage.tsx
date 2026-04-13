@@ -69,8 +69,6 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
 
   const handleUpdate = async (id: string, name: string) => {
     if (!confirm(t('provisioning.confirm_update_gateway', { name }))) return;
-
-Gateway uruchomi się ponownie (~15s).`)) return;
     try {
       const r = await appApi.gateways.triggerUpdate(id);
       alert(t('provisioning.update_started', { old: r.oldVersion, new: r.newVersion }));
@@ -87,11 +85,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
   };
 
   const handleRotateSecret = async (id: string) => {
-    if (!confirm(
-      'Rotacja klucza gateway\n\n' +
-      'Nowy klucz zostanie wygenerowany i wysłany do gateway automatycznie.\n' +
-      'Stary klucz pozostaje ważny przez 15 minut — okno na ewentualną ręczną aktualizację.'
-    )) return;
+    if (!confirm(t('provisioning.confirm_rotate'))) return;
     setBusy(true);
     try {
       const r = await appApi.gateways.rotateSecret(id);
@@ -260,9 +254,9 @@ Gateway uruchomi się ponownie (~15s).`)) return;
             </div>
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
               <span className="text-amber-500 shrink-0">⚠</span>
-              <p className="text-xs text-amber-700">Token jest jednorazowy. Po użyciu wygasa — wróć tu po nowy jeśli instalacja się nie powiedzie.</p>
+              <p className="text-xs text-amber-700">{t('provisioning.install.token_warning')}</p>
             </div>
-            <div className="flex justify-end"><Btn onClick={() => setModal(null)}>Zamknij</Btn></div>
+            <div className="flex justify-end"><Btn onClick={() => setModal(null)}>{t('btn.cancel')}</Btn></div>
           </div>
         )}
       </Modal>
@@ -523,10 +517,10 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
             </div>
             <div className="px-5 py-4 flex flex-col gap-4">
               <div>
-                <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Biurko</label>
+                <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('provisioning.form.label.desk')}</label>
                 <select value={assignDeskId} onChange={e => setAssignDeskId(e.target.value)}
                   className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
-                  <option value="">— brak przypisania —</option>
+                  <option value="">{t('provisioning.form.none')}</option>
                   {desks.filter(d => !d.device || d.device.id === assignTarget.id).map((d: any) => (
                     <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                   ))}
@@ -535,11 +529,11 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
               <div className="flex gap-3">
                 <button onClick={() => setAssignTarget(null)}
                   className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
-                  Anuluj
+                  {t('btn.cancel')}
                 </button>
                 <button onClick={handleAssign} disabled={assignBusy}
                   className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
-                  {assignBusy ? 'Zapisuję…' : 'Zapisz'}
+                  {assignBusy ? t('btn.saving') : t('btn.save')}
                 </button>
               </div>
             </div>
@@ -550,41 +544,41 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       <Modal open={modal} title={t('provisioning.modal.provision_title')} onClose={() => setModal(false)}>
         {!result ? (
           <div className="flex flex-col gap-3">
-            <FormField label="Biuro">
+            <FormField label={t('provisioning.form.label.location')}>
               <select className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
                 value={form.locId} onChange={e => { setForm(f => ({ ...f, locId: e.target.value, gatewayId: '', deskId: '' })); }}>
-                <option value="">— wybierz biuro —</option>
+                <option value="">{t('provisioning.form.select_placeholder')}</option>
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </FormField>
-            <FormField label="Hardware ID (unikalny ID ESP32)">
+            <FormField label={t('provisioning.form.hardware_label')}>
               <input className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
                 placeholder="d-aabbccdd" value={form.hardwareId}
                 onChange={e => setForm(f => ({ ...f, hardwareId: e.target.value }))} />
             </FormField>
-            <FormField label="Gateway">
+            <FormField label={t('provisioning.form.label.gateway')}>
               <select className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
                 value={form.gatewayId} onChange={e => setForm(f => ({ ...f, gatewayId: e.target.value }))}>
-                <option value="">— wybierz gateway —</option>
+                <option value="">{t('provisioning.form.select_gateway_placeholder')}</option>
                 {availableGateways.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </FormField>
-            <FormField label="Przypisz do biurka (opcjonalnie)">
+            <FormField label={t('provisioning.form.assign_optional')}>
               <select className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
                 value={form.deskId} onChange={e => setForm(f => ({ ...f, deskId: e.target.value }))}>
-                <option value="">— brak przypisania —</option>
+                <option value="">{t('provisioning.form.none')}</option>
                 {desks.filter(d => !d.device).map(d => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
               </select>
             </FormField>
             <div className="flex justify-end gap-2 mt-1">
-              <Btn variant="secondary" onClick={() => setModal(false)}>Anuluj</Btn>
-              <Btn onClick={provision} loading={busy} disabled={!form.hardwareId || !form.gatewayId}>Provisioning</Btn>
+              <Btn variant="secondary" onClick={() => setModal(false)}>{t('btn.cancel')}</Btn>
+              <Btn onClick={provision} loading={busy} disabled={!form.hardwareId || !form.gatewayId}>{t('provisioning.provision_button')}</Btn>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
-              ✓ Beacon zarejestrowany — MQTT user dodany do gateway automatycznie
+              {t('provisioning.provisioned_success')}
             </div>
 
             {/* Gotowa komenda PROVISION: dla monitora serialnego ESP32 */}
@@ -603,11 +597,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                   className="shrink-0 text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
                   title={t('provisioning.copy_cmd')}>⎘</button>
               </div>
-              <p className="text-[10px] text-zinc-400 mt-1">
-                Podmień <span className="font-mono bg-zinc-100 px-0.5 rounded">NAZWA_WIFI</span>,{' '}
-                <span className="font-mono bg-zinc-100 px-0.5 rounded">HASLO_WIFI</span> i{' '}
-                <span className="font-mono bg-zinc-100 px-0.5 rounded">IP_RASPBERRY</span> na rzeczywiste wartości
-              </p>
+              <p className="text-[10px] text-zinc-400 mt-1">{t('provisioning.serial_replace_hint')}</p>
             </div>
 
             {/* Dane techniczne */}
@@ -616,8 +606,8 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
               <p><span className="text-zinc-400">MQTT_USER  </span><span className="text-zinc-700">{result.mqttUsername}</span></p>
               <p><span className="text-zinc-400">MQTT_PASS  </span><span className="text-amber-600">{result.mqttPassword}</span></p>
             </div>
-            <p className="text-xs text-red-500">⚠ Hasło MQTT nie będzie wyświetlone ponownie</p>
-            <div className="flex justify-end"><Btn onClick={() => setModal(false)}>Zamknij</Btn></div>
+            <p className="text-xs text-red-500">{t('provisioning.mqtt_password_warning')}</p>
+            <div className="flex justify-end"><Btn onClick={() => setModal(false)}>{t('btn.cancel')}</Btn></div>
           </div>
         )}
       </Modal>
@@ -635,12 +625,12 @@ export function ProvisioningPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">{t('pages.provisioning.title')}</h1>
-          <p className="text-xs text-zinc-400 mt-0.5">Rejestracja i zarządzanie gateway'ami i beaconami</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{t('provisioning.subtitle')}</p>
         </div>
         {/* Biuro switcher */}
         {locations.length > 1 && (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-400">Aktywne biuro:</span>
+            <span className="text-xs text-zinc-400">{t('provisioning.active_office_label')}</span>
             <select value={activeLocId} onChange={e => setLoc(e.target.value)}
               className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 font-medium">
               {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
