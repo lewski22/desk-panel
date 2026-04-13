@@ -10,6 +10,7 @@ import { UpdateDeskDto } from './dto/update-desk.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
+import { Throttle }     from '@nestjs/throttler';
 
 @ApiTags('desks')
 @Controller()
@@ -44,6 +45,7 @@ export class DesksController {
   }
 
   // ── Public — no auth ─────────────────────────────────────────
+  @Throttle({ default: { ttl: 60_000, limit: 20 } }) // publiczny — niższy limit niż globalny 30/min
   @Get('desks/qr/:token')
   @ApiOperation({ summary: 'Desk info by QR token (public)' })
   getByQrToken(@Param('token') token: string) {
