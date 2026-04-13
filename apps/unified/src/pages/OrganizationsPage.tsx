@@ -9,6 +9,7 @@ function getUser() {
 
 // ── Modal: konfiguracja Azure SSO ────────────────────────────
 function AzureConfigModal({ location, onClose }: { location: any; onClose: () => void }) {
+  const { t } = useTranslation();
   const [config,   setConfig]   = useState<any>(null);
   const [tenantId, setTenantId] = useState('');
   const [enabled,  setEnabled]  = useState(false);

@@ -296,7 +296,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
 }
 // ── BeaconSection ─────────────────────────────────────────────
 function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [desks,    setDesks]    = useState<any[]>([]);
   const [devices,  setDevices]  = useState<any[]>([]);
   const [gateways, setGateways] = useState<any[]>([]);

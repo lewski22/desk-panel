@@ -20,7 +20,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function MyReservationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [err,          setErr]          = useState('');

@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { appApi } from '../api/client';
 import { PageHeader, Card, Stat, Spinner } from '../components/ui';
-import { format, subDays } from 'date-fns';
+import { format, subDays, type Locale } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 
 const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';

@@ -118,7 +118,7 @@ export function ReservationsAdminPage() {
                       <p className="text-xs text-zinc-400">{r.user?.firstName} {r.user?.lastName}</p>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.cls}`}>{meta.label}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.cls}`}>{t(`reservations.status.${r.status.toLowerCase()}`)}</span>
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
                       {r.checkin ? (
