@@ -119,6 +119,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 }
 
 function InstallTokenModal({ location, onClose }: { location: any; onClose: () => void }) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [token,   setToken]   = useState<any>(null);
   const [copied,  setCopied]  = useState(false);
@@ -126,7 +127,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
   useEffect(() => {
     appApi.gateways.createSetupToken(location.id)
-      .then(t => { setToken(t); setLoading(false); })
+      .then(tok => { setToken(tok); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
   }, [location.id]);
 
