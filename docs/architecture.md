@@ -1,216 +1,230 @@
-# Architektura systemu — Desk Beacon System
+# Architektura systemu — Reserti Desk Management
+
+> Aktualizacja: 2026-04-15 — v0.11.0
+
+---
 
 ## Przegląd
 
-Trójwarstwowy system IoT do zarządzania zajętością biurek hot-desk.
+Trzywarstwowy system IoT do zarządzania zajętością biurek hot-desk.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│              WARSTWA 3 — SERWER GŁÓWNY (Coolify/cloud)          │
-│                                                                 │
-│  ┌──────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
-│  │ Admin Panel   │  │  NestJS REST API │  │  PostgreSQL 15   │   │
-│  │  React/Vite   │  │  + MQTT bridge   │  │  Prisma ORM      │   │
-│  │  3 role        │  │  9 modułów       │  │  9 tabel         │   │
-│  └──────────────┘  └─────────────────┘  └──────────────────┘   │
-│  ┌──────────────┐  ┌─────────────────┐                          │
-│  │ Staff Panel   │  │   Mosquitto      │                         │
-│  │  React/Vite   │  │   MQTT broker    │                         │
-│  └──────────────┘  └─────────────────┘                          │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS / MQTT
-┌────────────────────────────▼────────────────────────────────────┐
-│         WARSTWA 2 — GATEWAY (per biuro, on-premise)             │
-│                                                                 │
-│  ┌──────────────────────┐  ┌──────────────────────────────────┐ │
-│  │  Eclipse Mosquitto    │  │  Gateway Node.js                 │ │
-│  │  MQTT broker lokalny  │  │  - SyncService (pull co 60s)    │ │
-│  │  auth + ACL           │  │  - CacheService (SQLite WAL)    │ │
-│  │  port 1883            │  │  - DeviceMonitor (heartbeat)    │ │
-│  └──────────────────────┘  └──────────────────────────────────┘ │
-└──────────┬────────────────────────┬──────────────────┬──────────┘
-           │ MQTT/WiFi              │ MQTT/WiFi         │ MQTT/WiFi
-   ┌───────▼──────┐       ┌────────▼─────┐    ┌────────▼─────┐
-   │ Desk Beacon  │       │ Desk Beacon  │    │ Desk Beacon  │
-   │ ESP32        │  ...  │ ESP32        │    │ ESP32        │
-   │ NFC + LED    │       │ NFC + LED    │    │ NFC + LED    │
-   └──────────────┘       └─────────────┘    └─────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│  WARSTWA 3 — SERWER (Coolify / Proxmox LXC)                        │
+│                                                                     │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌────────────────┐   │
+│  │ NestJS Backend    │  │ Unified Panel     │  │ PostgreSQL 15  │   │
+│  │ 11 modułów        │  │ React 18 + PWA    │  │ Prisma ORM     │   │
+│  │ JWT + MQTT client │  │ i18n PL/EN        │  │ 16 modeli      │   │
+│  │ /metrics (Prom)   │  │ Tailwind CSS      │  └────────────────┘   │
+│  └────────┬─────────┘  └──────────────────┘                        │
+│           │ MQTT                             ┌────────────────┐     │
+│  ┌────────▼─────────┐                       │ Mosquitto      │     │
+│  │ LedEventsService  │                       │ MQTT broker    │     │
+│  │ rxjs Subject      │                       │ Docker network │     │
+│  └───────────────────┘                       └────────────────┘     │
+└───────────────────────┬────────────────────────────────────────────┘
+                        │ HTTPS + MQTT (Cloudflare Tunnel)
+┌───────────────────────▼────────────────────────────────────────────┐
+│  WARSTWA 2 — GATEWAY (per biuro, Raspberry Pi)                      │
+│                                                                     │
+│  ┌─────────────────────────────┐  ┌──────────────────────────────┐ │
+│  │ gateway.py (systemd service) │  │ Mosquitto (local broker)     │ │
+│  │ ├── SyncService (co 60s)    │  │ port 1883 + passwd auth      │ │
+│  │ ├── Cache (SQLite WAL)      │  │ ACL: beacon read/write       │ │
+│  │ ├── DeviceMonitor           │  └──────────────┬───────────────┘ │
+│  │ ├── MqttAdmin               │                 │ MQTT/WiFi        │
+│  │ ├── MqttBridge              │  ┌──────────────▼──────────────┐  │
+│  │ └── /metrics :9100 (Prom)   │  │  ESP32 Beacony              │  │
+│  └─────────────────────────────┘  │  PN532 NFC + WS2812B LED    │  │
+│                                   └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Warstwa 1 — Beacon (ESP32)
 
-**Hardware:** ESP32 + PN532 (NFC/RFID) + WS2812B (LED)  
-**Firmware:** C++ / Arduino framework / PlatformIO  
-**Repo:** `desk-firmware`
+**Hardware:** ESP32 (4MB flash) + PN532 (I2C: SDA=21, SCL=22) + WS2812B 12-LED ring (pin 13)
+**Repo:** `desk-firmware` (PlatformIO, Arduino framework)
 
 ### Odpowiedzialności
-- Skanowanie kart NFC i publikowanie UID przez MQTT
-- Wyświetlanie stanu biurka przez kolor/animację LED
-- Odbieranie i wykonywanie komend (`SET_LED`, `REBOOT`, `IDENTIFY`)
-- Wysyłanie heartbeatu co 30s z RSSI, uptime i wersją firmware
-- Przechowywanie konfiguracji w NVS flash (przeżywa restarty)
-- **Kolejka offline** — przy braku MQTT: zdarzenia NVS → flush po reconnect
+- Skanowanie kart NFC → `desk/{deskId}/checkin` MQTT
+- Wyświetlanie stanu LED: zielony (wolne), niebieski (zarezerwowane), czerwony (zajęte)
+- Heartbeat co 30s → `desk/{deskId}/status`
+- Obsługa komend: `SET_LED`, `REBOOT`, `IDENTIFY`, `SET_DESK_ID`, `OTA_UPDATE`, `FACTORY_RESET`
+- Offline NVS queue — buforuje eventy NFC gdy MQTT offline (TTL 1h)
+- HTTP OTA: pobiera `.bin` z URL i restartuje do nowej partycji
 
-### FSM (Finite State Machine)
-```
-BOOTING → PROVISIONING          (brak konfiguracji w NVS)
-BOOTING → CONNECTING_WIFI
-        → CONNECTING_MQTT
-        → FREE
-
-FREE ↔ RESERVED ↔ OCCUPIED      (driven by server SET_LED commands)
-dowolny → ERROR                  (utrata WiFi/MQTT)
-ERROR   → FREE                   (przywrócenie połączenia)
-```
-
-### Kolory LED per stan
-| Stan | Kolor | Animacja |
-|---|---|---|
-| FREE | `#00C800` zielony | solid |
-| RESERVED | `#0050DC` niebieski | solid |
-| OCCUPIED | `#DC0000` czerwony | solid |
-| ERROR | `#DC0000` czerwony | pulse |
-| CONNECTING | `#C8A000` żółty | pulse |
+### Provisioning
+Przez Serial Monitor: `PROVISION:{"wifi_ssid":"...","mqtt_user":"beacon-X","desk_id":"UUID",...}`
 
 ---
 
-## Warstwa 2 — Gateway
+## Warstwa 2 — Gateway (Raspberry Pi)
 
-**Runtime:** Node.js / TypeScript  
-**Platforma:** Raspberry Pi 4 lub mini PC (Ubuntu 22.04)  
-**Repo:** `desk-gateway`
+**Hardware:** RPi 3B+, 4 lub Zero 2W (nie RPi 1B+ — ARMv6 niekompatybilne)
+**Repo:** `desk-gateway-python`
+**Serwis:** systemd `reserti-gateway`
 
-### Odpowiedzialności
-- Lokalny broker MQTT (Mosquitto) dla wszystkich beaconów w biurze
-- Cache rezerwacji w SQLite (dziś + jutro) — synchronizacja co 60s
-- Weryfikacja check-inów z cache **bez round-tripu do serwera**
-- Forwarding autoryzowanych check-inów do serwera (async, kolejka przy offline)
-- Monitoring heartbeatów — brak sygnału → SET_LED ERROR
+### Komponenty
 
-### Odporność offline
-```
-Gateway offline →
-  Beacony → weryfikacja przez lokalny cache
-  Zdarzenia → offline_events (SQLite)
+| Klasa | Rola |
+|-------|------|
+| `Cache` | SQLite WAL — rezerwacje, LED state, device registry |
+| `SyncService` | Pull z backendu co 60s → aktualizacja SQLite |
+| `MqttBridge` | Subskrybuje `desk/#` → forward NFC do backendu |
+| `DeviceMonitor` | Wykrywa beacony offline (> 90s bez heartbeat) |
+| `MqttAdmin` | Dynamiczne zarządzanie users Mosquitto |
+| `GatewayApiHandler` | REST API dla backendu (`/command`, `/health`) |
 
-Gateway reconnect →
-  Flush offline_events → POST /checkins/nfc per event
-  Serwer przetwarza wszystkie zaległe zdarzenia
-```
+### Offline-first
+Gdy sieć niedostępna: Cache obsługuje NFC z lokalnych danych (grace period 15min).
 
-Użytkownik nie odczuwa różnicy niezależnie od dostępności serwera.
+### Provisioning
+Automatyczna instalacja: `curl -fsSL .../install/gateway/{token} | bash`
 
 ---
 
-## Warstwa 3 — Serwer główny
+## Warstwa 3 — Serwer
 
-**Framework:** NestJS (TypeScript)  
-**Baza danych:** PostgreSQL 15 + Prisma ORM  
-**Repo:** `desk-panel`
-
-### Moduły
-```
-auth            JWT (15 min) + rotacja refresh tokenów
-organizations   Multi-tenant root (tylko Super Admin)
-locations       Biura w ramach organizacji
-desks           CRUD, mapa zajętości, tokeny QR
-devices         Provisioning beaconów, heartbeat, komendy
-gateways        Rejestracja gateway, API sync
-reservations    CRUD z weryfikacją konfliktów
-checkins        NFC / QR / ręczny — pełny audit trail
-mqtt            Bridge do sieci MQTT gateway
-users           Konta użytkowników, przypisanie kart NFC
-```
-
-**Source of truth:** Serwer przechowuje autorytatywny stan. Cache gateway to kopia read-through dla odporności offline.
-
----
-
-## Flow check-in NFC (happy path, online)
+### NestJS Backend — moduły
 
 ```
-t=0ms    Użytkownik przykłada kartę do beacona
-t=5ms    Beacon czyta UID → MQTT: desk/{id}/checkin
-t=8ms    Gateway odbiera wiadomość
-t=10ms   Gateway → SQLite cache lookup → MATCH
-t=12ms   Gateway → desk/{id}/command SET_LED #DC0000 ← LED zmienia się
-t=13ms   Gateway → POST /checkins/nfc (async, non-blocking)
-t=80ms   Serwer waliduje, tworzy rekord Checkin, loguje Event
-t=82ms   Serwer → user/{userId}/event (checkin_confirmed)
+AppModule
+├── SharedModule (@Global)
+│   └── LedEventsService         rxjs Subject — event bus dla LED
+├── DatabaseModule
+│   └── PrismaService
+├── MetricsModule                Prometheus /metrics
+├── AuthModule                   JWT (15min/7d) + Entra ID SSO
+├── UsersModule
+├── OrganizationsModule          Azure SSO config + (planowane: Subscriptions)
+├── LocationsModule              Biura + occupancy + extended stats
+├── DesksModule                  CRUD + live status + QR tokens
+├── DevicesModule                Provisioning + OTA + heartbeat
+│   └── → MqttModule
+├── GatewaysModule               Setup tokens + sendBeaconCommand
+│   └── InstallController        GET /install/gateway/:token (poza /api/v1)
+├── ReservationsModule           CRUD + konflikty + QR + cron expireOld
+├── CheckinsModule               NFC/QR/manual + cron autoCheckout
+├── NotificationsModule          Email (SMTP per org) + in-app
+├── MqttModule                   MQTT client + handlers
+└── OwnerModule                  CRUD org + impersonacja + stats + health
+```
 
-Latencja odczuwana przez użytkownika: ~15ms (odpowiedź LED)
+### LED flow (zero circular dependency)
+
+```
+CheckinsService / ReservationsService
+  → LedEventsService.emit({ deskId, state: 'OCCUPIED'|'FREE'|'RESERVED' })
+    → MqttHandlers.ledEvents.events$.subscribe()
+      → GatewaysService.sendBeaconCommand(gatewayId, deskId, 'SET_LED', { color })
+        → HTTP POST gateway Pi → Mosquitto → ESP32 → LED zmiana koloru
+```
+
+### OTA flow
+
+```
+GitHub Actions CI (push tag v*):
+  PlatformIO build → .bin → GitHub Releases
+
+Backend:
+  GET /firmware/latest → GitHub Releases API → { version, url, sha256 }
+  POST /devices/:id/ota → device.otaStatus = 'in_progress'
+                        → sendBeaconCommand('OTA_UPDATE', { url, version })
+
+Gateway → MQTT → ESP32:
+  HTTPUpdate.update(url) → new partition → ESP.restart()
+  → heartbeat z { version: newVersion }
+    → backend: otaStatus = 'success'
+
+Cron timeoutStaleOta() (co 5min):
+  otaStartedAt < now - 10min && otaStatus == 'in_progress' → 'failed'
 ```
 
 ---
 
-## Deployment produkcyjny
+## Przepływ danych — check-in NFC
 
 ```
-Cloudflare (DNS + Tunnel)
-  ↓ HTTPS
-Proxmox LXC — Coolify
-  ├── desk-backend  (NestJS)  → api.domena.pl
-  ├── front-admin   (nginx)   → admin.domena.pl
-  ├── front-staff   (nginx)   → staff.domena.pl
-  ├── PostgreSQL 15            → internal
-  └── Mosquitto                → port 1883
-
-Raspberry Pi (per biuro)
-  └── desk-gateway             → MQTT local broker
+1. Pracownik przykłada kartę do beacona ESP32
+2. Beacon czyta UID karty NFC
+3. Beacon publishuje: desk/{deskId}/checkin { card_uid, ts }
+4. Mosquitto (Pi) → gateway.py.MqttBridge._handle_checkin()
+5. Cache.find_by_card(uid) — sprawdza lokalnie (grace period 15min)
+6. POST backend /checkins (przez HTTPS, Cloudflare Tunnel)
+7. CheckinsService.nfcCheckin():
+   a. Znajdź User po cardUid
+   b. Sprawdź aktywną rezerwację
+   c. Utwórz Checkin record
+   d. LedEventsService.emit('OCCUPIED')
+8. MqttHandlers.onLedEvent():
+   GatewaysService.sendBeaconCommand(gwId, deskId, 'SET_LED', { color: '#DC0000' })
+9. HTTP POST gateway Pi /command → Mosquitto (Pi) → ESP32
+10. LED zmienia kolor na czerwony (< 200ms end-to-end)
 ```
-
-Pełna instrukcja → [deployment.md](deployment.md)
 
 ---
 
 ## Bezpieczeństwo
 
-| Obszar | Zabezpieczenie |
-|---|---|
-| MQTT auth | Per-device login/hasło, brak anonymous |
-| MQTT ACL | Każdy beacon ograniczony do własnych tematów |
-| API auth | JWT 15min + rotacja refresh tokenów |
-| Gateway auth | `x-gateway-id` + `x-gateway-secret` |
-| Hasła | bcrypt (rounds=10) |
-| CORS | Whitelist origins (CORS_ORIGINS env var) |
-| MQTT TLS | Port 8883 — zalecane w produkcji |
-| NFC | UID karty — rozważyć NDEF/challenge-response dla wyższego bezpieczeństwa |
+| Aspekt | Rozwiązanie |
+|--------|-------------|
+| Auth API | JWT Bearer, 15min access + 7d refresh z rotacją |
+| Auth gateway | `x-gateway-secret` (bcrypt) + `x-gateway-provision-key` |
+| Auth MQTT | Mosquitto passwd + ACL per beacon (user/password) |
+| Multi-tenant isolation | `organizationId` w każdym query + RolesGuard |
+| OWNER isolation | OwnerGuard — dedykowany guard |
+| SMTP hasła | AES-256-GCM (SMTP_ENCRYPTION_KEY env) |
+| Rate limiting | @nestjs/throttler: 100/60s globalnie, 5/60s dla auth |
+| Metrics | IP whitelist (METRICS_ALLOWED_IPS) |
+| Provisioning tokens | crypto.randomBytes(32).toString('hex'), jednorazowe, TTL 24h |
+| Impersonacja | JWT 30min + impersonated: true + audit log OWNER_IMPERSONATION |
 
 ---
 
-## QR Check-in — flow bez beacona
-
-Alternatywny flow check-inu bez hardware ESP32. Działa na każdym telefonie z aparatem.
+## Monitorowanie
 
 ```
-1. Admin generuje QR kod dla biurka (Admin Panel → Biurka → przycisk QR)
-   URL: https://staff.domena.pl/checkin/{qrToken}
-   Drukuje i klei na biurku
+NestJS /metrics (port 3000, poza /api/v1):
+  ├── http_request_duration_seconds (histogram)
+  ├── db_query_duration_seconds
+  ├── mqtt_events_total{type}
+  └── reserti_*_{orgs,gateways,beacons,checkins}_*
 
-2. Użytkownik skanuje QR telefonem → otwiera się Staff Panel (mobilny)
+Gateway /metrics (port 9100):
+  ├── gateway_mqtt_publishes_total{type}
+  ├── gateway_http_errors_total{endpoint}
+  ├── gateway_beacon_last_seen_seconds{hardware_id}
+  └── gateway_sync_duration_seconds
 
-3a. Biurko WOLNE:
-    → przycisk "Zarezerwuj i zrób check-in"
-    → POST /checkins/qr/walkin
-    → backend: tworzy rezerwację (teraz → closeTime) + check-in w transakcji
-    → sukces: "Biurko zostało zarezerwowane"
-
-3b. MOJA rezerwacja:
-    → przycisk "Check-in — potwierdź rezerwację"
-    → POST /checkins/qr z qrToken rezerwacji
-    → sukces: "Check-in udany!"
-
-3c. Biurko ZAJĘTE przez kogoś innego:
-    → "To biurko jest już zajęte. Wybierz inne biurko."
-    → przycisk do mapy biurek
-
-4. Czas check-inu zapisywany na rezerwacji (checkedInAt + checkedInMethod)
+Planowane: Prometheus + Grafana w Coolify (v0.12.1)
+  - Dashboard 1: Owner — System Health
+  - Dashboard 2: Owner — Fleet Overview
+  - Dashboard 3: Client — Desk Analytics
+  - Dashboard 4: Client — IoT Health
 ```
 
-**Godziny pracy biura** (`Location.openTime` / `Location.closeTime`):
-- Konfigurowane przez Super Admin: Biura → ⏰ Godziny
-- Walk-in kończy się o `closeTime` (domyślnie 17:00)
-- Walk-in po `closeTime` jest zablokowany
-- Jeśli ktoś ma rezerwację w godzinach pracy → walk-in kończy się 5 min przed nią
+---
+
+## Moduł subskrypcji (planowany v0.12.0)
+
+```
+Organization
+  ├── plan: starter|pro|enterprise|trial
+  ├── planExpiresAt: DateTime?
+  ├── limitDesks/Users/Gateways/Locations: Int? (null = ∞)
+  └── SubscriptionEvent[]
+        ├── type: plan_changed|renewed|expired|trial_started|limit_exceeded
+        ├── previousPlan, newPlan
+        └── changedBy (OWNER userId)
+
+GET /subscription/status → SUPER_ADMIN
+  { plan, daysUntilExpiry, status, usage: { desks: { used, limit, pct }, ... }, features }
+
+POST /owner/organizations/:id/subscription → OWNER
+  { plan, planExpiresAt, limitDesks, limitUsers, limitGateways, limitLocations, mrr }
+```
+
+Szczegóły: `docs/subscription.md`

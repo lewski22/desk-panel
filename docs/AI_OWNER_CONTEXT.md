@@ -1,384 +1,193 @@
 # Panel Owner — Kontekst dla narzędzi AI
 
-> Kontekst modułu Owner Panel — aplikacja do zarządzania wszystkimi klientami platformy Reserti.
-> Uzupełnienie do `AI_CONTEXT.md` i `AI_BACKEND_CONTEXT.md`.
-> Ostatnia aktualizacja: 2026-03-31
+> Kontekst modułu Owner Panel.
+> Ostatnia aktualizacja: 2026-04-15 — v0.11.0
 > Status: ✅ ZAIMPLEMENTOWANY — backend + frontend w pełni gotowe
 
 ---
 
 ## Czym jest Owner Panel
 
-Owner Panel to narzędzie operatora platformy Reserti (właściciela SaaS).
-Umożliwia zarządzanie wszystkimi firmami-klientami, monitorowanie infrastruktury
-IoT (gateway + beacony) we wszystkich biurach, tworzenie nowych klientów
-i wchodzenie w ich panel (impersonation) bez znajomości hasła.
+Narzędzie operatora platformy Reserti. Umożliwia:
+- Zarządzanie wszystkimi firmami-klientami (CRUD organizacji)
+- Wchodzenie do panelu każdej firmy bez hasła (impersonacja)
+- Monitoring infrastruktury IoT globalnie (gateway + beacony)
+- **Zarządzanie subskrypcjami klientów (planowane v0.12.0)**
 
-**Domena:** `owner.prohalw2026.ovh`
-**Osobna aplikacja React** — nie łączyć z Admin Panel.
-**Nowy prefix API:** `/owner/*` z dedykowanym guardem.
+**Dostęp:** Unified Panel (`app.prohalw2026.ovh`) → rola OWNER
 
 ---
 
-## Hierarchia ról (po dodaniu OWNER)
+## Hierarchia ról
 
 ```
-OWNER              ← operator platformy Reserti (Ty)
-  └── SUPER_ADMIN  ← admin firmy-klienta (widzi swoją org)
-        └── OFFICE_ADMIN  ← admin konkretnego biura
-              └── STAFF   ← pracownik biura
-                    └── END_USER  ← zwykły pracownik
-```
-
-Zmiana w `schema.prisma`:
-```prisma
-enum UserRole {
-  OWNER        // ← NOWE (dodać na początku enum)
-  SUPER_ADMIN
-  OFFICE_ADMIN
-  STAFF
-  END_USER
-}
+OWNER              ← operator platformy Reserti (jeden na platformę)
+  └── SUPER_ADMIN  ← admin firmy-klienta (widzi tylko swoją org)
+        └── OFFICE_ADMIN  ← admin biura
+              └── STAFF   ← recepcja
+                    └── END_USER  ← pracownik
 ```
 
 ---
 
-## Nowe pola w Organization
+## API — Owner endpoints
+
+```
+GET    /owner/organizations              — lista wszystkich org
+POST   /owner/organizations              — utwórz org (+ konto SUPER_ADMIN)
+PATCH  /owner/organizations/:id          — aktualizuj (plan, isActive, notes)
+DELETE /owner/organizations/:id          — dezaktywuj (soft delete)
+POST   /owner/organizations/:id/impersonate  — token JWT 30min jako SUPER_ADMIN tej org
+GET    /owner/stats                      — metryki globalne platformy
+GET    /owner/health                     — health wszystkich gateway + beaconów
+GET    /owner/health/:orgId              — health jednej org
+
+# Planowane v0.12.0 — Subskrypcje
+GET    /owner/organizations/:id/subscription        — stan subskrypcji org
+POST   /owner/organizations/:id/subscription        — zmiana planu / odnowienie
+GET    /owner/organizations/:id/subscription/events — historia zmian
+GET    /owner/subscription/dashboard                — MRR + wygasające
+```
+
+---
+
+## Model Organization — pola Owner
 
 ```prisma
 model Organization {
-  // ...istniejące pola (id, name, slug, isActive, createdAt, updatedAt)...
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  isActive       Boolean   @default(true)
 
-  // NOWE — dodać przez prisma db push:
-  plan           String    @default("starter")  // starter | pro | enterprise
-  planExpiresAt  DateTime?
-  trialEndsAt    DateTime?
-  notes          String?   @db.Text              // notatki wewnętrzne Ownera
+  // Plan i billing
+  plan           String    @default("starter")   // starter|pro|enterprise|trial
+  planExpiresAt  DateTime?                        // null = bezterminowy
+  trialEndsAt    DateTime?                        // null = nie trial
+  limitDesks     Int?                             // null = ∞
+  limitUsers     Int?
+  limitGateways  Int?
+  limitLocations Int?
+  mrr            Int?      // Monthly Recurring Revenue w groszach PLN
+  billingEmail   String?
+  billingNotes   String?   @db.Text
+
+  // Metadane Ownera
+  notes          String?   @db.Text
   contactEmail   String?
-  createdBy      String?                         // userId Ownera który stworzył
+  createdBy      String?   // userId Ownera
+
+  // M365/Entra ID (konfigurowane przez SUPER_ADMIN)
+  azureTenantId  String?
+  azureEnabled   Boolean   @default(false)
 }
 ```
 
 ---
 
-## Nowy moduł backend
+## Plany subskrypcji
 
-### Struktura plików
+| Plan | Biurka | Użytkownicy | Gatewaye | Biura | OTA | SSO |
+|------|--------|-------------|----------|-------|-----|-----|
+| starter | 10 | 25 | 1 | 1 | ✗ | ✗ |
+| pro | 50 | 150 | 3 | 5 | ✓ | ✓ |
+| enterprise | ∞ | ∞ | ∞ | ∞ | ✓ | ✓ |
+| trial | 10 | 10 | 1 | 1 | ✗ | ✗ |
+
+Limity są miękkie — przekroczenie wyświetla ostrzeżenia, nie blokuje działania.
+
+---
+
+## Impersonacja — flow
 
 ```
-backend/src/modules/owner/
-  owner.module.ts
-  owner.controller.ts        ← /owner/* endpoints, tylko OWNER
-  owner.service.ts           ← CRUD organizacji, tworzenie klientów
-  owner-health.service.ts    ← agregacja stanu gateway + beaconów
-  guards/
-    owner.guard.ts           ← sprawdza user.role === 'OWNER'
-  dto/
-    create-org.dto.ts        ← { name, slug, plan, contactEmail, adminEmail, adminName }
-    update-org.dto.ts        ← { plan?, isActive?, planExpiresAt?, notes?, contactEmail? }
+1. OWNER → OwnerPage → Firmy → [Impersonuj]
+2. POST /owner/organizations/:id/impersonate
+3. Backend: findFirst SUPER_ADMIN tej org + audit log (OWNER_IMPERSONATION Event)
+4. JWT 30min z { impersonated: true } — nieprzedłużalny
+5. Redirect: /auth/impersonate?token=...
+6. Panel wyświetla baner "Przeglądasz jako: admin@firma.pl [Wróć]"
 ```
 
-### owner.guard.ts
+**Audit trail:** `Event.type = 'OWNER_IMPERSONATION'`, `payload: { ownerId, orgId, at }`
+
+---
+
+## Statystyki Owner Dashboard
 
 ```typescript
-@Injectable()
-export class OwnerGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest();
-    return req.user?.role === 'OWNER';
-  }
-}
-// Używaj zamiast @Roles(UserRole.OWNER) — prostsze, jawniejsze
-```
-
-### owner.controller.ts — pełna lista endpointów
-
-```typescript
-@Controller('owner')
-@UseGuards(JwtAuthGuard, OwnerGuard)
-export class OwnerController {
-
-  // Lista firm
-  GET  /owner/organizations
-    query: ?isActive=bool, ?plan=string, ?search=string
-    return: OrgSummary[] (z metrykami: gateway online/total, beacony online/total)
-
-  // Utwórz nową firmę + pierwszego SUPER_ADMIN
-  POST /owner/organizations
-    body: { name, slug, plan, contactEmail, adminEmail, adminName, trialDays? }
-    return: { org, adminUser, temporaryPassword }
-
-  // Szczegóły firmy
-  GET  /owner/organizations/:id
-    return: pełne dane + biura + gateway + beacony + ostatnia aktywność
-
-  // Edytuj firmę (plan, status, notatki)
-  PATCH /owner/organizations/:id
-    body: UpdateOrgDto
-    return: zaktualizowana org
-
-  // Dezaktywuj firmę (soft delete)
-  DELETE /owner/organizations/:id
-    → ustawia isActive=false (nie usuwa danych)
-
-  // Globalny stan infrastruktury
-  GET /owner/health
-    query: ?status=offline|problem|healthy, ?orgId=string
-    return: { orgs: [{ org, gateways: [], beacons: [] }] }
-
-  // Stan infrastruktury jednej firmy
-  GET /owner/health/:orgId
-    return: { gateways: GatewayHealth[], beacons: BeaconHealth[] }
-
-  // Metryki całej platformy
-  GET /owner/stats
-    return: { orgsTotal, orgsActive, gatewaysOnline, gatewaysTotal,
-              beaconsOnline, beaconsTotal, checkinsToday, checkinsWeek,
-              inactiveOrgs: OrgSummary[] }
-
-  // Wejście w panel klienta jako SUPER_ADMIN (impersonation)
-  POST /owner/organizations/:id/impersonate
-    return: { token, expiresAt, adminUrl }
-    side-effect: tworzy Event(OWNER_IMPERSONATION, { ownerId, orgId, ip, at })
+// GET /owner/stats
+{
+  orgsTotal: number,        // wszystkie org
+  orgsActive: number,       // isActive=true
+  orgsInactive: number,
+  gatewaysTotal: number,
+  gatewaysOnline: number,   // isOnline=true
+  beaconsTotal: number,
+  beaconsOnline: number,
+  checkinsToday: number,    // Checkin.createdAt >= dzisiaj
+  checkinsWeek: number,
+  // Planowane v0.12.0:
+  mrrTotal: number,         // suma mrr wszystkich aktywnych org (PLN gr)
+  orgsExpiringSoon: number  // planExpiresAt < now + 14dni
 }
 ```
 
-### owner.service.ts — kluczowe metody
+---
+
+## Health monitoring
 
 ```typescript
-// Tworzy org + SUPER_ADMIN jednocześnie w transakcji
-async createOrganization(dto: CreateOrgDto, ownerId: string): Promise<{org, user, password}>
+// OwnerHealthService
+const GATEWAY_STALE_MINUTES = 5;
+const BEACON_STALE_MINUTES = 10;
 
-// Generuje JWT z rolą SUPER_ADMIN + organizationId, ważny 30 min
-// Payload: { sub: userId, role: 'SUPER_ADMIN', orgId, impersonated: true }
-async impersonate(orgId: string, ownerId: string): Promise<string>
-
-// Agreguje metryki dla listy orgów (N+1 prevention: batch queries)
-async getOrgSummaries(filter: OrgFilter): Promise<OrgSummary[]>
-```
-
-### owner-health.service.ts — kluczowe metody
-
-```typescript
-// Zwraca stan wszystkich gateway i beaconów grupowany per org
-// Używa: ostatni heartbeat, isOnline, lastSeen
-async getGlobalHealth(filter?: HealthFilter): Promise<OrgHealthGroup[]>
-
-// Stan jednej firmy — szybszy query
-async getOrgHealth(orgId: string): Promise<OrgHealth>
-
-// Czy gateway jest zdrowy? Kryterium: isOnline = true AND lastSeen < 5 min temu
-isGatewayHealthy(gw: Gateway): 'healthy' | 'stale' | 'offline'
-
-// Czy beacon jest zdrowy?
-isBeaconHealthy(device: Device): 'healthy' | 'stale' | 'offline'
+// Status: 'healthy' | 'stale' | 'offline'
+// healthy: lastSeen < stale threshold
+// stale:   lastSeen > threshold ale isOnline=true
+// offline: isOnline=false lub lastSeen null
 ```
 
 ---
 
-## Frontend: apps/owner/
+## Frontend — OwnerPage
 
-### Struktura
+`src/pages/OwnerPage.tsx` — zakładki:
 
-```
-apps/owner/
-├── package.json
-├── vite.config.ts        (port 3005)
-├── tsconfig.json
-├── index.html
-└── src/
-    ├── main.tsx
-    ├── App.tsx            (BrowserRouter + OwnerLayout + routes)
-    ├── components/
-    │   ├── OwnerLayout.tsx    (sidebar + topbar + baner impersonation)
-    │   ├── StatusDot.tsx      (● zielony/żółty/czerwony + label)
-    │   ├── MetricCard.tsx     (karta z liczbą i etykietą)
-    │   └── ui.tsx             (Btn, Modal, Input, Card — takie same jak Admin)
-    ├── pages/
-    │   ├── LoginPage.tsx          (formularz email/password)
-    │   ├── ClientsPage.tsx        (tabela firm z filtrami)
-    │   ├── ClientDetailPage.tsx   (4 sekcje: info | biura+gateways | beacony | aktywność)
-    │   ├── NewClientPage.tsx      (wizard 2-krokowy)
-    │   ├── HealthPage.tsx         (globalny monitoring, auto-refresh 30s)
-    │   └── StatsPage.tsx          (metryki + wykresy Recharts)
-    └── api/
-        └── client.ts              (axios do /owner/* endpoints)
-```
+1. **Dashboard** — KPI cards (statCards), tabela org z akcjami
+2. **Subskrypcje (planowane v0.12.0)** — tabela org z planem, ważnością, MRR
 
-### Routing
+**Akcje per organizacja:**
+- `Impersonuj` → otwiera nową kartę z tokenem
+- `Edytuj` → modal (plan, isActive, notes, billingEmail)
+- `Deaktywuj` / `Aktywuj` → toggle isActive
 
-```typescript
-// App.tsx
-<Routes>
-  <Route path="/login"   element={<LoginPage />} />
-  <Route path="/*" element={<OwnerLayout />}>
-    <Route path="clients"          element={<ClientsPage />} />
-    <Route path="clients/new"      element={<NewClientPage />} />
-    <Route path="clients/:id"      element={<ClientDetailPage />} />
-    <Route path="health"           element={<HealthPage />} />
-    <Route path="stats"            element={<StatsPage />} />
-    <Route path="*"                element={<Navigate to="clients" />} />
-  </Route>
-</Routes>
-```
-
-### OwnerLayout.tsx — ważne elementy
-
-```typescript
-// Baner impersonation — widoczny gdy localStorage.getItem('owner_impersonating')
-{impersonating && (
-  <div className="bg-amber-500 text-white text-xs px-4 py-1 flex justify-between">
-    <span>Zalogowany jako SUPER_ADMIN: {impersonating.orgName}</span>
-    <button onClick={exitImpersonation}>Wróć do Owner Panel</button>
-  </div>
-)}
-
-// Sidebar links
-const links = [
-  { to: '/clients', icon: '🏢', label: 'Klienci' },
-  { to: '/health',  icon: '📡', label: 'Health' },
-  { to: '/stats',   icon: '📊', label: 'Statystyki' },
-]
-```
+**OwnerGuard** — `src/pages/OwnerPage.tsx` dostępna tylko dla `role === 'OWNER'`.
+W AppLayout sidebar wyświetla link "Owner" tylko dla OWNER.
 
 ---
 
-## Funkcja impersonation — pełny flow
+## Subskrypcje — planowany moduł (v0.12.0)
 
-### Backend
+Szczegółowa specyfikacja: `docs/subscription.md`
 
-```typescript
-// owner.service.ts
-async impersonate(orgId: string, ownerId: string, ip: string) {
-  const org = await this.prisma.organization.findUniqueOrThrow({ where: { id: orgId } });
+**SUPER_ADMIN widzi** (`/subscription`):
+- PlanBadge (Starter/Pro/Enterprise/Trial)
+- Ważność planu + liczba dni
+- UsageBar per zasób (biurka/users/gateways/locations)
+- FeatureList (OTA, SSO, SMTP)
+- ExpiryBanner w AppLayout przy < 14 dni
 
-  // Znajdź SUPER_ADMIN tej organizacji (pierwszy aktywny)
-  const admin = await this.prisma.user.findFirst({
-    where: { organizationId: orgId, role: 'SUPER_ADMIN', isActive: true },
-  });
+**OWNER zarządza** (zakładka "Subskrypcje" w OwnerPage):
+- Tabela org: Firma | Plan | Status | Wygasa | MRR | Akcje
+- Modal zmiany planu (plan, planExpiresAt, limity, mrr, billingEmail)
+- Historia zmian (SubscriptionEvent per org)
+- KPI: MRR total, wygasające, na trialu
 
-  // Zaloguj zdarzenie (audit trail)
-  await this.prisma.event.create({
-    data: {
-      type: EventType.OWNER_IMPERSONATION,
-      entityType: 'organization',
-      entityId: orgId,
-      payload: { ownerId, orgName: org.name, ip, at: new Date() },
-    },
-  });
-
-  // Generuj tymczasowy JWT (30 min, impersonated: true)
-  const token = this.jwtService.sign(
-    { sub: admin.id, role: 'SUPER_ADMIN', orgId, impersonated: true },
-    { expiresIn: '30m' },
-  );
-
-  return {
-    token,
-    expiresAt: new Date(Date.now() + 30 * 60 * 1000),
-    adminUrl: `${process.env.ADMIN_URL}/auth/impersonate?token=${token}`,
-  };
-}
+**API dla SUPER_ADMIN:**
+```
+GET /subscription/status
+→ { plan, planExpiresAt, daysUntilExpiry, status, usage: { desks, users, gateways, locations }, features, warnings }
 ```
 
-### Frontend Admin Panel (zmiana przy imporsonation)
-
-```typescript
-// apps/admin/src/App.tsx — nowa route
-<Route path="/auth/impersonate" element={<ImpersonatePage />} />
-
-// apps/admin/src/pages/ImpersonatePage.tsx
-// Odczytuje ?token=..., zapisuje w localStorage jako admin_access
-// Przekierowuje na /dashboard
-// Ustawia localStorage.setItem('impersonated_by', 'owner') → pokazuje baner
-```
-
-### Frontend Owner Panel — przycisk impersonation
-
-```typescript
-// ClientDetailPage.tsx lub ClientsPage.tsx
-const impersonate = async (orgId: string, orgName: string) => {
-  const { adminUrl } = await ownerApi.impersonate(orgId);
-  // Zapisz info o impersonation w Owner Panel (żeby wyświetlić baner po powrocie)
-  localStorage.setItem('owner_impersonating', JSON.stringify({ orgId, orgName }));
-  window.open(adminUrl, '_blank');
-};
-```
-
----
-
-## HealthPage — szczegóły implementacji
-
-```typescript
-// Odświeżanie co 30s
-useEffect(() => {
-  const load = () => ownerApi.health.getGlobal().then(setData);
-  load();
-  const t = setInterval(load, 30_000);
-  return () => clearInterval(t);
-}, []);
-
-// Stan firmy = najgorszy stan z jej gateway
-function orgStatus(org: OrgHealthGroup): 'healthy' | 'problem' | 'critical' {
-  const gwStatuses = org.gateways.map(g => g.status);
-  if (gwStatuses.every(s => s === 'healthy')) return 'healthy';
-  if (gwStatuses.some(s => s === 'offline')) return 'critical';
-  return 'problem';
-}
-```
-
-**Kolorowanie:**
-- 🟢 Wszystkie gateway healthy → zielona lewa ramka karty firmy
-- 🟡 Problem (stale heartbeat) → żółta ramka
-- 🔴 Offline → czerwona ramka
-
----
-
-## Deploy w Coolify
-
-Nowy serwis `front-owner`:
-- Build source: `apps/owner/`
-- Dockerfile: identyczny jak `apps/admin/` (nginx + SPA)
-- Domena: `owner.prohalw2026.ovh`
-- Zmienna: `VITE_API_URL=https://api.prohalw2026.ovh/api/v1`
-
-Ważne: Cloudflare Tunnel automatycznie doda HTTPS dla nowej subdomeny.
-
----
-
-## Czego NIE zmieniać przy implementacji
-
-- Istniejące endpointy `/api/v1/*` — bez zmian
-- Logika JWT (`jwt.strategy.ts`) — bez zmian (OWNER to kolejna rola, sprawdzana przez OwnerGuard)
-- Admin Panel, Staff Panel — bez zmian (poza `ImpersonatePage`)
-- MQTT, gateway, firmware — bez zmian
-- Istniejące organizacje w bazie — schema migration additive (tylko nowe pola, nullable)
-
----
-
-## Kolejność implementacji (zalecana)
-
-```
-Dzień 1 (backend):
-  1. Dodaj OWNER do enum UserRole w schema.prisma + nowe pola Organization
-  2. prisma db push + seed konto OWNER
-  3. owner.guard.ts
-  4. owner.module.ts + owner.controller.ts + owner.service.ts (CRUD org)
-  5. Endpoint impersonation
-
-Dzień 2 (backend + frontend scaffold):
-  6. owner-health.service.ts + /owner/health endpoints
-  7. /owner/stats endpoint
-  8. apps/owner/ scaffold (package.json, vite, router, OwnerLayout, LoginPage)
-
-Dzień 3 (frontend pages):
-  9. ClientsPage + ownerApi.client.ts
-  10. NewClientPage (wizard)
-  11. ClientDetailPage
-
-Dzień 4 (monitoring + deploy):
-  12. HealthPage z auto-refresh
-  13. StatsPage z Recharts
-  14. ImpersonatePage w Admin Panel
-  15. Deploy Coolify + testy
-```
+**Bezpieczeństwo:** `mrr`, `billingNotes` — tylko dla OWNER, nigdy nie zwracane do SUPER_ADMIN.

@@ -1,7 +1,7 @@
 # Backend — Kontekst dla narzędzi AI
 
 > Szczegółowy kontekst `desk-panel/backend`.
-> Ostatnia aktualizacja: 2026-03-31
+> Ostatnia aktualizacja: 2026-04-15 — v0.11.0
 
 ---
 
@@ -11,11 +11,12 @@
 - **Prisma** 5 + PostgreSQL 15
 - **Passport.js** — JWT (15min) + Local strategy
 - **@nestjs/throttler** — rate limiting globalny + per endpoint
-- **@nestjs/schedule** — cron: `expireOld()` co 15 min
+- **@nestjs/schedule** — cron: `expireOld()` co 15min, `autoCheckout()` co 15min, `timeoutStaleOta()` co 5min
 - **jwks-rsa** + **jsonwebtoken** — weryfikacja Azure JWKS
-- **bcrypt** — hasła, secrety
-- **crypto.randomBytes** — generowanie haseł MQTT, secretów gateway
-- **ConfigService** — wszystkie env vars (nie `process.env`)
+- **bcrypt** — hasła, secrety gateway
+- **crypto.randomBytes** — hasła MQTT, secrety gateway, QR tokeny
+- **nodemailer** — wysyłka email (per-org SMTP lub globalny fallback)
+- **prom-client** + **@willsoto/nestjs-prometheus** — metryki Prometheus
 
 ---
 
@@ -24,62 +25,71 @@
 ```
 src/
 ├── main.ts
-├── app.module.ts              # imports: wszystkie moduły + ThrottlerModule
+├── app.module.ts
 ├── database/
-│   ├── db.module.ts
-│   └── prisma.service.ts      # PrismaClient singleton
-│   └── seeds/seed.ts          # Upsert kont testowych — uruchamiany przez CMD
-├── modules/
-│   ├── auth/
-│   │   ├── auth.controller.ts        # POST /auth/login|refresh|logout|azure
-│   │   │                             # GET /auth/azure/check (publiczny, 20/min)
-│   │   ├── auth.service.ts           # validateUser, login, refresh, logout
-│   │   ├── azure-auth.service.ts     # verifyIdToken (JWKS), JIT provisioning
-│   │   ├── strategies/jwt.strategy.ts  # ⚠ odpytuje DB przy każdym request
-│   │   └── guards/jwt-auth.guard.ts, roles.guard.ts
-│   │
-│   ├── owner/                 ← NOWY MODUŁ
-│   │   ├── owner.module.ts
-│   │   ├── owner.controller.ts       # GET|POST|PATCH|DELETE /owner/organizations
-│   │   │                             # POST /owner/organizations/:id/impersonate
-│   │   │                             # GET /owner/health|health/:id|stats
-│   │   ├── owner.service.ts          # CRUD org (transakcja), impersonate (JWT 30min + audit)
-│   │   │                             # getStats (metryki platformy)
-│   │   ├── owner-health.service.ts   # getGlobalHealth, getOrgHealth
-│   │   │                             # statusy: healthy / stale / offline
-│   │   │                             # kryterium: gateway > 5min, beacon > 10min
-│   │   ├── guards/owner.guard.ts     # role === 'OWNER'
-│   │   └── dto/create-org.dto.ts, update-org.dto.ts
-│   │
-│   ├── organizations/
-│   │   └── organizations.service.ts  # getAzureConfig, updateAzureConfig
-│   │
-│   ├── locations/
-│   │   ├── locations.service.ts      # findAll scoped do org dla OFFICE_ADMIN
-│   │   └── locations.controller.ts
-│   │
-│   ├── desks/
-│   │   ├── desks.service.ts          # findAvailable (walidacja startTime<endTime)
-│   │   └── desks.controller.ts       # GET /desks/available (Outlook Add-in)
-│   │
-│   ├── devices/
-│   │   └── devices.service.ts        # provision() + ConfigService (nie process.env)
-│   │
-│   ├── gateways/
-│   │   ├── gateways.service.ts
-│   │   ├── gateway-setup.service.ts  # createToken, redeemToken (jednorazowy, 24h)
-│   │   ├── gateways.controller.ts
-│   │   └── install.controller.ts     # GET /install/gateway/:token (POZA /api/v1)
-│   │                                 # GATEWAY_INSTALL_SCRIPT_URL z ConfigService
-│   │
-│   ├── reservations/
-│   │   ├── reservations.service.ts   # @Cron('0 */15 * * * *') expireOld()
-│   │   │                             # findMy: paginacja take=50 (max 100)
-│   │   │                             # ReservationStatus enum (nie string literals)
-│   │   └── reservations.controller.ts
-│   │
-│   └── checkins/
-│       └── checkins.service.ts       # walkinQr: sprawdza openTime/closeTime (lokalny TZ)
+│   ├── prisma.service.ts
+│   └── seeds/seed.ts               # upsert idempotentny — konta testowe
+├── metrics/                         # Prometheus (poza /api/v1)
+│   ├── metrics.controller.ts        # GET /metrics (IP whitelist)
+│   ├── metrics.service.ts
+│   ├── metrics.interceptor.ts       # request duration histogram
+│   └── metrics.module.ts
+├── shared/
+│   └── led-events.service.ts        # rxjs Subject — LED event bus
+├── mqtt/
+│   ├── mqtt.service.ts              # MQTT client (publish, subscribe)
+│   ├── mqtt.handlers.ts             # NFC events + LED events subscription
+│   └── topics.ts                    # topic strings + LED payload builders
+└── modules/
+    ├── auth/
+    │   ├── auth.controller.ts        # /auth/login|refresh|logout|azure|azure/check
+    │   ├── auth.service.ts           # validateUser, login, refresh, changePassword, logout
+    │   ├── azure-auth.service.ts     # verifyIdToken (JWKS), JIT provisioning
+    │   └── guards/                   # JwtAuthGuard, RolesGuard
+    │
+    ├── owner/
+    │   ├── owner.controller.ts       # /owner/organizations CRUD + impersonate + stats + health
+    │   ├── owner.service.ts          # CRUD org, impersonate (JWT 30min + OWNER_IMPERSONATION audit)
+    │   ├── owner-health.service.ts   # getGlobalHealth, getOrgHealth (stale/offline)
+    │   └── guards/owner.guard.ts     # role === 'OWNER'
+    │
+    ├── organizations/
+    │   └── organizations.service.ts  # getAzureConfig, updateAzureConfig
+    │                                 # (planowane: SubscriptionsService)
+    │
+    ├── locations/
+    │   └── locations.service.ts      # findAll scoped do org, occupancy, extended (dashboard)
+    │
+    ├── desks/
+    │   ├── desks.service.ts          # CRUD, getCurrentStatus (live mapa), QR tokeny
+    │   └── desks.controller.ts       # GET /desks/available (Outlook Add-in)
+    │
+    ├── devices/
+    │   ├── devices.service.ts        # provision, triggerOta, timeoutStaleOta, heartbeat
+    │   │                             # findAll (filtr orgId dla non-OWNER)
+    │   └── devices.controller.ts     # command, assign, ota, ota-all, firmware/latest
+    │
+    ├── gateways/
+    │   ├── gateways.service.ts       # sendBeaconCommand (HTTP → Pi Mosquitto → beacon)
+    │   ├── gateway-setup.service.ts  # createToken, redeemToken (jednorazowy 24h)
+    │   └── install.controller.ts     # GET /install/gateway/:token (POZA /api/v1)
+    │
+    ├── reservations/
+    │   ├── reservations.service.ts   # create (konflikt check), cancel (LED FREE), expireOld cron
+    │   │                             # getQrToken, findMy (take max 100), findAll (filtry)
+    │   └── reservations.controller.ts
+    │
+    ├── checkins/
+    │   └── checkins.service.ts       # nfcCheckin, checkinQr, walkinQr, checkout, autoCheckout
+    │                                 # endOfWorkInTz() — Intl.DateTimeFormat, pure TS
+    │
+    └── notifications/
+        ├── notifications.service.ts  # sendEmail per org (SMTP AES-256-GCM → fallback global)
+        │                             # 8 typów, 24h dedup, NotificationLog
+        ├── notifications.controller.ts # settings, log, test, smtp config
+        ├── inapp.service.ts          # createNotification, getForUser, markRead, announce
+        ├── inapp.controller.ts       # polling, rules, announce
+        └── smtp.service.ts           # AES-256-GCM encrypt/decrypt haseł SMTP
 ```
 
 ---
@@ -89,60 +99,76 @@ src/
 ### Enums
 
 ```prisma
-enum UserRole {
-  OWNER           ← operator platformy
-  SUPER_ADMIN
-  OFFICE_ADMIN
-  STAFF
-  END_USER
-}
+enum UserRole { OWNER | SUPER_ADMIN | OFFICE_ADMIN | STAFF | END_USER }
+
+enum ReservationStatus { PENDING | CONFIRMED | CANCELLED | EXPIRED }
 
 enum EventType {
   DESK_CREATED | DESK_UPDATED | DESK_STATUS_CHANGED
   RESERVATION_CREATED | RESERVATION_CANCELLED | RESERVATION_EXPIRED
   CHECKIN_NFC | CHECKIN_QR | CHECKIN_MANUAL | CHECKOUT
-  DEVICE_ONLINE | DEVICE_OFFLINE | DEVICE_PROVISIONED
-  GATEWAY_ONLINE | GATEWAY_OFFLINE
+  DEVICE_ONLINE | DEVICE_OFFLINE | DEVICE_PROVISIONED | DEVICE_OTA_SUCCESS | DEVICE_OTA_FAILED
+  GATEWAY_ONLINE | GATEWAY_OFFLINE | GATEWAY_RESET
   UNAUTHORIZED_SCAN
   USER_CREATED | USER_UPDATED
-  OWNER_IMPERSONATION   ← audit trail impersonacji
-}
-
-enum ReservationStatus {
-  PENDING | CONFIRMED | CANCELLED | EXPIRED
+  OWNER_IMPERSONATION
 }
 ```
 
-### Organization — nowe pola (Owner Panel)
+### Organization — kluczowe pola
+
 ```prisma
 model Organization {
-  // ...istniejące...
-  plan           String    @default("starter")
-  planExpiresAt  DateTime?
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  isActive       Boolean   @default(true)
+  plan           String    @default("starter")   // starter|pro|enterprise|trial
+  planExpiresAt  DateTime?                        // null = bezterminowy
   trialEndsAt    DateTime?
+  limitDesks     Int?                             // null = ∞ (Enterprise)
+  limitUsers     Int?
+  limitGateways  Int?
+  limitLocations Int?
+  billingEmail   String?
+  mrr            Int?      // MRR w groszach PLN (dla OWNERa)
   notes          String?   @db.Text
   contactEmail   String?
-  createdBy      String?   // userId Ownera
-  // M365:
+  createdBy      String?
   azureTenantId  String?
   azureEnabled   Boolean   @default(false)
+  // relacje: locations[], users[], OrganizationSmtpConfig, SubscriptionEvent[] (planowane)
 }
 ```
 
-### User — pola M365
+### Device — OTA tracking
+
 ```prisma
-model User {
-  // ...istniejące...
-  azureObjectId  String?  @unique
-  azureTenantId  String?
+model Device {
+  // ...istniejące pola...
+  firmwareVersion String?
+  otaStatus       String?   // null | in_progress | success | failed
+  otaStartedAt    DateTime?
+  otaVersion      String?   // wersja do której aktualizujemy
+  isOnline        Boolean   @default(false)
+  rssi            Int?
+  lastSeen        DateTime?
 }
 ```
 
-### GatewaySetupToken
+### SubscriptionEvent (planowane v0.12.0)
+
 ```prisma
-model GatewaySetupToken {
-  // ...
-  @@index([locationId])   ← wydajność przy listTokens(locationId)
+model SubscriptionEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // plan_changed|renewed|expired|trial_started|limit_exceeded
+  previousPlan   String?
+  newPlan        String?
+  changedBy      String?
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id])
 }
 ```
 
@@ -150,93 +176,127 @@ model GatewaySetupToken {
 
 ## Wzorce autoryzacji
 
-### JwtAuthGuard + OwnerGuard (nowy)
+### OwnerGuard
+
 ```typescript
-// OwnerGuard — prostszy niż @Roles, jawny
 @Injectable()
 export class OwnerGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
-    return context.switchToHttp().getRequest().user?.role === 'OWNER';
+  canActivate(ctx: ExecutionContext): boolean {
+    return ctx.switchToHttp().getRequest().user?.role === 'OWNER';
   }
 }
-
-// Użycie w OwnerController:
-@UseGuards(JwtAuthGuard, OwnerGuard)
+// Użycie: @UseGuards(JwtAuthGuard, OwnerGuard)
 ```
 
-### Scoping OFFICE_ADMIN
+### Org isolation (SUPER_ADMIN vs OFFICE_ADMIN)
+
 ```typescript
-const where = user.role === 'SUPER_ADMIN'
-  ? {}
-  : { organizationId: user.organizationId };
+const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+// undefined = brak filtra (OWNER widzi wszystko)
 ```
 
-### Rate limiting (ThrottlerModule)
+### Rate limiting
+
 ```typescript
 // Globalne: 100 req / 60s
-// Auth endpoints: 5 req/min (login), 10 req/min (azure)
-@Throttle({ default: { limit: 5, ttl: 60000 } })
-async login(...)
+// Auth: @Throttle({ default: { limit: 5, ttl: 60000 } }) na login
+// Azure check: @Throttle({ default: { limit: 20, ttl: 60000 } })
 ```
 
 ---
 
-## Impersonation — implementacja
+## OTA Firmware — flow
+
+```typescript
+// devices.service.ts
+async triggerOta(id: string, actorOrgId?: string) {
+  const device = await this.assertBelongsToOrg(id, actorOrgId);
+  if (device.otaStatus === 'in_progress') throw new ConflictException();
+  const fw = await this.getLatestFirmware();
+  if (!fw) throw new BadRequestException('Brak wydania firmware na GitHub');
+
+  await prisma.device.update({ where: { id }, data: {
+    otaStatus: 'in_progress', otaStartedAt: new Date(), otaVersion: fw.version
+  }});
+
+  return {
+    triggered: true, deskId: device.desk?.id, gatewayId: device.gatewayId,
+    oldVersion: device.firmwareVersion, newVersion: fw.version,
+    _ota_payload: { command: 'OTA_UPDATE', params: { url: fw.url, version: fw.version } }
+  };
+}
+
+// Cron: timeout stale OTA
+@Cron('0 */5 * * * *')
+async timeoutStaleOta() {
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+  await prisma.device.updateMany({
+    where: { otaStatus: 'in_progress', otaStartedAt: { lt: cutoff } },
+    data: { otaStatus: 'failed' }
+  });
+}
+```
+
+---
+
+## Powiadomienia email — architektura
+
+```typescript
+// notifications.service.ts
+async send(orgId: string, type: string, payload: EmailPayload) {
+  const setting = await getNotificationSetting(orgId, type);
+  if (!setting?.enabled) return;
+
+  // 24h deduplikacja
+  const recentLog = await prisma.notificationLog.findFirst({
+    where: { organizationId: orgId, type, createdAt: { gte: new Date(Date.now() - 86400000) } }
+  });
+  if (recentLog) return;
+
+  // Per-org SMTP lub globalny fallback
+  const smtp = await getOrgSmtp(orgId);
+  const transport = smtp ? smtpFromOrgConfig(smtp) : globalSmtp;
+  await transport.sendMail({ to: setting.recipients, subject, html });
+  await prisma.notificationLog.create({ data: { organizationId: orgId, type, ... } });
+}
+```
+
+---
+
+## Impersonation
 
 ```typescript
 // owner.service.ts
-async impersonate(orgId: string, ownerId: string, ip: string) {
+async impersonate(orgId: string, ownerId: string) {
   const admin = await prisma.user.findFirst({
     where: { organizationId: orgId, role: 'SUPER_ADMIN', isActive: true }
   });
   // Audit log
   await prisma.event.create({
-    data: {
-      type: EventType.OWNER_IMPERSONATION,
-      payload: { ownerId, orgId, orgName, ip, at: new Date().toISOString() }
-    }
+    data: { type: 'OWNER_IMPERSONATION', payload: { ownerId, orgId } }
   });
-  // JWT 30 min, nieprzedłużalny
+  // JWT 30min, nieprzedłużalny, impersonated: true
   const token = jwtService.sign(
-    { sub: admin.id, email: admin.email, role: 'SUPER_ADMIN', orgId, impersonated: true },
-    { secret: config.get('JWT_SECRET'), expiresIn: '30m' }
+    { sub: admin.id, email: admin.email, role: 'SUPER_ADMIN', impersonated: true },
+    { expiresIn: '30m' }
   );
-  return { token, expiresAt, adminUrl: `${ADMIN_URL}/auth/impersonate?token=${token}` };
+  return { token, adminUrl: `${APP_URL}/auth/impersonate?token=${token}` };
 }
 ```
 
 ---
 
-## Azure SSO — flow (M1)
+## Seed — konta testowe
 
 ```
-POST /auth/azure { idToken }
-  → azure-auth.service.verifyIdToken(idToken)
-    → jwks-rsa pobiera klucze z https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys
-    → jsonwebtoken.verify(idToken, getKey, { algorithms: ['RS256'] })
-    → sprawdź aud === AZURE_CLIENT_ID
-  → JIT provisioning:
-    prisma.user.upsert({ where: { azureObjectId: oid }, ... })
-    → nowy user: passwordHash = 'AZURE_SSO_ONLY' (nie może się zalogować hasłem)
-  → generuj JWT jak przy normalnym login
-```
+CMD: prisma db push → node dist/database/seeds/seed.js → node dist/main
 
----
-
-## Seed — CMD przy starcie
-
-```
-Dockerfile CMD:
-  prisma db push --accept-data-loss
-  → node dist/database/seeds/seed.js
-    → node dist/main
-
-Seed tworzy przez upsert (idempotentny):
-  owner@reserti.pl       / Owner1234!  / OWNER    (bez organizationId)
-  superadmin@reserti.pl  / Admin1234!  / SUPER_ADMIN
-  admin@demo-corp.pl     / Admin1234!  / OFFICE_ADMIN
-  staff@demo-corp.pl     / Staff1234!  / STAFF
-  user@demo-corp.pl      / User1234!   / END_USER
+Upsert idempotentny:
+  owner@reserti.pl       Owner1234!   OWNER (bez organizationId)
+  superadmin@reserti.pl  Admin1234!   SUPER_ADMIN
+  admin@demo-corp.pl     Admin1234!   OFFICE_ADMIN
+  staff@demo-corp.pl     Staff1234!   STAFF
+  user@demo-corp.pl      User1234!    END_USER
 ```
 
 ---
@@ -245,17 +305,22 @@ Seed tworzy przez upsert (idempotentny):
 
 ```env
 DATABASE_URL=postgresql://...
-JWT_SECRET=...
-JWT_REFRESH_SECRET=...
+JWT_SECRET=...                        # access token (15min)
+JWT_REFRESH_SECRET=...                # refresh token (7d)
 MQTT_BROKER_URL=mqtt://mosquitto-NAME:1883
-CORS_ORIGINS=https://admin.prohalw2026.ovh,https://staff.prohalw2026.ovh
-GATEWAY_PROVISION_KEY=...
+CORS_ORIGINS=https://app.prohalw2026.ovh
+GATEWAY_PROVISION_KEY=...             # x-gateway-provision-key header
 PUBLIC_API_URL=https://api.prohalw2026.ovh/api/v1
-ADMIN_URL=https://admin.prohalw2026.ovh
-AZURE_CLIENT_ID=...
-AZURE_CLIENT_SECRET=...
-AZURE_REDIRECT_URI=https://api.prohalw2026.ovh/auth/azure/callback
-GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/lewski22/desk-gateway-python/main/install.sh
+AZURE_CLIENT_ID=...                   # Entra ID / Azure AD app
+FIRMWARE_REPO=lewski22/desk-firmware  # GitHub owner/repo dla Releases API
+SMTP_ENCRYPTION_KEY=...               # 64 hex chars (AES-256-GCM dla haseł SMTP)
+SMTP_HOST=smtp.example.com            # globalny fallback SMTP
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASS=...
+SMTP_FROM=Reserti <noreply@reserti.pl>
+METRICS_ALLOWED_IPS=127.0.0.1         # comma-separated IP whitelist dla /metrics
+GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/.../install.sh
 ```
 
 ---
@@ -263,11 +328,11 @@ GATEWAY_INSTALL_SCRIPT_URL=https://raw.githubusercontent.com/lewski22/desk-gatew
 ## Typowe błędy i naprawki
 
 | Błąd | Przyczyna | Rozwiązanie |
-|---|---|---|
-| `Cannot find module './seed.ts'` | ts-node w production bez src/ | Uruchom `node dist/database/seeds/seed.js` |
-| `Failed to fetch` przy logowaniu | `checkSso` wywoływany przy keystroke | Usunięty — SSO tylko przez osobny modal |
-| Internal Error przy logowaniu | Brak kolumn Azure w bazie | `prisma db push` w terminalu kontenera |
-| `property X should not exist` | forbidNonWhitelisted=true | Usuń nieznane pola z body requestu |
-| `ENOTFOUND mosquitto` | Race condition Docker | Healthcheck na mosquitto w docker-compose |
-| `0700` Mosquitto passwd | Zły chmod | `chmod 0600 + chown mosquitto:mosquitto` |
-| `ECONNRESET better-sqlite3` | Kompilacja native na ARM | Kopiuj node_modules z builder stage |
+|------|-----------|-------------|
+| `ENOTFOUND mosquitto` | Race condition Docker | healthcheck na mosquitto w docker-compose |
+| `0700 passwd file` | Zły chmod Mosquitto | `chmod 0600 + chown mosquitto:mosquitto` |
+| `ECONNRESET better-sqlite3` | Native ARM compile | Kopiuj node_modules z builder stage |
+| `property X should not exist` | forbidNonWhitelisted | Usuń nieznane pola z body |
+| Internal Error przy logowaniu | Brak kolumn Azure | `prisma db push` w kontenerze |
+| OTA stuck in_progress | Beacon nie odpowiedział | cron timeoutStaleOta() po 10min → failed |
+| Email nie wysłany | SMTP_ENCRYPTION_KEY brak | Ustaw 64-znakowy hex w env |

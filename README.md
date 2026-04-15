@@ -1,7 +1,7 @@
 # Reserti — Desk Management System
 
-**SaaS do zarządzania hot-deskami z IoT beaconami** (ESP32 + NFC + LED).  
-Pracownicy rezerwują biurka przez panel webowy lub Microsoft Teams.  
+**SaaS do zarządzania hot-deskami z IoT beaconami** (ESP32 + NFC + LED).
+Pracownicy rezerwują biurka przez panel webowy lub Microsoft Teams.
 Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 
 ---
@@ -16,8 +16,7 @@ Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 
 **Produkcja:**
 - API: `https://api.prohalw2026.ovh/api/v1`
-- App (Unified): `https://app.prohalw2026.ovh`
-- Owner: `https://owner.prohalw2026.ovh`
+- App: `https://app.prohalw2026.ovh`
 - Deploy: Coolify na Proxmox LXC + Cloudflare Tunnel
 
 ---
@@ -26,37 +25,94 @@ Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  CLOUD                                                           │
+│  CLOUD (Coolify / Proxmox)                                       │
 │                                                                  │
-│  ┌──────────────────────────────────────────────┐              │
-│  │  desk-panel (Coolify)                         │              │
-│  │  ┌─────────────┐  ┌────────────────────────┐ │              │
-│  │  │ Backend     │  │ Unified Panel           │ │              │
-│  │  │ NestJS      │  │ React + Vite + Tailwind │ │              │
-│  │  │ Prisma/PG15 │  │ app.prohalw2026.ovh     │ │              │
-│  │  │ MQTT client │  └────────────────────────┘ │              │
-│  │  └──────┬──────┘                              │              │
-│  └─────────┼───────────────────────────────────--┘              │
-│            │ HTTPS + MQTT (Cloudflare Tunnel)                    │
-└────────────┼────────────────────────────────────────────────────┘
-             │
-┌────────────┼────────────────────────────────────────────────────┐
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  desk-panel                                               │   │
+│  │  ┌─────────────────────┐  ┌───────────────────────────┐  │   │
+│  │  │ NestJS Backend       │  │ Unified Panel (React)     │  │   │
+│  │  │ Prisma + PostgreSQL  │  │ PWA + i18n PL/EN          │  │   │
+│  │  │ MQTT client         │  │ app.prohalw2026.ovh        │  │   │
+│  │  │ Prometheus /metrics  │  └───────────────────────────┘  │   │
+│  │  └──────────┬──────────┘                                  │   │
+│  └─────────────┼──────────────────────────────────────────────┘  │
+│                │ HTTPS + MQTT (Cloudflare Tunnel)                 │
+└────────────────┼────────────────────────────────────────────────┘
+                 │
+┌────────────────┼────────────────────────────────────────────────┐
 │  SIEĆ LOKALNA BIURA                                              │
-│            │                                                     │
-│  ┌─────────▼──────────────────────────────┐                    │
-│  │  Raspberry Pi 3B+/4/Zero 2W            │                    │
-│  │  ┌─────────────────┐  ┌─────────────┐  │                    │
-│  │  │ desk-gateway    │  │ Mosquitto   │  │                    │
-│  │  │ Python/systemd  │  │ MQTT broker │  │                    │
-│  │  └────────┬────────┘  └──────┬──────┘  │                    │
-│  └───────────┼──────────────────┼──────────┘                    │
-│              │ MQTT             │ MQTT                           │
-│    ┌─────────▼──────────────────▼──────────┐                    │
-│    │  ESP32 Beacony (per biurko)            │                    │
-│    │  WS2812B LED + PN532 NFC + WiFi        │                    │
-│    └────────────────────────────────────────┘                    │
-└─────────────────────────────────────────────────────────────────┘
+│  ┌─────────────▼────────────────────────────────────────────┐   │
+│  │  Raspberry Pi 3B+ / 4 / Zero 2W                          │   │
+│  │  ┌────────────────────┐  ┌──────────────────────────┐    │   │
+│  │  │ gateway.py (systemd)│  │ Mosquitto (MQTT broker)  │    │   │
+│  │  │ SyncService         │  │ port 1883 + auth + ACL   │    │   │
+│  │  │ Cache (SQLite)      │  └──────────┬───────────────┘    │   │
+│  │  │ DeviceMonitor       │             │ MQTT                │   │
+│  │  │ /metrics :9100      │  ┌──────────▼───────────────┐    │   │
+│  │  └────────────────────┘  │  ESP32 Beacony (per biurko)│   │   │
+│  └───────────────────────────│  WS2812B LED + PN532 NFC   │───┘   │
+│                              └───────────────────────────┘        │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Stack technologiczny
+
+| Warstwa | Technologia | Wersja |
+|---------|-------------|--------|
+| Backend | NestJS + Prisma + PostgreSQL | NestJS 10, Prisma 5, PG 15 |
+| Frontend | React + Vite + Tailwind + i18next + vite-plugin-pwa | React 18 |
+| Gateway | Python + paho-mqtt + sqlite3 | Python 3.8+ |
+| Firmware | ESP32 + PlatformIO + ArduinoJson + PN532 | Arduino framework |
+| Infra | Docker + Coolify + Mosquitto + Cloudflare Tunnel | — |
+| Monitoring | Prometheus + Grafana (planowane) | prom-client 14 |
+
+---
+
+## Funkcjonalności
+
+### ✅ Produkcja (v0.11.0)
+
+**Rezerwacje i check-in**
+- Rezerwacja biurek przez panel webowy lub QR kod
+- Check-in NFC (karta przy beaconie), QR (scan QR na biurku), ręczny (STAFF)
+- Walk-in przez QR bez rezerwacji
+- LED beacon: zielony (wolne), niebieski (zarezerwowane), czerwony (zajęte)
+- Auto-wygasanie rezerwacji co 15 min, auto-checkout walkin po 12h
+
+**Multi-tenant i role**
+- 5 ról: OWNER > SUPER_ADMIN > OFFICE_ADMIN > STAFF > END_USER
+- Impersonacja: OWNER wchodzi do panelu klienta (JWT 30min + audit log)
+- SSO Entra ID (Microsoft 365) per organizacja
+
+**IoT — provisioning**
+- Gateway: automatyczna instalacja curl + systemd (jednorazowy token 24h)
+- Beacon: provisioning przez Serial Monitor (PROVISION:{...} JSON)
+- OTA firmware: GitHub Actions CI → GitHub Releases → HTTP OTA na ESP32
+- Reassign beacona do biurka z panelu
+
+**Powiadomienia**
+- Email: 8 typów, per-org SMTP (AES-256-GCM), fallback globalny
+- In-app: dzwoneczek, polling 15s, ogłoszenia systemowe (OWNER)
+
+**Jakość**
+- i18n: 427 kluczy PL + EN, 100% pokrycie UI
+- PWA: instalacja na telefon, offline cache, skróty
+- Testy: 178 testów (backend NestJS + gateway Python)
+- Monitoring: Prometheus metrics (backend + gateway)
+
+### 🚧 Planowane (v0.12.0 — Q2 2026)
+
+**Moduł subskrypcji**
+- SUPER_ADMIN: plan, ważność, utilizacja zasobów (biurka/users/gateways)
+- OWNER: zarządzanie planami klientów, MRR dashboard
+- Powiadomienia: 30/14/7/1 dzień przed wygaśnięciem
+- Szczegóły: `docs/subscription.md`
+
+**Grafana dashboards**
+- Owner: System Health, Fleet Overview
+- Client: Desk Analytics, IoT Health
 
 ---
 
@@ -64,75 +120,91 @@ Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 
 ```
 desk-panel/
-├── backend/                    NestJS REST API + MQTT bridge
+├── backend/                      NestJS REST API
 │   ├── src/
-│   │   ├── modules/            Moduły domenowe
-│   │   │   ├── auth/           JWT + rotacja tokenów + SSO Entra ID
-│   │   │   ├── organizations/  Multi-tenant (Super Admin)
-│   │   │   ├── locations/      Biura w ramach organizacji
-│   │   │   ├── desks/          CRUD, mapa zajętości, tokeny QR
-│   │   │   ├── devices/        Provisioning beaconów, heartbeat
-│   │   │   ├── gateways/       Rejestracja gateway, setup tokeny
-│   │   │   ├── reservations/   CRUD + weryfikacja konfliktów + LED event
-│   │   │   ├── checkins/       NFC / QR / ręczny + checkout + LED event
-│   │   │   ├── users/          Konta, NFC card assignment
-│   │   │   └── owner/          Panel operatora (Owner role)
-│   │   ├── mqtt/               MQTT Service + Handlers (NFC events)
-│   │   │   └── topics.ts       Definicje topicków + LED payloads
-│   │   ├── shared/             Shared module (global)
-│   │   │   └── led-events.service.ts  Rxjs Subject — event bus LED
-│   │   ├── database/           Prisma + seed
-│   │   └── app.module.ts
+│   │   ├── modules/              Moduły domenowe (auth, users, desks, ...)
+│   │   ├── mqtt/                 MQTT service + handlers
+│   │   ├── shared/               LedEventsService (rxjs event bus)
+│   │   ├── metrics/              Prometheus exporter
+│   │   └── database/
+│   │       ├── prisma.service.ts
+│   │       └── seeds/seed.ts
 │   ├── prisma/
-│   │   ├── schema.prisma       Model bazy danych
-│   │   └── migrations/
-│   └── Dockerfile
+│   │   └── schema.prisma         16 modeli
+│   └── src/modules/
+│       ├── auth/                 JWT + Entra ID SSO
+│       ├── organizations/        Multi-tenant + Azure config
+│       ├── locations/            Biura (godziny, limity rezerwacji)
+│       ├── desks/                CRUD + live status + QR
+│       ├── devices/              Beacony + OTA
+│       ├── gateways/             Gateway setup + heartbeat
+│       ├── reservations/         CRUD + konflikty
+│       ├── checkins/             NFC/QR/manual + LED event
+│       ├── users/                Konta + NFC card
+│       ├── notifications/        Email + in-app
+│       └── owner/                Owner Panel API
 │
 ├── apps/
-│   └── unified/                Unified Panel — jedna app dla wszystkich ról
+│   └── unified/                  React Unified Panel (wszystkie role)
 │       ├── src/
-│       │   ├── pages/          Login, Dashboard, Desks, Reservations,
-│       │   │                   Users, Provisioning, DeskMap, MyReservations,
-│       │   │                   Reports, Organizations, QrCheckin, ChangePassword
-│       │   ├── components/
-│       │   │   ├── desks/      DeskMap, DeskCard (hideActions prop)
-│       │   │   ├── layout/     AppLayout (mobile sidebar drawer)
-│       │   │   └── ui.tsx      Shared UI components (Table, Modal, Btn...)
-│       │   ├── api/client.ts   API client (wszystkie endpointy)
-│       │   ├── hooks/          useDesks (polling co 30s)
-│       │   ├── types/          DeskMapItem, Reservation, ...
-│       │   └── utils/
-│       │       └── date.ts     localDateStr(), localDateTimeISO()
-│       └── Dockerfile
+│       │   ├── pages/            18 stron
+│       │   ├── components/       DeskMap, NfcCardModal, NotificationBell, ...
+│       │   ├── locales/          pl/ en/ (427 kluczy każdy)
+│       │   └── api/client.ts     Wszystkie wywołania API
+│       └── public/               favicon.svg, icon-192.svg, icon-512.svg
 │
 ├── docs/
-│   ├── AI_CONTEXT.md           ← Kontekst dla narzędzi AI (ten plik)
-│   ├── roadmap.md              Roadmapa i planowane funkcje
-│   ├── changelog.md            Historia zmian
-│   ├── architecture.md         Architektura techniczna
-│   ├── api.md                  REST API reference
-│   ├── mqtt.md                 MQTT specyfikacja
-│   ├── provisioning.md         Provisioning beaconów
-│   └── deployment.md           Wdrożenie produkcyjne
+│   ├── AI_CONTEXT.md             Główny kontekst dla AI (ten plik na start)
+│   ├── AI_BACKEND_CONTEXT.md     Szczegóły backendu
+│   ├── AI_OWNER_CONTEXT.md       Owner Panel + subskrypcje
+│   ├── AI_M365_CONTEXT.md        Microsoft 365 integracja
+│   ├── api.md                    REST API reference
+│   ├── architecture.md           Architektura systemu
+│   ├── roadmap.md                Plan rozwoju
+│   ├── subscription.md           Specyfikacja modułu subskrypcji
+│   ├── changelog.md              Historia wersji
+│   ├── roles.md                  Role i uprawnienia
+│   ├── deployment.md             Wdrożenie produkcyjne
+│   ├── hardware.md               ESP32 + RPi specyfikacja
+│   ├── mqtt.md                   Tematy i protokół MQTT
+│   ├── metrics.md                Prometheus metryki
+│   └── provisioning.md           Provisioning gateway i beaconów
 │
-└── docker-compose.yml          Lokalny dev stack
+└── docker-compose.yml            Backend + Mosquitto
 ```
 
 ---
 
-## Role użytkowników
+## Szybki start (development)
 
-| Rola | Dostęp | Uprawnienia |
-|------|--------|-------------|
-| **OWNER** | `/owner` | Operator platformy — zarządza wszystkimi klientami |
-| **SUPER_ADMIN** | `/app` | Pełny dostęp do jednej organizacji + provisioning |
-| **OFFICE_ADMIN** | `/app` | Biurka, użytkownicy, rezerwacje, raporty |
-| **STAFF** | `/app` | Mapa + check-in/out ręczny, urządzenia |
-| **END_USER** | `/app` + QR | Mapa biurek, rezerwacje, QR check-in |
+```bash
+# 1. Backend
+cd backend
+cp .env.example .env   # uzupełnij DATABASE_URL, JWT_SECRET, ...
+npm install
+npx prisma db push
+npx prisma db seed
+npm run start:dev      # http://localhost:3000/api/v1
+
+# 2. Frontend
+cd apps/unified
+npm install
+npm run dev            # http://localhost:3010
+
+# 3. Gateway (opcjonalnie)
+cd desk-gateway-python
+pip install paho-mqtt requests
+cp .env.example .env
+python3 gateway.py
+
+# 4. Testy
+cd backend && npx jest --coverage
+cd desk-gateway-python && python3 -m unittest discover -s tests/ -v
+```
 
 ---
 
-## Konta testowe (seed)
+## Konta testowe
 
 | Email | Hasło | Rola |
 |-------|-------|------|
@@ -144,135 +216,19 @@ desk-panel/
 
 ---
 
-## Zmienne środowiskowe produkcyjne
+## Dokumentacja
 
-```env
-# Backend
-DATABASE_URL=postgresql://...
-JWT_SECRET=...                    # min. 32 znaki
-JWT_REFRESH_SECRET=...
-MQTT_BROKER_URL=mqtt://mosquitto-NAME:1883
-MQTT_USERNAME=backend
-MQTT_PASSWORD=...
-CORS_ORIGINS=https://app.prohalw2026.ovh,https://owner.prohalw2026.ovh
-GATEWAY_PROVISION_KEY=...         # współdzielony z gateway
-PUBLIC_API_URL=https://api.prohalw2026.ovh/api/v1
-AZURE_CLIENT_ID=...               # Entra ID SSO
-AZURE_CLIENT_SECRET=...
-AZURE_REDIRECT_URI=...
-```
-
----
-
-## Szybki start — development
-
-```bash
-git clone https://github.com/lewski22/desk-panel
-cd desk-panel
-
-# Backend
-cd backend
-cp .env.example .env
-npm install
-npx prisma db push
-node -e "require('./dist/database/seeds/seed.js')"
-npm run start:dev
-
-# Unified Panel
-cd apps/unified
-cp .env.example .env
-npm install
-npm run dev     # → http://localhost:5175
-```
-
----
-
-## Localization / i18n
-
-This project includes built-in internationalization support using `i18next` and `react-i18next`.
-
-- Default locale: `pl` (Polish). English (`en`) is available.
-- Locale files are located at `apps/unified/src/locales/{en,pl}/translation.json`.
-- i18n is initialized in `apps/unified/src/i18n.ts` and loaded from `main.tsx`.
-
-How to add or update translations:
-
-1. Add new keys to both `apps/unified/src/locales/en/translation.json` and `apps/unified/src/locales/pl/translation.json` (or only one for a quick change).
-2. In React components, use `useTranslation()` from `react-i18next`:
-
-```tsx
-import { useTranslation } from 'react-i18next';
-const { t, i18n } = useTranslation();
-return <h1>{t('pages.dashboard.title')}</h1>;
-```
-
-3. For fallback text during development, pass a default value to `t()`:
-
-```ts
-t('organizations.new_title', 'New office')
-```
-
-Language switcher and runtime:
-
-- A language switcher component is provided at `apps/unified/src/components/LanguageSwitcher.tsx` and placed in the left sidebar (`AppLayout`).
-- To change the default language for development, edit `apps/unified/src/i18n.ts` (`lng` option) or call `i18n.changeLanguage('en')` at runtime.
-
-Testing translations locally:
-
-```bash
-cd apps/unified
-npm install
-npm run dev
-# open http://localhost:5175 and use the language switcher in the sidebar
-```
-
-Contribution guidelines for translators:
-
-- Keep keys stable: avoid renaming keys that are already in use.
-- Use interpolation tokens (e.g. `{{name}}`) rather than concatenating strings in code.
-- If you add pluralization or nested namespaces, follow the existing JSON structure.
-
-See `docs/localization.md` for more detailed guidance and examples.
-
-
-## Deploy produkcyjny (Coolify)
-
-1. Wgraj zmiany do `main` na GitHub
-2. Coolify wykrywa push i buduje Docker image
-3. Automatyczny `prisma db push` + seed (idempotentny)
-4. Seed NIE tworzy rezerwacji testowych (tylko użytkowników i biurka)
-
-**Ważne:** Coolify deployuje z brancha `main`. Push na inny branch nie trigguje deploy.
-
----
-
-## Kluczowe decyzje architektoniczne
-
-### LED Event Bus (SharedModule)
-Zamiast circular dependency `MqttModule ↔ CheckinsModule`, używamy rxjs Subject:
-```
-CheckinsService → LedEventsService.emit('OCCUPIED')
-MqttHandlers   ← LedEventsService.events$.subscribe() → mqtt.publish()
-```
-
-### Strefa czasowa
-Wszystkie daty przechowywane jako UTC w PostgreSQL.  
-Frontend używa `localDateStr()` i `localDateTimeISO()` z `utils/date.ts`  
-zamiast `toISOString()` (które zwraca UTC datę, nie lokalną).  
-**TODO:** Location.timezone per biuro — patrz roadmap.
-
-### MQTT Topic Schema
-```
-desk/{deskId}/command    ← backend → beacon (SET_LED, REBOOT, IDENTIFY, SET_DESK_ID)
-desk/{deskId}/checkin    → gateway ← beacon (NFC scan)
-desk/{deskId}/status     → gateway ← beacon (heartbeat)
-gateway/{gwId}/hello     → backend ← gateway (rejestracja)
-```
-
-### Provisioning Flow
-```
-Panel Admin → POST /devices/provision → generuje MQTT credentials
-→ wyświetla komendę PROVISION:{...} do wklejenia w Serial Monitor
-→ beacon zapisuje config do NVS → restart → MQTT connect
-→ beacon subscribe desk/{deskId}/command
-```
+| Dokument | Zawartość |
+|----------|-----------|
+| `docs/AI_CONTEXT.md` | **Start tutaj** — pełny kontekst dla AI |
+| `docs/AI_BACKEND_CONTEXT.md` | Moduły NestJS, Prisma, wzorce |
+| `docs/AI_OWNER_CONTEXT.md` | Owner Panel, impersonacja, subskrypcje |
+| `docs/subscription.md` | Specyfikacja modułu subskrypcji (v0.12.0) |
+| `docs/api.md` | REST API reference |
+| `docs/roadmap.md` | Plan rozwoju + versioning |
+| `docs/roles.md` | Role i tabela uprawnień |
+| `docs/hardware.md` | ESP32, RPi, NFC, LED specyfikacja |
+| `docs/mqtt.md` | Tematy MQTT i flow komunikacji |
+| `docs/provisioning.md` | Provisioning gateway i beaconów krok po kroku |
+| `docs/metrics.md` | Prometheus metryki (backend + gateway) |
+| `docs/deployment.md` | Wdrożenie na Coolify + Cloudflare Tunnel |
