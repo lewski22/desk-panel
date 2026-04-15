@@ -210,7 +210,7 @@ describe('ReservationsController', () => {
       const res = makeReservation();
       svcMock.findOne.mockResolvedValue(res);
 
-      const result = await controller.findOne('res-1');
+      const result = await controller.findOne('res-1', { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
       expect(svcMock.findOne).toHaveBeenCalledWith('res-1');
       expect(result.id).toBe('res-1');

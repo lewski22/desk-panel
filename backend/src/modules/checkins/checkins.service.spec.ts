@@ -97,7 +97,7 @@ describe('CheckinsService', () => {
     it('zwraca authorized=false gdy karta nie jest zarejestrowana', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
 
-      const result = await service.nfcCheckin(DESK_ID, CARD_UID, 'gateway-1');
+      const result = await service.checkinNfc(DESK_ID, CARD_UID, 'gateway-1');
 
       expect(result.authorized).toBe(false);
       expect(result.reason).toBe('card_not_registered');
@@ -106,7 +106,7 @@ describe('CheckinsService', () => {
     it('zwraca authorized=false gdy użytkownik nieaktywny', async () => {
       prismaMock.user.findUnique.mockResolvedValue(makeUser({ isActive: false }));
 
-      const result = await service.nfcCheckin(DESK_ID, CARD_UID, 'gateway-1');
+      const result = await service.checkinNfc(DESK_ID, CARD_UID, 'gateway-1');
 
       expect(result.authorized).toBe(false);
       expect(result.reason).toBe('card_not_registered');
@@ -116,7 +116,7 @@ describe('CheckinsService', () => {
       prismaMock.user.findUnique.mockResolvedValue(makeUser());
       prismaMock.reservation.findFirst.mockResolvedValue(null);
 
-      const result = await service.nfcCheckin(DESK_ID, CARD_UID, 'gateway-1');
+      const result = await service.checkinNfc(DESK_ID, CARD_UID, 'gateway-1');
 
       expect(result.authorized).toBe(false);
       expect(result.reason).toBe('no_active_reservation');
@@ -127,7 +127,7 @@ describe('CheckinsService', () => {
       prismaMock.reservation.findFirst.mockResolvedValue(makeReservation());
       prismaMock.checkin.findUnique.mockResolvedValue(makeCheckin());
 
-      const result = await service.nfcCheckin(DESK_ID, CARD_UID, 'gateway-1');
+      const result = await service.checkinNfc(DESK_ID, CARD_UID, 'gateway-1');
 
       expect(result.authorized).toBe(true);
       expect(result.alreadyCheckedIn).toBe(true);
@@ -140,7 +140,7 @@ describe('CheckinsService', () => {
       const newCheckin = makeCheckin();
       prismaMock.$transaction.mockResolvedValue([newCheckin, makeReservation()]);
 
-      const result = await service.nfcCheckin(DESK_ID, CARD_UID, 'gateway-1');
+      const result = await service.checkinNfc(DESK_ID, CARD_UID, 'gateway-1');
 
       expect(result.authorized).toBe(true);
       expect(result.alreadyCheckedIn).toBeUndefined();

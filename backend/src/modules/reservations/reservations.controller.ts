@@ -65,7 +65,7 @@ export class ReservationsController {
   create(@Body() dto: CreateReservationDto, @Request() req) {
     // Dodaj actorOrgId do DTO — serwis sprawdzi czy biurko należy do tej org
     const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
-    return this.svc.create(req.user.id, { ...dto, actorOrgId });
+    return this.svc.create(req.user.id, dto, actorOrgId);
   }
 
   @Delete(':id')

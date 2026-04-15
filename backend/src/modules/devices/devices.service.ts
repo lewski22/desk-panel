@@ -5,7 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService }  from '@nestjs/config';
 import { PrismaService }  from '../../database/prisma.service';
 import { GatewaysService } from '../gateways/gateways.service';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 
 export interface ProvisionDeviceDto {
   hardwareId: string;
@@ -40,7 +40,7 @@ export class DevicesService {
     });
 
     await this.prisma.event.create({
-      data: { type: 'PROVISIONING', entityType: 'device', payload: { hardwareId: dto.hardwareId, gatewayId: dto.gatewayId } },
+      data: { type: 'DEVICE_PROVISIONED' as any, entityType: 'device', payload: { hardwareId: dto.hardwareId, gatewayId: dto.gatewayId } },
     }).catch(() => {});
 
     await this.gateways.addBeaconCredentials(dto.gatewayId, mqttUsername, mqttPassword, dto.deskId);

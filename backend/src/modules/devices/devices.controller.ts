@@ -60,10 +60,9 @@ export class DevicesController {
   async command(@Param('id') id: string, @Body() dto: SendCommandDto, @Request() req: any) {
     const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     // assertBelongsToOrg — throws ForbiddenException jeśli beacon nie jest z tej org
-    const device = actorOrgId
-      ? await this.svc.assertBelongsToOrg(id, actorOrgId)
-      : await this.svc.findOne(id);
-    const deskId = device.desk?.id ?? '';
+    if (actorOrgId) await this.svc.assertBelongsToOrg(id, actorOrgId);
+    const device = await this.svc.findOne(id);  // zawiera desk i gateway
+    const deskId = (device as any).desk?.id ?? device.deskId ?? '';
 
     await this.gateways.sendBeaconCommand(
       device.gatewayId ?? '',
@@ -158,7 +157,7 @@ export class DevicesController {
     const actorOrgId = req.user.organizationId;
     if (!actorOrgId) return { queued: 0, error: 'Brak organizacji' };
 
-    this.logger.log(\`OTA-all requested by \${req.user.email} (org: \${actorOrgId})\`);
+    this.logger.log(`OTA-all requested by ${req.user.email} (org: ${actorOrgId})`);
     return this.svc.triggerOtaAll(actorOrgId, locationId);
   }
 

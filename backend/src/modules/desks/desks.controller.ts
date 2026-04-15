@@ -21,8 +21,8 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Permanently delete INACTIVE desk' })
-  hardDelete(@Param('id') id: string) {
-    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+  hardDelete(@Param('id') id: string, @Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.desks.hardDelete(id, orgId);
   }
 
@@ -44,14 +44,12 @@ export class DesksController {
     return this.desks.findAvailable(locationId, date, startTime, endTime, req.user.organizationId);
   }
 
-  // ── Public — no auth ─────────────────────────────────────────
   @Get('desks/qr/:token')
   @ApiOperation({ summary: 'Desk info by QR token (public)' })
   getByQrToken(@Param('token') token: string) {
     return this.desks.getByQrToken(token);
   }
 
-  // ── Protected ─────────────────────────────────────────────────
   @Get('locations/:locationId/desks')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -103,8 +101,8 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Update desk' })
-  update(@Param('id') id: string, @Body() dto: UpdateDeskDto) {
-    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+  update(@Param('id') id: string, @Body() dto: UpdateDeskDto, @Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.desks.update(id, dto, orgId);
   }
 
@@ -113,8 +111,8 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Deactivate desk' })
-  remove(@Param('id') id: string) {
-    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+  remove(@Param('id') id: string, @Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.desks.remove(id, orgId);
   }
 
@@ -123,8 +121,8 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Reactivate a deactivated desk' })
-  activate(@Param('id') id: string) {
-    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+  activate(@Param('id') id: string, @Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.desks.activate(id, orgId);
   }
 

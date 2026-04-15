@@ -80,7 +80,7 @@ export class ReservationsService {
     return r;
   }
 
-  async create(actorId: string, dto: CreateReservationDto) {
+  async create(actorId: string, dto: CreateReservationDto, actorOrgId?: string) {
     // Staff/Admin mogą rezerwować dla konkretnego pracownika
     const userId = dto.targetUserId ?? actorId;
 
@@ -104,7 +104,6 @@ export class ReservationsService {
 
     // Izolacja org — sprawdź czy aktor należy do tej samej organizacji co biurko
     // actorOrgId null = OWNER (może rezerwować w każdej org — impersonacja)
-    const actorOrgId = dto.actorOrgId;
     if (actorOrgId && desk.location?.organizationId !== actorOrgId) {
       throw new ForbiddenException('Biurko nie należy do Twojej organizacji');
     }

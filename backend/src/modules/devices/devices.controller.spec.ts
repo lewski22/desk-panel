@@ -10,13 +10,14 @@ const PassGuard = { canActivate: () => true };
 
 // ── Service mocks ─────────────────────────────────────────────
 const svcMock = {
-  findAll:         jest.fn(),
-  findOne:         jest.fn(),
-  provision:       jest.fn(),
-  remove:          jest.fn(),
-  getLatestFirmware: jest.fn(),
-  triggerOta:      jest.fn(),
-  triggerOtaAll:   jest.fn(),
+  findAll:             jest.fn(),
+  findOne:             jest.fn(),
+  provision:           jest.fn(),
+  remove:              jest.fn(),
+  assertBelongsToOrg:  jest.fn().mockResolvedValue(undefined),
+  getLatestFirmware:   jest.fn(),
+  triggerOta:          jest.fn(),
+  triggerOtaAll:       jest.fn(),
 };
 
 const gatewaysMock = {
@@ -127,7 +128,7 @@ describe('DevicesController', () => {
       const result = await controller.command('device-1', {
         command: 'REBOOT',
         params:  undefined,
-      });
+      }, { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
       expect(gatewaysMock.sendBeaconCommand).toHaveBeenCalledWith(
         'gw-1', 'desk-1', 'REBOOT', undefined
@@ -143,7 +144,7 @@ describe('DevicesController', () => {
       await controller.command('device-1', {
         command: 'IDENTIFY',
         params:  { duration: 5000 },
-      });
+      }, { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
       expect(gatewaysMock.sendBeaconCommand).toHaveBeenCalledWith(
         'gw-1', 'desk-1', 'IDENTIFY', { duration: 5000 }
@@ -154,7 +155,7 @@ describe('DevicesController', () => {
       svcMock.findOne.mockResolvedValue(makeDevice({ deskId: 'desk-42', gatewayId: 'gw-99' }));
       gatewaysMock.sendBeaconCommand.mockResolvedValue({});
 
-      const result = await controller.command('device-1', { command: 'REBOOT' });
+      const result = await controller.command('device-1', { command: 'REBOOT' }, { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
       expect(result.deskId).toBe('desk-42');
       expect(result.gatewayId).toBe('gw-99');
@@ -173,7 +174,7 @@ describe('DevicesController', () => {
       const result = await controller.firmwareLatest();
 
       expect(svcMock.getLatestFirmware).toHaveBeenCalled();
-      expect(result.version).toBe('1.2.0');
+      expect(result!.version).toBe('1.2.0');
     });
   });
 
@@ -276,7 +277,7 @@ describe('DevicesController', () => {
       );
 
       expect(svcMock.triggerOtaAll).toHaveBeenCalledWith('org-1', undefined);
-      expect(result.queued).toBe(3);
+      expect(result!.queued).toBe(3);
     });
 
     it('OFFICE_ADMIN może filtrować po locationId', async () => {
@@ -309,7 +310,7 @@ describe('DevicesController', () => {
     it('wywołuje svc.remove z poprawnym id', async () => {
       svcMock.remove.mockResolvedValue({ deleted: true });
 
-      const result = await controller.remove('device-1');
+      const result = await controller.remove('device-1', { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
       expect(svcMock.remove).toHaveBeenCalledWith('device-1');
       expect(result).toEqual({ deleted: true });
