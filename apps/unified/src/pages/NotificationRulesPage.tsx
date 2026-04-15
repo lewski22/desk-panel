@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
 
+// ALL_ROLES nie może wywoływać t() — jest poza komponentem React
 const ALL_ROLES = [
   { key: 'SUPER_ADMIN',  label: 'Super Admin',  color: 'bg-purple-100 text-purple-700' },
   { key: 'OFFICE_ADMIN', label: 'Office Admin', color: 'bg-blue-100 text-blue-700' },
   { key: 'STAFF',        label: 'Staff',        color: 'bg-teal-100 text-teal-700' },
-  { key: 'END_USER',     label: t('roles.END_USER'),    color: 'bg-zinc-100 text-zinc-600' },
+  { key: 'END_USER',     label: 'Użytkownik',   color: 'bg-zinc-100 text-zinc-600' },
 ];
 
 const TYPE_ICON: Record<string, string> = {
@@ -32,12 +33,12 @@ function RoleTag({ role }: { role: string }) {
 // ── Modal: nowe ogłoszenie ────────────────────────────────────────
 function AnnounceModal({ onClose }: { onClose(): void }) {
   const { t } = useTranslation();
-  const [title,     setTitle]     = useState('');
-  const [body,      setBody]      = useState('');
-  const [roles,     setRoles]     = useState<string[]>(['SUPER_ADMIN', 'OFFICE_ADMIN']);
-  const [sending,   setSending]   = useState(false);
-  const [result,    setResult]    = useState<{ count: number } | null>(null);
-  const [err,       setErr]       = useState('');
+  const [title,   setTitle]   = useState('');
+  const [body,    setBody]    = useState('');
+  const [roles,   setRoles]   = useState<string[]>(['SUPER_ADMIN', 'OFFICE_ADMIN']);
+  const [sending, setSending] = useState(false);
+  const [result,  setResult]  = useState<{ count: number } | null>(null);
+  const [err,     setErr]     = useState('');
 
   const toggleRole = (r: string) =>
     setRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
@@ -54,7 +55,7 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
   };
 
   if (result) return (
-    <Modal title=t('notifications.rules.saved') onClose={onClose}>
+    <Modal title={t('notifications.rules.saved')} onClose={onClose}>
       <p className="text-green-600 font-semibold mb-2">{t('notifications.rules.saved')}</p>
       <p className="text-sm text-zinc-500">Dostarczono do <strong>{result.count}</strong> użytkowników.</p>
       <div className="mt-4"><Btn onClick={onClose}>{t('btn.cancel')}</Btn></div>
@@ -62,7 +63,7 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
   );
 
   return (
-    <Modal title=t('notifications.rules.announce') onClose={onClose}>
+    <Modal title={t('notifications.rules.announce')} onClose={onClose}>
       <div className="space-y-4">
         <Input label={t('notifications.rules.title') || 'Tytuł *'} value={title} onChange={e => setTitle(e.target.value)} placeholder="np. Zaplanowana przerwa techniczna" />
         <div>
@@ -99,12 +100,12 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
 // ── Główna strona ─────────────────────────────────────────────────
 export function NotificationRulesPage() {
   const { t } = useTranslation();
-  const [rules,      setRules]      = useState<any[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
+  const [rules,        setRules]        = useState<any[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
-  const [err,        setErr]        = useState('');
+  const [err,          setErr]          = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
