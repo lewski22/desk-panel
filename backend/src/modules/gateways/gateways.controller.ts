@@ -19,8 +19,10 @@ export class GatewaysController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  findAll(@Query('locationId') locationId?: string) {
-    return this.svc.findAll(locationId);
+  findAll(@Query('locationId') locationId?: string, @Request() req?: any) {
+    // OWNER widzi wszystko; inni — tylko gatewaye swojej org
+    const actorOrgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+    return this.svc.findAll(locationId, actorOrgId);
   }
 
   @Post('register')
@@ -38,7 +40,8 @@ export class GatewaysController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Generate one-time install token (24h)' })
   createSetupToken(@Body('locationId') locationId: string, @Request() req: any) {
-    return this.setup.createToken(locationId, req.user.id);
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.setup.createToken(locationId, req.user.id, actorOrgId);
   }
 
   @Get('setup-tokens/:locationId')
@@ -96,16 +99,18 @@ export class GatewaysController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  remove(@Param('id') id: string) {
-    return this.svc.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.remove(id, actorOrgId);
   }
 
   @Post(':id/rotate-secret')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Rotate gateway secret — 15min overlap window, auto-push to gateway' })
-  rotateSecret(@Param('id') id: string) {
-    return this.svc.rotateSecret(id);
+  rotateSecret(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.rotateSecret(id, actorOrgId);
   }
 
   @Post(':id/regenerate-secret')

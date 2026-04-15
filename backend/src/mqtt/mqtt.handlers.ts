@@ -57,7 +57,8 @@ export class MqttHandlers implements OnModuleInit {
     this.logger.log('NFC scan', { deskId, cardUid: card_uid, offline, eventId: event_id });
 
     try {
-      const result = await this.checkins.checkinNfc(deskId, card_uid, device_id ?? '');
+      // Przekaż device_id — checkinNfc weryfikuje czy beacon jest przypisany do tego biurka
+      const result = await this.checkins.checkinNfc(deskId, card_uid, device_id ?? '', device_id);
 
       if (result.authorized) {
         // Emituj przez LedEventsService → gateway HTTP → Pi Mosquitto → beacon

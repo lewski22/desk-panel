@@ -18,6 +18,8 @@ import { CheckinsModule }       from './modules/checkins/checkins.module';
 import { MqttModule }           from './mqtt/mqtt.module';
 import { OwnerModule }          from './modules/owner/owner.module';
 import { MetricsModule }        from './metrics/metrics.module';
+import { NotificationsModule }  from './modules/notifications/notifications.module';
+import { InAppNotificationsModule } from './modules/inapp-notifications/inapp-notifications.module';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { MetricsModule }        from './metrics/metrics.module';
     MqttModule,
     OwnerModule,
     MetricsModule,
+    NotificationsModule,
+    InAppNotificationsModule,
   ],
   providers: [
     // ThrottlerGuard globalnie — działa na wszystkich endpointach

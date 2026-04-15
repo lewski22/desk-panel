@@ -26,3 +26,9 @@ export class CreateReservationDto {
   @IsOptional() @IsString()
   targetUserId?: string;
 }
+
+// Wewnętrzne pole — ustawiane przez kontroler z JWT, nie przez klienta
+// Przekazywane jako część DTO aby serwis mógł zweryfikować org bez kontekstu HTTP
+export class ReservationWithOrgDto extends CreateReservationDto {
+  actorOrgId?: string;
+}

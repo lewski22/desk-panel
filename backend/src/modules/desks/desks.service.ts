@@ -68,21 +68,37 @@ export class DesksService {
     });
   }
 
-  async update(id: string, dto: UpdateDeskDto) {
-    await this.findOne(id);
+
+  // ── Org isolation guard ─────────────────────────────────────
+  // Weryfikuje: Desk → Location → Organization
+  // Rzuca ForbiddenException jeśli biurko nie należy do actorOrg.
+  private async assertDeskInOrg(deskId: string, actorOrgId?: string): Promise<void> {
+    if (!actorOrgId) return;  // OWNER — brak ograniczenia
+    const desk = await this.prisma.desk.findUnique({
+      where: { id: deskId },
+      include: { location: { select: { organizationId: true } } },
+    });
+    if (!desk) throw new NotFoundException(`Desk ${deskId} not found`);
+    if (desk.location.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Biurko nie należy do Twojej organizacji');
+    }
+  }
+
+  async update(id: string, dto: UpdateDeskDto, actorOrgId?: string) {
+    await this.assertDeskInOrg(id, actorOrgId);
     return this.prisma.desk.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
+  async remove(id: string, actorOrgId?: string) {
+    await this.assertDeskInOrg(id, actorOrgId);
     return this.prisma.desk.update({
       where: { id },
       data: { status: DeskStatus.INACTIVE },
     });
   }
 
-  async hardDelete(id: string) {
-    await this.findOne(id);
+  async hardDelete(id: string, actorOrgId?: string) {
+    await this.assertDeskInOrg(id, actorOrgId);
 
     // Przed usunięciem: anuluj/zakończ wszystkie aktywne rezerwacje i checkout otwarte checkins
     // (CASCADE usunie rekordy, ale chcemy mieć spójny stan dla audytu)
@@ -186,8 +202,8 @@ export class DesksService {
     return { locationLimits, desks: mapped };
   }
 
-  async activate(id: string) {
-    await this.findOne(id);
+  async activate(id: string, actorOrgId?: string) {
+    await this.assertDeskInOrg(id, actorOrgId);
     return this.prisma.desk.update({ where: { id }, data: { status: DeskStatus.ACTIVE } });
   }
 

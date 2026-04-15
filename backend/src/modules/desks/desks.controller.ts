@@ -10,7 +10,6 @@ import { UpdateDeskDto } from './dto/update-desk.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
-import { Throttle }     from '@nestjs/throttler';
 
 @ApiTags('desks')
 @Controller()
@@ -23,7 +22,8 @@ export class DesksController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Permanently delete INACTIVE desk' })
   hardDelete(@Param('id') id: string) {
-    return this.desks.hardDelete(id);
+    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+    return this.desks.hardDelete(id, orgId);
   }
 
   @Get('desks/available')
@@ -45,7 +45,6 @@ export class DesksController {
   }
 
   // ── Public — no auth ─────────────────────────────────────────
-  @Throttle({ default: { ttl: 60_000, limit: 20 } }) // publiczny — niższy limit niż globalny 30/min
   @Get('desks/qr/:token')
   @ApiOperation({ summary: 'Desk info by QR token (public)' })
   getByQrToken(@Param('token') token: string) {
@@ -105,7 +104,8 @@ export class DesksController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Update desk' })
   update(@Param('id') id: string, @Body() dto: UpdateDeskDto) {
-    return this.desks.update(id, dto);
+    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+    return this.desks.update(id, dto, orgId);
   }
 
   @Delete('desks/:id')
@@ -114,7 +114,8 @@ export class DesksController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Deactivate desk' })
   remove(@Param('id') id: string) {
-    return this.desks.remove(id);
+    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+    return this.desks.remove(id, orgId);
   }
 
   @Patch('desks/:id/activate')
@@ -123,7 +124,8 @@ export class DesksController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Reactivate a deactivated desk' })
   activate(@Param('id') id: string) {
-    return this.desks.activate(id);
+    const orgId = req?.user?.role === 'OWNER' ? undefined : req?.user?.organizationId;
+    return this.desks.activate(id, orgId);
   }
 
   @Patch('desks/:id/unpair')

@@ -86,9 +86,12 @@ model Organization {
   azureTenantId  String?          // Tenant ID z Entra ID firmy-klienta
   azureEnabled   Boolean  @default(false)
 
-  locations Location[]
-  users     User[]
-  events    Event[]
+  locations              Location[]
+  users                  User[]
+  events                 Event[]
+  notificationSettings   NotificationSetting[]
+  smtpConfig             OrganizationSmtpConfig?
+
 }
 
 // ─── Locations (offices) ─────────────────────────────────────
@@ -152,6 +155,11 @@ model Device {
   lastSeen        DateTime?
   isOnline        Boolean  @default(false)
   rssi            Int?
+  // OTA status tracking
+  otaStatus       String?   // idle | in_progress | success | failed
+  otaVersion      String?   // wersja docelowa (do której próbujemy zaktualizować)
+  otaStartedAt    DateTime?
+  otaFinishedAt   DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -313,3 +321,125 @@ model Event {
   @@index([actorId])
   @@index([ts])
 }
+
+// ─── Notifications ───────────────────────────────────────────
+
+// Typy powiadomień obsługiwanych przez system
+enum NotificationType {
+  FIRMWARE_UPDATE_AVAILABLE   // Nowa wersja firmware dostępna na GitHub
+  GATEWAY_OFFLINE             // Gateway stracił połączenie (lastSeen > 10min)
+  BEACON_OFFLINE              // Beacon stracił połączenie (lastSeen > 10min)
+  RESERVATION_CONFIRMED       // Potwierdzenie rezerwacji dla pracownika
+  RESERVATION_REMINDER        // Przypomnienie 30min przed rezerwacją
+  RESERVATION_CANCELLED       // Anulowanie rezerwacji
+  CHECKIN_MISSED              // Brak check-in przy rezerwacji (auto-release)
+  DAILY_REPORT                // Dzienny raport zajętości (07:00)
+}
+
+// Konfiguracja powiadomień per organizacja — zarządza SUPER_ADMIN
+model NotificationSetting {
+  id             String           @id @default(cuid())
+  organizationId String
+  type           NotificationType
+  enabled        Boolean          @default(false)
+  // Lista email adresów — JSON array: ["admin@firma.pl", "it@firma.pl"]
+  // Jeśli puste — używany jest contactEmail organizacji lub SUPER_ADMINów
+  recipients     String[]         @default([])
+  // Opcjonalny próg dla alertów ilościowych (np. beacon offline > N min)
+  thresholdMin   Int?             @default(10)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+}
+
+// Log wysłanych powiadomień — audyt i deduplicacja
+model NotificationLog {
+  id             String           @id @default(cuid())
+  organizationId String?
+  type           NotificationType
+  subject        String
+  recipients     String[]
+  // Klucz deduplikacji — np. "gateway:{id}:offline" — zapobiega spamowi
+  dedupeKey      String?
+  sentAt         DateTime         @default(now())
+  success        Boolean          @default(true)
+  errorMsg       String?
+
+  @@index([organizationId, type, sentAt])
+  @@index([dedupeKey, sentAt])
+}
+
+// Własna konfiguracja SMTP per organizacja (opcjonalna)
+// Jeśli skonfigurowana — emaile tej org idą przez własny serwer
+// Jeśli brak — fallback na globalny SMTP z env backendu
+model OrganizationSmtpConfig {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  host           String
+  port           Int      @default(587)
+  secure         Boolean  @default(false)
+  user           String
+  // Hasło szyfrowane AES-256-GCM (env: SMTP_ENCRYPTION_KEY)
+  passwordEnc    String
+  fromName       String   @default("Reserti")
+  fromEmail      String
+  isVerified     Boolean  @default(false)   // true po pomyślnym teście
+  lastTestedAt   DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+
+// ─── In-App Notification System ──────────────────────────────
+
+// Typy zdarzeń wewnętrznych — niezależne od emaila
+enum InAppNotifType {
+  GATEWAY_OFFLINE         // Gateway stracił połączenie
+  GATEWAY_BACK_ONLINE     // Gateway wrócił online
+  BEACON_OFFLINE          // Beacon stracił połączenie
+  FIRMWARE_UPDATE         // Nowa wersja firmware dostępna
+  GATEWAY_RESET_NEEDED    // Gateway wymaga restartu / resetu
+  RESERVATION_CHECKIN_MISSED // Brak check-in → biurko zwolnione
+  SYSTEM_ANNOUNCEMENT     // Ogłoszenie od Ownera do firm
+}
+
+// Reguły powiadomień — Owner decyduje kto widzi co
+// Każdy typ może być widoczny dla wybranych ról
+model NotificationRule {
+  id           String          @id @default(cuid())
+  type         InAppNotifType  @unique
+  // JSON array ról które widzą ten typ: ["SUPER_ADMIN","OFFICE_ADMIN"]
+  targetRoles  String[]        @default([])
+  enabled      Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+// Instancja powiadomienia dla konkretnego użytkownika
+model InAppNotification {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String?
+  type           InAppNotifType
+  title          String
+  body           String
+  // Dodatkowe dane (np. gatewayId, deviceId) — JSON string
+  meta           String?
+  // Link do akcji (np. /provisioning)
+  actionUrl      String?
+  actionLabel    String?
+  read           Boolean        @default(false)
+  readAt         DateTime?
+  createdAt      DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read, createdAt])
+  @@index([organizationId, type, createdAt])
+}
+

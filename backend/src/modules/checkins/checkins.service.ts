@@ -44,8 +44,30 @@ export class CheckinsService {
   ) {}
 
   // ── NFC scan from beacon via MQTT ────────────────────────────
-  async checkinNfc(deskId: string, cardUid: string, gatewayId: string) {
+  async checkinNfc(deskId: string, cardUid: string, gatewayId: string, deviceId?: string) {
     const now = new Date();
+
+    // ── Weryfikacja device → desk powiązania ─────────────────────
+    // Jeśli beacon podaje device_id, sprawdź czy jest przypisany do tego biurka.
+    // Zapobiega: beacon z desk A publikuje payload z deskId=B (sfabrykowany topic).
+    if (deviceId) {
+      const device = await this.prisma.device.findUnique({
+        where:  { hardwareId: deviceId },
+        select: { deskId: true },
+      });
+      if (device && device.deskId && device.deskId !== deskId) {
+        await this.logEvent(EventType.UNAUTHORIZED_SCAN, {
+          deskId, cardUid, gatewayId, deviceId,
+          reason: 'device_desk_mismatch',
+          expected: device.deskId,
+        });
+        this.logger.warn(
+          `Device mismatch: beacon ${deviceId} przypisany do ${device.deskId}, ` +
+          `próba check-in na ${deskId} — odrzucone`
+        );
+        return { authorized: false, reason: 'device_desk_mismatch' };
+      }
+    }
 
     const user = await this.prisma.user.findUnique({ where: { cardUid } });
     if (!user || !user.isActive) {

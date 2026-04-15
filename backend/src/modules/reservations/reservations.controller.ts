@@ -33,21 +33,25 @@ export class ReservationsController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  @ApiOperation({ summary: 'List reservations (STAFF+) — filterable' })
+  @ApiOperation({ summary: 'List reservations (STAFF+) — filterable, org-isolated' })
   findAll(
     @Query('locationId') locationId?: string,
     @Query('deskId') deskId?: string,
     @Query('date') date?: string,
     @Query('status') status?: any,
+    @Request() req?: any,
   ) {
-    return this.svc.findAll({ locationId, deskId, date, status });
+    // OWNER widzi wszystko; SUPER_ADMIN/OFFICE_ADMIN/STAFF — tylko swoją org
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findAll({ locationId, deskId, date, status, actorOrgId });
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findOne(id, actorOrgId);
   }
 
   @Get(':id/qr')
@@ -59,13 +63,16 @@ export class ReservationsController {
   @Post()
   @ApiOperation({ summary: 'Create reservation' })
   create(@Body() dto: CreateReservationDto, @Request() req) {
-    return this.svc.create(req.user.id, dto);
+    // Dodaj actorOrgId do DTO — serwis sprawdzi czy biurko należy do tej org
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.create(req.user.id, { ...dto, actorOrgId });
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cancel reservation' })
   cancel(@Param('id') id: string, @Request() req) {
-    return this.svc.cancel(id, req.user.id, req.user.role);
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.cancel(id, req.user.id, req.user.role, actorOrgId);
   }
 }

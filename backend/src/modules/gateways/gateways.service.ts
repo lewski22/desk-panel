@@ -66,9 +66,18 @@ export class GatewaysService {
     return gw;
   }
 
-  async findAll(locationId?: string) {
+  async findAll(locationId?: string, actorOrgId?: string) {
+    // Izolacja org — Gateway → Location → Organization
+    const where: any = {};
+    if (actorOrgId) {
+      where.location = { organizationId: actorOrgId };
+    }
+    if (locationId) {
+      // locationId doprecyzowuje, ale org guard nadal obowiązuje
+      where.locationId = locationId;
+    }
     return this.prisma.gateway.findMany({
-      where: locationId ? { locationId } : undefined,
+      where: Object.keys(where).length ? where : undefined,
       include: {
         _count:   { select: { devices: true } },
         location: { select: { id: true, name: true } },
@@ -129,18 +138,50 @@ export class GatewaysService {
 
   async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
     const online = isOnline === false ? false : true;
-    return this.prisma.device.update({
+
+    const device = await this.prisma.device.update({
       where: { hardwareId },
       data: {
-        isOnline:        online,
-        lastSeen:        new Date(),
+        isOnline:  online,
+        lastSeen:  new Date(),
         ...(rssi !== undefined && { rssi }),
         ...(firmwareVersion    && { firmwareVersion }),
       },
     });
+
+    // OTA korelacja: beacon zameldował nową wersję = aktualizacja się powiodła
+    if (
+      firmwareVersion &&
+      device.otaStatus === 'in_progress' &&
+      device.otaVersion === firmwareVersion
+    ) {
+      await this.prisma.device.update({
+        where: { id: device.id },
+        data:  { otaStatus: 'success', otaFinishedAt: new Date() },
+      });
+      this.logger.log(`OTA success confirmed by heartbeat: ${hardwareId} v${firmwareVersion}`);
+    }
+
+    return device;
   }
 
-  async remove(id: string) {
+
+  // ── Org guard dla gateways ─────────────────────────────────
+  // Weryfikuje: Gateway → Location → Organization
+  private async assertGatewayInOrg(gatewayId: string, actorOrgId?: string): Promise<void> {
+    if (!actorOrgId) return;  // OWNER — brak ograniczenia
+    const gw = await this.prisma.gateway.findUnique({
+      where: { id: gatewayId },
+      include: { location: { select: { organizationId: true } } },
+    });
+    if (!gw) throw new NotFoundException(`Gateway ${gatewayId} not found`);
+    if (gw.location?.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Gateway nie należy do Twojej organizacji');
+    }
+  }
+
+  async remove(id: string, actorOrgId?: string) {
+    await this.assertGatewayInOrg(id, actorOrgId);
     await this.prisma.gateway.delete({ where: { id } });
     return { deleted: true };
   }
@@ -158,7 +199,7 @@ export class GatewaysService {
    * Okno 15 minut = failsafe gdy gateway nie mógł się zrestartować.
    * Po 15 minutach stary secret przestaje działać automatycznie.
    */
-  async rotateSecret(id: string): Promise<{
+  async rotateSecret(id: string, actorOrgId?: string): Promise<{
     secret: string;
     secretPreview: string;
     expiresAt: Date;
@@ -295,7 +336,12 @@ export class GatewaysService {
     }
   }
 
-  async addBeaconCredentials(gatewayId: string, username: string, password: string): Promise<void> {
+  async addBeaconCredentials(
+    gatewayId: string,
+    username:  string,
+    password:  string,
+    deskId?:   string,  // ← przekazuj desk_id — gateway użyje do wąskiego ACL
+  ): Promise<void> {
     const gw = await this.prisma.gateway.findUnique({
       where:  { id: gatewayId },
       select: { ipAddress: true },
@@ -313,7 +359,8 @@ export class GatewaysService {
       const resp = await fetch(url, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        body:    JSON.stringify({ username, password }),
+        // desk_id pozwala gateway wygenerować wąski ACL per-biurko (nie desk/#)
+        body:    JSON.stringify({ username, password, ...(deskId && { desk_id: deskId }) }),
         signal:  AbortSignal.timeout(5000),
       });
       if (resp.ok) {

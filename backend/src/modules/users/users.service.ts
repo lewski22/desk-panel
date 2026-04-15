@@ -57,13 +57,19 @@ export class UsersService {
     });
   }
 
-  async findOne(id: string) {
-    const u = await this.prisma.user.findUnique({ where: { id }, select: USER_SELECT });
+  async findOne(id: string, actorOrgId?: string) {
+    const u = await this.prisma.user.findUnique({ where: { id }, select: { ...USER_SELECT, organizationId: true } });
     if (!u) throw new NotFoundException(`User ${id} not found`);
+    // Izolacja org — nie pozwól na dostęp do użytkownika z innej organizacji
+    if (actorOrgId && u.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Użytkownik nie należy do Twojej organizacji');
+    }
     return u;
   }
 
-  async update(id: string, dto: UpdateUserDto, actorRole: UserRole) {
+  async update(id: string, dto: UpdateUserDto, actorRole: UserRole, actorOrgId?: string) {
+    // Weryfikacja org przed jakąkolwiek zmianą
+    await this.findOne(id, actorOrgId);
     if (dto.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only Super Admin can grant Super Admin role');
     }
@@ -76,11 +82,13 @@ export class UsersService {
     return this.prisma.user.update({ where: { id }, data, select: USER_SELECT });
   }
 
-  async updateCardUid(id: string, cardUid: string) {
+  async updateCardUid(id: string, cardUid: string, actorOrgId?: string) {
+    await this.findOne(id, actorOrgId);  // org check
     return this.prisma.user.update({ where: { id }, data: { cardUid }, select: { id: true, cardUid: true } });
   }
 
-  async softDelete(id: string, retentionDays = 30) {
+  async softDelete(id: string, retentionDays = 30, actorOrgId?: string) {
+    await this.findOne(id, actorOrgId);  // org check
     if (retentionDays < 30) retentionDays = 30;
     const deletedAt = new Date();
     const scheduledDeleteAt = new Date(deletedAt);
@@ -92,7 +100,8 @@ export class UsersService {
     });
   }
 
-  async restore(id: string) {
+  async restore(id: string, actorOrgId?: string) {
+    await this.findOne(id, actorOrgId);  // org check (note: findOne queries all users including deleted)
     return this.prisma.user.update({
       where: { id },
       data:  { isActive: true, deletedAt: null, scheduledDeleteAt: null, retentionDays: null },

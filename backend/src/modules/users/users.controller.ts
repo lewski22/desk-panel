@@ -23,21 +23,26 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  findAll(@Query('organizationId') organizationId?: string) {
-    return this.svc.findAll(organizationId);
+  findAll(@Request() req: any) {
+    // OWNER widzi wszystkich użytkowników; SUPER_ADMIN/OFFICE_ADMIN tylko własną org
+    // Usunięto @Query('organizationId') — admin nie może odpytać cudzej org
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findAll(orgId);
   }
 
   @Get('deactivated')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'List deactivated users pending deletion' })
-  findDeactivated(@Query('organizationId') organizationId?: string) {
-    return this.svc.findDeactivated(organizationId);
+  findDeactivated(@Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findDeactivated(orgId);
   }
 
   @Get(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  findOne(@Param('id') id: string) {
-    return this.svc.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findOne(id, actorOrgId);
   }
 
   @Post()
@@ -51,21 +56,24 @@ export class UsersController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Update user (role change to SUPER_ADMIN requires SUPER_ADMIN actor)' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto, @Request() req: any) {
-    return this.svc.update(id, dto, req.user.role);
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.update(id, dto, req.user.role, actorOrgId);
   }
 
   @Patch(':id/card')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Assign NFC card UID to user' })
-  assignCard(@Param('id') id: string, @Body('cardUid') cardUid: string) {
-    return this.svc.updateCardUid(id, cardUid);
+  assignCard(@Param('id') id: string, @Body('cardUid') cardUid: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.updateCardUid(id, cardUid, actorOrgId);
   }
 
   @Patch(':id/restore')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Restore deactivated user account' })
-  restore(@Param('id') id: string) {
-    return this.svc.restore(id);
+  restore(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.restore(id, actorOrgId);
   }
 
   @Delete(':id')
@@ -74,8 +82,10 @@ export class UsersController {
   deactivate(
     @Param('id') id: string,
     @Body('retentionDays') retentionDays?: number,
+    @Request() req?: any,
   ) {
-    return this.svc.softDelete(id, retentionDays ?? 30);
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.softDelete(id, retentionDays ?? 30, actorOrgId);
   }
 
   @Post(':id/nfc-scan-start')

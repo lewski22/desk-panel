@@ -1,58 +1,70 @@
-import { Injectable, NotFoundException, ConflictException, Logger, BadRequestException } from '@nestjs/common';
-import { randomBytes } from 'crypto';
-import * as bcrypt from 'bcrypt';
-import { PrismaService }    from '../../database/prisma.service';
+import {
+  Injectable, Logger, NotFoundException, BadRequestException, ConflictException, ForbiddenException,
+} from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
+import { ConfigService }  from '@nestjs/config';
+import { PrismaService }  from '../../database/prisma.service';
 import { GatewaysService } from '../gateways/gateways.service';
-import { EventType } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 export interface ProvisionDeviceDto {
   hardwareId: string;
-  deskId?: string;
-  gatewayId: string;
+  gatewayId:  string;
+  deskId?:    string;
 }
 
 @Injectable()
 export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
+
   constructor(
     private prisma:    PrismaService,
     private gateways:  GatewaysService,
+    private config:    ConfigService,
   ) {}
 
+  // ── Provisioning ──────────────────────────────────────────────
   async provision(dto: ProvisionDeviceDto) {
-    const exists = await this.prisma.device.findUnique({
-      where: { hardwareId: dto.hardwareId },
-    });
-    if (exists) throw new ConflictException('Device already provisioned');
-
-    const mqttPassword     = randomBytes(20).toString('hex');
+    const mqttUsername    = `beacon_${dto.hardwareId}`;
+    const mqttPassword    = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);
-    const mqttUsername     = `beacon-${dto.hardwareId}`;
 
-    const device = await this.prisma.device.create({
-      data: { hardwareId: dto.hardwareId, mqttUsername, mqttPasswordHash, gatewayId: dto.gatewayId, deskId: dto.deskId },
+    const device = await this.prisma.device.upsert({
+      where:  { hardwareId: dto.hardwareId },
+      update: { gatewayId: dto.gatewayId, ...(dto.deskId && { deskId: dto.deskId }) },
+      create: {
+        hardwareId: dto.hardwareId, mqttUsername, mqttPasswordHash,
+        gatewayId: dto.gatewayId, deskId: dto.deskId,
+      },
+      include: { desk: { select: { id: true } } },
     });
 
     await this.prisma.event.create({
-      data: {
-        type: EventType.DEVICE_PROVISIONED,
-        entityType: 'device',
-        entityId: device.id,
-        payload: { hardwareId: dto.hardwareId, gatewayId: dto.gatewayId },
-      },
-    });
+      data: { type: 'PROVISIONING', entityType: 'device', payload: { hardwareId: dto.hardwareId, gatewayId: dto.gatewayId } },
+    }).catch(() => {});
 
-    // ── Notify gateway to add MQTT user automatically ────────
-    await this.gateways.addBeaconCredentials(dto.gatewayId, mqttUsername, mqttPassword);
+    await this.gateways.addBeaconCredentials(dto.gatewayId, mqttUsername, mqttPassword, dto.deskId);
 
-    return { device, mqttUsername, mqttPassword };
+    return {
+      deviceId:     device.id,
+      hardwareId:   device.hardwareId,
+      mqttUsername,
+      mqttPassword,
+      deskId:       device.deskId,
+      gatewayId:    device.gatewayId,
+    };
   }
 
+  // ── CRUD ──────────────────────────────────────────────────────
+  async findAll(organizationId?: string) {
+    const where = organizationId
+      ? { gateway: { location: { organizationId } } }
+      : undefined;
 
-  async findAll(gatewayId?: string) {
     return this.prisma.device.findMany({
-      where: gatewayId ? { gatewayId } : undefined,
+      where,
       include: { desk: { select: { id: true, name: true, code: true } } },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -65,20 +77,28 @@ export class DevicesService {
     return d;
   }
 
-  // FIX: combine heartbeat + firmwareVersion into one query (was 2 separate calls from MQTT handler)
-  async heartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string) {
-    return this.prisma.device.update({
-      where: { hardwareId },
-      data:  {
-        isOnline: true,
-        lastSeen: new Date(),
-        ...(rssi !== undefined && { rssi }),
-        ...(firmwareVersion    && { firmwareVersion }),
-      },
+  // ── Org isolation guard ───────────────────────────────────────
+  // Waliduje Device → Gateway → Location → organizationId
+  // Rzuca ForbiddenException jeśli beacon nie należy do tej org.
+  async assertBelongsToOrg(deviceId: string, organizationId: string) {
+    const device = await this.prisma.device.findUnique({
+      where:   { id: deviceId },
+      include: { gateway: { include: { location: true } } },
     });
+    if (!device) throw new NotFoundException(`Device ${deviceId} not found`);
+
+    const devOrgId = device.gateway?.location?.organizationId;
+    if (!devOrgId || devOrgId !== organizationId) {
+      this.logger.warn(
+        `OTA org guard: device ${deviceId} (org: ${devOrgId}) ` +
+        `rejected for actor org: ${organizationId}`
+      );
+      throw new ForbiddenException('Beacon nie należy do Twojej organizacji');
+    }
+    return device;
   }
 
-
+  // ── Assign desk ───────────────────────────────────────────────
   async assignToDesk(id: string, deskId: string) {
     const device = await this.findOne(id);
     const updated = await this.prisma.device.update({
@@ -93,15 +113,189 @@ export class DevicesService {
     return { updated, setDeskIdTopic: oldTopic, newDeskId: deskId };
   }
 
+  // ── Heartbeat ─────────────────────────────────────────────────
+  async heartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string) {
+    const device = await this.prisma.device.update({
+      where: { hardwareId },
+      data:  {
+        isOnline:  true,
+        lastSeen:  new Date(),
+        ...(rssi !== undefined && { rssi }),
+        ...(firmwareVersion    && { firmwareVersion }),
+      },
+    });
 
-  /**
-   * Pobiera najnowszą wersję firmware z GitHub Releases.
-   * Zwraca { version, url, size, publishedAt } lub null jeśli brak releases.
-   */
+    // OTA korelacja: jeśli beacon zameldował nową wersję = aktualizacja się powiodła
+    if (
+      firmwareVersion &&
+      device.otaStatus === 'in_progress' &&
+      device.otaVersion === firmwareVersion
+    ) {
+      await this.prisma.device.update({
+        where: { id: device.id },
+        data:  {
+          otaStatus:    'success',
+          otaFinishedAt: new Date(),
+        },
+      });
+      this.logger.log(`OTA success: ${hardwareId} → v${firmwareVersion}`);
+    }
+
+    return device;
+  }
+
+  // ── OTA: trigger dla pojedynczego beacona ─────────────────────
+  async triggerOta(deviceId: string, actorOrgId?: string) {
+    // Jeśli actorOrgId podany → sprawdź izolację org
+    let device = actorOrgId
+      ? await this.assertBelongsToOrg(deviceId, actorOrgId)
+      : await this.findOne(deviceId);
+
+    // Guard: nie zezwalaj na podwójny OTA
+    if (device.otaStatus === 'in_progress') {
+      throw new ConflictException(
+        'Aktualizacja już w toku — poczekaj na zakończenie lub reset beacon'
+      );
+    }
+
+    // Guard: beacon musi mieć przypisane biurko (inaczej brak topicu MQTT)
+    if (!device.deskId) {
+      throw new BadRequestException(
+        'Beacon nie jest przypisany do biurka — nie można wysłać komendy OTA'
+      );
+    }
+
+    const firmware = await this.getLatestFirmware();
+    if (!firmware) {
+      throw new BadRequestException(
+        'Brak dostępnych releases firmware — opublikuj release na GitHub'
+      );
+    }
+
+    const currentVer = device.firmwareVersion ?? '0.0.0';
+    this.logger.log(`OTA trigger: ${device.hardwareId} ${currentVer} → ${firmware.version}`);
+
+    // Zapisz status przed wysłaniem komendy
+    await this.prisma.device.update({
+      where: { id: deviceId },
+      data:  {
+        otaStatus:   'in_progress',
+        otaVersion:  firmware.version,
+        otaStartedAt: new Date(),
+        otaFinishedAt: null,
+      },
+    });
+
+    return {
+      triggered:   true,
+      deviceId,
+      hardwareId:  device.hardwareId,
+      gatewayId:   device.gatewayId,
+      deskId:      device.deskId,
+      from:        currentVer,
+      to:          firmware.version,
+      _ota_payload: {
+        command: 'OTA_UPDATE',
+        params:  { url: firmware.url, version: firmware.version },
+      },
+    };
+  }
+
+  // ── OTA: aktualizacja wszystkich outdated beaconów w org ──────
+  async triggerOtaAll(actorOrgId: string, locationId?: string) {
+    const firmware = await this.getLatestFirmware();
+    if (!firmware) {
+      throw new BadRequestException('Brak dostępnych releases firmware');
+    }
+
+    // Znajdź wszystkie outdated beacony w org (lub konkretnej lokalizacji)
+    const devices = await this.prisma.device.findMany({
+      where: {
+        gateway: {
+          location: {
+            organizationId: actorOrgId,
+            ...(locationId ? { id: locationId } : {}),
+          },
+        },
+        deskId:   { not: null },          // musi mieć biurko (topic MQTT)
+        otaStatus: { not: 'in_progress' }, // pomiń te co już się aktualizują
+        NOT: { firmwareVersion: firmware.version }, // tylko outdated
+      },
+      include: { gateway: { select: { id: true } } },
+    });
+
+    if (!devices.length) return { queued: 0, version: firmware.version };
+
+    this.logger.log(
+      `OTA-all: queuing ${devices.length} device(s) → v${firmware.version} (org: ${actorOrgId})`
+    );
+
+    // Oznacz wszystkie jako in_progress przed wysłaniem komend
+    const now = new Date();
+    await this.prisma.device.updateMany({
+      where: { id: { in: devices.map(d => d.id) } },
+      data: {
+        otaStatus:    'in_progress',
+        otaVersion:   firmware.version,
+        otaStartedAt: now,
+        otaFinishedAt: null,
+      },
+    });
+
+    // Wyślij komendy z 5s opóźnieniem między każdym — nie przeciążaj sieci
+    let sent = 0;
+    for (const dev of devices) {
+      try {
+        await this.gateways.sendBeaconCommand(
+          dev.gateway!.id,
+          dev.deskId!,
+          'OTA_UPDATE',
+          { url: firmware.url, version: firmware.version },
+        );
+        sent++;
+      } catch (e: any) {
+        this.logger.warn(`OTA-all: failed to send to ${dev.hardwareId}: ${e.message}`);
+        // Oznacz jako failed jeśli komenda nie dotarła do gateway
+        await this.prisma.device.update({
+          where: { id: dev.id },
+          data:  { otaStatus: 'failed', otaFinishedAt: new Date() },
+        });
+      }
+
+      if (sent < devices.length) {
+        await new Promise(r => setTimeout(r, 5000)); // 5s throttle
+      }
+    }
+
+    return { queued: sent, total: devices.length, version: firmware.version };
+  }
+
+  // ── Cron: timeout OTA po 10 minutach ─────────────────────────
+  @Cron('0 */10 * * * *')
+  async timeoutStaleOta() {
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+
+    const result = await this.prisma.device.updateMany({
+      where: {
+        otaStatus:   'in_progress',
+        otaStartedAt: { lt: cutoff },
+      },
+      data: {
+        otaStatus:    'failed',
+        otaFinishedAt: new Date(),
+      },
+    });
+
+    if (result.count > 0) {
+      this.logger.warn(`OTA timeout: marked ${result.count} device(s) as failed`);
+    }
+  }
+
+  // ── GitHub Releases ───────────────────────────────────────────
   async getLatestFirmware(): Promise<{
     version: string; url: string; size: number; publishedAt: string;
   } | null> {
-    const repo = 'lewski22/desk-firmware';
+    const repo   = this.config.get<string>('FIRMWARE_REPO', 'lewski22/desk-firmware');
     const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
 
     try {
@@ -110,16 +304,16 @@ export class DevicesService {
         signal:  AbortSignal.timeout(8000),
       });
 
-      if (resp.status === 404) return null;  // No releases yet
+      if (resp.status === 404) return null;
       if (!resp.ok) throw new Error(`GitHub API: HTTP ${resp.status}`);
 
-      const data = await resp.json();
-      const tag  = (data.tag_name as string).replace(/^v/, '');
+      const data  = await resp.json() as any;
+      const tag   = (data.tag_name as string).replace(/^v/, '');
 
-      // Find the .bin asset for esp32dev
       const asset = (data.assets as any[]).find(
         (a: any) => a.name.endsWith('-esp32dev.bin')
-      );
+      ) ?? (data.assets as any[])[0]; // fallback: pierwszy asset .bin
+
       if (!asset) return null;
 
       return {
@@ -132,40 +326,6 @@ export class DevicesService {
       this.logger.warn(`GitHub firmware API failed: ${err.message}`);
       return null;
     }
-  }
-
-  /**
-   * Wysyła komendę OTA_UPDATE do beacona przez gateway.
-   * Beacon pobiera .bin z GitHub Releases i flashuje się.
-   */
-  async triggerOta(deviceId: string) {
-    const [device, firmware] = await Promise.all([
-      this.findOne(deviceId),
-      this.getLatestFirmware(),
-    ]);
-
-    if (!firmware) {
-      throw new BadRequestException('Brak dostępnych releases firmware — opublikuj release na GitHub');
-    }
-
-    const current = device.firmwareVersion ?? '0.0.0';
-    this.logger.log(`OTA trigger: ${device.hardwareId} ${current} → ${firmware.version}`);
-
-    // Wyślij komendę przez GatewaysService.sendBeaconCommand
-    // (importujemy dynamicznie żeby uniknąć circular dep z GatewaysModule)
-    return {
-      triggered:  true,
-      deviceId,
-      hardwareId: device.hardwareId,
-      from:       current,
-      to:         firmware.version,
-      url:        firmware.url,
-      // Rzeczywiste wysłanie komendy robi kontroler przez GatewaysService
-      _ota_payload: {
-        command: 'OTA_UPDATE',
-        params: { url: firmware.url, version: firmware.version },
-      },
-    };
   }
 
   async remove(id: string) {

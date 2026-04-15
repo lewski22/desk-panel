@@ -40,15 +40,28 @@ export class LocationsController {
 
   @Get(':id/analytics/occupancy')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
-  @ApiOperation({ summary: 'Occupancy analytics for a location' })
-  getOccupancyAnalytics(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Occupancy analytics for a location — org-isolated' })
+  async getOccupancyAnalytics(@Param('id') id: string, @Request() req: any) {
+    // Org guard — zweryfikuj dostęp do tej lokalizacji
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
     return this.svc.getOccupancyAnalytics(id);
   }
 
   @Get(':id/analytics/extended')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Extended analytics: 7-day history, hourly, top desks, trend' })
-  getExtendedAnalytics(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Extended analytics — org-isolated' })
+  async getExtendedAnalytics(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
     return this.svc.getAnalyticsExtended(id);
   }
 
@@ -60,7 +73,14 @@ export class LocationsController {
 
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  update(@Param('id') id: string, @Body() dto: Partial<CreateLocationDto>) {
+  async update(@Param('id') id: string, @Body() dto: Partial<CreateLocationDto>, @Request() req: any) {
+    // Org guard — OFFICE_ADMIN nie może edytować lokalizacji innej org
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
     return this.svc.update(id, dto);
   }
 }

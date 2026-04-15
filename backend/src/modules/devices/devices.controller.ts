@@ -1,6 +1,6 @@
 import {
-  Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Logger,
-  BadRequestException,
+  Controller, Get, Post, Patch, Delete, Body, Param, Query, Request,
+  UseGuards, Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsIn, IsOptional } from 'class-validator';
@@ -35,9 +35,11 @@ export class DevicesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List all beacons' })
-  findAll(@Query('gatewayId') gatewayId?: string) {
-    return this.svc.findAll(gatewayId);
+  @ApiOperation({ summary: 'List all beacons (filtered by org for non-OWNER)' })
+  findAll(@Request() req: any) {
+    // OWNER widzi wszystko; SUPER_ADMIN/OFFICE_ADMIN tylko swoją org
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.findAll(orgId);
   }
 
   @Get(':id')
@@ -54,11 +56,13 @@ export class DevicesController {
 
   @Post(':id/command')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Send REBOOT / IDENTIFY / SET_LED to beacon via gateway' })
-  async command(@Param('id') id: string, @Body() dto: SendCommandDto) {
-    // Komenda idzie: backend → gateway HTTP API → Pi Mosquitto → beacon
-    // Nie używamy lokalnego mqtt.publish() — backend i beacony mają osobne brokery
-    const device = await this.svc.findOne(id);
+  @ApiOperation({ summary: 'Send REBOOT / IDENTIFY / SET_LED to beacon via gateway — org-isolated' })
+  async command(@Param('id') id: string, @Body() dto: SendCommandDto, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    // assertBelongsToOrg — throws ForbiddenException jeśli beacon nie jest z tej org
+    const device = actorOrgId
+      ? await this.svc.assertBelongsToOrg(id, actorOrgId)
+      : await this.svc.findOne(id);
     const deskId = device.desk?.id ?? '';
 
     await this.gateways.sendBeaconCommand(
@@ -74,8 +78,11 @@ export class DevicesController {
 
   @Patch(':id/assign')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Assign beacon to a desk — sends SET_DESK_ID via gateway' })
-  async assign(@Param('id') id: string, @Body('deskId') deskId: string) {
+  @ApiOperation({ summary: 'Assign beacon to a desk — org-isolated' })
+  async assign(@Param('id') id: string, @Body('deskId') deskId: string, @Request() req: any) {
+    // Org guard: beacon I biurko muszą należeć do tej samej org
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    if (actorOrgId) await this.svc.assertBelongsToOrg(id, actorOrgId);
     // Pobierz stary deskId PRZED update — komenda musi iść na STARY topic
     // (beacon słucha na desk/{oldDeskId}/command dopóki nie zrestartuje z nowym NVS)
     const deviceBefore = await this.svc.findOne(id);
@@ -119,25 +126,48 @@ export class DevicesController {
 
   @Post(':id/ota')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Trigger OTA firmware update for a beacon' })
-  async triggerOta(@Param('id') id: string) {
-    const result = await this.svc.triggerOta(id);
-    const device  = await this.svc.findOne(id);
-    // Wyślij OTA_UPDATE przez gateway HTTP → Pi Mosquitto → beacon
+  @ApiOperation({ summary: 'Trigger OTA firmware update (org-isolated)' })
+  async triggerOta(@Param('id') id: string, @Request() req: any) {
+    // OWNER może aktualizować wszystko; SUPER_ADMIN/OFFICE_ADMIN — tylko własna org
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    const result = await this.svc.triggerOta(id, actorOrgId);
+
+    // Wyślij OTA_UPDATE przez gateway HTTP → Mosquitto → beacon
     await this.gateways.sendBeaconCommand(
-      device.gatewayId ?? '',
-      device.deskId    ?? '',
+      result.gatewayId ?? '',
+      result.deskId    ?? '',
       result._ota_payload.command,
       result._ota_payload.params,
     );
+
     const { _ota_payload: _, ...response } = result;
     return response;
   }
 
+  @Post('ota-all')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Trigger OTA for all outdated beacons in org (5s throttle)' })
+  async triggerOtaAll(
+    @Request() req:              any,
+    @Body('locationId') locationId?: string,
+  ) {
+    if (req.user.role === 'OWNER') {
+      // Owner zarządza przez OwnerPage — ten endpoint tylko dla org-scoped ról
+      return { error: 'OWNER powinien używać panelu zarządzania firmami' };
+    }
+    const actorOrgId = req.user.organizationId;
+    if (!actorOrgId) return { queued: 0, error: 'Brak organizacji' };
+
+    this.logger.log(\`OTA-all requested by \${req.user.email} (org: \${actorOrgId})\`);
+    return this.svc.triggerOtaAll(actorOrgId, locationId);
+  }
+
   @Delete(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Delete beacon' })
-  remove(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Delete beacon — org-isolated' })
+  async remove(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    if (actorOrgId) await this.svc.assertBelongsToOrg(id, actorOrgId);
     return this.svc.remove(id);
   }
 }

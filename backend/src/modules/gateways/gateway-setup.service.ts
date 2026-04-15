@@ -13,7 +13,18 @@ export class GatewaySetupService {
   constructor(private prisma: PrismaService) {}
 
   // ── Admin tworzy token instalacyjny ──────────────────────────
-  async createToken(locationId: string, createdBy: string) {
+  async createToken(locationId: string, createdBy: string, actorOrgId?: string) {
+    // Org guard — sprawdź czy lokalizacja należy do org aktora
+    if (actorOrgId) {
+      const loc = await this.prisma.location.findUnique({
+        where: { id: locationId },
+        select: { organizationId: true },
+      });
+      if (!loc) throw new NotFoundException(`Location ${locationId} not found`);
+      if (loc.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Lokalizacja nie należy do Twojej organizacji');
+      }
+    }
     // Sprawdź czy lokalizacja istnieje
     const loc = await this.prisma.location.findUnique({
       where:  { id: locationId },

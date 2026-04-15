@@ -5,7 +5,8 @@ import {
 import { Cron } from '@nestjs/schedule';
 import { PrismaService }  from '../../database/prisma.service';
 import { LedEventsService } from '../../shared/led-events.service';
-import { GatewaysService }   from '../gateways/gateways.service';
+import { GatewaysService }        from '../gateways/gateways.service';
+import { NotificationsService }   from '../notifications/notifications.service';
 import { ReservationStatus } from '@prisma/client';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 
@@ -18,6 +19,7 @@ export class ReservationsService {
     private prisma:     PrismaService,
     private ledEvents:  LedEventsService,
     private gateways:   GatewaysService,
+    private notify:     NotificationsService,
   ) {}
 
   async findAll(filters: {
@@ -27,9 +29,18 @@ export class ReservationsService {
     date?: string;
     status?: ReservationStatus;
     take?: number;
+    actorOrgId?: string;  // ← WYMAGANE dla OFFICE_ADMIN/SUPER_ADMIN — izolacja org
   }) {
     return this.prisma.reservation.findMany({
       where: {
+        // Zawsze filtruj przez organizację aktora (gdy przekazane)
+        // Desk → Location → Organization — pełny łańcuch izolacji
+        desk: {
+          location: {
+            ...(filters.actorOrgId  && { organizationId: filters.actorOrgId }),
+            ...(filters.locationId  && { id: filters.locationId }),
+          },
+        },
         ...(filters.deskId     && { deskId: filters.deskId }),
         ...(filters.userId     && { userId: filters.userId }),
         ...(filters.date && (() => {
@@ -38,7 +49,6 @@ export class ReservationsService {
           return { date: { gte: d, lt: next } };
         })()),
         ...(filters.status     && { status: filters.status }),
-        ...(filters.locationId && { desk: { locationId: filters.locationId } }),
       },
       include: {
         desk: { select: { name: true, code: true, floor: true, zone: true } },
@@ -52,16 +62,21 @@ export class ReservationsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorOrgId?: string) {
     const r = await this.prisma.reservation.findUnique({
       where: { id },
       include: {
-        desk: true,
+        desk: { include: { location: { select: { organizationId: true } } } },
         user: { select: { firstName: true, lastName: true, email: true } },
         checkin: true,
       },
     });
     if (!r) throw new NotFoundException(`Reservation ${id} not found`);
+
+    // Izolacja org — OFFICE_ADMIN/SUPER_ADMIN może widzieć tylko własną org
+    if (actorOrgId && r.desk?.location?.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Brak dostępu do tej rezerwacji');
+    }
     return r;
   }
 
@@ -75,6 +90,7 @@ export class ReservationsService {
       include: {
         location: {
           select: {
+            organizationId: true,
             openTime:       true,
             closeTime:      true,
             maxDaysAhead:   true,
@@ -85,6 +101,13 @@ export class ReservationsService {
       },
     });
     if (!desk) throw new NotFoundException('Biurko nie istnieje');
+
+    // Izolacja org — sprawdź czy aktor należy do tej samej organizacji co biurko
+    // actorOrgId null = OWNER (może rezerwować w każdej org — impersonacja)
+    const actorOrgId = dto.actorOrgId;
+    if (actorOrgId && desk.location?.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Biurko nie należy do Twojej organizacji');
+    }
 
     const loc  = desk.location;
     const now  = new Date();
@@ -164,14 +187,15 @@ export class ReservationsService {
     });
 
     // Powiadom beacon o nowej rezerwacji — SET_RESERVATION z czasami
-    // Beacon użyje tych danych do lokalnego timera: FREE→RESERVED 15 min przed startem
     this._notifyBeaconReservation(dto.deskId, reservation.startTime, reservation.endTime).catch(() => {});
+    // Wyślij email potwierdzenia do pracownika
+    this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});
 
     return reservation;
   }
 
-  async cancel(id: string, actorId: string, actorRole: string) {
-    const reservation = await this.findOne(id);
+  async cancel(id: string, actorId: string, actorRole: string, actorOrgId?: string) {
+    const reservation = await this.findOne(id, actorOrgId);
 
     // Only owner or admin/office-admin can cancel
     if (
@@ -199,8 +223,9 @@ export class ReservationsService {
     // Poinformuj beacon — ustaw LED na wolne
     try {
       this.ledEvents.emit(reservation.deskId, 'FREE');
-      // Powiadom beacon — wyczyść lokalny timer rezerwacji
       this._notifyBeaconReservation(reservation.deskId, null, null).catch(() => {});
+      // Wyślij email o anulowaniu
+      this.notify.notifyReservationCancelled(reservation.id).catch(() => {});
     } catch { /* MQTT may be offline */ }
 
     return updated;

@@ -1,11 +1,14 @@
 import {
   Controller, Post, Patch, Body, Param,
-  UseGuards, Request, HttpCode, HttpStatus,
+  UseGuards, Request, Headers, UnauthorizedException,
+  HttpCode, HttpStatus, ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CheckinsService } from './checkins.service';
+import { GatewaysService } from '../gateways/gateways.service';
+import { PrismaService }   from '../../database/prisma.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -32,15 +35,44 @@ class NfcCheckinDto {
 @ApiBearerAuth()
 @Controller('checkins')
 export class CheckinsController {
-  constructor(private svc: CheckinsService) {}
+  constructor(
+    private svc:      CheckinsService,
+    private gateways: GatewaysService,
+    private prisma:   PrismaService,
+  ) {}
 
   @Post('nfc')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN) // called by gateway service account
-  @ApiOperation({ summary: 'NFC check-in (gateway → server)' })
+  @ApiOperation({ summary: 'NFC check-in (gateway → server) — uwierzytelnienie: x-gateway-secret + x-gateway-id' })
   @HttpCode(HttpStatus.OK)
-  nfc(@Body() dto: NfcCheckinDto) {
-    return this.svc.checkinNfc(dto.deskId, dto.cardUid, dto.gatewayId);
+  async nfc(
+    @Body() dto: NfcCheckinDto,
+    @Headers('x-gateway-id')     gwId?:   string,
+    @Headers('x-gateway-secret') secret?: string,
+  ) {
+    // ── Auth: gateway musi podać x-gateway-secret (bcrypt) ──────
+    if (!gwId || !secret) {
+      throw new UnauthorizedException('Missing x-gateway-id or x-gateway-secret');
+    }
+    await this.gateways.authenticate(gwId, secret);
+
+    // ── Org isolation: deskId musi należeć do lokalizacji tego gateway ──
+    const gw = await this.prisma.gateway.findUnique({
+      where:   { id: gwId },
+      include: { location: { select: { id: true, organizationId: true } } },
+    });
+    if (!gw) throw new UnauthorizedException('Gateway not found');
+
+    const desk = await this.prisma.desk.findUnique({
+      where:   { id: dto.deskId },
+      select:  { locationId: true },
+    });
+    if (!desk || desk.locationId !== gw.locationId) {
+      throw new ForbiddenException(
+        `Biurko ${dto.deskId} nie należy do lokalizacji gateway ${gwId}`
+      );
+    }
+
+    return this.svc.checkinNfc(dto.deskId, dto.cardUid, gwId);
   }
 
   @Post('qr')
