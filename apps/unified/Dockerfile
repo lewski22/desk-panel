@@ -1,11 +1,12 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Kopiuj package*.json — obejmuje package-lock.json jeśli istnieje
-# Po wygenerowaniu package-lock.json lokalnie (npm install w apps/unified/)
-# i zacommitowaniu go do repo, zmień poniższe na: RUN npm ci
-COPY package*.json ./
-RUN npm install
+# Kopiuj manifesty osobno — cache layer jeśli package.json nie zmienione
+COPY package.json ./
+
+# --legacy-peer-deps: unika kosztownej resolucji peer deps
+# --no-audit --no-fund: pomija sieciowe sprawdzenia (szybciej, mniej pamięci)
+RUN npm install --legacy-peer-deps --no-audit --no-fund
 
 COPY . .
 RUN npm run build
