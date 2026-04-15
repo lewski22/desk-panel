@@ -39,7 +39,7 @@ function makeDto(overrides: Record<string, any> = {}) {
     date:      TODAY,
     startTime: ts('09:00'),
     endTime:   ts('11:00'),
-    notes:     null,
+    notes:     undefined,
     ...overrides,
   };
 }
