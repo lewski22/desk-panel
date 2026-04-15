@@ -237,7 +237,8 @@ model User {
   reservations Reservation[]
   checkins     Checkin[]
   refreshTokens RefreshToken[]
-  events       Event[]       @relation("ActorEvents")
+  events              Event[]             @relation("ActorEvents")
+  inAppNotifications  InAppNotification[]
 }
 
 // ─── Refresh Tokens ──────────────────────────────────────────
