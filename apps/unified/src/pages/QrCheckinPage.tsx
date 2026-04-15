@@ -16,6 +16,7 @@ function getToken(): string | null {
 }
 
 export function QrCheckinPage() {
+  const { t }      = useTranslation();
   const { token }  = useParams<{ token: string }>();
   const navigate   = useNavigate();
   const [step,     setStep]    = useState<Step>('loading');

@@ -10,10 +10,10 @@ interface Props {
   hideActions?: boolean;   // END_USER — cała karta klikalność, bez przycisków
 }
 
-function statusMeta(desk: DeskMapItem) {
+function statusMeta(desk: DeskMapItem, t: (key: string) => string) {
   if (!desk.isOnline || desk.status === 'MAINTENANCE') {
     return {
-      label: desk.status === 'MAINTENANCE' ? _t('desks.actions.maintenance') : _t('devices.status.offline'),
+      label: desk.status === 'MAINTENANCE' ? t('desks.actions.maintenance') : t('devices.status.offline'),
       dot: 'bg-zinc-400',
       ring: 'ring-zinc-200',
       badge: 'bg-zinc-100 text-zinc-500',
@@ -21,7 +21,7 @@ function statusMeta(desk: DeskMapItem) {
   }
   if (desk.isOccupied) {
     return {
-      label: _t('desks.stats.occupied'),
+      label: t('desks.stats.occupied'),
       dot: 'bg-white',
       ring: 'ring-white/40',
       badge: 'bg-white/20 text-white',
@@ -29,14 +29,14 @@ function statusMeta(desk: DeskMapItem) {
   }
   if (desk.currentReservation) {
     return {
-      label: _t('desks.stats.reserved'),
+      label: t('desks.stats.reserved'),
       dot: 'bg-sky-300',
       ring: 'ring-sky-200',
       badge: 'bg-sky-100 text-sky-700',
     };
   }
   return {
-    label: _t('desks.stats.free'),
+    label: t('desks.stats.free'),
     dot: 'bg-emerald-400',
     ring: 'ring-emerald-200',
     badge: 'bg-emerald-50 text-emerald-700',
@@ -51,7 +51,8 @@ function cardBg(desk: DeskMapItem) {
 }
 
 export function DeskCard({ desk, onCheckin, onCheckout, hideActions = false }: Props) {
-  const meta = statusMeta(desk);
+  const { t } = useTranslation();
+  const meta = statusMeta(desk, t);
   const bg   = cardBg(desk);
   const res  = desk.currentReservation;
 

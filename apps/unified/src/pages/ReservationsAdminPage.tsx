@@ -126,7 +126,7 @@ export function ReservationsAdminPage() {
                       {r.checkin ? (
                         <div className="space-y-0.5">
                           <p className="font-medium text-zinc-700">{format(new Date(r.checkin.checkedInAt), 'HH:mm')}</p>
-                          <p className="text-zinc-400">{t(`reservations.method.${r.checkin.method.toLowerCase()}`, r.checkin.method)}</p>
+                          <p className="text-zinc-400">{String(t(`reservations.method.${r.checkin.method.toLowerCase()}`, r.checkin.method))}</p>
                         </div>
                       ) : <span className="text-zinc-300">—</span>}
                     </td>

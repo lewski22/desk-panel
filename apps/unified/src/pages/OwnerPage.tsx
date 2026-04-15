@@ -5,6 +5,7 @@ import { PageHeader, Btn, Modal, Input } from '../components/ui';
 
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
+  const { t } = useTranslation();
   const [name, setName]         = useState('');
   const [slug, setSlug]         = useState('');
   const [plan, setPlan]         = useState('basic');
@@ -80,6 +81,7 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
 
 // ─── Modal: edycja firmy ──────────────────────────────────────
 function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
+  const { t } = useTranslation();
   const [name,  setName]  = useState(org.name);
   const [plan,  setPlan]  = useState(org.plan ?? 'basic');
   const [notes, setNotes] = useState(org.notes ?? '');

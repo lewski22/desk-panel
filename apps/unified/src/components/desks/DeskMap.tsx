@@ -170,6 +170,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
   const [users,             setUsers]             = useState<any[]>([]);
+  const [err,               setErr]               = useState('');
 
   const isEndUser = userRole === 'END_USER';
 

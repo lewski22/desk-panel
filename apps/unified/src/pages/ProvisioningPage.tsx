@@ -34,6 +34,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
   const [secretResult, setSecretResult] = useState<any>(null);
   const [busy,         setBusy]         = useState(false);
   const [copied,       setCopied]       = useState(false);
+  const [gwErr,        setGwErr]        = useState('');
 
   useEffect(() => { setLocId(activeLocId); }, [activeLocId]);
 
@@ -300,7 +301,6 @@ Gateway uruchomi się ponownie (~15s).`)) return;
 //   - Przycisk "Zaktualizuj wszystkie" (ota-all) bez alert()
 //   - Inline toast zamiast alert/confirm
 //   - useTranslation — wszystkie stringi z i18n
-import { useTranslation } from 'react-i18next';
 
 // ── OTA status badge ──────────────────────────────────────────
 function OtaBadge({ status, version }: { status?: string; version?: string }) {

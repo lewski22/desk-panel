@@ -234,14 +234,14 @@ export function NotificationsPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-zinc-200 mb-6">
-        {(['settings', 'smtp', 'log'] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
+        {(['settings', 'smtp', 'log'] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => setTab(tabKey)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === t
+              tab === tabKey
                 ? 'border-[#B03472] text-[#B03472]'
                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
             }`}>
-            {t === 'settings' ? `⚙️ ${tab === 'settings' ? t('notifications.settings.title') : t('notifications.settings.title')}` : t === 'smtp' ? `📧 ${t('notifications.settings.smtp_title')}` : '📋 Log'}
+            {tabKey === 'settings' ? `⚙️ ${t('notifications.settings.title')}` : tabKey === 'smtp' ? `📧 ${t('notifications.settings.smtp_title')}` : '📋 Log'}
           </button>
         ))}
       </div>
