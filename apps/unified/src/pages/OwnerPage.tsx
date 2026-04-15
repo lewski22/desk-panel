@@ -127,6 +127,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
 
 // ─── Główna strona ────────────────────────────────────────────
 export function OwnerPage() {
+  const { t } = useTranslation();
   const [stats, setStats]     = useState<any>(null);
   const [orgs,  setOrgs]      = useState<any[]>([]);
   const [search, setSearch]   = useState('');
