@@ -9,7 +9,6 @@ function getUser() {
 
 // ── Modal: konfiguracja Azure SSO ────────────────────────────
 function AzureConfigModal({ location, onClose }: { location: any; onClose: () => void }) {
-  const { t } = useTranslation();
   const [config,   setConfig]   = useState<any>(null);
   const [tenantId, setTenantId] = useState('');
   const [enabled,  setEnabled]  = useState(false);
@@ -19,6 +18,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
   const [err, setErr]           = useState('');
 
   // Znajdź organizationId przez location — API konfiguracji jest per-org
+  const { t } = useTranslation();
   const orgId = location.organizationId;
 
   useEffect(() => {
@@ -49,23 +49,23 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
   };
 
   return (
-    <Modal title={`${t('orgs.azure.title', 'Microsoft 365 SSO')} — ${location.name}`} onClose={onClose}>
+    <Modal title={`Microsoft 365 SSO — ${location.name}`} onClose={onClose}>
       <div className="space-y-4">
         {/* Instrukcja */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
-          <p className="font-semibold">{t('orgs.azure.howto_title')}</p>
-          <p>{t('orgs.azure.step1')}</p>
+          <p className="font-semibold">Jak skonfigurować (IT Admin firmy):</p>
+          <p>1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:</p>
           <code className="block bg-blue-100 rounded px-2 py-1 text-[10px] break-all">
             {`https://login.microsoftonline.com/organizations/adminconsent?client_id=${import.meta.env.VITE_AZURE_CLIENT_ID ?? 'CLIENT_ID'}&redirect_uri=${encodeURIComponent(window.location.origin)}`}
           </code>
-          <p>{t('orgs.azure.step2')}</p>
-          <p>{t('orgs.azure.step3')}</p>
+          <p>2. Kliknij "Akceptuj" → Skopiuj <strong>Tenant ID</strong> z URL lub Azure Portal</p>
+          <p>3. Wklej Tenant ID poniżej i włącz SSO</p>
         </div>
 
         {err && <p className="text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
 
         <div>
-          <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('orgs.azure.tenant_label')}</label>
+          <label className="block text-xs text-zinc-500 mb-1.5 font-medium">Azure Tenant ID</label>
           <div className="flex gap-2">
             <input
               type="text"
@@ -79,21 +79,21 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
               disabled={testing || !tenantId}
               className="text-xs px-3 py-2 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-600 disabled:opacity-40 transition-colors whitespace-nowrap"
             >
-              {testing ? '…' : t('orgs.azure.test')}
+              {testing ? '…' : t('btn.retry')}
             </button>
           </div>
-          {testResult === 'ok'   && <p className="text-xs text-emerald-600 mt-1">{t('orgs.azure.test_ok')}</p>}
-          {testResult === 'fail' && <p className="text-xs text-red-500 mt-1">{t('orgs.azure.test_fail')}</p>}
+          {testResult === 'ok'   && <p className="text-xs text-emerald-600 mt-1">✓ Tenant ID poprawny — Entra ID odpowiada</p>}
+          {testResult === 'fail' && <p className="text-xs text-red-500 mt-1">✗ Nie można połączyć z tym tenant ID</p>}
           <p className="text-[10px] text-zinc-400 mt-1">
-            {t('orgs.azure.hint')}
+            Znajdziesz w: Azure Portal → Azure Active Directory → Overview → Tenant ID
           </p>
         </div>
 
         <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-200 bg-zinc-50">
           <div>
-            <p className="text-sm font-medium text-zinc-700">{t('orgs.azure.login_label', 'Logowanie przez Microsoft')}</p>
+            <p className="text-sm font-medium text-zinc-700">Logowanie przez Microsoft</p>
             <p className="text-xs text-zinc-400 mt-0.5">
-              {enabled ? t('orgs.azure.enabled_desc', 'Sign-in button visible on login page') : t('orgs.azure.disabled_desc', 'Disabled — only email and password')}
+              {enabled ? 'Przycisk "Zaloguj przez Microsoft" widoczny na stronie logowania' : 'Wyłączone — tylko email i hasło'}
             </p>
           </div>
           <button
@@ -106,7 +106,10 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
 
         <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
           <span className="text-amber-500 shrink-0 mt-0.5">⚠</span>
-          <p className="text-xs text-amber-700">{t('orgs.azure.password_warning', 'Password sign-in remains active — users can use both methods. Password removal planned for a future release.')}</p>
+          <p className="text-xs text-amber-700">
+            Logowanie hasłem pozostaje aktywne — użytkownicy mogą używać obu metod.
+            Wyłączenie hasła planowane w przyszłej wersji.
+          </p>
         </div>
 
         <div className="flex gap-2 justify-end">
@@ -127,7 +130,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
   useEffect(() => {
     appApi.gateways.createSetupToken(location.id)
-      .then(tok => { setToken(tok); setLoading(false); })
+      .then(t => { setToken(t); setLoading(false); })
       .catch(e => { setError(e.message); setLoading(false); });
   }, [location.id]);
 
@@ -138,7 +141,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
   };
 
   return (
-    <Modal title={`${t('provisioning.modal.add_gateway')} — ${location.name}`} onClose={onClose}>
+    <Modal title={`Dodaj gateway — ${location.name}`} onClose={onClose}>
       {loading && (
         <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
@@ -151,18 +154,18 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
         <div className="space-y-5">
           {/* Instrukcja */}
           <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-            <p className="text-sm font-semibold text-zinc-700 mb-2">{t('provisioning.install.title')}</p>
+            <p className="text-sm font-semibold text-zinc-700 mb-2">Jak zainstalować gateway:</p>
             <ol className="text-sm text-zinc-600 space-y-1.5 list-decimal list-inside">
-              <li>{t('provisioning.install.step1')}</li>
-              <li>{t('provisioning.install.step2')}</li>
-              <li>{t('provisioning.install.step3')}</li>
-              <li>{t('provisioning.install.step4', 'The script will ask for WiFi name (skipped for wired connections)')}</li>
+              <li>Włącz Raspberry Pi i połącz z internetem</li>
+              <li>Otwórz terminal (SSH lub lokalnie)</li>
+              <li>Wklej poniższą komendę i naciśnij Enter</li>
+              <li>Skrypt zapyta tylko o nazwę WiFi (jeśli na kablu — pomija)</li>
             </ol>
           </div>
 
           {/* Komenda instalacyjna */}
           <div>
-            <p className="text-xs text-zinc-400 mb-1.5 font-medium">{t('provisioning.install.cmd_label')}</p>
+            <p className="text-xs text-zinc-400 mb-1.5 font-medium">Komenda instalacyjna (ważna 24h, jednorazowa)</p>
             <div className="bg-zinc-950 rounded-xl p-4 flex items-start gap-3">
               <code className="text-emerald-400 text-xs font-mono flex-1 break-all leading-relaxed">
                 {token.installCmd}
@@ -170,7 +173,6 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
               <button
                 onClick={() => copy(token.installCmd)}
                 className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors font-medium"
-                title={t('provisioning.copy_cmd')}
               >
                 {copied ? '✓' : '⎘'}
               </button>
@@ -180,11 +182,11 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
           {/* Informacje */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="bg-zinc-50 rounded-lg p-3">
-              <p className="text-zinc-400 mb-0.5">{t('organizations.label_office', 'Office')}</p>
+              <p className="text-zinc-400 mb-0.5">{t('organizations.label_office')}</p>
               <p className="font-medium text-zinc-700">{token.location?.name}</p>
             </div>
             <div className="bg-zinc-50 rounded-lg p-3">
-              <p className="text-zinc-400 mb-0.5">{t('organizations.valid_until', 'Valid until')}</p>
+              <p className="text-zinc-400 mb-0.5">{t('organizations.valid_until')}</p>
               <p className="font-medium text-zinc-700">
                 {new Date(token.expiresAt).toLocaleString('pl-PL', {
                   day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -195,7 +197,10 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
             <span className="text-amber-500 shrink-0">⚠</span>
-            <p className="text-xs text-amber-700">{t('provisioning.install.token_warning', 'Token is one-time — it expires after use. If installation fails, come back and generate a new one.')}</p>
+            <p className="text-xs text-amber-700">
+              Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie,
+              wróć tutaj i wygeneruj nowy.
+            </p>
           </div>
 
           <div className="flex justify-end">
@@ -208,8 +213,8 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 }
 
 export function OrganizationsPage() {
-  const { t } = useTranslation();
   const user = getUser();
+  const { t, i18n } = useTranslation();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [locations, setLocations] = useState<any[]>([]);
@@ -295,9 +300,9 @@ export function OrganizationsPage() {
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid gap-3">
           {locations.map(loc => (
-            <Card key={loc.id} className="p-4 flex items-center gap-4">
+            <Card key={loc.id} className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-lg shrink-0">
                 {loc.name[0].toUpperCase()}
               </div>
@@ -313,17 +318,17 @@ export function OrganizationsPage() {
                     </span>
                   )}
                 </div>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-zinc-400 mt-0.5">
                   {[loc.address, loc.city].filter(Boolean).join(', ') || t('organizations.no_address')}
                 </p>
                 {/* ID do prowizjonowania */}
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">{t('organizations.id_label', 'ID:')}</span>
+                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">{t('organizations.id_label')}</span>
                   <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{loc.id}</code>
                   <button
                     onClick={() => { navigator.clipboard.writeText(loc.id); }}
                     className="text-[10px] text-zinc-400 hover:text-[#B53578] transition-colors"
-                    title={t('provisioning.copy_id')}
+                    title="Kopiuj ID"
                   >⎘</button>
                 </div>
               </div>
@@ -339,15 +344,15 @@ export function OrganizationsPage() {
               </div>
               <div className="shrink-0 flex items-center gap-2">
                 <p className="text-xs text-zinc-400">
-                  {new Date(loc.createdAt).toLocaleDateString('pl-PL')}
+                  {new Date(loc.createdAt).toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL')}
                 </p>
-                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>{t('organizations.m365_button','M365')}</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>{t('provisioning.new_gateway')}</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>{t('organizations.edit')}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>{t('organizations_extra.m365_button')}</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>+ Gateway</Btn>
+                <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>{t('organizations_extra.edit')}</Btn>
               </div>
             </Card>
           ))}
-                  {locations.length === 0 && (
+          {locations.length === 0 && (
             <div className="text-center py-16 text-zinc-400">
               <p className="text-3xl mb-2">🏢</p>
               <p className="text-sm">{t('organizations.no_locations')}</p>
@@ -359,7 +364,7 @@ export function OrganizationsPage() {
       {/* Create / Edit modal */}
       <Modal
         open={modal !== null}
-        title={modal === 'create' ? t('organizations.new_title','New office') : t('organizations.edit_title', { name: target?.name })}
+        title={modal === 'create' ? t('organizations_extra.new_title') : t('organizations_extra.edit_title', { name: target?.name })}
         onClose={() => setModal(null)}
       >
         {err && <p className="mb-3 text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
@@ -378,24 +383,24 @@ export function OrganizationsPage() {
               </select>
             </div>
           )}
-          <Input label={t('organizations.form.name', 'Office name')} value={form.name}
+          <Input label="Nazwa biura" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="Warszawa HQ" />
-          <Input label={t('organizations.form.address', 'Address')} value={form.address}
+          <Input label="Adres" value={form.address}
             onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
             placeholder="ul. Marszałkowska 1" />
-          <Input label={t('organizations.form.city', 'City')} value={form.city}
+          <Input label="Miasto" value={form.city}
             onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
             placeholder="Warszawa" />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.openTime')}</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Otwarcie</label>
               <input type="time" value={form.openTime}
                 onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.closeTime')}</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Zamknięcie</label>
               <input type="time" value={form.closeTime}
                 onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
@@ -404,25 +409,26 @@ export function OrganizationsPage() {
           {/* Limity rezerwacji */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.maxDaysAhead')}</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max dni do przodu</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
                 onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.maxHoursPerDay')}</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max godzin / rezerwacja</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
                 onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
           <p className="text-xs text-zinc-400">
-            {t('organizations.form.hours_hint')}
+            Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka.
+            Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.
           </p>
           <div className="flex gap-2 mt-1 justify-end">
             <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}>
-              {modal === 'create' ? t('organizations.create_action') : t('btn.save')}
+              {modal === 'create' ? t('btn.create') : t('btn.save')}
             </Btn>
           </div>
         </div>

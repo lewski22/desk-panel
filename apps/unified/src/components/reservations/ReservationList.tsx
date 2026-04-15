@@ -11,18 +11,18 @@ interface Props {
   onRefresh: () => void;
 }
 
-const STATUS_META: Record<string, { key: string; className: string }> = {
-  CONFIRMED: { key: 'confirmed', className: 'bg-emerald-100 text-emerald-700' },
-  PENDING:   { key: 'pending',   className: 'bg-amber-100  text-amber-700'   },
-  CANCELLED: { key: 'cancelled', className: 'bg-zinc-100   text-zinc-500'    },
-  EXPIRED:   { key: 'expired',   className: 'bg-red-100    text-red-600'     },
-  COMPLETED: { key: 'completed', className: 'bg-sky-100    text-sky-700'     },
+const STATUS_META: Record<string, { label: string; className: string }> = {
+  CONFIRMED: { label: 'Potwierdzona', className: 'bg-emerald-100 text-emerald-700' },
+  PENDING:   { label: 'Oczekuje',     className: 'bg-amber-100  text-amber-700'   },
+  CANCELLED: { label: 'Anulowana',    className: 'bg-zinc-100   text-zinc-500'    },
+  EXPIRED:   { label: 'Wygasła',      className: 'bg-red-100    text-red-600'     },
+  COMPLETED: { label: 'Zakończona',   className: 'bg-sky-100    text-sky-700'     },
 };
 
 const METHOD_LABEL: Record<string, string> = {
-  NFC:    'reservations.method.nfc',
-  QR:     'reservations.method.qr',
-  MANUAL: 'reservations.method.manual',
+  NFC:    '📡 NFC',
+  QR:     '📷 QR',
+  MANUAL: '✋ Ręczny',
 };
 
 function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }) {
@@ -32,9 +32,9 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
   const canCancel = ['CONFIRMED', 'PENDING'].includes(r.status);
 
   const handleCancel = async () => {
-    if (!confirm(t('reservations.confirm_cancel', { code: r.desk.code }))) return;
+    if (!confirm(`Anulować rezerwację ${r.desk.code}?`)) return;
     setBusy(true);
-    try { await onCancel(r.id); } catch (e: any) { alert(e.message); }
+    try { await onCancel(r.id); } catch (e: any) { console.error(e.message); }
     setBusy(false);
   };
 
@@ -51,10 +51,7 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
       <td className="py-3 px-4">
         <p className="text-sm font-semibold text-zinc-800">{r.desk.name}</p>
         <p className="text-xs text-zinc-400">
-          {[
-            r.desk.zone,
-            r.desk.floor && t('desks.floor', { floor: r.desk.floor })
-          ].filter(Boolean).join(' · ')}
+          {[r.desk.zone, r.desk.floor && `Piętro ${r.desk.floor}`].filter(Boolean).join(' · ')}
         </p>
       </td>
 
@@ -68,7 +65,7 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
       <td className="py-3 px-4 text-xs text-zinc-500">
         {r.checkin ? (
           <div>
-            <p>{t(METHOD_LABEL[r.checkin.method] ?? r.checkin.method)}</p>
+            <p>{METHOD_LABEL[r.checkin.method] ?? r.checkin.method}</p>
             <p className="text-zinc-400">
               {format(new Date(r.checkin.checkedInAt), 'HH:mm')}
               {r.checkin.checkedOutAt && ` → ${format(new Date(r.checkin.checkedOutAt), 'HH:mm')}`}
@@ -82,20 +79,20 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
       {/* Status */}
       <td className="py-3 px-4">
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.className}`}>
-          {t(`reservations.status.${meta.key}`)}
+          {meta.label}
         </span>
       </td>
 
       {/* Actions */}
       <td className="py-3 px-4 text-right">
         {canCancel && (
-            <button
-              onClick={handleCancel}
-              disabled={busy}
-              className="text-xs text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40 font-medium"
-            >
-              {busy ? '…' : t('reservations.cancel')}
-            </button>
+          <button
+            onClick={handleCancel}
+            disabled={busy}
+            className="text-xs text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40 font-medium"
+          >
+            {busy ? '…' : t('reservations.cancel')}
+          </button>
         )}
       </td>
     </tr>
@@ -125,11 +122,11 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
             onChange={e => setFilter(e.target.value)}
             className="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 text-zinc-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
           >
-            <option value="ALL">{t('reservations.all', { count: reservations.length })}</option>
-            <option value="CONFIRMED">{t('reservations.status.confirmed')}</option>
-            <option value="PENDING">{t('reservations.status.pending')}</option>
-            <option value="COMPLETED">{t('reservations.status.completed')}</option>
-            <option value="CANCELLED">{t('reservations.status.cancelled')}</option>
+            <option value="ALL">Wszystkie ({reservations.length})</option>
+            <option value="CONFIRMED">Potwierdzone</option>
+            <option value="PENDING">Oczekujące</option>
+            <option value="COMPLETED">Zakończone</option>
+            <option value="CANCELLED">Anulowane</option>
           </select>
           <button
             onClick={onRefresh}
@@ -154,9 +151,9 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                {['time', 'desk', 'user', 'checkin', 'status', 'actions'].map(h => (
+                {[t('reservations.table.time'), t('reservations.table.desk'), t('reservations.table.user'), t('reservations.table.checkin'), t('reservations.table.status'), ''].map(h => (
                   <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                    {t(`reservations.table.${h}`)}
+                    {h}
                   </th>
                 ))}
               </tr>

@@ -1,5 +1,5 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
+import React from 'react';
 
 // ── Button ────────────────────────────────────────────────────
 type BtnVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
@@ -169,15 +169,19 @@ export function PageHeader({ title, subtitle, sub, action }: {
 // ── Table with headers + empty state ─────────────────────────
 type TableHeader = string | { label: string; hideOnMobile?: boolean };
 
+function TableEmpty() {
+  const { t } = useTranslation();
+  return <p className="text-sm">{t('table.empty')}</p>;
+}
+
 export function Table({ children, headers, empty }: {
   children: React.ReactNode; headers?: TableHeader[]; empty?: boolean;
 }) {
-  const { t } = useTranslation();
   if (empty) {
     return (
       <div className="text-center py-16 text-zinc-400">
         <p className="text-3xl mb-2">📭</p>
-        <p className="text-sm">{t('table.empty')}</p>
+        <TableEmpty />
       </div>
     );
   }

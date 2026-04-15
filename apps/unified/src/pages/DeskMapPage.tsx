@@ -23,12 +23,9 @@ function LocationPicker({
 export function DeskMapPage() {
   const { t } = useTranslation();
   const [locations,  setLocations]  = useState<any[]>([]);
-  const [locationId, setLocationId] = useState(
-    import.meta.env.VITE_LOCATION_ID ?? ''
-  );
+  const [locationId, setLocationId] = useState(import.meta.env.VITE_LOCATION_ID ?? '');
   const [locLoading, setLocLoading] = useState(true);
 
-  // Load locations once
   useEffect(() => {
     appApi.locations.listAll()
       .then(locs => {
@@ -41,7 +38,6 @@ export function DeskMapPage() {
 
   const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId);
 
-  // Get user role from app_user
   const userRole = (() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; }
     catch { return ''; }

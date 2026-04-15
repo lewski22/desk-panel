@@ -18,7 +18,6 @@ function getToken(): string | null {
 export function QrCheckinPage() {
   const { token }  = useParams<{ token: string }>();
   const navigate   = useNavigate();
-  const { t, i18n } = useTranslation();
   const [step,     setStep]    = useState<Step>('loading');
   const [desk,     setDesk]    = useState<any>(null);
   const [result,   setResult]  = useState<any>(null);
@@ -40,7 +39,7 @@ export function QrCheckinPage() {
         const jwt = getToken();
         setStep(jwt ? 'desk-info' : 'login-required');
       })
-        .catch(() => { setStep('error'); setError(t('qr.no_connection')); });
+      .catch(() => { setStep('error'); setError(t('qr.no_connection')); });
   }, [token]);
 
   // ── Check-in: user has a reservation for this desk ───────────
@@ -55,7 +54,7 @@ export function QrCheckinPage() {
         body:    JSON.stringify({ deskId: desk.id, qrToken: desk.currentReservation?.qrToken ?? token }),
       });
       const data = await res.json();
-        if (!res.ok) {
+      if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           // Token wygasł — wyczyść i wróć do logowania
           localStorage.removeItem('app_access');
@@ -86,14 +85,14 @@ export function QrCheckinPage() {
         body:    JSON.stringify({ deskId: desk.id }),
       });
       const data = await res.json();
-        if (!res.ok) {
+      if (!res.ok) {
         if (res.status === 409) { setStep('occupied'); return; }
         throw new Error(data.message ?? t('qr.error_reservation'));
       }
       setResult({ type: 'walkin', deskName: data.deskName ?? desk.name });
       setStep('success');
     } catch (e: any) {
-      setError(e.message ?? t('qr.unknown_error')); setStep('error');
+      setError(e.message); setStep('error');
     }
   };
 
@@ -155,7 +154,9 @@ export function QrCheckinPage() {
           </svg>
         </div>
         <p className="text-white font-semibold text-lg mb-2">{t('qr.occupied_title')}</p>
-        <p className="text-zinc-400 text-sm mb-6 leading-relaxed">{t('qr.occupied_desc')}</p>
+        <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+          {t('qr.occupied_other_desc')}
+        </p>
         <button onClick={() => navigate('/')}
           className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
           {t('qr.back_to_map')}
@@ -191,7 +192,9 @@ export function QrCheckinPage() {
             </p>
           </div>
         )}
-        <p className="text-zinc-400 text-sm text-center mb-5">{t('qr.login_prompt')}</p>
+        <p className="text-zinc-400 text-sm text-center mb-5">
+          {t('qr.login_prompt')}
+        </p>
         <button onClick={() => navigate('/login', { state: { returnTo: `/checkin/${token}` } })}
           className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
           {t('qr.login')}
@@ -222,7 +225,7 @@ export function QrCheckinPage() {
             <p className="text-white font-semibold text-lg mb-1">{t('qr.success_checkin')}</p>
             <p className="text-zinc-400 text-sm mb-1">{result.deskName}</p>
             <p className="text-zinc-500 text-xs">
-              {new Date().toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour: '2-digit', minute: '2-digit' })}
+              {new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </>
         )}
@@ -246,7 +249,7 @@ export function QrCheckinPage() {
 
   return (
     <Wrapper>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="p-5 border-b border-zinc-800">
           <div className="flex items-start justify-between">
@@ -273,7 +276,7 @@ export function QrCheckinPage() {
         {/* Reservation info */}
         {desk.currentReservation && (
           <div className="px-5 py-3 bg-sky-950/40 border-b border-zinc-800">
-              <p className="text-xs text-sky-400 font-medium mb-0.5">
+            <p className="text-xs text-sky-400 font-medium mb-0.5">
               {isMyReservation ? t('qr.your_reservation') : t('qr.reserved_by')}
             </p>
             {!isMyReservation && (
@@ -281,10 +284,10 @@ export function QrCheckinPage() {
                 {desk.currentReservation.user?.firstName} {desk.currentReservation.user?.lastName}
               </p>
             )}
-              <p className="text-sky-400 text-xs">
-              {new Date(desk.currentReservation.startTime).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour:'2-digit', minute:'2-digit' })}
+            <p className="text-sky-400 text-xs">
+              {new Date(desk.currentReservation.startTime).toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' })}
               {' – '}
-              {new Date(desk.currentReservation.endTime).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour:'2-digit', minute:'2-digit' })}
+              {new Date(desk.currentReservation.endTime).toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' })}
             </p>
           </div>
         )}
@@ -294,7 +297,7 @@ export function QrCheckinPage() {
           <div className="px-5 py-3 bg-red-950/30 border-b border-zinc-800">
             <p className="text-xs text-red-400 font-medium mb-0.5">{t('qr.occupied_since')}</p>
             <p className="text-red-200 text-sm">
-              {new Date(desk.checkins[0].checkedInAt).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour:'2-digit', minute:'2-digit' })}
+              {new Date(desk.checkins[0].checkedInAt).toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' })}
             </p>
           </div>
         )}
@@ -320,7 +323,9 @@ export function QrCheckinPage() {
           {/* Reserved by someone else */}
           {deskStatus === 'reserved' && !isMyReservation && (
             <div className="text-center py-2">
-              <p className="text-zinc-400 text-sm mb-3">{t('qr.occupied_other_desc')}</p>
+              <p className="text-zinc-400 text-sm mb-3">
+                {t('qr.occupied_other_desc')}
+              </p>
               <button onClick={() => navigate('/')}
                 className="w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
                 {t('qr.back_to_map')}
@@ -340,7 +345,9 @@ export function QrCheckinPage() {
                 </button>
               ) : (
                 <div className="text-center py-2">
-                  <p className="text-zinc-400 text-sm mb-3">{t('qr.occupied_other_desc')}</p>
+                  <p className="text-zinc-400 text-sm mb-3">
+                    {t('qr.occupied_other_desc')}
+                  </p>
                   <button onClick={() => navigate('/')}
                     className="w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
                     {t('qr.back_to_map')}

@@ -17,6 +17,8 @@ import { DeskMapPage }         from './pages/DeskMapPage';
 import { MyReservationsPage }  from './pages/MyReservationsPage';
 import { DevicesPage }         from './pages/DevicesPage';
 import { OwnerPage }           from './pages/OwnerPage';
+import { NotificationsPage }   from './pages/NotificationsPage';
+import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { ChangePasswordPage }  from './pages/ChangePasswordPage';
 
 // Role sets
@@ -95,6 +97,12 @@ export default function App() {
                     <Guard user={user} allowed={SUPER_ONLY}><OrganizationsPage /></Guard>
                   } />
 
+                  <Route path="/notifications" element={
+                    <Guard user={user} allowed={SUPER_ONLY}><NotificationsPage /></Guard>
+                  } />
+                  <Route path="/notification-rules" element={
+                    <Guard user={user} allowed={OWNER_ONLY}><NotificationRulesPage /></Guard>
+                  } />
                   <Route path="/owner" element={
                     <Guard user={user} allowed={OWNER_ONLY}><OwnerPage /></Guard>
                   } />

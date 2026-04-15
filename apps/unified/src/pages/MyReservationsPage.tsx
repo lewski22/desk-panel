@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 
 function StatusBadge({ status }: { status: string }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const map: Record<string, string> = {
     PENDING:   'bg-amber-100 text-amber-700',
     CONFIRMED: 'bg-emerald-100 text-emerald-700',
@@ -14,7 +14,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${map[status] ?? 'bg-zinc-100 text-zinc-500'}`}>
-      {t(`reservations.status.${status.toLowerCase()}`)}
+      {t(`reservations.status.${status.toLowerCase()}`, status)}
     </span>
   );
 }
@@ -39,10 +39,11 @@ export function MyReservationsPage() {
     if (!confirm(t('reservations.confirm_cancel_simple'))) return;
     setCancelling(id);
     try { await appApi.reservations.cancel(id); await load(); }
-    catch (e: any) { alert(e.message); }
+    catch (e: any) { setErr(e.message); }
     setCancelling(null);
   };
 
+  const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
   const active   = reservations.filter(r => ['PENDING', 'CONFIRMED'].includes(r.status));
   const inactive = reservations.filter(r => !['PENDING', 'CONFIRMED'].includes(r.status));
 
@@ -57,11 +58,10 @@ export function MyReservationsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">{t('pages.myReservations.sub', { defaultValue: 'Your active and historical desk reservations' })}</p>
         </div>
         <button onClick={load}
           className="text-sm px-4 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-600">
-          ↻ {t('desks.refresh')}
+          {t('btn.refresh')}
         </button>
       </div>
 
@@ -86,13 +86,13 @@ export function MyReservationsPage() {
                         {r.desk?.code ?? '?'}
                       </div>
                       <div className="flex-1 min-w-0">
-                          <p className="font-medium text-zinc-800">{r.desk?.name ?? t('desks.count', { count: 1 })}</p>
+                        <p className="font-medium text-zinc-800">{r.desk?.name ?? 'Biurko'}</p>
                         <p className="text-xs text-zinc-400 mt-0.5">
-                            {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                            {' '}·{' '}
-                            {new Date(r.startTime).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                            –
-                            {new Date(r.endTime).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                          {' '}·{' '}
+                          {new Date(r.startTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                          –
+                          {new Date(r.endTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
                       <StatusBadge status={r.status} />
@@ -100,7 +100,7 @@ export function MyReservationsPage() {
                     <button
                       onClick={() => cancel(r.id)}
                       disabled={cancelling === r.id}
-                      className="text-xs px-3 py-2 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 active:bg-red-50 transition-colors text-zinc-500 disabled:opacity-40 sm:ml-auto w-full sm:w-auto text-center">
+                      className="text-xs px-3 py-2 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40 sm:ml-auto w-full sm:w-auto text-center">
                       {cancelling === r.id ? '…' : t('reservations.cancel')}
                     </button>
                   </div>
@@ -108,7 +108,6 @@ export function MyReservationsPage() {
               </div>
             </div>
           )}
-
           {inactive.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.history')}</h2>
@@ -119,9 +118,9 @@ export function MyReservationsPage() {
                       {r.desk?.code ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-600">{r.desk?.name ?? t('desks.count', { count: 1 })}</p>
+                      <p className="text-sm font-medium text-zinc-600">{r.desk?.name ?? 'Biurko'}</p>
                       <p className="text-xs text-zinc-400">
-                        {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />

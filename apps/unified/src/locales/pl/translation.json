@@ -2,27 +2,16 @@
   "table": { "empty": "Brak danych" },
   "btn": { "save": "Zapisz", "create": "Utwórz", "cancel": "Anuluj", "saving": "Zapisuję…", "refresh": "↺ Odśwież", "retry": "Spróbuj ponownie" },
   "nav": {
-    "dashboard": "Dashboard",
-    "desks": "Biurka",
-    "reservations": "Rezerwacje",
-    "users": "Użytkownicy",
-    "provisioning": "Provisioning",
-    "reports": "Raporty",
-    "organizations": "Biura",
-    "owner": "Panel Operatora",
-    "change_password": "Zmień hasło",
-    "map": "Mapa biurek",
-    "my_reservations": "Moje rezerwacje",
-    "devices": "Urządzenia"
+    "dashboard": "Dashboard", "desks": "Biurka", "reservations": "Rezerwacje",
+    "users": "Użytkownicy", "provisioning": "Provisioning", "reports": "Raporty",
+    "organizations": "Biura", "owner": "Panel Operatora", "change_password": "Zmień hasło",
+    "map": "Mapa biurek", "my_reservations": "Moje rezerwacje", "devices": "Urządzenia",
+    "notifications": "Powiadomienia", "notification_rules": "Reguły powiadomień"
   },
   "layout": {
-    "staff": "Pracownik",
-    "change_password": "Zmień hasło",
-    "logout": "Wyloguj",
-    "open_menu": "Otwórz menu",
-    "close_menu": "Zamknij menu",
-    "expand": "Rozwiń",
-    "collapse": "Zwiń",
+    "staff": "Pracownik", "change_password": "Zmień hasło", "logout": "Wyloguj",
+    "open_menu": "Otwórz menu", "close_menu": "Zamknij menu",
+    "expand": "Rozwiń", "collapse": "Zwiń",
     "impersonation_banner": "Sesja tymczasowa (30 min) — każda akcja jest logowana",
     "impersonation_end": "Zakończ"
   },
@@ -32,30 +21,18 @@
     "extend_button": "Przedłuż"
   },
   "roles": {
-    "SUPER_ADMIN": "Super Admin",
-    "OFFICE_ADMIN": "Office Admin",
-    "STAFF": "Staff",
-    "OWNER": "Owner",
-    "END_USER": "Użytkownik"
+    "SUPER_ADMIN": "Super Admin", "OFFICE_ADMIN": "Office Admin",
+    "STAFF": "Staff", "OWNER": "Owner", "END_USER": "Użytkownik"
   },
   "login": {
-    "title": "Zaloguj się",
-    "email": "Email",
-    "password": "Hasło",
-    "submit": "Zaloguj się",
-    "submitting": "Logowanie…",
-    "or": "lub",
-    "test_accounts": "Konta testowe:"
+    "title": "Zaloguj się", "email": "Email", "password": "Hasło",
+    "submit": "Zaloguj się", "submitting": "Logowanie…", "or": "lub", "test_accounts": "Konta testowe:"
   },
   "entra": {
-    "title": "Logowanie przez Entra ID",
-    "subtitle": "Microsoft 365 / Azure AD",
-    "work_email": "Email firmowy",
-    "placeholder_email": "jan@twoja-firma.pl",
-    "check": "Dalej",
-    "checking": "Sprawdzanie…",
-    "login_button": "Zaloguj przez Microsoft",
-    "logging_in": "Logowanie…",
+    "title": "Logowanie przez Entra ID", "subtitle": "Microsoft 365 / Azure AD",
+    "work_email": "Email firmowy", "placeholder_email": "jan@twoja-firma.pl",
+    "check": "Dalej", "checking": "Sprawdzanie…",
+    "login_button": "Zaloguj przez Microsoft", "logging_in": "Logowanie…",
     "change_email": "← Zmień email",
     "errors": {
       "invalid_email": "Podaj prawidłowy adres email",
@@ -70,16 +47,11 @@
     "title": "Zmiana hasła",
     "sso_managed_title": "Konto zarządzane przez Entra ID / Microsoft",
     "sso_managed_text": "Twoje hasło jest zarządzane przez Microsoft 365. Aby je zmienić, przejdź do",
-    "changed": "Hasło zmienione",
-    "logging_out": "Za chwilę zostaniesz wylogowany…",
+    "changed": "Hasło zmienione", "logging_out": "Za chwilę zostaniesz wylogowany…",
     "intro": "Po zmianie hasła zostaniesz wylogowany i poproszony o ponowne zalogowanie.",
-    "current_label": "Aktualne hasło",
-    "new_label": "Nowe hasło",
-    "confirm_label": "Potwierdź nowe hasło",
-    "min_chars": "Minimum 8 znaków.",
-    "cancel": "Anuluj",
-    "submit": "Zmień hasło",
-    "saving": "Zapisywanie…",
+    "current_label": "Aktualne hasło", "new_label": "Nowe hasło",
+    "confirm_label": "Potwierdź nowe hasło", "min_chars": "Minimum 8 znaków.",
+    "cancel": "Anuluj", "submit": "Zmień hasło", "saving": "Zapisywanie…",
     "errors": {
       "required_current": "Podaj aktualne hasło.",
       "min_length": "Nowe hasło musi mieć co najmniej 8 znaków.",
@@ -88,104 +60,76 @@
       "not_identical": "Hasła nie są identyczne."
     },
     "strength": { "weak": "Słabe", "medium": "Średnie", "good": "Dobre", "strong": "Silne" }
-  }
-  ,
+  },
   "pages": {
-    "dashboard": { "title": "Dashboard" },
-    "desks": { "title": "Biurka", "new": "+ Nowe biurko" },
-    "users": { "title": "Użytkownicy", "new": "+ Nowy użytkownik" },
-    "reports": { "title": "Raporty", "sub": "Statystyki lokalizacji" },
-    "organizations": { "title": "Biura" },
-    "owner": { "title": "Panel Operatora" },
-    "provisioning": { "title": "Provisioning" },
-    "reservations": { "title": "Rezerwacje" },
-    "reservationsAdmin": { "title": "Rezerwacje" },
-    "myReservations": { "title": "Moje rezerwacje" },
-    "deskMap": { "title": "Mapa biurek" },
-    "devices": { "title": "Urządzenia" },
-    "qrCheckin": { "title": "QR Check-in" },
-    "impersonate": { "title": "Impersonuj" }
-  }
-
-  ,
+    "dashboard":        { "title": "Dashboard" },
+    "desks":            { "title": "Biurka", "new": "+ Nowe biurko" },
+    "users":            { "title": "Użytkownicy", "new": "+ Nowy użytkownik" },
+    "reports":          { "title": "Raporty", "sub": "Statystyki lokalizacji" },
+    "organizations":    { "title": "Biura" },
+    "owner":            { "title": "Panel Operatora" },
+    "provisioning":     { "title": "Provisioning" },
+    "reservations":     { "title": "Rezerwacje" },
+    "reservationsAdmin":{ "title": "Rezerwacje" },
+    "myReservations":   { "title": "Moje rezerwacje" },
+    "deskMap":          { "title": "Mapa biurek" },
+    "devices":          { "title": "Urządzenia" },
+    "qrCheckin":        { "title": "QR Check-in" },
+    "impersonate":      { "title": "Impersonuj" },
+    "notifications":    { "title": "Powiadomienia" },
+    "notificationRules":{ "title": "Reguły powiadomień" }
+  },
   "deskmap": {
-    "location_label": "Biuro:",
-    "loading": "Ładowanie mapy biurek…",
+    "location_label": "Biuro:", "loading": "Ładowanie mapy biurek…",
     "conn_error": "Błąd połączenia",
     "stale_warning": "Problem z połączeniem — dane mogą być nieaktualne"
-  }
-
-  ,
+  },
   "impersonate": {
-    "back_to_login": "Wróć do logowania",
-    "authenticating": "Uwierzytelnianie…",
+    "back_to_login": "Wróć do logowania", "authenticating": "Uwierzytelnianie…",
     "errors": {
       "missing_token": "Brak tokenu impersonacji.",
       "not_impersonation": "Token nie pochodzi z impersonacji Owner.",
       "invalid_token": "Nieprawidłowy token impersonacji."
     }
-  }
-
-  ,
+  },
   "qr": {
-    "invalid_qr": "Nieprawidłowy kod QR",
-    "not_found": "Biurko nie istnieje lub jest nieaktywne",
-    "no_connection": "Brak połączenia z serwerem",
-    "error_checkin": "Błąd check-in",
-    "error_reservation": "Błąd rezerwacji",
-    "unknown_error": "Wystąpił nieoczekiwany błąd",
-    "error_checkout": "Błąd podczas check-out",
-    "processing": "Przetwarzanie…",
+    "invalid_qr": "Nieprawidłowy kod QR", "not_found": "Biurko nie istnieje lub jest nieaktywne",
+    "no_connection": "Brak połączenia z serwerem", "error_checkin": "Błąd check-in",
+    "error_reservation": "Błąd rezerwacji", "unknown_error": "Wystąpił nieoczekiwany błąd",
+    "error_checkout": "Błąd podczas check-out", "processing": "Przetwarzanie…",
     "occupied_title": "Biurko zajęte",
     "occupied_desc": "To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko.",
-    "back_to_map": "Przejdź do mapy biurek",
-    "error_title": "Wystąpił problem",
+    "back_to_map": "Przejdź do mapy biurek", "error_title": "Wystąpił problem",
     "back_to_panel": "Wróć do panelu",
     "login_prompt": "Zaloguj się aby zarezerwować biurko lub zrobić check-in",
-    "login": "Zaloguj się",
-    "success_reserved": "Biurko zarezerwowane!",
+    "login": "Zaloguj się", "success_reserved": "Biurko zarezerwowane!",
     "reservation_checkin_info": "Rezerwacja na dziś · check-in zarejestrowany",
-    "success_checkin": "Check-in udany!",
-    "success_checkout": "Check-out zarejestrowany",
+    "success_checkin": "Check-in udany!", "success_checkout": "Check-out zarejestrowany",
     "status": { "free": "Wolne", "reserved": "Zarezerwowane", "occupied": "Zajęte" },
-    "your_reservation": "Twoja rezerwacja",
-    "reserved_by": "Zarezerwowane przez",
-    "occupied_since": "Zajęte od",
-    "reserve_and_checkin": "Zarezerwuj i zrób check-in",
+    "your_reservation": "Twoja rezerwacja", "reserved_by": "Zarezerwowane przez",
+    "occupied_since": "Zajęte od", "reserve_and_checkin": "Zarezerwuj i zrób check-in",
     "confirm_checkin": "Check-in — potwierdź rezerwację",
     "occupied_other_desc": "To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko."
-  }
-
-  ,
+  },
   "devices": {
     "table": { "desk": "Biurko", "last_seen": "Ostatni kontakt" },
     "status": { "online": "Online", "offline": "Offline" },
     "unassigned": "Nieprzypisany",
     "summary": { "all": "Wszystkich", "online": "Online", "offline": "Offline" }
-  }
-
-  ,
+  },
   "desks": {
     "qr": {
-      "title": "Kod QR — {{name}}",
-      "url_label": "URL check-in",
+      "title": "Kod QR — {{name}}", "url_label": "URL check-in",
       "print_hint": "Wydrukuj i umieść na biurku — użytkownicy skanują telefonem aby zrobić check-in",
-      "generate_title": "Generuj kod QR",
-      "alt": "QR kod"
+      "generate_title": "Generuj kod QR", "alt": "QR kod"
     },
-    "location_label": "Biuro:",
-    "sub_active": "{{active}} aktywnych z {{total}}",
+    "location_label": "Biuro:", "sub_active": "{{active}} aktywnych z {{total}}",
     "no_beacon": "Brak beacona",
     "actions": {
-      "maintenance": "Serwis",
-      "activate": "Aktywuj",
-      "reactivate": "Reaktywuj",
-      "delete_permanent": "Usuń trwale",
-      "unpair": "Odparuj",
-      "unpair_title": "Odparuj beacon od biurka",
-      "deactivate": "Dezaktywuj",
-      "checkin": "Check-in",
-      "checkout": "Check-out"
+      "maintenance": "Serwis", "activate": "Aktywuj", "reactivate": "Reaktywuj",
+      "delete_permanent": "Usuń trwale", "unpair": "Odparuj",
+      "unpair_title": "Odparuj beacon od biurka", "deactivate": "Dezaktywuj",
+      "checkin": "Check-in", "checkout": "Check-out"
     },
     "confirm": {
       "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna.",
@@ -193,436 +137,199 @@
       "deactivate": "Dezaktywować biurko \"{{name}}\"?"
     },
     "col": {
-      "location": "Biuro",
-      "code": "Kod",
-      "name": "Nazwa",
-      "desk_id": "ID biurka",
-      "floor": "Piętro",
-      "zone": "Strefa",
-      "beacon": "Beacon",
-      "status": "Status",
-      "actions": ""
+      "location": "Biuro", "code": "Kod", "name": "Nazwa", "desk_id": "ID biurka",
+      "floor": "Piętro", "zone": "Strefa", "beacon": "Beacon", "status": "Status", "actions": ""
     },
     "actions_extra": {
-      "unpair": "Odparuj",
-      "unpair_title": "Odparuj beacon od biurka",
-      "deactivate": "Dezaktywuj"
+      "unpair": "Odparuj", "unpair_title": "Odparuj beacon od biurka", "deactivate": "Dezaktywuj"
     },
     "deactivate_hint": "Dezaktywuje biurko — można je potem trwale usunąć.",
     "modals": { "create_title": "Nowe biurko", "edit_title": "Edytuj: {{name}}" },
     "form": {
       "label": {
-        "location": "Biuro",
-        "name": "Nazwa",
-        "code": "Kod (unikalny w lokalizacji)",
-        "floor": "Piętro",
-        "zone": "Strefa"
+        "location": "Biuro", "name": "Nazwa",
+        "code": "Kod (unikalny w lokalizacji)", "floor": "Piętro", "zone": "Strefa"
       },
       "select_placeholder": "— wybierz biuro —"
     },
-    "checkout_error": "Błąd check-out: {{msg}}",
-    "stats": {
-      "free": "Wolne",
-      "reserved": "Zarezerwowane",
-      "occupied": "Zajęte",
-      "offline": "Offline"
-    },
+    "checkout_error": "Błąd check-out: {{msg}}", "floor": "Piętro {{floor}}",
+    "stats": { "free": "Wolne", "reserved": "Rezerwacja", "occupied": "Zajęte", "offline": "Offline" },
     "reserve": {
-      "title": "Zarezerwuj biurko",
-      "staff_label": "Pracownik",
-      "staff_helper": "(puste = rezerwacja dla siebie)",
-      "for_self": "— rezerwacja dla siebie —",
-      "date": "Data",
-      "from": "Od",
-      "to": "Do",
-      "open_hours": "Biuro czynne {{open}}–{{close}} · max {{maxHours}}h · do {{maxDays}} dni do przodu",
-      "any_time": "Możesz zarezerwować biurko na dowolną godzinę dnia.",
-      "submitting": "Rezerwuję…",
-      "action": "Zarezerwuj",
+      "title": "Zarezerwuj biurko", "staff_label": "Pracownik",
+      "staff_helper": "(puste = rezerwacja dla siebie)", "for_self": "— zarezerwuj dla siebie —",
+      "date": "Data", "from": "Od", "to": "Do",
+      "open_hours": "Otwarte {{open}}–{{close}} · max {{maxHours}}h · do {{maxDays}} dni naprzód",
+      "any_time": "Możesz zarezerwować biurko na dowolny czas dnia.",
+      "submitting": "Rezerwowanie…", "action": "Zarezerwuj",
       "success": "Biurko zarezerwowane! Sprawdź Moje rezerwacje.",
       "errors": {
-        "end_after_start": "Godzina zakończenia musi być późniejsza niż startu.",
+        "end_after_start": "Godzina końca musi być późniejsza niż początek.",
         "max_length": "Maksymalna długość rezerwacji to {{maxHours}}h.",
-        "max_days": "Rezerwacja możliwa maksymalnie {{days}} dni do przodu.",
-        "failed": "Błąd rezerwacji."
+        "max_days": "Rezerwacje można tworzyć do {{days}} dni naprzód.",
+        "failed": "Rezerwacja nie powiodła się."
       }
-    },
-    "updated": "Aktualizacja",
-    "refresh": "Odśwież",
-    "none_in_location": "Brak biurek w tej lokalizacji",
-    "floor_prefix": "Piętro",
-    "floor": "Piętro {{floor}}",
-    "count": "{{count}} biurek"
-  }
-
-  ,
-  "provisioning": {
-    "gateways_title": "Gateway'e",
-    "new_gateway": "+ Nowy gateway",
-    "table": {
-      "name": "Nazwa",
-      "id": "ID",
-      "location": "Biuro",
-      "ip": "IP",
-      "version": "Wersja",
-      "devices": "Urządzenia",
-      "status": "Status",
-      "last_seen": "Ostatni kontakt",
-      "actions": "",
-      "hardware": "Hardware ID",
-      "mqtt_user": "Użytkownik MQTT",
-      "desk": "Biurko",
-      "fw": "Firmware"
-    },
-    "status": { "online": "Online", "problem": "Problem", "offline": "Offline" },
-    "last_seen": { "now": "przed chwilą", "minutes": "{{minutes}} min temu" },
-    "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną",
-    "modal": { "add_gateway": "Dodaj gateway" },
-    "install": { "title": "Jak zainstalować gateway:", "step1": "Włącz Raspberry Pi (lub inne urządzenie z Linuksem)", "step2": "Otwórz terminal (SSH lub lokalnie)", "step3": "Wklej poniższą komendę i naciśnij Enter", "step4": "Skrypt zapyta tylko o nazwę WiFi (jeśli na kablu — pomija)", "cmd_label": "Komenda instalacyjna (ważna 24h, jednorazowa)" },
-    "beacons_title": "Beacony (urządzenia)",
-    "all_locations": "Wszystkie biura",
-    "provision_button": "+ Provisioning"
-    ,
-    "copy_id": "Kopiuj ID",
-    "update_title": "Zaktualizuj gateway do najnowszej wersji",
-    "update_button": "Aktualizuj",
-    "rotate_title": "Rotuj klucz gateway (okno 15 min)",
-    "rotate_button": "Rotuj",
-    "delete_title": "Usuń gateway",
-    "delete_button": "Usuń",
-    "identify": "Zidentyfikuj",
-    "restart": "Restart",
-    "assign_to_desk": "Przypisz do biurka",
-    "modal": {
-      "secret_title": "Nowy secret gateway",
-      "provision_title": "Provisioning urządzenia"
-    },
-    "copy_cmd": "Kopiuj komendę"
-  ,
-    "form": {
-      "label": {
-        "desk": "Biurko",
-        "location": "Biuro",
-        "gateway": "Gateway"
-      },
-      "select_placeholder": "— wybierz biuro —",
-      "select_gateway_placeholder": "— wybierz gateway —",
-      "assign_optional": "Przypisz do biurka (opcjonalnie)",
-      "none": "— brak przypisania —",
-      "hardware_label": "Hardware ID (unikalny ID ESP32)"
-    },
-    "provision_button": "Provisioning",
-    "provisioned_success": "✓ Beacon zarejestrowany — MQTT user dodany do gateway automatycznie",
-    "serial_instructions": "Wklej w monitorze serialnym ESP32 (115200 baud):",
-    "serial_replace_hint": "Podmień NAZWA_WIFI, HASLO_WIFI i IP_RASPBERRY na rzeczywiste wartości",
-    "mqtt_password_warning": "⚠ Hasło MQTT nie będzie wyświetlone ponownie",
-    "subtitle": "Rejestracja i zarządzanie gateway'ami i beaconami",
-    "active_office_label": "Aktywne biuro:",
-    "install_failed": "Błąd wygenerowania tokenu instalacyjnego.",
-    "install": {
-      "token_warning": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
-    },
-    "confirm_delete_gateway": "Usunąć gateway \"{{name}}\"?",
-    "delete_failed": "Nie udało się usunąć gateway'a.",
-    "confirm_update_gateway": "Zaktualizować gateway \"{{name}}\" do najnowszej wersji?",
-    "update_started": "Aktualizacja uruchomiona: {{old}} → {{new}}. Gateway się restartuje.",
-    "update_failed": "Aktualizacja gateway nie powiodła się: {{msg}}",
-    "confirm_rotate": "Rotacja klucza gateway: nowy klucz zostanie wygenerowany i wysłany do gateway. Stary klucz pozostaje ważny przez 15 minut.",
-    "rotate_failed": "Rotacja klucza nie powiodła się.",
-    "confirm_ota": "Zaktualizować beacon \"{{hw}}\"?\nAktualna: {{current}}\nNowa: {{version}}\nBeacon uruchomi się ponownie (~30s).",
-    "ota_started": "OTA uruchomione → {{version}}. Beacon restartuje się.",
-    "ota_failed": "OTA nie powiodło się.",
-    "provision_failed": "Provisioning nie powiódł się.",
-    "confirm_delete_beacon": "Usunąć beacon \"{{hw}}\"?",
-    "assign_failed": "Nie udało się przypisać urządzenia do biurka."
-  }
-
-  ,
-  "provisioning_extra": {
-    "copy_id": "Kopiuj ID",
-    "update_title": "Zaktualizuj gateway do najnowszej wersji",
-    "update_button": "Aktualizuj",
-    "rotate_title": "Rotuj klucz gateway (okno 15 min)",
-    "rotate_button": "Rotuj",
-    "delete_title": "Usuń gateway",
-    "delete_button": "Usuń",
-    "identify": "Zidentyfikuj",
-    "restart": "Restart",
-    "assign_to_desk": "Przypisz do biurka",
-    "modal": {
-      "secret_title": "Nowy secret gateway",
-      "provision_title": "Provisioning urządzenia"
-    },
-    "copy_cmd": "Kopiuj komendę"
-  }
-
-  ,
-  "owner": {
-    "create_title": "Nowa firma",
-    "create_action": "Utwórz firmę",
-    "create_done_title": "✅ Firma utworzona",
-    "create_done_msg": "Firma {{name}} gotowa.",
-    "admin_account": "Konto admina:",
-    "copy_password_warning": "⚠️ Skopiuj hasło — nie będzie widoczne ponownie.",
-    "form": {
-      "name": "Nazwa firmy *",
-      "slug": "Slug (URL) *",
-      "plan": "Plan",
-      "firstName": "Imię *",
-      "lastName": "Nazwisko *",
-      "email": "Email admina *",
-      "notes": "Notatki"
-    },
-    "edit_title": "Edytuj: {{name}}",
-    "search_placeholder": "Szukaj firmy...",
-    "count": "{{count}} firm",
-    "loading": "Ładowanie...",
-    "load_error": "Błąd ładowania danych",
-    "no_orgs": "Brak firm",
-    "table": {
-      "name": "Firma",
-      "slug": "Slug",
-      "plan": "Plan",
-      "users": "Użytkownicy",
-      "status": "Status",
-      "actions": "Akcje"
-    },
-    "status": { "active": "aktywna", "inactive": "nieaktywna" },
-    "actions": { "impersonate": "🔑 Wejdź", "edit": "Edytuj", "deactivate": "Deaktywuj", "activate": "Aktywuj" }
-  }
-  ,
-  "owner": {
-    "api_error": "Błąd połączenia z API.",
-    "impersonate_failed": "Nie udało się wejść jako firma.",
-    "confirm_deactivate": "Dezaktywować firmę \"{{name}}\"?",
-    "deactivate_failed": "Nie udało się dezaktywować firmy.",
-    "activate_failed": "Nie udało się aktywować firmy.",
-    "stats": {
-      "active": "Firmy aktywne",
-      "gateways_online": "Gateway'e online",
-      "beacons_online": "Beacony online",
-      "checkins_today": "Check-iny dziś",
-      "total": "{{total}} łącznie",
-      "week_count": "{{count}} w tygodniu"
     }
-  }
-
-  ,
-  "orgs": {
-    "azure": {
-      "howto_title": "Jak skonfigurować (IT Admin firmy):",
-      "step1": "1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:",
-      "step2": "2. Kliknij \"Akceptuj\" → Skopiuj Tenant ID z URL lub Azure Portal",
-      "step3": "3. Wklej Tenant ID poniżej i włącz SSO",
-      "title": "Microsoft 365 SSO",
-      "login_label": "Logowanie przez Microsoft",
-      "enabled_desc": "Przycisk 'Zaloguj przez Microsoft' widoczny na stronie logowania",
-      "disabled_desc": "Wyłączone — tylko email i hasło",
-      "password_warning": "Logowanie hasłem pozostaje aktywne — użytkownicy mogą używać obu metod. Wyłączenie hasła planowane w przyszłej wersji.",
-      "tenant_label": "Azure Tenant ID",
-      "test": "Testuj",
-      "test_ok": "✓ Tenant ID poprawny — Entra ID odpowiada",
-      "test_fail": "✗ Nie można połączyć z tym tenant ID",
-      "hint": "Znajdziesz w: Azure Portal → Azure Active Directory → Overview → Tenant ID"
-    }
-  }
-
-  ,
-  "organizations": {
-    "form": {
-      "closeTime": "Zamknięcie",
-      "openTime": "Otwarcie",
-      "name": "Nazwa biura",
-      "address": "Adres",
-      "city": "Miasto",
-      "maxDaysAhead": "Max dni do przodu",
-      "maxHoursPerDay": "Max godzin / rezerwacja"
-    },
-    "hours_hint": "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.",
-    "create_action": "Utwórz",
-    "subtitle": "Fizyczne biura — godziny pracy, adresy, lokalizacje",
-    "new_location": "+ Nowe biuro",
-    "no_locations": "Brak biur — dodaj pierwsze biuro",
-    "inactive": "Nieaktywne",
-    "label_office": "Biuro",
-    "valid_until": "Ważny do"
-    ,"no_address": "Brak adresu"
-    ,"id_label": "ID:"
   },
-  "organizations_extra": {
-    "m365_button": "M365",
-    "edit": "Edytuj",
-    "new_title": "Nowe biuro",
-    "edit_title": "Edytuj: {{name}}"
-  },
-  "reservations": {
-    "confirm_cancel": "Anulować rezerwację {{code}}?",
-    "today_title": "Rezerwacje na dziś",
-    "all": "Wszystkie ({{count}})",
-    "none_today": "Brak rezerwacji na dziś",
-    "cancel": "Anuluj",
-    "location": "Biuro:",
-    "filter": {
-      "date": "Data",
-      "status": "Status",
-      "all": "Wszystkie"
-    },
-    "none_filters": "Brak rezerwacji dla wybranych filtrów",
-    "table": {
-      "time": "Czas",
-      "desk": "Biurko",
-      "user": "Pracownik",
-      "checkin": "Check-in",
-      "status": "Status",
-      "actions": ""
-    },
-    "confirm_cancel_simple": "Anulować rezerwację?",
-    "none": "Brak rezerwacji",
-    "none_hint": "Przejdź do mapy biurek, aby zarezerwować miejsce",
-    "active": "Aktywne",
-    "history": "Historia",
-    "status": {
-      "confirmed": "Potwierdzone",
-      "pending": "Oczekujące",
-      "completed": "Zakończone",
-      "cancelled": "Anulowane",
-      "expired": "Wygasłe"
-    },
-    "method": {
-      "nfc": "📡 NFC",
-      "qr": "📷 QR",
-      "manual": "✋ Ręczny"
-    }
-  }
-
-  ,
   "users": {
+    "sub": "{{active}} aktywnych · {{deactivated}} dezaktywowanych",
+    "tabs": { "active": "Aktywni ({{count}})", "deactivated": "Dezaktywowani ({{count}})" },
+    "table": {
+      "name": "Imię i nazwisko", "email": "Email", "role": "Rola", "card": "Karta NFC",
+      "active": "Aktywny", "deactivated": "Dezaktywowany", "remove_in": "Usunięcie za"
+    },
+    "actions": {
+      "add_card": "+ Karta", "edit": "Edytuj", "card": "Karta",
+      "deactivate": "Dezaktywuj", "restore": "Przywróć", "delete_data": "Usuń dane",
+      "create": "Utwórz", "save": "Zapisz"
+    },
+    "yes": "Tak", "no": "Nie",
+    "form": { "firstName": "Imię", "lastName": "Nazwisko", "email": "Email", "password": "Hasło", "role": "Rola" },
+    "roles": { "SUPER_ADMIN": "Super Admin", "OFFICE_ADMIN": "Office Admin", "STAFF": "Staff", "END_USER": "Użytkownik" },
+    "modals": {
+      "create_title": "Nowy użytkownik", "edit_title": "Edytuj: {{name}}",
+      "deactivate_title": "Dezaktywuj: {{name}}",
+      "deactivate_text": "Konto zostanie dezaktywowane. Po upływie okresu retencji dane osobowe zostaną anonimizowane, jednak wszystkie aktywności (rezerwacje, check-iny) pozostaną zachowane.",
+      "retention_label": "Okres retencji (minimum 30 dni)",
+      "will_be_anonymized_on": "Konto zostanie trwale zanonimizowane: {{date}}",
+      "confirm_hard_delete": "Trwale usunąć dane konta \"{{name}}\"? Aktywności zostaną zachowane."
+    },
+    "days": "{{count}} dni",
     "nfcModal": {
-      "title": "Karta NFC — {{name}}",
-      "current_card": "Aktualnie przypisana karta",
-      "scan_auto": "Zbliż kartę automatycznie ({{seconds}}s)",
-      "or_manual": "lub wpisz ręcznie",
-      "manual_button": "Wpisz UID ręcznie",
-      "waiting_title": "Czekam na kartę…",
-      "waiting_desc_prefix": "Zbliż kartę NFC do",
-      "waiting_desc_strong": "dowolnego beacona",
-      "waiting_desc_suffix": "w biurze",
-      "seconds": "{{seconds}}s",
-      "assigned": "Karta przypisana!",
-      "done": "Gotowe",
-      "label_uid": "UID karty (format AA:BB:CC:DD)",
-      "placeholder_uid": "AA:BB:CC:DD",
-      "back": "Wróć",
-      "save": "Zapisz",
-      "saving": "Zapisuję…",
+      "title": "Karta NFC — {{name}}", "current_card": "Aktualnie przypisana karta",
+      "scan_auto": "Zbliż kartę automatycznie ({{seconds}}s)", "or_manual": "lub wpisz ręcznie",
+      "manual_button": "Wpisz UID ręcznie", "waiting_title": "Czekam na kartę…",
+      "waiting_desc_prefix": "Zbliż kartę NFC do", "waiting_desc_strong": "dowolnego beacona",
+      "waiting_desc_suffix": "w biurze", "seconds": "{{seconds}}s",
+      "assigned": "Karta przypisana!", "done": "Gotowe",
+      "label_uid": "UID karty (format AA:BB:CC:DD)", "placeholder_uid": "AA:BB:CC:DD",
+      "back": "Wróć", "save": "Zapisz", "saving": "Zapisuję…",
       "errors": {
         "start_failed": "Błąd uruchamiania sesji.",
         "timeout": "Czas minął. Spróbuj ponownie.",
         "save_failed": "Błąd zapisu."
       }
     }
-
-      ,
-      "dashboard": {
-        "trend": {
-          "no_change": "bez zmian",
-          "vs_prev": "vs poprzedni tydzień"
-        },
-        "kpi": {
-          "occupancy_now": "Zajętość teraz",
-          "occupied_desks": "Zajęte biurka",
-          "of_active": "z {{count}} aktywnych",
-          "checkins_today": "Check-iny dziś",
-          "beacons_online": "Beacony online",
-          "registered_of": "z {{count}} zarejestrowanych"
-        },
-        "checkins_title": "Check-iny — ostatnie 7 dni",
-        "checkins": "Check-iny",
-        "hourly": {
-          "title": "Rozkład godzinowy (30 dni)",
-          "peaks": "Szczyty"
-        },
-        "zone": {
-          "title": "Zajętość wg strefy",
-          "occupied": "Zajęte",
-          "reserved": "Zarezerwowane",
-          "free": "Wolne"
-        },
-        "no_data": "Brak danych",
-        "top": {
-          "title": "Top biurka (30 dni)",
-          "checkins_suffix": "check-inów"
-        },
-        "methods": { "title": "Metody check-in (30 dni)" },
-        "state": { "title": "Stan biurek" },
-        "legend": { "free": "Wolne", "reserved": "Rezerwacja", "occupied": "Zajęte", "offline": "Offline" }
-      },
-      "methods": { "NFC": "NFC", "QR": "QR", "MANUAL": "Ręczny", "NO_CHECKIN": "Brak" }
-
-      ,
-      "reports": {
-        "kpi": {
-          "occ_today": "Zajętość dziś",
-          "total": "Wszystkich rezerwacji",
-          "with_checkin": "Z check-in",
-          "no_show": "No-show rate"
-        },
-        "chart_title": "Rezerwacje — ostatnie 14 dni",
-        "series": { "confirmed": "Potwierdzone", "completed": "Zakończone", "cancelled": "Anulowane" },
-        "methods_title": "Metody check-in"
-      }
-
-      ,
-      "users": {
-        "sub": "{{active}} aktywnych · {{deactivated}} dezaktywowanych",
-        "tabs": {
-          "active": "Aktywni ({{count}})",
-          "deactivated": "Dezaktywowani ({{count}})"
-        },
-        "table": {
-          "name": "Imię i nazwisko",
-          "email": "Email",
-          "role": "Rola",
-          "card": "Karta NFC",
-          "active": "Aktywny",
-          "deactivated": "Dezaktywowany",
-          "remove_in": "Usunięcie za"
-        },
-        "actions": {
-          "add_card": "+ Karta",
-          "edit": "Edytuj",
-          "card": "Karta",
-          "deactivate": "Dezaktywuj",
-          "restore": "Przywróć",
-          "delete_data": "Usuń dane",
-          "create": "Utwórz",
-          "save": "Zapisz"
-        },
-        "yes": "Tak",
-        "no": "Nie",
-        "form": {
-          "firstName": "Imię",
-          "lastName": "Nazwisko",
-          "email": "Email",
-          "password": "Hasło",
-          "role": "Rola"
-        },
-        "roles": {
-          "SUPER_ADMIN": "Super Admin",
-          "OFFICE_ADMIN": "Office Admin",
-          "STAFF": "Staff",
-          "END_USER": "Użytkownik"
-        },
-        "modals": {
-          "create_title": "Nowy użytkownik",
-          "edit_title": "Edytuj: {{name}}",
-          "deactivate_title": "Dezaktywuj: {{name}}",
-          "deactivate_text": "Konto zostanie dezaktywowane. Po upływie okresu retencji dane osobowe zostaną anonimizowane, jednak wszystkie aktywności (rezerwacje, check-iny) pozostaną zachowane z zachowaną nazwą konta.",
-          "retention_label": "Okres retencji (minimum 30 dni)",
-          "will_be_anonymized_on": "Konto zostanie trwale zanonimizowane: {{date}}",
-          "confirm_hard_delete": "Trwale usunąć dane konta \"{{name}}\"? Aktywności zostaną zachowane."
-        },
-        "days": "{{count}} dni"
-      }
+  },
+  "dashboard": {
+    "trend": { "no_change": "bez zmian", "vs_prev": "vs poprzedni tydzień" },
+    "kpi": {
+      "occupancy_now": "Zajętość teraz", "occupied_desks": "Zajęte biurka",
+      "of_active": "z {{count}} aktywnych", "checkins_today": "Check-iny dziś",
+      "beacons_online": "Beacony online", "registered_of": "z {{count}} zarejestrowanych"
+    },
+    "checkins_title": "Check-iny — ostatnie 7 dni", "checkins": "Check-iny",
+    "hourly": { "title": "Rozkład godzinowy (30 dni)", "peaks": "Szczyty" },
+    "zone": { "title": "Zajętość wg strefy", "occupied": "Zajęte", "reserved": "Zarezerwowane", "free": "Wolne" },
+    "no_data": "Brak danych",
+    "top": { "title": "Top biurka (30 dni)", "checkins_suffix": "check-inów" },
+    "methods": { "title": "Metody check-in (30 dni)" },
+    "state": { "title": "Stan biurek" },
+    "legend": { "free": "Wolne", "reserved": "Rezerwacja", "occupied": "Zajęte", "offline": "Offline" }
+  },
+  "methods": { "NFC": "NFC", "QR": "QR", "MANUAL": "Ręczny", "NO_CHECKIN": "Brak" },
+  "reports": {
+    "kpi": {
+      "occ_today": "Zajętość dziś", "total": "Wszystkich rezerwacji",
+      "with_checkin": "Z check-in", "no_show": "No-show rate"
+    },
+    "chart_title": "Rezerwacje — ostatnie 14 dni",
+    "series": { "confirmed": "Potwierdzone", "completed": "Zakończone", "cancelled": "Anulowane" },
+    "methods_title": "Metody check-in"
+  },
+  "organizations": {
+    "create_action": "Utwórz", "subtitle": "Fizyczne biura — godziny pracy, adresy, lokalizacje",
+    "new_location": "+ Nowe biuro", "no_locations": "Brak biur — dodaj pierwsze biuro",
+    "inactive": "Nieaktywne", "label_office": "Biuro",
+    "valid_until": "Ważny do", "no_address": "Brak adresu", "id_label": "ID:"
+  },
+  "organizations_extra": {
+    "m365_button": "M365", "edit": "Edytuj",
+    "new_title": "Nowe biuro", "edit_title": "Edytuj: {{name}}"
+  },
+  "reservations": {
+    "confirm_cancel": "Anulować rezerwację {{code}}?", "today_title": "Rezerwacje na dziś",
+    "all": "Wszystkie ({{count}})", "none_today": "Brak rezerwacji na dziś",
+    "cancel": "Anuluj", "location": "Biuro:",
+    "filter": { "date": "Data", "status": "Status", "all": "Wszystkie" },
+    "none_filters": "Brak rezerwacji dla wybranych filtrów",
+    "table": {
+      "time": "Czas", "desk": "Biurko", "user": "Pracownik",
+      "checkin": "Check-in", "status": "Status", "actions": ""
+    },
+    "confirm_cancel_simple": "Anulować rezerwację?",
+    "none": "Brak rezerwacji", "none_hint": "Przejdź do mapy biurek, aby zarezerwować miejsce",
+    "active": "Aktywne", "history": "Historia",
+    "status": {
+      "confirmed": "Potwierdzone", "pending": "Oczekujące",
+      "completed": "Zakończone", "cancelled": "Anulowane", "expired": "Wygasłe"
+    },
+    "method": { "nfc": "📡 NFC", "qr": "📷 QR", "manual": "✋ Ręczny" }
+  },
+  "provisioning": {
+    "title": "Provisioning", "beacons_title": "Beacony (urządzenia)",
+    "gateways_title": "Gatewaye", "filter_office": "Filtruj po biurze",
+    "add_provisioning": "+ Provisioning", "add_gateway": "+ Gateway",
+    "firmware": {
+      "latest_label": "Najnowszy firmware", "published": "opublikowany", "size_kb": "KB",
+      "update_all": "Zaktualizuj wszystkie",
+      "update_all_confirm": "Zaktualizować {{count}} beacon(ów) do v{{version}}?\n\nKażdy beacon uruchomi się ponownie (~30s). Nie wyłączaj urządzeń w trakcie aktualizacji.",
+      "updating_all": "Aktualizowanie…",
+      "update_all_started": "Zlecono aktualizację {{count}} beacon(ów) do v{{version}}",
+      "no_outdated": "Wszystkie beacony mają aktualną wersję firmware.",
+      "no_releases": "Brak dostępnych releases firmware. Opublikuj release na GitHub."
+    },
+    "table": {
+      "hardware_id": "Hardware ID", "device_id": "ID urządzenia", "mqtt_user": "MQTT user",
+      "office": "Biuro", "desk": "Biurko", "fw": "Firmware", "actions": "Akcje"
+    },
+    "ota": {
+      "button": "↑ FW", "button_title": "Aktualizuj firmware: {{current}} → {{target}}",
+      "confirm_title": "Aktualizacja firmware",
+      "confirm_msg": "Zaktualizować beacon \"{{hwId}}\"?\n\nAktualna wersja: {{current}}\nNowa wersja: {{target}}\n\nBeacon uruchomi się ponownie (~30s).",
+      "started": "Aktualizacja zlecona",
+      "started_desc": "Beacon \"{{hwId}}\" pobiera firmware v{{version}}. Status zaktualizuje się automatycznie.",
+      "success": "Zaktualizowano pomyślnie",
+      "success_desc": "Beacon \"{{hwId}}\" działa na v{{version}}.",
+      "failed": "Aktualizacja nieudana",
+      "failed_desc": "Beacon \"{{hwId}}\" nie zaktualizował się w ciągu 10 minut. Sprawdź połączenie urządzenia.",
+      "in_progress": "Aktualizowanie…", "in_progress_desc": "Pobieranie v{{version}}…",
+      "already_latest": "Aktualny", "conflict": "Aktualizacja już w toku. Poczekaj na zakończenie.",
+      "no_desk": "Beacon musi być przypisany do biurka, aby móc go zaktualizować.",
+      "status_idle": "Aktualny", "status_in_progress": "Aktualizowanie…",
+      "status_success": "Zaktualizowany", "status_failed": "Błąd aktualizacji"
+    },
+    "gateway": {
+      "install_title": "Instalacja Gateway", "rotate_secret": "Rotacja klucza",
+      "last_seen": "Ostatnio widziany", "never": "Nigdy", "ip": "Adres IP", "location": "Lokalizacja"
+    },
+    "device": {
+      "identify": "Zidentyfikuj", "reboot": "Restart", "assign": "Przypisz",
+      "assign_title": "Przypisz beacon do biurka", "assign_desk": "Wybierz biurko",
+      "assign_save": "Zapisz", "unassign": "Odparuj",
+      "unassign_confirm": "Odparować beacon \"{{hwId}}\" od biurka \"{{deskName}}\"?",
+      "delete": "Usuń beacon",
+      "delete_confirm": "Usunąć beacon \"{{hwId}}\"? Operacja jest nieodwracalna.",
+      "no_desk": "Brak biurka"
+    }
+  },
+  "notifications": {
+    "bell_label": "Powiadomienia", "bell_label_n": "Powiadomienia ({{count}} nowych)",
+    "mark_all": "Oznacz wszystkie", "empty_title": "Brak powiadomień",
+    "empty_desc": "Tutaj pojawią się ważne alerty systemowe.",
+    "footer": "{{count}} powiadomień · usuwane po 30 dniach",
+    "just_now": "przed chwilą", "min_ago": "{{count}} min temu",
+    "h_ago": "{{count}}h temu", "d_ago": "{{count}}d temu",
+    "ota_success": "Beacon \"{{hwId}}\" zaktualizowany do v{{version}}",
+    "ota_failed": "Aktualizacja beacona \"{{hwId}}\" nieudana",
+    "settings": {
+      "title": "Ustawienia powiadomień email", "smtp_title": "Skrzynka pocztowa",
+      "test_email": "Wyślij email testowy", "test_success": "Email wysłany pomyślnie",
+      "save": "Zapisz ustawienia", "saved": "Zapisano"
+    },
+    "rules": {
+      "title": "Reguły powiadomień systemowych",
+      "subtitle": "Określ kto widzi jakie powiadomienia w panelu",
+      "announce": "Ogłoszenie", "save": "Zapisz reguły", "saved": "Zapisano"
+    }
   }
 }

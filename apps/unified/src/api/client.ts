@@ -100,6 +100,36 @@ export const appApi = {
   },
 
 
+
+
+  inapp: {
+    getAll:       (unreadOnly?: boolean) => req<any[]>(`/inapp${unreadOnly ? '?unreadOnly=true' : ''}`),
+    unreadCount:  ()                     => req<{ count: number }>('/inapp/unread-count'),
+    markRead:     (ids: string[])        => req<void>('/inapp/read',     { method: 'PATCH', body: JSON.stringify({ ids }) }),
+    markAllRead:  ()                     => req<void>('/inapp/read-all', { method: 'PATCH' }),
+    deleteOne:    (id: string)           => req<void>(`/inapp/${id}`,    { method: 'DELETE' }),
+    // Owner — reguły
+    getRules:     ()                     => req<any[]>('/inapp/rules'),
+    saveRules:    (rules: any[])         => req<any[]>('/inapp/rules',   { method: 'PATCH', body: JSON.stringify(rules) }),
+    announce:     (d: { title: string; body: string; targetRoles?: string[] }) =>
+      req<any>('/inapp/announce', { method: 'POST', body: JSON.stringify(d) }),
+  },
+  notifications: {
+    getSettings:  ()                 => req<any[]>('/notifications/settings'),
+    saveSettings: (settings: any[]) => req<any[]>('/notifications/settings', {
+      method: 'PUT', body: JSON.stringify(settings),
+    }),
+    getLog:       (limit?: number)  => req<any[]>(`/notifications/log${limit ? '?limit=' + limit : ''}`),
+    testSend:     (email: string)   => req<any>('/notifications/test', {
+      method: 'POST', body: JSON.stringify({ email }),
+    }),
+    getTypes:     ()                => req<any[]>('/notifications/types'),
+    // SMTP per org
+    getSmtp:      ()                => req<any>('/notifications/smtp'),
+    saveSmtp:     (d: any)          => req<any>('/notifications/smtp', { method: 'PUT', body: JSON.stringify(d) }),
+    testSmtp:     (email: string)   => req<any>('/notifications/smtp/test', { method: 'POST', body: JSON.stringify({ email }) }),
+    deleteSmtp:   ()                => req<any>('/notifications/smtp/delete', { method: 'POST' }),
+  },
   owner: {
     // Statystyki platformy (firmy, gateway, beacony, check-iny)
     getStats:        ()                     => req<any>('/owner/stats'),
@@ -157,7 +187,8 @@ export const appApi = {
       req<any>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command: cmd, params }) }),
     remove:         (id: string)                 => req<any>(`/devices/${id}`, { method: 'DELETE' }),
     firmwareLatest: ()                           => req<any>('/devices/firmware/latest'),
-    triggerOta:     (id: string)                 => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
+    triggerOta:     (id: string)                 => req<any>(`/devices/${id}/ota`,  { method: 'POST' }),
+    otaAll:         (locationId?: string)        => req<any>('/devices/ota-all', { method: 'POST', body: JSON.stringify({ locationId }) }),
   },
 
   gateways: {

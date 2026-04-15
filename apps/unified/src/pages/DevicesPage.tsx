@@ -39,9 +39,7 @@ export function DevicesPage() {
         { headers: { Authorization: `Bearer ${localStorage.getItem('app_access')}` } }
       ).then((r: Response) => r.json());
       setDevices(data);
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -50,24 +48,32 @@ export function DevicesPage() {
   const online  = devices.filter(d => d.isOnline).length;
   const offline = devices.filter(d => !d.isOnline).length;
 
+  const HEADERS = [
+    t('devices.status.online').slice(0, 0) + 'Status',
+    'Hardware ID',
+    t('devices.table.desk'),
+    'Firmware',
+    'RSSI',
+    t('devices.table.last_seen'),
+  ];
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">{t('pages.devices.title')}</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">{t('pages.devices.sub', { defaultValue: 'Stan połączenia każdego beacona' })}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">{t('devices.status.online')} / {t('devices.status.offline')}</p>
         </div>
-          <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-            {t('btn.refresh')}
-          </button>
+        <button onClick={load} className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
+          {t('btn.refresh')}
+        </button>
       </div>
 
-      {/* Summary */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: 'Wszystkich', count: devices.length, color: 'text-zinc-700', bg: 'bg-zinc-50' },
-          { label: 'Online',     count: online,          color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Offline',    count: offline,         color: 'text-red-500',     bg: 'bg-red-50'     },
+          { label: t('devices.summary.all'),     count: devices.length, color: 'text-zinc-700',    bg: 'bg-zinc-50'    },
+          { label: t('devices.summary.online'),  count: online,         color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: t('devices.summary.offline'), count: offline,        color: 'text-red-500',     bg: 'bg-red-50'     },
         ].map(({ label, count, color, bg }) => (
           <div key={label} className={`${bg} rounded-xl p-4 text-center`}>
             <p className={`text-3xl font-bold font-mono ${color}`}>{count}</p>
@@ -85,10 +91,8 @@ export function DevicesPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                {['Status', 'Hardware ID', t('devices.table.desk'), 'Firmware', 'RSSI', t('devices.table.last_seen')].map(h => (
-                  <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">
-                    {h}
-                  </th>
+                {HEADERS.map(h => (
+                  <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -101,9 +105,7 @@ export function DevicesPage() {
                       {d.isOnline ? t('devices.status.online') : t('devices.status.offline')}
                     </span>
                   </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono text-xs text-zinc-700">{d.hardwareId}</span>
-                  </td>
+                  <td className="py-3 px-4"><span className="font-mono text-xs text-zinc-700">{d.hardwareId}</span></td>
                   <td className="py-3 px-4 text-sm text-zinc-700">
                     {d.desk ? (
                       <span>{d.desk.name} <span className="text-zinc-400 text-xs">({d.desk.code})</span></span>
@@ -111,15 +113,12 @@ export function DevicesPage() {
                       <span className="text-zinc-300 text-xs">{t('devices.unassigned')}</span>
                     )}
                   </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono text-xs text-zinc-500">{d.firmwareVersion ?? '—'}</span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <RssiBar rssi={d.rssi} />
-                  </td>
+                  <td className="py-3 px-4"><span className="font-mono text-xs text-zinc-500">{d.firmwareVersion ?? '—'}</span></td>
+                  <td className="py-3 px-4"><RssiBar rssi={d.rssi} /></td>
                   <td className="py-3 px-4 text-xs text-zinc-500">
                     {d.lastSeen
-                      ? new Date(d.lastSeen).toLocaleString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+                      ? new Date(d.lastSeen).toLocaleString(i18n.language === 'en' ? 'en-GB' : 'pl-PL',
+                          { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
                       : '—'}
                   </td>
                 </tr>

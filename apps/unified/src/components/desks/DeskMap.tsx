@@ -1,6 +1,6 @@
 import { localDateStr, localDateTimeISO } from '../../utils/date';
-import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import React, { useState } from 'react';
 import { DeskMapItem, LocationLimits } from '../../types/index';
 import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
@@ -16,7 +16,7 @@ interface Props {
 function groupByFloor(desks: DeskMapItem[]) {
   const map = new Map<string, DeskMapItem[]>();
   for (const d of desks) {
-    const key = d.floor ?? 'Inne';
+    const key = d.floor ?? 'Other';
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(d);
   }
@@ -33,14 +33,14 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
       {[
-        { labelKey: 'free',     count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { labelKey: 'reserved', count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
-        { labelKey: 'occupied', count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
-        { labelKey: 'offline',  count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
-      ].map(({ labelKey, count, color, bg }) => (
-        <div key={labelKey} className={`${bg} rounded-xl p-3 text-center`}>
+        { label: t('desks.stats.free'),     count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
+        { label: t('desks.stats.reserved'), count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
+        { label: t('desks.stats.occupied'), count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+        { label: t('desks.stats.offline'),  count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
+      ].map(({ label, count, color, bg }) => (
+        <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
           <p className={`text-2xl font-bold font-mono ${color}`}>{count}</p>
-          <p className="text-xs text-zinc-500 mt-0.5 truncate">{t(`desks.stats.${labelKey}`)}</p>
+          <p className="text-xs text-zinc-500 mt-0.5 truncate">{label}</p>
         </div>
       ))}
     </div>
@@ -48,12 +48,12 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
 }
 
 // ── Modal rezerwacji — dla END_USER i Staff/Admin ─────────────
-function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [], limits }: {
+function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [], limits }:  {
   desk: DeskMapItem; onClose: () => void; onSuccess: () => void;
   isEndUser?: boolean; users?: any[]; limits?: LocationLimits | null;
 }) {
-  const { t } = useTranslation();
   const today  = localDateStr();
+  const { t } = useTranslation();
   const maxDate = (() => {
     const d = new Date();
     d.setDate(d.getDate() + (limits?.maxDaysAhead ?? 14));
@@ -73,10 +73,10 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
       const [eh, em] = end.split(':').map(Number);
       const durH = (eh * 60 + em - sh * 60 - sm) / 60;
       if (durH > limits.maxHoursPerDay) {
-        setErr(t('desks.reserve.errors.max_length', { maxHours: limits.maxHoursPerDay })); return;
+        setErr(`Maksymalna długość rezerwacji to ${limits.maxHoursPerDay}h`); return;
       }
       if (date > maxDate) {
-        setErr(t('desks.reserve.errors.max_days', { days: limits.maxDaysAhead })); return;
+        setErr(`Rezerwacja możliwa maksymalnie ${limits.maxDaysAhead} dni do przodu`); return;
       }
     }
     setBusy(true); setErr('');
@@ -109,11 +109,11 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
           {!isEndUser && (
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">
-                {t('desks.reserve.staff_label')} <span className="text-zinc-300 font-normal">{t('desks.reserve.staff_helper')}</span>
+                Pracownik <span className="text-zinc-300 font-normal">(puste = rezerwacja dla siebie)</span>
               </label>
               <select value={userId} onChange={e => setUserId(e.target.value)}
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
-                <option value="">{t('desks.reserve.for_self')}</option>
+                <option value="">— rezerwacja dla siebie —</option>
                 {users.filter((u: any) => u.isActive).map((u: any) => (
                   <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
                 ))}
@@ -147,7 +147,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
           <div className="flex gap-3 pt-1">
             <button onClick={onClose}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
-              {t('btn.cancel')}
+              Anuluj
             </button>
             <button onClick={submit} disabled={busy}
               className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
@@ -166,7 +166,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
 }
 
 export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
   const [users,             setUsers]             = useState<any[]>([]);
@@ -194,7 +194,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
     try {
       await api.checkins.checkout(desk.currentReservation.id);
       onRefresh();
-    } catch (e: any) { alert(t('desks.checkout_error', { msg: e?.message })); }
+    } catch (e: any) { setErr(t('desks.checkout_error', { msg: e.message })); }
   };
 
   const handleReservationSuccess = () => {
@@ -219,17 +219,17 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">
-            {isEndUser ? t('pages.desks.title') : t('pages.deskMap.title')}
+            {isEndUser ? t('nav.desks') : t('pages.deskMap.title')}
           </h2>
           {lastUpdated && (
             <p className="text-xs text-zinc-400 mt-0.5">
-              {t('desks.updated')}: {lastUpdated.toLocaleTimeString(i18n.language?.startsWith('pl') ? 'pl-PL' : 'en-US')}
+              Aktualizacja: {lastUpdated.toLocaleTimeString('pl-PL')}
             </p>
           )}
         </div>
         <button onClick={onRefresh}
           className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors font-medium">
-          ↻ {t('desks.refresh')}
+          ↻ Odśwież
         </button>
       </div>
 
@@ -244,7 +244,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       {isEndUser && visibleDesks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🏢</p>
-          <p className="font-medium text-zinc-600">{t('desks.none_in_location')}</p>
+          <p className="font-medium text-zinc-600">{t('table.empty')}</p>
         </div>
       )}
 
@@ -252,10 +252,10 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
         <div key={floor} className="mb-8">
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
-              {t('desks.floor_prefix')} {floor}
+              Piętro {floor}
             </span>
             <div className="flex-1 h-px bg-zinc-100" />
-            <span className="text-xs text-zinc-400">{t('desks.count', { count: floorDesks.length })}</span>
+            <span className="text-xs text-zinc-400">{floorDesks.length} biurek</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -284,7 +284,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
       {!isEndUser && desks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
           <p className="text-4xl mb-3">🏢</p>
-          <p className="font-medium">{t('desks.none_in_location')}</p>
+          <p className="font-medium">{t('table.empty')}</p>
         </div>
       )}
     </div>

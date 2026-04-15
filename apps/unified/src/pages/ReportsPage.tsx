@@ -1,23 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
 import { appApi } from '../api/client';
 import { PageHeader, Card, Stat, Spinner } from '../components/ui';
-import { format, subDays, type Locale } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 
 const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01';
-
-// Build last-N-days labels
-function lastNDays(n: number, locale: Locale) {
-  return Array.from({ length: n }, (_, i) => {
-    const d = subDays(new Date(), n - 1 - i);
-    return { date: format(d, 'yyyy-MM-dd'), label: format(d, 'EEE dd.MM', { locale }) };
-  });
-}
 
 export function ReportsPage() {
   const { t, i18n } = useTranslation();
@@ -41,9 +33,13 @@ export function ReportsPage() {
 
   if (loading) return <Spinner />;
 
-  // Aggregate reservations by day for the last 14 days
-  const locale = i18n.language?.startsWith('pl') ? pl : enUS;
-  const days = lastNDays(14, locale);
+  const locale = i18n.language === 'en' ? enUS : pl;
+
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const d = subDays(new Date(), 13 - i);
+    return { date: format(d, 'yyyy-MM-dd'), label: format(d, 'EEE dd.MM', { locale }) };
+  });
+
   const byDay = Object.fromEntries(days.map(d => [d.date, { confirmed:0, cancelled:0, completed:0 }]));
   for (const r of resv) {
     const day = r.date?.slice(0, 10);
@@ -55,7 +51,6 @@ export function ReportsPage() {
   }
   const chartData = days.map(d => ({ ...d, ...byDay[d.date] }));
 
-  // Method distribution
   const methods = resv.reduce((acc: Record<string,number>, r) => {
     const m = r.checkin?.method ?? 'NO_CHECKIN';
     acc[m] = (acc[m] ?? 0) + 1;
@@ -63,10 +58,10 @@ export function ReportsPage() {
   }, {});
   const methodData = Object.entries(methods).map(([name, value]) => ({ name, value }));
 
-  const totalResv     = resv.length;
-  const confirmed     = resv.filter(r => r.status === 'CONFIRMED').length;
-  const withCheckin   = resv.filter(r => r.checkin).length;
-  const noShowRate    = totalResv ? Math.round(((confirmed - withCheckin) / Math.max(confirmed, 1)) * 100) : 0;
+  const totalResv   = resv.length;
+  const confirmed   = resv.filter(r => r.status === 'CONFIRMED').length;
+  const withCheckin = resv.filter(r => r.checkin).length;
+  const noShowRate  = totalResv ? Math.round(((confirmed - withCheckin) / Math.max(confirmed, 1)) * 100) : 0;
 
   return (
     <div>
@@ -74,13 +69,12 @@ export function ReportsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Stat label={t('reports.kpi.occ_today')}    value={`${occ?.occupancyPct ?? 0}%`} accent />
-        <Stat label={t('reports.kpi.total')} value={totalResv} />
-        <Stat label={t('reports.kpi.with_checkin')}       value={withCheckin}
+        <Stat label={t('reports.kpi.total')}         value={totalResv} />
+        <Stat label={t('reports.kpi.with_checkin')} value={withCheckin}
           sub={`${totalResv ? Math.round((withCheckin/totalResv)*100) : 0}%`} />
-        <Stat label={t('reports.kpi.no_show')}     value={`${noShowRate}%`} />
+        <Stat label={t('reports.kpi.no_show')}      value={`${noShowRate}%`} />
       </div>
 
-      {/* Reservations over 14 days */}
       <Card className="p-5 mb-6">
         <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.chart_title')}</p>
         <ResponsiveContainer width="100%" height={220}>
@@ -97,7 +91,6 @@ export function ReportsPage() {
         </ResponsiveContainer>
       </Card>
 
-      {/* Check-in methods */}
       {methodData.length > 0 && (
         <Card className="p-5">
           <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.methods_title')}</p>
@@ -105,9 +98,7 @@ export function ReportsPage() {
             {methodData.map(({ name, value }) => (
               <div key={name} className="flex-1 min-w-[120px] bg-zinc-50 rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold font-mono text-zinc-800">{value}</p>
-                <p className="text-xs text-zinc-500 mt-1">
-                  { (name === 'NFC' && t('methods.NFC')) || (name === 'QR' && t('methods.QR')) || (name === 'MANUAL' && t('methods.MANUAL')) || (name === 'NO_CHECKIN' && t('methods.NO_CHECKIN')) || name }
-                </p>
+                <p className="text-xs text-zinc-500 mt-1">{t(`methods.${name}`, name)}</p>
               </div>
             ))}
           </div>
