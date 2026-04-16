@@ -25,16 +25,27 @@ const TrashIcon = () => (
 
 // ── Ikony typów ──────────────────────────────────────────────────
 const TYPE_ICON: Record<string, string> = {
-  GATEWAY_OFFLINE:            '🔴',
-  GATEWAY_BACK_ONLINE:        '🟢',
-  BEACON_OFFLINE:             '🟠',
-  FIRMWARE_UPDATE:            '🆙',
-  GATEWAY_RESET_NEEDED:       '⚠️',
-  RESERVATION_CHECKIN_MISSED: '⏰',
-  SYSTEM_ANNOUNCEMENT:        '📢',
+  GATEWAY_OFFLINE:              '🔴',
+  GATEWAY_BACK_ONLINE:          '🟢',
+  BEACON_OFFLINE:               '🟠',
+  FIRMWARE_UPDATE:              '🆙',
+  GATEWAY_RESET_NEEDED:         '⚠️',
+  RESERVATION_CHECKIN_MISSED:   '⏰',
+  SYSTEM_ANNOUNCEMENT:          '📢',
+  GATEWAY_KEY_ROTATION_FAILED:  '🔑',
 };
 
 // ── Formatuj czas relatywnie ─────────────────────────────────────
+/** Zwraca tytuł/body w języku UI jeśli notifikacja ma meta.translations */
+function getLocalized(item: any, field: 'title' | 'body' | 'actionLabel', lang: string): string {
+  try {
+    const meta = item.meta ? JSON.parse(item.meta) : null;
+    const tr   = meta?.translations?.[lang] ?? meta?.translations?.['en'];
+    if (tr?.[field]) return tr[field];
+  } catch {}
+  return item[field] ?? '';
+}
+
 function timeAgo(dateStr: string, t: (k: string, opts?: any) => string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const min  = Math.floor(diff / 60000);
@@ -48,7 +59,7 @@ function timeAgo(dateStr: string, t: (k: string, opts?: any) => string): string 
 
 // ════════════════════════════════════════════════════════════════
 export function NotificationBell({ role }: { role: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [items,    setItems]    = useState<any[]>([]);
   const [unread,   setUnread]   = useState(0);
   const [open,     setOpen]     = useState(false);
@@ -206,7 +217,7 @@ export function NotificationBell({ role }: { role: string }) {
                       </span>
                       <p className={`text-sm truncate font-medium
                         ${item.read ? 'text-zinc-400' : 'text-white'}`}>
-                        {item.title}
+                        {getLocalized(item, 'title', i18n.language)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -222,11 +233,11 @@ export function NotificationBell({ role }: { role: string }) {
                     </div>
                   </div>
                   <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed line-clamp-2">
-                    {item.body}
+                    {getLocalized(item, 'body', i18n.language)}
                   </p>
                   {item.actionLabel && !item.read && (
                     <span className="text-[11px] text-[#B53578] font-medium mt-1 block">
-                      {item.actionLabel} →
+                      {getLocalized(item, 'actionLabel', i18n.language)} →
                     </span>
                   )}
                 </div>
