@@ -3,7 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService }             from '../../database/prisma.service';
+import { InAppNotificationsService } from '../inapp-notifications/inapp-notifications.service';
 import { EventType } from '@prisma/client';
 
 @Injectable()
