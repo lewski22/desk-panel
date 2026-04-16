@@ -400,13 +400,14 @@ model OrganizationSmtpConfig {
 
 // Typy zdarzeń wewnętrznych — niezależne od emaila
 enum InAppNotifType {
-  GATEWAY_OFFLINE         // Gateway stracił połączenie
-  GATEWAY_BACK_ONLINE     // Gateway wrócił online
-  BEACON_OFFLINE          // Beacon stracił połączenie
-  FIRMWARE_UPDATE         // Nowa wersja firmware dostępna
-  GATEWAY_RESET_NEEDED    // Gateway wymaga restartu / resetu
-  RESERVATION_CHECKIN_MISSED // Brak check-in → biurko zwolnione
-  SYSTEM_ANNOUNCEMENT     // Ogłoszenie od Ownera do firm
+  GATEWAY_OFFLINE               // Gateway stracił połączenie
+  GATEWAY_BACK_ONLINE           // Gateway wrócił online
+  BEACON_OFFLINE                // Beacon stracił połączenie
+  FIRMWARE_UPDATE               // Nowa wersja firmware dostępna
+  GATEWAY_RESET_NEEDED          // Gateway wymaga restartu / resetu
+  RESERVATION_CHECKIN_MISSED    // Brak check-in → biurko zwolnione
+  SYSTEM_ANNOUNCEMENT           // Ogłoszenie od Ownera do firm
+  GATEWAY_KEY_ROTATION_FAILED   // Rotacja klucza gateway nieudana — klucz niespójny
 }
 
 // Reguły powiadomień — Owner decyduje kto widzi co

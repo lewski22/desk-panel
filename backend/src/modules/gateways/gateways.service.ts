@@ -12,6 +12,7 @@ export class GatewaysService {
   constructor(
     private prisma:  PrismaService,
     private config:  ConfigService,
+    private inapp:   InAppNotificationsService,
   ) {}
 
   async register(locationId: string, name: string) {
@@ -206,38 +207,86 @@ export class GatewaysService {
     gatewayReached: boolean;
   }> {
     const gw = await this.prisma.gateway.findUnique({
-      where:  { id },
-      select: { id: true, name: true, ipAddress: true, secretHash: true },
+      where:   { id },
+      select:  { id: true, name: true, ipAddress: true, secretHash: true, location: { select: { organizationId: true } } },
     });
     if (!gw) throw new NotFoundException('Gateway not found');
 
+    // ── Krok 1: Spróbuj dostarczyć nowy klucz do gateway ZANIM zmienisz backend ──
+    // Jeśli gateway niedostępny → nie zmieniamy secretHash → brak desync.
     const newSecret     = randomBytes(24).toString('hex');
     const newSecretHash = await bcrypt.hash(newSecret, 10);
-    const expiresAt     = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+    const expiresAt     = new Date(Date.now() + 15 * 60 * 1000);
 
-    // Rotacja:
-    //   secretHash         → nowy (aktywny od teraz)
-    //   secretHashPending  → stary hash (akceptowany przez 15 min jako fallback)
-    // authenticate() sprawdza najpierw secretHash (nowy), potem secretHashPending (stary)
-    // Gateway nadal działa ze starym secretem do momentu gdy dostanie nowy przez /rotate-secret
+    let gatewayReached = false;
+
+    if (!gw.ipAddress) {
+      this.logger.warn(`Gateway ${id}: brak IP — rotacja niemożliwa bez kontaktu z gateway`);
+      // Nie zmieniamy klucza — stary działa
+      throw new Error(
+        'Rotacja niemożliwa: brak adresu IP gateway. Gateway musi wysłać heartbeat żeby zarejestrować IP.'
+      );
+    }
+
+    // Próba dostarczenia nowego klucza do gateway
+    gatewayReached = await this._pushRotateSecret(gw.ipAddress, newSecret);
+
+    if (!gatewayReached) {
+      // Gateway niedostępny — NIE zmieniamy secretHash w backendzie
+      // Stary klucz pozostaje ważny — brak desync
+      this.logger.warn(
+        `Gateway ${gw.name}: rotate-secret ABORTED — gateway niedostępny pod ${gw.ipAddress}:3001. ` +
+        `Stary klucz pozostaje niezmieniony.`
+      );
+      // Wyślij powiadomienie in-app do SUPER_ADMIN w org — w obu językach (meta.translations)
+      await this.inapp.create({
+        type:           'GATEWAY_KEY_ROTATION_FAILED' as any,
+        title:          `Gateway "${gw.name}" — rotacja klucza nieudana`,
+        body:           `Nie można połączyć się z gateway "${gw.name}" (${gw.ipAddress}:3001). Klucz nie został zmieniony — stary klucz pozostaje ważny.`,
+        organizationId: gw.location?.organizationId,
+        actionUrl:      '/provisioning',
+        actionLabel:    'Sprawdź gateway',
+        meta: {
+          gatewayId:   gw.id,
+          gatewayName: gw.name,
+          ipAddress:   gw.ipAddress,
+          translations: {
+            pl: {
+              title:       `Gateway "${gw.name}" — rotacja klucza nieudana`,
+              body:        `Nie można połączyć się z gateway "${gw.name}" (${gw.ipAddress}:3001). Klucz nie został zmieniony — stary klucz pozostaje ważny.`,
+              actionLabel: 'Sprawdź gateway',
+            },
+            en: {
+              title:       `Gateway "${gw.name}" — key rotation failed`,
+              body:        `Cannot connect to gateway "${gw.name}" (${gw.ipAddress}:3001). The key was NOT changed — old key remains valid.`,
+              actionLabel: 'Check gateway',
+            },
+          },
+        },
+      }, `gw:key-rotation-failed:${gw.id}`, 30);
+
+      throw new Error(
+        `Rotacja anulowana: nie można połączyć się z gateway (${gw.ipAddress}:3001). ` +
+        `Sprawdź czy gateway jest online i spróbuj ponownie.`
+      );
+    }
+
+    // ── Krok 2: Gateway potwierdził — teraz aktualizuj backend ──
+    // secretHashPending = stary hash jako 15-minutowe okno failsafe
+    // (np. gdy gateway dostał klucz ale jeszcze się nie zrestartował)
     await this.prisma.gateway.update({
       where: { id },
       data: {
         secretHash:             newSecretHash,
-        secretHashPending:      gw.secretHash,       // stary hash = fallback
+        secretHashPending:      gw.secretHash,
         secretPendingExpiresAt: expiresAt,
       },
     });
 
-    this.logger.log(`Gateway ${gw.name}: rotation started, old secret valid until ${expiresAt.toISOString()}`);
-
-    // Powiadom gateway — zapisze nowy secret do .env i zrestartuje się
-    let gatewayReached = false;
-    if (gw.ipAddress) {
-      gatewayReached = await this._pushRotateSecret(gw.ipAddress, newSecret);
-    } else {
-      this.logger.warn(`Gateway ${id}: brak IP — nie można automatycznie zaktualizować .env`);
-    }
+    this.logger.log(
+      `Gateway ${gw.name}: rotation SUCCESS — gateway confirmed, ` +
+      `old secret valid as fallback until ${expiresAt.toISOString()}`
+    );
 
     return {
       secret:         newSecret,
