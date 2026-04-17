@@ -12,7 +12,7 @@ import { OrganizationsModule }  from './modules/organizations/organizations.modu
 import { LocationsModule }      from './modules/locations/locations.module';
 import { DesksModule }          from './modules/desks/desks.module';
 import { DevicesModule }        from './modules/devices/devices.module';
-import { GatewaysModule }       from './modules/gateways/gateways.module';
+import { GatewaysModule }
 import { ResourcesModule } from './modules/resources/resources.module';
 import { PushModule }       from './modules/push/push.module';
 import { VisitorsModule }       from './modules/visitors/visitors.module';
