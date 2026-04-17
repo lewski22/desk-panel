@@ -7,8 +7,12 @@
     "create": "Create",
     "cancel": "Cancel",
     "saving": "Saving…",
-    "refresh": "↺ Refresh",
-    "retry": "Try again"
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "cancel_selection": "Deselect",
+    "remove": "Remove",
+    "back": "← Back",
+    "later": "Maybe later"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -29,13 +33,43 @@
   "layout": {
     "staff": "Employee",
     "change_password": "Change password",
-    "logout": "Log out",
+    "logout": "Logout",
     "open_menu": "Open menu",
     "close_menu": "Close menu",
-    "expand": "Expand",
-    "collapse": "Collapse",
-    "impersonation_banner": "Temporary impersonation session (30 min) — actions are logged",
-    "impersonation_end": "End"
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "impersonation_banner": "Preview mode — session as organisation admin",
+    "impersonation_end": "End session",
+    "group": {
+      "workspace": "Workspace",
+      "management": "Management",
+      "analytics": "Analytics",
+      "config": "Configuration",
+      "operator": "Operator"
+    },
+    "nav": {
+      "map": "Desk Map",
+      "my_reservations": "My Reservations",
+      "reservations": "All Reservations",
+      "desks": "Desks",
+      "users": "Users",
+      "devices": "Devices",
+      "provisioning": "Provisioning",
+      "dashboard": "Dashboard",
+      "reports": "Reports",
+      "organizations": "Offices",
+      "notifications": "Notifications",
+      "owner": "Operator Panel",
+      "notification_rules": "Notification Rules",
+      "change_password": "Change Password",
+      "weekly": "Calendar",
+      "resources": "Rooms & Parking",
+      "visitors": "Visitors",
+      "subscription": "Subscription"
+    },
+    "session_warning_title": "Session expires in 1 minute",
+    "session_warning_body": "Click \"Extend\" to stay logged in.",
+    "session_extend": "Extend"
   },
   "session": {
     "will_expire_in_minute": "Session will expire in one minute",
@@ -162,7 +196,22 @@
     "location_label": "Office:",
     "loading": "Loading desk map…",
     "conn_error": "Connection error",
-    "stale_warning": "Connection issue — data may be outdated"
+    "stale_warning": "Connection issue — data may be outdated",
+    "no_location_title": "No office assigned",
+    "no_location_sub": "Please contact your administrator.",
+    "no_desks_title": "No desks in this office",
+    "no_desks_sub": "Add desks in the administration panel.",
+    "error_title": "Error loading map",
+    "tab": {
+      "desks": "Desks",
+      "rooms": "Rooms",
+      "parking": "Parking"
+    },
+    "empty": {
+      "rooms": "No conference rooms",
+      "parking": "No parking spots",
+      "sub": "An admin can add them in the management panel."
+    }
   },
   "impersonate": {
     "back_to_login": "Back to login",
@@ -184,7 +233,7 @@
     "processing": "Processing…",
     "occupied_title": "Desk occupied",
     "occupied_desc": "This desk is occupied by someone else. Choose another desk.",
-    "back_to_map": "Back to desk map",
+    "back_to_map": "Back to map",
     "error_title": "Something went wrong",
     "back_to_panel": "Back to dashboard",
     "login_prompt": "Sign in to reserve or check in",
@@ -386,7 +435,8 @@
   "dashboard": {
     "trend": {
       "no_change": "no change",
-      "vs_prev": "vs previous week"
+      "vs_prev": "vs previous week",
+      "prev": "previous week"
     },
     "kpi": {
       "occupancy_now": "Occupancy now",
@@ -400,13 +450,17 @@
     "checkins": "Check-ins",
     "hourly": {
       "title": "Hourly distribution (30 days)",
-      "peaks": "Peaks"
+      "peaks": "Peaks",
+      "morning": "Morning 8–12",
+      "noon": "Noon 12–16",
+      "evening": "Afternoon 16–20"
     },
     "zone": {
       "title": "Occupancy by zone",
       "occupied": "Occupied",
       "reserved": "Reserved",
-      "free": "Free"
+      "free": "Free",
+      "other": "Other"
     },
     "no_data": "No data",
     "top": {
@@ -424,6 +478,25 @@
       "reserved": "Reserved",
       "occupied": "Occupied",
       "offline": "Offline"
+    },
+    "qa": {
+      "book": "Reserve a desk",
+      "checkin": "Manual check-in",
+      "announce": "Send announcement",
+      "ann_title_ph": "Announcement title...",
+      "ann_body_ph": "Announcement body...",
+      "send": "Send"
+    },
+    "issues": {
+      "title": "Issues today",
+      "all_ok": "All clear! 🎉",
+      "all_ok_sub": "No issues requiring attention.",
+      "type": {
+        "BEACON_OFFLINE": "Beacon offline",
+        "LONG_CHECKIN": "Desk occupied > 3h",
+        "OTA_FAILED": "OTA update failed",
+        "NO_CHECKIN": "Missing check-in"
+      }
     }
   },
   "methods": {
@@ -501,7 +574,14 @@
       "nfc": "📡 NFC",
       "qr": "📷 QR",
       "manual": "✋ Manual"
-    }
+    },
+    "selected": "Selected: {{count}}",
+    "bulk_cancel": "Cancel selected ({{count}})",
+    "bulk_cancel_confirm": "Cancel {{count}} reservations?",
+    "none_filters_sub": "Try changing the filters or date.",
+    "show_all": "Show all",
+    "recurring_badge": "Recurring",
+    "swipe_hint": "Swipe to cancel"
   },
   "provisioning": {
     "title": "Provisioning",
@@ -549,7 +629,8 @@
       "status_idle": "Up to date",
       "status_in_progress": "Updating…",
       "status_success": "Updated",
-      "status_failed": "Update failed"
+      "status_failed": "Update failed",
+      "remaining": "remaining"
     },
     "gateway": {
       "install_title": "Gateway Installation",
@@ -610,5 +691,210 @@
     "rules_labels": {
       "GATEWAY_KEY_ROTATION_FAILED": "Gateway key rotation failed"
     }
+  },
+  "deskcard": {
+    "book": "Reserve",
+    "book_full_day": "Book full day",
+    "book_choose_time": "Choose hours...",
+    "checkin_since": "since",
+    "floor": "Floor"
+  },
+  "common": {
+    "na": "—"
+  },
+  "floorplan": {
+    "editor": {
+      "title": "Floor Plan Editor",
+      "hint": "Drag desks onto the plan. R = rotate. Ctrl+Z = undo.",
+      "no_desks": "No desks in this location",
+      "no_desks_sub": "Add desks before setting up the floor plan.",
+      "go_add_desks": "Go to desks →"
+    },
+    "toolbar": {
+      "upload_bg": "Upload plan",
+      "remove_bg": "Remove background",
+      "snap": "Grid snap",
+      "zoom_in": "Zoom in",
+      "zoom_out": "Zoom out",
+      "undo": "Undo (Ctrl+Z)",
+      "redo": "Redo (Ctrl+Shift+Z)",
+      "save": "Save",
+      "discard": "Discard changes",
+      "saved": "Saved",
+      "file_too_large": "File too large. Maximum size is 2MB."
+    },
+    "unplaced": {
+      "title": "{{count}} desks without position",
+      "hint": "Click a desk to place it at the centre of the plan."
+    },
+    "view": {
+      "toggle_plan": "Plan",
+      "toggle_cards": "Cards",
+      "edit_plan": "Edit plan",
+      "no_plan": "No floor plan uploaded yet",
+      "no_plan_sub": "An admin can upload a floor plan in edit mode.",
+      "free_only": "Free only",
+      "desks_visible": "desks"
+    },
+    "rotate": "Rotate",
+    "save_error": "Save failed. Please try again.",
+    "discard_confirm": "You have unsaved changes. Discard them?"
+  },
+  "weekly": {
+    "title": "Who's in the office",
+    "subtitle": "Weekly team attendance view",
+    "today_week": "This week",
+    "in_office_today": "In office today",
+    "team_size": "Total",
+    "search_placeholder": "Search person...",
+    "person": "Person",
+    "mobile_hint": "Today's view",
+    "no_users": "No users found",
+    "status": {
+      "office": "In office",
+      "reserved": "Reservation",
+      "unknown": "No data"
+    }
+  },
+  "resource": {
+    "page_title": "Rooms & Parking",
+    "page_sub": "Manage conference rooms, parking spots and equipment",
+    "add": "Add resource",
+    "book": "Book",
+    "edit_title": "Edit: {{name}}",
+    "create_title": "New resource",
+    "confirm_book": "Confirm booking",
+    "confirm_remove": "Remove resource \"{{name}}\"?",
+    "select_time": "Select time slot",
+    "select_end": "Click end of range",
+    "notes": "Notes (optional)",
+    "notes_placeholder": "Meeting purpose, details...",
+    "capacity": "{{count}} people",
+    "empty_title": "No resources",
+    "empty_sub": "Add conference rooms or parking spots.",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "vehicle": {
+      "car": "Car",
+      "moto": "Motorcycle",
+      "bike": "Bicycle"
+    },
+    "legend": {
+      "free": "Available",
+      "taken": "Taken"
+    },
+    "table": {
+      "name": "Name",
+      "details": "Details",
+      "location": "Location",
+      "status": "Status"
+    },
+    "form": {
+      "type": "Resource type",
+      "name": "Name",
+      "code": "Code",
+      "description": "Description",
+      "capacity": "Capacity (people)",
+      "amenities": "Amenities",
+      "vehicle_type": "Vehicle type",
+      "required": "Fill in required fields"
+    }
+  },
+  "kiosk": {
+    "exit_btn": "Exit kiosk mode",
+    "exit_title": "Exit kiosk mode",
+    "exit_hint": "Enter admin PIN",
+    "last_update": "Last update"
+  },
+  "push": {
+    "banner_title": "Enable push notifications",
+    "banner_sub": "Stay updated on reservations and IoT alerts",
+    "card_title": "Real-time notifications",
+    "card_sub": "Know instantly when something needs your attention",
+    "benefit1": "Beacon offline > 30 minutes",
+    "benefit2": "Your reservation is ready for check-in",
+    "benefit3": "Admin alerts (key rotation, OTA)",
+    "enable_btn": "Enable notifications",
+    "denied_hint": "Blocked in browser settings. Unblock and try again."
+  },
+  "recurring": {
+    "label": "Repeat",
+    "none": "Does not repeat",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "custom": "Custom",
+    "days_of_week": "Days of week",
+    "count": "Number of repetitions",
+    "count_suffix": "times",
+    "preview": "Scheduled dates ({{count}})",
+    "result_created": "{{count}} reservations created",
+    "result_conflicts": "{{count}} conflicts (skipped)",
+    "close": "Done"
+  },
+  "visitors": {
+    "title": "Office Visitors",
+    "subtitle": "Manage visits and guests",
+    "invite_title": "Invite visitor",
+    "invite_btn": "Invite",
+    "confirm_cancel": "Cancel this visit?",
+    "empty": "No visitors",
+    "empty_sub": "Invite your first visitor using the button above.",
+    "kpi": {
+      "expected": "Expected",
+      "arrived": "Arrived",
+      "left": "Left"
+    },
+    "col": {
+      "guest": "Guest",
+      "date": "Date",
+      "host": "Host",
+      "purpose": "Purpose",
+      "status": "Status"
+    },
+    "form": {
+      "company": "Company (optional)",
+      "visit_date": "Visit date",
+      "purpose": "Purpose (optional)",
+      "purpose_ph": "Team meeting...",
+      "required": "Fill in required fields"
+    }
+  },
+  "subscription": {
+    "title": "Subscription",
+    "subtitle": "Plan status and resource usage",
+    "plan": "Plan",
+    "no_expiry": "Unlimited (Enterprise)",
+    "valid_until": "Valid until",
+    "trial_ends": "Trial ends",
+    "days_left": "{{count}} days",
+    "contact_cta": "Want to upgrade? Contact Reserti",
+    "status": {
+      "active": "Active",
+      "expiring_soon": "Expiring soon",
+      "expired": "Expired",
+      "trial": "Trial",
+      "trial_expiring": "Trial expiring"
+    },
+    "usage": {
+      "title": "Resource usage",
+      "desks": "Desks",
+      "users": "Users",
+      "gateways": "Gateways",
+      "locations": "Offices",
+      "unlimited": "∞",
+      "of": "of"
+    },
+    "features": {
+      "title": "Plan features",
+      "ota": "OTA firmware updates",
+      "sso": "Microsoft login (SSO)",
+      "smtp": "Custom SMTP mailbox",
+      "api": "API access"
+    },
+    "expiry_banner": "Your plan expires in {{days}} days ({{date}}). Contact your administrator.",
+    "expired_banner": "Your plan expired {{date}}. New resources are blocked."
   }
 }

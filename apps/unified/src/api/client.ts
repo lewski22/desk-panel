@@ -144,6 +144,8 @@ export const appApi = {
     createOrg:       (d: any)               => req<any>('/owner/organizations', { method: 'POST', body: JSON.stringify(d) }),
     // Edytuj firmę (plan, status, notatki)
     updateOrg:       (id: string, d: any)   => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    setModules:      (id: string, modules: string[]) =>
+      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ enabledModules: modules }) }),
     // Dezaktywuj firmę (soft delete)
     deactivateOrg:   (id: string)           => req<void>(`/owner/organizations/${id}`, { method: 'DELETE' }),
     // Impersonacja — wejdź jako SUPER_ADMIN firmy (JWT 30 min)
@@ -162,6 +164,12 @@ export const appApi = {
     create:    (_orgId: string, d: any)     => req<any>('/locations', { method: 'POST', body: JSON.stringify(d) }),
     update:    (id: string, d: any)         => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     occupancy: (locId: string)              => req<any>(`/locations/${locId}/analytics/occupancy`),
+    issues:    (locId: string)              => req<any>(`/locations/${locId}/issues`),
+        floorPlan: {
+      get:    (locId: string)                          => req<any>(`/locations/${locId}/floor-plan`),
+      upload: (locId: string, body: any)               => req<any>(`/locations/${locId}/floor-plan`, { method: 'POST', body: JSON.stringify(body) }),
+      delete: (locId: string)                          => req<any>(`/locations/${locId}/floor-plan/delete`, { method: 'POST', body: '{}' }),
+    },
     extended:  (locId: string)              => req<any>(`/locations/${locId}/analytics/extended`),
   },
 
@@ -174,6 +182,7 @@ export const appApi = {
     activate:    (id: string)               => req<any>(`/desks/${id}/activate`, { method: 'PATCH' }),
     hardDelete:  (id: string)               => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
     unpair:      (id: string)               => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
+    batchPositions: (updates: any[]) => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
     availability:(id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
     getAvailable:(locId: string, start: string, end: string) =>
       req<any[]>(`/desks/available?locationId=${locId}&startTime=${encodeURIComponent(start)}&endTime=${encodeURIComponent(end)}`),
@@ -232,7 +241,10 @@ export const appApi = {
     },
     getMy:          () => req<any[]>('/reservations/my'),
     create:         (d: any) => req<any>('/reservations', { method: 'POST', body: JSON.stringify(d) }),
-    cancel:         (id: string) => req<any>(`/reservations/${id}`, { method: 'DELETE' }),
+    cancel:          (id: string) => req<any>(`/reservations/${id}`, { method: 'DELETE' }),
+    createRecurring: (body: any)  => req<any>('/reservations/recurring', { method: 'POST', body: JSON.stringify(body) }),
+    cancelRecurring: (id: string, scope: 'single' | 'following' | 'all') =>
+      req<any>(`/reservations/${id}/cancel-recurring`, { method: 'POST', body: JSON.stringify({ scope }) }),
   },
 
   checkins: {
@@ -243,5 +255,45 @@ export const appApi = {
       req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
     walkin:   (deskId: string) =>
       req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),
+  },
+
+  // ── Sprint E1: Attendance ────────────────────────────────
+  // (locations.attendance dodane do bloku locations wyżej)
+
+  // ── Sprint E2: Sale / Parking / Equipment ────────────────
+  resources: {
+    list:         (locId: string, type?: string) =>
+      req<any[]>(`/locations/${locId}/resources${type ? `?type=${type}` : ''}`),
+    create:       (locId: string, body: any)     => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
+    update:       (id: string, body: any)        => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove:       (id: string)                   => req<any>(`/resources/${id}`, { method: 'DELETE' }),
+    availability: (id: string, date: string)     => req<any>(`/resources/${id}/availability?date=${date}`),
+    book:         (id: string, body: any)        => req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
+  },
+  bookings: {
+    cancel: (id: string)    => req<any>(`/bookings/${id}/cancel`, { method: 'POST', body: '{}' }),
+    myList: (from?: string) => req<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`),
+  },
+
+  subscription: {
+    getStatus:  ()              => req<any>('/subscription/status'),
+    // Owner endpoints
+    getOrgStatus:  (id: string) => req<any>(`/owner/organizations/${id}/subscription`),
+    updatePlan:    (id: string, body: any) => req<any>(`/owner/organizations/${id}/subscription`, { method: 'POST', body: JSON.stringify(body) }),
+    getEvents:     (id: string) => req<any[]>(`/owner/organizations/${id}/subscription/events`),
+    getDashboard:  ()           => req<any>('/owner/subscription/dashboard'),
+  },
+  visitors: {
+    list:     (locId: string, date?: string) =>
+      req<any[]>(`/locations/${locId}/visitors${date ? `?date=${date}` : ''}`),
+    invite:   (locId: string, body: any)    => req<any>(`/locations/${locId}/visitors`, { method: 'POST', body: JSON.stringify(body) }),
+    checkin:  (id: string)                  => req<any>(`/visitors/${id}/checkin`, { method: 'POST', body: '{}' }),
+    checkout: (id: string)                  => req<any>(`/visitors/${id}/checkout`, { method: 'POST', body: '{}' }),
+    cancel:   (id: string)                  => req<any>(`/visitors/${id}/cancel`, { method: 'POST', body: '{}' }),
+  },
+  push: {
+    getVapidKey:  ()        => req<{ publicKey: string }>('/push/vapid-public-key'),
+    subscribe:    (sub: any) => req<any>('/push/subscribe',   { method: 'POST', body: JSON.stringify(sub) }),
+    unsubscribe:  (endpoint: string) => req<any>('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
   },
 };

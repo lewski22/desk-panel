@@ -74,3 +74,9 @@ export function useReservations(locationId: string, user: any) {
 
   return { reservations, loading, error, refetch: load, cancel };
 }
+
+export { useSortable } from './useSortable';
+export type { SortState, SortDir } from './useSortable';
+
+export { useOrgModules } from './useOrgModules';
+export type { AppModule } from './useOrgModules';

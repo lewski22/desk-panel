@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import {
@@ -54,6 +55,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
 
 export function DesksPage() {
   const { t } = useTranslation();
+  const navigate    = useNavigate();
   const [locations, setLocations] = useState<any[]>([]);
   const [locId,     setLocId]     = useState(() =>
     localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? ''

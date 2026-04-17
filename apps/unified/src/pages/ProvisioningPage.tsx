@@ -303,40 +303,51 @@ Gateway uruchomi się ponownie (~15s).`)) return;
 //   - useTranslation — wszystkie stringi z i18n
 
 // ── OTA status badge ──────────────────────────────────────────
-function OtaBadge({ status, version }: { status?: string; version?: string }) {
+function OtaBadge({ status, version, startedAt }: { status?: string; version?: string; startedAt?: number }) {
   const { t } = useTranslation();
+  // Sprint A3: progress bar dla in_progress z estymacją czasu
+  const [elapsed, setElapsed] = React.useState(0);
+  React.useEffect(() => {
+    if (status !== 'in_progress') return;
+    const ref = setInterval(() => setElapsed(e => e + 1), 1000);
+    return () => clearInterval(ref);
+  }, [status]);
+
   if (!status || status === 'idle') return null;
 
-  const cfg = {
-    in_progress: {
-      cls:   'bg-amber-100 text-amber-700 border-amber-200',
-      label: t('provisioning.ota.status_in_progress'),
-      icon:  '⟳',
-      spin:  true,
-    },
-    success: {
-      cls:   'bg-emerald-100 text-emerald-700 border-emerald-200',
-      label: t('provisioning.ota.status_success'),
-      icon:  '✓',
-      spin:  false,
-    },
-    failed: {
-      cls:   'bg-red-100 text-red-600 border-red-200',
-      label: t('provisioning.ota.status_failed'),
-      icon:  '✗',
-      spin:  false,
-    },
-  }[status] ?? null;
+  if (status === 'in_progress') {
+    // Estymacja: OTA typowo 30–60s → progress do 90% w 45s, potem wolniej
+    const OTA_ESTIMATE = 45;
+    const pct = Math.min(Math.round((elapsed / OTA_ESTIMATE) * 90), 95);
+    return (
+      <div className="flex flex-col gap-1 mt-1 min-w-[120px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-amber-600 font-semibold animate-pulse">
+            {t('provisioning.ota.status_in_progress')}
+          </span>
+          <span className="text-[10px] text-zinc-400">{pct}%</span>
+        </div>
+        <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+          <div className="h-full bg-amber-400 rounded-full transition-all duration-1000"
+            style={{ width: `${pct}%` }} />
+        </div>
+        <span className="text-[9px] text-zinc-400">
+          ~{Math.max(OTA_ESTIMATE - elapsed, 0)}s {t('provisioning.ota.remaining')}
+        </span>
+      </div>
+    );
+  }
 
+  const cfg = {
+    success: { cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: t('provisioning.ota.status_success'), icon: '✓' },
+    failed:  { cls: 'bg-red-100 text-red-600 border-red-200',             label: t('provisioning.ota.status_failed'),  icon: '✗' },
+  }[status] ?? null;
   if (!cfg) return null;
 
   return (
-    <span
-      title={version ? `v${version}` : undefined}
-      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${cfg.cls}`}
-    >
-      <span className={cfg.spin ? 'animate-spin inline-block' : ''}>{cfg.icon}</span>
-      {cfg.label}
+    <span title={version ? `v${version}` : undefined}
+      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border ${cfg.cls}`}>
+      {cfg.icon} {cfg.label}
     </span>
   );
 }

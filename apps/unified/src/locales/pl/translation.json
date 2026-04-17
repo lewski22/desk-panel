@@ -7,8 +7,12 @@
     "create": "Utwórz",
     "cancel": "Anuluj",
     "saving": "Zapisuję…",
-    "refresh": "↺ Odśwież",
-    "retry": "Spróbuj ponownie"
+    "refresh": "Odśwież",
+    "retry": "Spróbuj ponownie",
+    "cancel_selection": "Odznacz",
+    "remove": "Usuń",
+    "back": "← Wróć",
+    "later": "Może później"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -32,10 +36,40 @@
     "logout": "Wyloguj",
     "open_menu": "Otwórz menu",
     "close_menu": "Zamknij menu",
-    "expand": "Rozwiń",
-    "collapse": "Zwiń",
-    "impersonation_banner": "Sesja tymczasowa (30 min) — każda akcja jest logowana",
-    "impersonation_end": "Zakończ"
+    "expand": "Rozwiń sidebar",
+    "collapse": "Zwiń sidebar",
+    "impersonation_banner": "Tryb podglądu — sesja jako admin organizacji",
+    "impersonation_end": "Zakończ",
+    "group": {
+      "workspace": "Przestrzeń",
+      "management": "Zarządzanie",
+      "analytics": "Analityka",
+      "config": "Konfiguracja",
+      "operator": "Operator"
+    },
+    "nav": {
+      "map": "Mapa biurek",
+      "my_reservations": "Moje rezerwacje",
+      "reservations": "Wszystkie rezerwacje",
+      "desks": "Biurka",
+      "users": "Użytkownicy",
+      "devices": "Urządzenia",
+      "provisioning": "Provisioning",
+      "dashboard": "Dashboard",
+      "reports": "Raporty",
+      "organizations": "Biura",
+      "notifications": "Powiadomienia",
+      "owner": "Panel Operatora",
+      "notification_rules": "Reguły powiadomień",
+      "change_password": "Zmień hasło",
+      "weekly": "Kalendarz",
+      "resources": "Sale i Parking",
+      "visitors": "Goście",
+      "subscription": "Subskrypcja"
+    },
+    "session_warning_title": "Sesja wygaśnie za 1 minutę",
+    "session_warning_body": "Kliknij \"Przedłuż\" aby pozostać zalogowanym.",
+    "session_extend": "Przedłuż"
   },
   "session": {
     "will_expire_in_minute": "Sesja wygaśnie za minutę",
@@ -162,7 +196,22 @@
     "location_label": "Biuro:",
     "loading": "Ładowanie mapy biurek…",
     "conn_error": "Błąd połączenia",
-    "stale_warning": "Problem z połączeniem — dane mogą być nieaktualne"
+    "stale_warning": "Problem z połączeniem — dane mogą być nieaktualne",
+    "no_location_title": "Brak przypisanego biura",
+    "no_location_sub": "Skontaktuj się z administratorem.",
+    "no_desks_title": "Brak biurek w tym biurze",
+    "no_desks_sub": "Dodaj biurka w panelu administracyjnym.",
+    "error_title": "Błąd ładowania mapy",
+    "tab": {
+      "desks": "Biurka",
+      "rooms": "Sale",
+      "parking": "Parking"
+    },
+    "empty": {
+      "rooms": "Brak sal konferencyjnych",
+      "parking": "Brak miejsc parkingowych",
+      "sub": "Administrator może je dodać w panelu zarządzania."
+    }
   },
   "impersonate": {
     "back_to_login": "Wróć do logowania",
@@ -184,7 +233,7 @@
     "processing": "Przetwarzanie…",
     "occupied_title": "Biurko zajęte",
     "occupied_desc": "To biurko jest już zajęte przez kogoś innego. Wybierz inne biurko.",
-    "back_to_map": "Przejdź do mapy biurek",
+    "back_to_map": "Wróć do mapy",
     "error_title": "Wystąpił problem",
     "back_to_panel": "Wróć do panelu",
     "login_prompt": "Zaloguj się aby zarezerwować biurko lub zrobić check-in",
@@ -386,7 +435,8 @@
   "dashboard": {
     "trend": {
       "no_change": "bez zmian",
-      "vs_prev": "vs poprzedni tydzień"
+      "vs_prev": "vs poprzedni tydzień",
+      "prev": "poprzedni tydzień"
     },
     "kpi": {
       "occupancy_now": "Zajętość teraz",
@@ -400,13 +450,17 @@
     "checkins": "Check-iny",
     "hourly": {
       "title": "Rozkład godzinowy (30 dni)",
-      "peaks": "Szczyty"
+      "peaks": "Szczyty",
+      "morning": "Rano 8–12",
+      "noon": "Południe 12–16",
+      "evening": "Popołudnie 16–20"
     },
     "zone": {
       "title": "Zajętość wg strefy",
       "occupied": "Zajęte",
       "reserved": "Zarezerwowane",
-      "free": "Wolne"
+      "free": "Wolne",
+      "other": "Inne"
     },
     "no_data": "Brak danych",
     "top": {
@@ -424,6 +478,25 @@
       "reserved": "Rezerwacja",
       "occupied": "Zajęte",
       "offline": "Offline"
+    },
+    "qa": {
+      "book": "Zarezerwuj biurko",
+      "checkin": "Check-in ręczny",
+      "announce": "Wyślij ogłoszenie",
+      "ann_title_ph": "Tytuł ogłoszenia...",
+      "ann_body_ph": "Treść ogłoszenia...",
+      "send": "Wyślij"
+    },
+    "issues": {
+      "title": "Problemy dziś",
+      "all_ok": "Wszystko gra! 🎉",
+      "all_ok_sub": "Brak problemów wymagających uwagi.",
+      "type": {
+        "BEACON_OFFLINE": "Beacon offline",
+        "LONG_CHECKIN": "Biurko zajęte > 3h",
+        "OTA_FAILED": "Błąd aktualizacji",
+        "NO_CHECKIN": "Brak check-in"
+      }
     }
   },
   "methods": {
@@ -501,7 +574,14 @@
       "nfc": "📡 NFC",
       "qr": "📷 QR",
       "manual": "✋ Ręczny"
-    }
+    },
+    "selected": "Wybrano: {{count}}",
+    "bulk_cancel": "Anuluj zaznaczone ({{count}})",
+    "bulk_cancel_confirm": "Anulować {{count}} rezerwacji?",
+    "none_filters_sub": "Spróbuj zmienić filtry lub datę.",
+    "show_all": "Pokaż wszystkie",
+    "recurring_badge": "Cykliczna",
+    "swipe_hint": "Przesuń aby anulować"
   },
   "provisioning": {
     "title": "Provisioning",
@@ -549,7 +629,8 @@
       "status_idle": "Aktualny",
       "status_in_progress": "Aktualizowanie…",
       "status_success": "Zaktualizowany",
-      "status_failed": "Błąd aktualizacji"
+      "status_failed": "Błąd aktualizacji",
+      "remaining": "pozostało"
     },
     "gateway": {
       "install_title": "Instalacja Gateway",
@@ -610,5 +691,210 @@
     "rules_labels": {
       "GATEWAY_KEY_ROTATION_FAILED": "Rotacja klucza gateway nieudana"
     }
+  },
+  "deskcard": {
+    "book": "Zarezerwuj",
+    "book_full_day": "Zarezerwuj na cały dzień",
+    "book_choose_time": "Wybierz godziny...",
+    "checkin_since": "od",
+    "floor": "Piętro"
+  },
+  "common": {
+    "na": "—"
+  },
+  "floorplan": {
+    "editor": {
+      "title": "Edytor planu biura",
+      "hint": "Przeciągnij biurka na plan. R = obrót. Ctrl+Z = cofnij.",
+      "no_desks": "Brak biurek w tej lokalizacji",
+      "no_desks_sub": "Dodaj biurka przed ustawieniem planu.",
+      "go_add_desks": "Przejdź do biurek →"
+    },
+    "toolbar": {
+      "upload_bg": "Wgraj plan",
+      "remove_bg": "Usuń tło",
+      "snap": "Siatka",
+      "zoom_in": "Powiększ",
+      "zoom_out": "Pomniejsz",
+      "undo": "Cofnij (Ctrl+Z)",
+      "redo": "Ponów (Ctrl+Shift+Z)",
+      "save": "Zapisz",
+      "discard": "Odrzuć zmiany",
+      "saved": "Zapisano",
+      "file_too_large": "Plik jest za duży. Maksymalny rozmiar to 2MB."
+    },
+    "unplaced": {
+      "title": "{{count}} biurek bez pozycji",
+      "hint": "Kliknij biurko aby umieścić je w centrum planu."
+    },
+    "view": {
+      "toggle_plan": "Plan",
+      "toggle_cards": "Karty",
+      "edit_plan": "Edytuj plan",
+      "no_plan": "Plan biura nie został jeszcze dodany",
+      "no_plan_sub": "Administrator może wgrać plan w trybie edycji.",
+      "free_only": "Tylko wolne",
+      "desks_visible": "biurek"
+    },
+    "rotate": "Obróć",
+    "save_error": "Błąd zapisu. Spróbuj ponownie.",
+    "discard_confirm": "Masz niezapisane zmiany. Na pewno odrzucić?"
+  },
+  "weekly": {
+    "title": "Kto jest w biurze",
+    "subtitle": "Tygodniowy widok obecności zespołu",
+    "today_week": "Ten tydzień",
+    "in_office_today": "W biurze dziś",
+    "team_size": "Wszystkich",
+    "search_placeholder": "Szukaj osoby...",
+    "person": "Osoba",
+    "mobile_hint": "Widok na dziś",
+    "no_users": "Brak użytkowników",
+    "status": {
+      "office": "W biurze",
+      "reserved": "Rezerwacja",
+      "unknown": "Brak danych"
+    }
+  },
+  "resource": {
+    "page_title": "Sale i Parking",
+    "page_sub": "Zarządzaj salami konferencyjnymi, miejscami parkingowymi i sprzętem",
+    "add": "Dodaj zasób",
+    "book": "Zarezerwuj",
+    "edit_title": "Edytuj: {{name}}",
+    "create_title": "Nowy zasób",
+    "confirm_book": "Potwierdź rezerwację",
+    "confirm_remove": "Usunąć zasób \"{{name}}\"?",
+    "select_time": "Wybierz godziny",
+    "select_end": "Kliknij koniec przedziału",
+    "notes": "Notatka (opcjonalnie)",
+    "notes_placeholder": "Cel spotkania, informacje...",
+    "capacity": "{{count}} osób",
+    "empty_title": "Brak zasobów",
+    "empty_sub": "Dodaj sale konferencyjne lub miejsca parkingowe.",
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "vehicle": {
+      "car": "Samochód",
+      "moto": "Motocykl",
+      "bike": "Rower"
+    },
+    "legend": {
+      "free": "Dostępny",
+      "taken": "Zajęty"
+    },
+    "table": {
+      "name": "Nazwa",
+      "details": "Szczegóły",
+      "location": "Lokalizacja",
+      "status": "Status"
+    },
+    "form": {
+      "type": "Typ zasobu",
+      "name": "Nazwa",
+      "code": "Kod",
+      "description": "Opis",
+      "capacity": "Pojemność (osób)",
+      "amenities": "Wyposażenie",
+      "vehicle_type": "Typ pojazdu",
+      "required": "Wypełnij wymagane pola"
+    }
+  },
+  "kiosk": {
+    "exit_btn": "Wyjdź z trybu kiosk",
+    "exit_title": "Wyjdź z trybu kiosk",
+    "exit_hint": "Wprowadź PIN administratora",
+    "last_update": "Ostatnia aktualizacja"
+  },
+  "push": {
+    "banner_title": "Włącz powiadomienia push",
+    "banner_sub": "Bądź na bieżąco z rezerwacjami i alertami IoT",
+    "card_title": "Powiadomienia w czasie rzeczywistym",
+    "card_sub": "Dowiedz się natychmiast gdy coś wymaga Twojej uwagi",
+    "benefit1": "Check-in beacon offline > 30 min",
+    "benefit2": "Twoja rezerwacja jest gotowa do check-in",
+    "benefit3": "Alerty administracyjne (rotacja klucza, OTA)",
+    "enable_btn": "Włącz powiadomienia",
+    "denied_hint": "Zablokowano w ustawieniach przeglądarki. Odblokuj i spróbuj ponownie."
+  },
+  "recurring": {
+    "label": "Powtarzaj",
+    "none": "Nie powtarza",
+    "daily": "Codziennie",
+    "weekly": "Co tydzień",
+    "monthly": "Co miesiąc",
+    "custom": "Własny",
+    "days_of_week": "Dni tygodnia",
+    "count": "Liczba powtórzeń",
+    "count_suffix": "razy",
+    "preview": "Zaplanowane daty ({{count}})",
+    "result_created": "Utworzono {{count}} rezerwacji",
+    "result_conflicts": "{{count}} konfliktów (pominięte)",
+    "close": "Gotowe"
+  },
+  "visitors": {
+    "title": "Goście biura",
+    "subtitle": "Zarządzaj wizytami i gośćmi",
+    "invite_title": "Zaproś gościa",
+    "invite_btn": "Zaproś",
+    "confirm_cancel": "Anulować wizytę?",
+    "empty": "Brak gości",
+    "empty_sub": "Zaproś pierwszego gościa klikając przycisk powyżej.",
+    "kpi": {
+      "expected": "Oczekiwanych",
+      "arrived": "W biurze",
+      "left": "Wyszło"
+    },
+    "col": {
+      "guest": "Gość",
+      "date": "Data",
+      "host": "Gospodarz",
+      "purpose": "Cel",
+      "status": "Status"
+    },
+    "form": {
+      "company": "Firma (opcjonalnie)",
+      "visit_date": "Data wizyty",
+      "purpose": "Cel wizyty (opcjonalnie)",
+      "purpose_ph": "Spotkanie z zespołem...",
+      "required": "Wypełnij wymagane pola"
+    }
+  },
+  "subscription": {
+    "title": "Subskrypcja",
+    "subtitle": "Stan planu i wykorzystanie zasobów",
+    "plan": "Plan",
+    "no_expiry": "Bezterminowy (Enterprise)",
+    "valid_until": "Ważny do",
+    "trial_ends": "Koniec trialu",
+    "days_left": "{{count}} dni",
+    "contact_cta": "Chcesz rozszerzyć plan? Skontaktuj się z Reserti",
+    "status": {
+      "active": "Aktywny",
+      "expiring_soon": "Wygasa wkrótce",
+      "expired": "Wygasły",
+      "trial": "Okres próbny",
+      "trial_expiring": "Trial wygasa"
+    },
+    "usage": {
+      "title": "Wykorzystanie zasobów",
+      "desks": "Biurka",
+      "users": "Użytkownicy",
+      "gateways": "Gatewaye",
+      "locations": "Biura",
+      "unlimited": "∞",
+      "of": "z"
+    },
+    "features": {
+      "title": "Funkcje planu",
+      "ota": "Aktualizacje OTA firmware",
+      "sso": "Logowanie Microsoft (SSO)",
+      "smtp": "Własna skrzynka SMTP",
+      "api": "Dostęp do API"
+    },
+    "expiry_banner": "Twój plan wygasa za {{days}} dni ({{date}}). Skontaktuj się z administratorem.",
+    "expired_banner": "Twój plan wygasł {{date}}. Nowe zasoby są zablokowane."
   }
 }

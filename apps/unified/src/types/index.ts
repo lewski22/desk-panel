@@ -17,6 +17,18 @@ export interface DeskMapItem {
   isOnline: boolean;
   isOccupied: boolean;
   status: 'ACTIVE' | 'INACTIVE' | 'MAINTENANCE';
+  // Floor Plan position (Sprint D)
+  posX?:     number | null;
+  posY?:     number | null;
+  rotation?: number;
+  width?:    number;
+  height?:   number;
+
+  currentCheckin?: {
+    userId:      string;
+    checkedInAt: string;
+    user?:       { firstName: string; lastName: string };
+  } | null;
   currentReservation?: {
     id: string;
     user: { firstName: string; lastName: string };

@@ -1,12 +1,17 @@
+/**
+ * ReservationsAdminPage — Sprint A3
+ * - Sortowanie kolumn (czas, biurko, status) z URL state
+ * - Bulk actions: Zaznacz + Anuluj zaznaczone
+ * - Kontekstowy empty state
+ */
 import { localDateStr } from '../utils/date';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
-import { Btn, Card } from '../components/ui';
+import { Btn, Card, EmptyState, SortHeader, SortState } from '../components/ui';
 import { format } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
-
-const LOC_ID = import.meta.env.VITE_LOCATION_ID ?? '';
+import { useSortable } from '../hooks/useSortable';
 
 const STATUS_CLS: Record<string, string> = {
   CONFIRMED: 'bg-emerald-100 text-emerald-700',
@@ -17,44 +22,77 @@ const STATUS_CLS: Record<string, string> = {
 };
 
 export function ReservationsAdminPage() {
-  const { t, i18n } = useTranslation();
+  const { t, i18n }   = useTranslation();
+  const dfns           = i18n.language === 'en' ? enUS : pl;
+  const { sort, toggle, sortArray } = useSortable('startTime', 'asc');
+
   const [res, setRes]         = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate]       = useState(localDateStr());
   const [status, setStatus]   = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const filters: Record<string, string> = { locationId: LOC_ID, date };
+    setSelected(new Set());
+    const filters: Record<string, string> = { date };
     if (status) filters.status = status;
     setRes(await appApi.reservations.list(filters).catch(() => []));
     setLoading(false);
-  };
+  }, [date, status]);
 
-  useEffect(() => { load(); }, [date, status]);
+  useEffect(() => { load(); }, [load]);
 
   const cancel = async (id: string) => {
     if (!confirm(t('reservations.confirm_cancel_simple'))) return;
     await appApi.reservations.cancel(id);
-    await load();
+    load();
   };
 
   const checkin = async (r: any) => {
     await appApi.checkins.manual(r.deskId, r.userId, r.id);
-    await load();
+    load();
   };
 
+  // ── Bulk cancel ─────────────────────────────────────────────
+  const bulkCancel = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(t('reservations.bulk_cancel_confirm', { count: selected.size }))) return;
+    setBulkLoading(true);
+    await Promise.all([...selected].map(id => appApi.reservations.cancel(id).catch(() => {})));
+    setBulkLoading(false);
+    load();
+  };
+
+  const toggleSelect = (id: string) =>
+    setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const toggleAll = () => {
+    const cancellable = res.filter(r => ['CONFIRMED','PENDING'].includes(r.status)).map(r => r.id);
+    setSelected(prev => prev.size === cancellable.length ? new Set() : new Set(cancellable));
+  };
+
+  // ── Sorted list ──────────────────────────────────────────────
+  const sorted = useMemo(() => sortArray(res, item => {
+    if (sort.field === 'desk')   return item.desk?.name ?? '';
+    if (sort.field === 'user')   return `${item.user?.firstName ?? ''} ${item.user?.lastName ?? ''}`;
+    if (sort.field === 'status') return item.status;
+    return item.startTime;
+  }), [res, sort, sortArray]);
+
   const statuses = ['CONFIRMED','PENDING','CANCELLED','EXPIRED','COMPLETED'];
+  const cancellable = res.filter(r => ['CONFIRMED','PENDING'].includes(r.status));
+  const allSelected = cancellable.length > 0 && selected.size === cancellable.length;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reservationsAdmin.title')}</h1>
-        </div>
+        <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reservationsAdmin.title')}</h1>
       </div>
 
-      <div className="flex gap-3 mb-5 flex-wrap">
+      {/* Filters */}
+      <div className="flex gap-3 mb-5 flex-wrap items-end">
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.date')}</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
@@ -70,46 +108,99 @@ export function ReservationsAdminPage() {
             ))}
           </select>
         </div>
-        <div className="flex items-end">
-          <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-            {t('btn.refresh')}
-          </button>
-        </div>
+        <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
+          ↺ {t('btn.refresh')}
+        </button>
       </div>
 
+      {/* Status summary */}
       <div className="grid grid-cols-5 gap-2 mb-5">
         {statuses.map(s => {
           const count = res.filter(r => r.status === s).length;
           return (
-            <div key={s} className="bg-white border border-zinc-100 rounded-xl p-3 text-center">
+            <button key={s} onClick={() => setStatus(status === s ? '' : s)}
+              className={`border rounded-xl p-3 text-center transition-all ${status === s ? 'border-[#B53578] bg-[#B53578]/5' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
               <p className="text-lg font-bold font-mono text-zinc-700">{count}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5">{t(`reservations.status.${s.toLowerCase()}`)}</p>
-            </div>
+              <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{t(`reservations.status.${s.toLowerCase()}`)}</p>
+            </button>
           );
         })}
       </div>
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-[#B53578]/5 border border-[#B53578]/20 rounded-xl">
+          <span className="text-sm font-medium text-[#B53578]">
+            {t('reservations.selected', { count: selected.size })}
+          </span>
+          <Btn variant="danger" loading={bulkLoading} onClick={bulkCancel}>
+            {t('reservations.bulk_cancel', { count: selected.size })}
+          </Btn>
+          <button onClick={() => setSelected(new Set())}
+            className="text-xs text-zinc-500 hover:text-zinc-700 ml-auto">
+            {t('btn.cancel_selection')}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-12">
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
         </div>
+      ) : sorted.length === 0 ? (
+        <EmptyState
+          icon="📋"
+          title={t('reservations.none_filters')}
+          sub={t('reservations.none_filters_sub')}
+          action={
+            <button onClick={() => setStatus('')}
+              className="text-sm text-[#B53578] underline mt-2">{t('reservations.show_all')}</button>
+          }
+        />
       ) : (
         <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-xl border-y sm:border border-zinc-100">
           <table className="w-full text-left text-sm">
             <thead className="bg-zinc-50 border-b border-zinc-100">
               <tr>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.time')}</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.desk')} / {t('reservations.table.user')}</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.status')}</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">{t('reservations.table.checkin')}</th>
-                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.actions')}</th>
+                {/* Bulk checkbox */}
+                <th className="py-2.5 px-3 w-8">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll}
+                    className="rounded border-zinc-300 text-[#B53578] focus:ring-[#B53578]/20 cursor-pointer" />
+                </th>
+                <SortHeader field="startTime" sort={sort} onToggle={toggle}
+                  className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  {t('reservations.table.time')}
+                </SortHeader>
+                <SortHeader field="desk" sort={sort} onToggle={toggle}
+                  className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  {t('reservations.table.desk')} / {t('reservations.table.user')}
+                </SortHeader>
+                <SortHeader field="status" sort={sort} onToggle={toggle}
+                  className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  {t('reservations.table.status')}
+                </SortHeader>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">
+                  {t('reservations.table.checkin')}
+                </th>
+                <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">
+                  {t('reservations.table.actions')}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {res.map(r => {
+              {sorted.map(r => {
                 const cls = STATUS_CLS[r.status] ?? STATUS_CLS.PENDING;
+                const isCancellable = ['CONFIRMED','PENDING'].includes(r.status);
+                const isSelected    = selected.has(r.id);
                 return (
-                  <tr key={r.id} className="border-b border-zinc-50 hover:bg-zinc-50/60 group">
+                  <tr key={r.id}
+                    className={`border-b border-zinc-50 group transition-colors ${isSelected ? 'bg-[#B53578]/5' : 'hover:bg-zinc-50/60'}`}>
+                    <td className="py-3 px-3">
+                      {isCancellable && (
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)}
+                          className="rounded border-zinc-300 text-[#B53578] focus:ring-[#B53578]/20 cursor-pointer" />
+                      )}
+                    </td>
                     <td className="py-3 px-4 font-mono text-xs text-zinc-600 whitespace-nowrap">
                       {format(new Date(r.startTime), 'HH:mm')}–{format(new Date(r.endTime), 'HH:mm')}
                     </td>
@@ -138,7 +229,7 @@ export function ReservationsAdminPage() {
                             Check-in
                           </button>
                         )}
-                        {['CONFIRMED','PENDING'].includes(r.status) && (
+                        {isCancellable && (
                           <button onClick={() => cancel(r.id)}
                             className="text-xs px-2 py-1.5 sm:py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                             {t('reservations.cancel')}
@@ -149,9 +240,6 @@ export function ReservationsAdminPage() {
                   </tr>
                 );
               })}
-              {res.length === 0 && (
-                <tr><td colSpan={5} className="py-10 text-center text-zinc-400 text-sm">{t('reservations.none_filters')}</td></tr>
-              )}
             </tbody>
           </table>
         </div>

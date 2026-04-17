@@ -20,6 +20,12 @@ import { OwnerPage }           from './pages/OwnerPage';
 import { NotificationsPage }   from './pages/NotificationsPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { ChangePasswordPage }  from './pages/ChangePasswordPage';
+import { FloorPlanEditorPage } from './pages/FloorPlanEditorPage';
+import { WeeklyViewPage }      from './pages/WeeklyViewPage';
+import { KioskPage }           from './pages/KioskPage';
+import { VisitorsPage }        from './pages/VisitorsPage';
+import { SubscriptionPage }    from './pages/SubscriptionPage';
+import { ResourcesPage }       from './pages/ResourcesPage';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
@@ -63,6 +69,7 @@ export default function App() {
         } />
         <Route path="/auth/impersonate" element={<ImpersonatePage onLogin={setUser} />} />
         <Route path="/checkin/:token"   element={<QrCheckinPage />} />
+        <Route path="/kiosk"            element={<KioskPage />} />
 
         {/* Chronione — z AppLayout */}
         <Route path="/*" element={
@@ -110,6 +117,21 @@ export default function App() {
                   {/* Wspólne (staff + admin) */}
                   <Route path="/map" element={
                     <Guard user={user} allowed={ALL_ROLES}><DeskMapPage /></Guard>
+                  } />
+                  <Route path="/weekly" element={
+                    <Guard user={user} allowed={ALL_ROLES}><WeeklyViewPage /></Guard>
+                  } />
+                  <Route path="/subscription" element={
+                    <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN']}><SubscriptionPage /></Guard>
+                  } />
+                  <Route path="/visitors" element={
+                    <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN','STAFF']}><VisitorsPage /></Guard>
+                  } />
+                  <Route path="/resources" element={
+                    <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN']}><ResourcesPage /></Guard>
+                  } />
+                  <Route path="/floor-plan/:locationId" element={
+                    <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN']}><FloorPlanEditorPage /></Guard>
                   } />
                   <Route path="/my-reservations" element={
                     <Guard user={user} allowed={ALL_ROLES}><MyReservationsPage /></Guard>

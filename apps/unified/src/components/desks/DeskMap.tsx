@@ -63,8 +63,10 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   const [start,  setStart]  = useState(limits?.openTime  ?? '09:00');
   const [end,    setEnd]    = useState(limits?.closeTime ?? '17:00');
   const [userId, setUserId] = useState('');
-  const [busy,   setBusy]   = useState(false);
-  const [err,    setErr]    = useState('');
+  const [busy,       setBusy]      = useState(false);
+  const [err,        setErr]       = useState('');
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig>({ enabled: false, rule: '', label: '' });
+  const [recurResult, setRecurResult] = useState<any>(null);
 
   const submit = async () => {
     if (start >= end) { setErr(t('desks.reserve.errors.end_after_start')); return; }
@@ -84,9 +86,18 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
       const startISO = localDateTimeISO(date, start);
       const endISO   = localDateTimeISO(date, end);
       const body: any = { deskId: desk.id, date, startTime: startISO, endTime: endISO };
-      // Staff/Admin mogą rezerwować dla konkretnego usera
       if (!isEndUser && userId) body.targetUserId = userId;
-      await api.reservations.create(body);
+
+      if (recurrence.enabled && recurrence.rule) {
+        // Cykliczne rezerwacje
+        const result = await api.reservations.createRecurring({ ...body, recurrenceRule: recurrence.rule });
+        if (result.conflicts?.length > 0) {
+          setRecurResult(result);
+          return; // Pokaż podsumowanie z konfliktami
+        }
+      } else {
+        await api.reservations.create(body);
+      }
       onSuccess();
     } catch (e: any) { setErr(e.message ?? t('desks.reserve.errors.failed')); }
     setBusy(false);
@@ -144,6 +155,29 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
 {limits ? t('desks.reserve.open_hours', { open: limits.openTime, close: limits.closeTime, maxHours: limits.maxHoursPerDay, maxDays: limits.maxDaysAhead }) : t('desks.reserve.any_time')}
           </p>
 
+          {/* Cykliczne rezerwacje — Sprint G1 */}
+          <div className="border-t border-zinc-100 pt-3">
+            <RecurringToggle startDate={date} onChange={setRecurrence} />
+          </div>
+
+          {/* Podsumowanie serii z konfliktami */}
+          {recurResult && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs space-y-1">
+              <p className="font-semibold text-amber-700">
+                ✓ {t('recurring.result_created', { count: recurResult.created?.length ?? 0 })}
+              </p>
+              {recurResult.conflicts?.length > 0 && (
+                <p className="text-amber-600">
+                  ⚠ {t('recurring.result_conflicts', { count: recurResult.conflicts.length })}: {recurResult.conflicts.join(', ')}
+                </p>
+              )}
+              <button onClick={onSuccess}
+                className="mt-2 w-full py-2 rounded-lg bg-amber-500 text-white font-medium text-xs hover:bg-amber-600 transition-colors">
+                {t('recurring.close')}
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-1">
             <button onClick={onClose}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
@@ -165,7 +199,7 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   );
 }
 
-export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits }: Props) {
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits, showAvatars = false }: Props & { showAvatars?: boolean }) {
   const { t } = useTranslation();
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
@@ -190,6 +224,12 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
   const floors = groupByFloor(visibleDesks);
 
   // Checkout (Staff/Admin)
+  const handleQuickBook = (desk: DeskMapItem, fullDay: boolean) => {
+    // fullDay=true → otwórz modal z prefillem godzin biura
+    // fullDay=false → otwórz standardowy ReservationModal
+    setReservationTarget(desk);
+  };
+
   const handleCheckout = async (desk: DeskMapItem) => {
     if (!desk.currentReservation) return;
     try {

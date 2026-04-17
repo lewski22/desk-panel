@@ -204,15 +204,29 @@ export function QrCheckinPage() {
     </Wrapper>
   );
 
-  // ── Success ───────────────────────────────────────────────────
-  if (step === 'success') return (
+  // ── Success — Sprint A4: animated checkmark + haptic ─────────
+  if (step === 'success') {
+    // Haptic feedback na mobile
+    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
+    return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+        {/* Animated checkmark SVG */}
+        <div className="w-20 h-20 mx-auto mb-4">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" stroke="#10b981" strokeWidth="3"
+              strokeDasharray="239" strokeDashoffset="0"
+              style={{ animation: 'stroke-circle 0.4s ease-in-out forwards' }} />
+            <path d="M22 40l12 12 24-24" stroke="#10b981" strokeWidth="3"
+              strokeLinecap="round" strokeLinejoin="round"
+              strokeDasharray="50" strokeDashoffset="50"
+              style={{ animation: 'stroke-check 0.3s ease-in-out 0.35s forwards' }} />
           </svg>
         </div>
+        <style>{`
+          @keyframes stroke-circle { to { stroke-dashoffset: 0; } from { stroke-dashoffset: 239; } }
+          @keyframes stroke-check  { to { stroke-dashoffset: 0; } }
+        `}</style>
 
         {result?.type === 'walkin' && (
           <>
@@ -239,11 +253,12 @@ export function QrCheckinPage() {
 
         <button onClick={() => navigate('/')}
           className="mt-6 w-full py-3 rounded-xl bg-zinc-800 text-zinc-300 text-sm font-medium hover:bg-zinc-700 transition-colors">
-          Wróć do mapy
+          {t('qr.back_to_map')}
         </button>
       </div>
     </Wrapper>
-  );
+    );
+  }
 
   // ── Main desk-info view ───────────────────────────────────────
   const isMyReservation = desk.currentReservation && getStoredUser()?.id === desk.currentReservation.userId;

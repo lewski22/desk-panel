@@ -1,30 +1,113 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useDesks } from '../hooks';
-import { DeskMap } from '../components/desks/DeskMap';
-import { appApi } from '../api/client';
+/**
+ * DeskMapPage — Sprint A2 + D4
+ * - Location tabs z live occupancy
+ * - Toggle [🗺 Plan] [⊞ Karty]
+ * - FloorPlanView lub DeskMap grid
+ * - Preferencja widoku w localStorage
+ */
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useTranslation }  from 'react-i18next';
+import { useNavigate }      from 'react-router-dom';
+import { useDesks }         from '../hooks';
+import { DeskMap }          from '../components/desks/DeskMap';
+import { FloorPlanView }    from '../components/floor-plan/FloorPlanView';
+import { ResourceCard }     from '../components/desks/ResourceCard';
+import { BookingModal }     from '../components/desks/BookingModal';
+import { appApi }           from '../api/client';
+import { EmptyState }       from '../components/ui';
+import { useOrgModules }    from '../hooks/useOrgModules';
 
-function LocationPicker({
-  locations, activeId, onChange,
-}: { locations: any[]; activeId: string; onChange: (id: string) => void }) {
-  const { t } = useTranslation();
-  if (locations.length <= 1) return null;
+// ── Helpers ──────────────────────────────────────────────────
+function occupancyColor(occupied: number, total: number) {
+  const pct = total === 0 ? 0 : (occupied / total) * 100;
+  if (pct >= 90) return 'text-red-600 bg-red-50 border-red-200';
+  if (pct >= 70) return 'text-amber-600 bg-amber-50 border-amber-200';
+  return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+}
+
+// ── Location Tabs ─────────────────────────────────────────────
+function LocationTabs({ locations, activeId, desksPerLocation, onChange }: {
+  locations: any[]; activeId: string;
+  desksPerLocation: Record<string, { occupied: number; total: number }>;
+  onChange: (id: string) => void;
+}) {
+  if (locations.length === 0) return null;
+  if (locations.length === 1) return <p className="text-sm text-zinc-500 mb-4 font-medium">{locations[0].name}</p>;
   return (
-    <div className="flex items-center gap-2 mb-4">
-      <span className="text-xs text-zinc-400">{t('deskmap.location_label')}</span>
-      <select value={activeId} onChange={e => onChange(e.target.value)}
-        className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 font-medium">
-        {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-      </select>
+    <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {locations.map(loc => {
+        const occ   = desksPerLocation[loc.id] ?? { occupied: 0, total: 0 };
+        const active = loc.id === activeId;
+        const color = occupancyColor(occ.occupied, occ.total);
+        return (
+          <button key={loc.id} onClick={() => onChange(loc.id)}
+            className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+              active ? 'bg-[#B53578] text-white border-[#B53578] shadow-sm' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+            }`}>
+            <span>{loc.name}</span>
+            {occ.total > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${active ? 'bg-white/20 text-white border-white/30' : color}`}>
+                {occ.occupied}/{occ.total}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-export function DeskMapPage() {
+// ── View Toggle ───────────────────────────────────────────────
+type ViewMode = 'plan' | 'cards';
+
+function ViewToggle({ mode, onChange, hasPlan }: { mode: ViewMode; onChange: (m: ViewMode) => void; hasPlan: boolean }) {
   const { t } = useTranslation();
-  const [locations,  setLocations]  = useState<any[]>([]);
-  const [locationId, setLocationId] = useState(import.meta.env.VITE_LOCATION_ID ?? '');
-  const [locLoading, setLocLoading] = useState(true);
+  if (!hasPlan) return null;
+  return (
+    <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-4 w-fit">
+      <button onClick={() => onChange('plan')}
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          mode === 'plan' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+        }`}>
+        🗺 {t('floorplan.view.toggle_plan')}
+      </button>
+      <button onClick={() => onChange('cards')}
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+          mode === 'cards' ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+        }`}>
+        ⊞ {t('floorplan.view.toggle_cards')}
+      </button>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────
+export function DeskMapPage() {
+  const { t }       = useTranslation();
+  const navigate    = useNavigate();
+  const [locations,     setLocations]     = useState<any[]>([]);
+  const [locationId,    setLocationId]    = useState(import.meta.env.VITE_LOCATION_ID ?? '');
+  const [locLoading,    setLocLoading]    = useState(true);
+  const [occupancyCache, setOccupancyCache] = useState<Record<string, { occupied: number; total: number }>>({});
+  const [hasPlan,       setHasPlan]       = useState(false);
+  const [viewMode,      setViewMode]      = useState<ViewMode>(
+    (localStorage.getItem('desk_view_mode') as ViewMode) ?? 'cards'
+  );
+  const [reservationTarget, setReservationTarget] = useState<any>(null);
+
+  // ── Sprint E2: Resources (Sale / Parking) ─────────────────
+  type MapTab = 'desks' | 'rooms' | 'parking';
+  const [mapTab, setMapTab]           = useState<MapTab>('desks');
+  const [resources,  setResources]    = useState<any[]>([]);
+  const [resLoading, setResLoading]   = useState(false);
+  const [bookTarget, setBookTarget]   = useState<any>(null);
+
+  const userRole = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
+  }, []);
+  const isAdmin  = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(userRole);
+  const isStaff  = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
+  const { isEnabled } = useOrgModules();
 
   useEffect(() => {
     appApi.locations.listAll()
@@ -36,49 +119,151 @@ export function DeskMapPage() {
       .finally(() => setLocLoading(false));
   }, []);
 
+  // Sprawdź czy lokalizacja ma floor plan → ustaw domyślny tryb
+  useEffect(() => {
+    if (!locationId) return;
+    const saved = localStorage.getItem('desk_view_mode') as ViewMode | null;
+    appApi.locations.floorPlan.get(locationId)
+      .then(fp => {
+        const has = !!fp?.floorPlanUrl;
+        setHasPlan(has);
+        if (!saved) setViewMode(has ? 'plan' : 'cards');
+      })
+      .catch(() => setHasPlan(false));
+  }, [locationId]);
+
+  const handleViewMode = (m: ViewMode) => {
+    setViewMode(m);
+    localStorage.setItem('desk_view_mode', m);
+  };
+
+  // Załaduj resources gdy zakładka aktywna
+  useEffect(() => {
+    if (mapTab === 'desks' || !locationId) return;
+    const typeMap: Record<string, string> = { rooms: 'ROOM', parking: 'PARKING' };
+    setResLoading(true);
+    appApi.resources.list(locationId, typeMap[mapTab])
+      .then(setResources)
+      .catch(() => {})
+      .finally(() => setResLoading(false));
+  }, [mapTab, locationId]);
+
   const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId);
 
-  const userRole = (() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; }
-    catch { return ''; }
-  })();
+  useEffect(() => {
+    if (!locationId || desks.length === 0) return;
+    setOccupancyCache(prev => ({
+      ...prev,
+      [locationId]: { occupied: desks.filter(d => d.isOccupied).length, total: desks.length },
+    }));
+  }, [desks, locationId]);
 
-  if (locLoading || (loading && desks.length === 0 && locationId)) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3 text-zinc-300">
-          <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
-          <p className="text-sm">{t('deskmap.loading')}</p>
-        </div>
+  if (locLoading || (loading && desks.length === 0 && locationId)) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="flex flex-col items-center gap-3 text-zinc-300">
+        <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+        <p className="text-sm">{t('deskmap.loading')}</p>
       </div>
-    );
-  }
-
-  if (error && desks.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="text-4xl mb-3">⚠️</p>
-          <p className="text-zinc-600 font-medium mb-1">{t('deskmap.conn_error')}</p>
-          <p className="text-zinc-400 text-sm mb-4">{error}</p>
-          <button onClick={refetch}
-            className="text-sm px-4 py-2 rounded-lg bg-[#B53578] text-white hover:bg-[#9d2d66] transition-colors">
-            {t('btn.retry')}
-          </button>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div>
-      <LocationPicker locations={locations} activeId={locationId} onChange={setLocationId} />
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm flex items-center gap-2">
-          <span>⚠</span><span>{t('deskmap.stale_warning')}</span>
+      <LocationTabs
+        locations={locations}
+        activeId={locationId}
+        desksPerLocation={occupancyCache}
+        onChange={setLocationId}
+      />
+
+      {/* Tab bar: Biurka | Sale | Parking — filtrowane przez moduły org */}
+      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-4 w-fit">
+        {([
+          ['desks',   '🪑', 'DESKS'  ],
+          ['rooms',   '🏛', 'ROOMS'  ],
+          ['parking', '🅿️', 'PARKING'],
+        ] as const).filter(([, , mod]) => isEnabled(mod)).map(([tab, icon]) => (
+          <button key={tab} onClick={() => setMapTab(tab as any)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              mapTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+            }`}>
+            <span>{icon}</span>
+            <span>{t(`deskmap.tab.${tab}`)}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Toolbar row: View toggle + Edit floor plan link */}
+      <div className="flex items-center justify-between mb-1">
+        <ViewToggle mode={viewMode} onChange={handleViewMode} hasPlan={hasPlan} />
+        {isAdmin && locationId && (
+          <button
+            onClick={() => navigate(`/floor-plan/${locationId}`)}
+            className="text-xs text-[#B53578] hover:underline flex items-center gap-1">
+            ✏ {t('floorplan.view.edit_plan')}
+          </button>
+        )}
+      </div>
+
+      {error && desks.length === 0 && (
+        <EmptyState icon="⚠️" title={t('deskmap.error_title')} sub={error}
+          action={<button onClick={refetch} className="text-sm text-[#B53578] underline mt-2">{t('btn.retry')}</button>} />
+      )}
+      {!loading && desks.length === 0 && !error && (
+        <EmptyState icon="🪑" title={t('deskmap.no_desks_title')} sub={t('deskmap.no_desks_sub')} />
+      )}
+
+      {desks.length > 0 && viewMode === 'plan' && (
+        <FloorPlanView
+          locationId={locationId}
+          desks={desks}
+          userRole={userRole}
+          onReserve={desk => setReservationTarget(desk)}
+        />
+      )}
+
+      {desks.length > 0 && viewMode === 'cards' && mapTab === 'desks' && (
+        <DeskMap
+          desks={desks}
+          locationLimits={locationLimits}
+          lastUpdated={lastUpdated}
+          onRefresh={refetch}
+          userRole={userRole}
+          showAvatars={isStaff}
+        />
+      )}
+
+      {/* Resources — Sale i Parking */}
+      {mapTab !== 'desks' && (
+        <div>
+          {resLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+            </div>
+          ) : resources.length === 0 ? (
+            <EmptyState
+              icon={mapTab === 'rooms' ? '🏛' : '🅿️'}
+              title={t(`deskmap.empty.${mapTab}`)}
+              sub={t('deskmap.empty.sub')}
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {resources.map(r => (
+                <ResourceCard key={r.id} resource={r} onBook={setBookTarget} />
+              ))}
+            </div>
+          )}
         </div>
       )}
-      <DeskMap desks={desks} locationLimits={locationLimits} lastUpdated={lastUpdated} onRefresh={refetch} userRole={userRole} />
+
+      {/* Booking Modal */}
+      {bookTarget && (
+        <BookingModal
+          resource={bookTarget}
+          onClose={() => setBookTarget(null)}
+          onBooked={() => { setBookTarget(null); }}
+        />
+      )}
     </div>
   );
 }

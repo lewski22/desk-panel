@@ -275,3 +275,66 @@ export function Thead({ cols }: { cols: string[] }) {
     </thead>
   );
 }
+
+// ── Sprint A: Sortowanie nagłówków tabel ──────────────────────
+export interface SortState {
+  field: string | null;
+  dir:   'asc' | 'desc';
+}
+
+export function SortHeader({
+  field, sort, onToggle, children, className = '',
+}: {
+  field:    string;
+  sort:     SortState;
+  onToggle: (f: string) => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const active = sort.field === field;
+  return (
+    <th className={`cursor-pointer select-none group ${className}`} onClick={() => onToggle(field)}>
+      <span className="flex items-center gap-1">
+        {children}
+        <span className={`text-[10px] transition-colors ${active ? 'text-[#B53578]' : 'text-zinc-300 group-hover:text-zinc-400'}`}>
+          {active ? (sort.dir === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+// ── Sprint A: Empty State z ilustracją SVG ────────────────────
+export function EmptyState({
+  icon, title, sub, action, illustration,
+}: {
+  icon?:         string;
+  title:         string;
+  sub?:          string;
+  action?:       React.ReactNode;
+  illustration?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      {illustration ?? (
+        <span className="text-5xl mb-4 select-none">{icon ?? '📭'}</span>
+      )}
+      <p className="text-sm font-semibold text-zinc-600 mb-1">{title}</p>
+      {sub && <p className="text-xs text-zinc-400 mb-4 max-w-xs">{sub}</p>}
+      {action}
+    </div>
+  );
+}
+
+// ── Sprint A: KPI Trend badge ─────────────────────────────────
+export function TrendBadge({ pct, positive = true }: { pct: number; positive?: boolean }) {
+  if (pct === 0) return <span className="text-[10px] text-zinc-400 font-medium">→ 0%</span>;
+  const good = positive ? pct > 0 : pct < 0;
+  return (
+    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+      good ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+    }`}>
+      {pct > 0 ? '↑' : '↓'} {Math.abs(pct)}%
+    </span>
+  );
+}

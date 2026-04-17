@@ -1,7 +1,13 @@
+/**
+ * MyReservationsPage — Sprint H2
+ * Dodano swipe-left → reveal "Anuluj" (iOS Mail pattern)
+ */
 import { localDateStr } from '../utils/date';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { appApi } from '../api/client';
+import { appApi }          from '../api/client';
+import { useSwipe }        from '../hooks/useSwipe';
+import { EmptyState }      from '../components/ui';
 
 function StatusBadge({ status }: { status: string }) {
   const { t } = useTranslation();
@@ -16,6 +22,90 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${map[status] ?? 'bg-zinc-100 text-zinc-500'}`}>
       {t(`reservations.status.${status.toLowerCase()}`, status)}
     </span>
+  );
+}
+
+// ── Swipeable reservation card ────────────────────────────────
+function ReservationCard({
+  r, locale, onCancel, cancelling,
+}: {
+  r: any; locale: string; onCancel: (id: string) => void; cancelling: string | null;
+}) {
+  const { t }           = useTranslation();
+  const [offset, setOffset] = useState(0);       // px translation
+  const [revealed, setRevealed] = useState(false); // anuluj widoczny
+  const startX = useRef<number | null>(null);
+  const REVEAL_THRESHOLD = 80; // px żeby odsłonić przycisk
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX.current === null) return;
+    const dx = e.touches[0].clientX - startX.current;
+    if (dx > 0 && !revealed) return; // blokuj swipe w prawo gdy zwinięty
+    setOffset(revealed ? Math.min(0, dx - REVEAL_THRESHOLD) : Math.min(0, dx));
+  };
+  const handleTouchEnd = () => {
+    if (offset < -REVEAL_THRESHOLD) {
+      setRevealed(true); setOffset(-REVEAL_THRESHOLD);
+    } else {
+      setRevealed(false); setOffset(0);
+    }
+    startX.current = null;
+  };
+
+  const close = () => { setRevealed(false); setOffset(0); };
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Delete button behind */}
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 bg-red-500 rounded-2xl">
+        <button
+          onClick={() => { close(); onCancel(r.id); }}
+          disabled={cancelling === r.id}
+          className="text-white text-sm font-semibold px-2">
+          {cancelling === r.id ? '…' : t('reservations.cancel')}
+        </button>
+      </div>
+
+      {/* Draggable card */}
+      <div
+        className="bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 relative"
+        style={{ transform: `translateX(${offset}px)`, transition: startX.current === null ? 'transform 0.2s' : 'none' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onClick={() => revealed && close()}
+      >
+        <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-sm shrink-0">
+          {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-zinc-800 truncate">{r.desk?.name ?? 'Biurko'}</p>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { weekday:'short', day:'2-digit', month:'2-digit' })}
+            {' · '}
+            {new Date(r.startTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
+            –
+            {new Date(r.endTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
+          </p>
+          {r.recurrenceGroupId && (
+            <p className="text-[10px] text-[#B53578] mt-0.5">↻ {t('reservations.recurring_badge')}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <StatusBadge status={r.status} />
+          {/* Desktop cancel button */}
+          <button
+            onClick={() => onCancel(r.id)}
+            disabled={cancelling === r.id}
+            className="hidden sm:block text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
+            {cancelling === r.id ? '…' : t('reservations.cancel')}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -43,9 +133,9 @@ export function MyReservationsPage() {
     setCancelling(null);
   };
 
-  const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
-  const active   = reservations.filter(r => ['PENDING', 'CONFIRMED'].includes(r.status));
-  const inactive = reservations.filter(r => !['PENDING', 'CONFIRMED'].includes(r.status));
+  const locale   = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
+  const active   = reservations.filter(r => ['PENDING','CONFIRMED'].includes(r.status));
+  const inactive = reservations.filter(r => !['PENDING','CONFIRMED'].includes(r.status));
 
   if (loading) return (
     <div className="flex justify-center py-16">
@@ -56,71 +146,49 @@ export function MyReservationsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
-        </div>
+        <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
         <button onClick={load}
           className="text-sm px-4 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-600">
-          {t('btn.refresh')}
+          ↺ {t('btn.refresh')}
         </button>
       </div>
+
+      {/* Swipe hint — tylko mobile */}
+      {active.length > 0 && (
+        <p className="sm:hidden text-[10px] text-zinc-400 mb-3 text-center">
+          ← {t('reservations.swipe_hint')}
+        </p>
+      )}
 
       {err && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{err}</div>}
 
       {reservations.length === 0 ? (
-        <div className="text-center py-16 text-zinc-400">
-          <p className="text-4xl mb-3">📅</p>
-          <p className="text-sm font-medium">{t('reservations.none')}</p>
-          <p className="text-xs mt-1">{t('reservations.none_hint')}</p>
-        </div>
+        <EmptyState icon="📅" title={t('reservations.none')} sub={t('reservations.none_hint')} />
       ) : (
         <div className="space-y-6">
           {active.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.active')}</h2>
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.active')}</h2>
               <div className="space-y-3">
                 {active.map(r => (
-                  <div key={r.id} className="bg-white border border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-sm shrink-0">
-                        {r.desk?.code ?? '?'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-zinc-800">{r.desk?.name ?? 'Biurko'}</p>
-                        <p className="text-xs text-zinc-400 mt-0.5">
-                          {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(locale, { weekday: 'short', day: '2-digit', month: '2-digit' })}
-                          {' '}·{' '}
-                          {new Date(r.startTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                          –
-                          {new Date(r.endTime).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <StatusBadge status={r.status} />
-                    </div>
-                    <button
-                      onClick={() => cancel(r.id)}
-                      disabled={cancelling === r.id}
-                      className="text-xs px-3 py-2 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40 sm:ml-auto w-full sm:w-auto text-center">
-                      {cancelling === r.id ? '…' : t('reservations.cancel')}
-                    </button>
-                  </div>
+                  <ReservationCard key={r.id} r={r} locale={locale} onCancel={cancel} cancelling={cancelling} />
                 ))}
               </div>
             </div>
           )}
           {inactive.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.history')}</h2>
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.history')}</h2>
               <div className="space-y-2">
                 {inactive.map(r => (
                   <div key={r.id} className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center gap-3 opacity-70">
                     <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-xs shrink-0">
-                      {r.desk?.code ?? '?'}
+                      {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-600">{r.desk?.name ?? 'Biurko'}</p>
+                      <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? 'Biurko'}</p>
                       <p className="text-xs text-zinc-400">
-                        {new Date(r.date.slice(0,10) + 'T12:00:00').toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' })}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />

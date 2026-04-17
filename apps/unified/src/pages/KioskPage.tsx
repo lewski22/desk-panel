@@ -1,0 +1,246 @@
+/**
+ * KioskPage — Sprint H3
+ * Route: /kiosk?location=<id>&pin=<4cyfry>
+ * Fullscreen widok zajętości biurek — dla tabletu przy wejściu do biura
+ * Auto-refresh co 30s, wyjście przez PIN
+ */
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useTranslation }  from 'react-i18next';
+import { appApi }           from '../api/client';
+
+// ── Kolory statusu ────────────────────────────────────────────
+const S_FREE     = '#10b981';
+const S_RESERVED = '#0ea5e9';
+const S_OCCUPIED = '#6366f1';
+const S_OFFLINE  = '#a1a1aa';
+
+function deskColor(d: any) {
+  if (!d.isOnline || d.status !== 'ACTIVE') return S_OFFLINE;
+  if (d.isOccupied)            return S_OCCUPIED;
+  if (d.currentReservation)   return S_RESERVED;
+  return S_FREE;
+}
+
+// ── PIN exit modal ────────────────────────────────────────────
+function PinModal({ correctPin, onClose, onSuccess }: {
+  correctPin: string; onClose: () => void; onSuccess: () => void;
+}) {
+  const { t }      = useTranslation();
+  const [pin, setPin] = useState('');
+  const [err, setErr] = useState(false);
+
+  const handleDigit = (d: string) => {
+    const next = (pin + d).slice(0, 4);
+    setPin(next); setErr(false);
+    if (next.length === 4) {
+      if (next === correctPin) { onSuccess(); }
+      else { setErr(true); setTimeout(() => setPin(''), 600); }
+    }
+  };
+  const del = () => setPin(p => p.slice(0, -1));
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      onClick={onClose}>
+      <div className="bg-zinc-900 rounded-3xl p-8 w-72 shadow-2xl border border-zinc-700"
+        onClick={e => e.stopPropagation()}>
+        <p className="text-center text-white font-bold text-lg mb-1">{t('kiosk.exit_title')}</p>
+        <p className="text-center text-zinc-400 text-sm mb-6">{t('kiosk.exit_hint')}</p>
+
+        {/* PIN dots */}
+        <div className="flex justify-center gap-3 mb-6">
+          {[0,1,2,3].map(i => (
+            <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${
+              i < pin.length
+                ? (err ? 'bg-red-500 border-red-500' : 'bg-[#B53578] border-[#B53578]')
+                : 'border-zinc-600'
+            }`} />
+          ))}
+        </div>
+
+        {/* Numpad */}
+        <div className="grid grid-cols-3 gap-3">
+          {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, i) => (
+            d === '' ? <div key={i} /> :
+            <button key={d} onClick={() => d === '⌫' ? del() : handleDigit(d)}
+              className={`h-14 rounded-2xl text-xl font-bold transition-colors ${
+                d === '⌫'
+                  ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
+                  : 'bg-zinc-800 text-white hover:bg-zinc-700 active:bg-zinc-600'
+              }`}>
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Desk tile — duże, touch-friendly ─────────────────────────
+function DeskTile({ desk }: { desk: any }) {
+  const color = deskColor(desk);
+  const label = desk.isOccupied ? 'Zajęte' : desk.currentReservation ? 'Zarezerwowane' : 'Wolne';
+  return (
+    <div className="rounded-2xl flex flex-col items-center justify-center gap-2 p-4 min-h-[100px]"
+      style={{ background: color + '22', border: `2px solid ${color}40` }}>
+      <div className="w-4 h-4 rounded-full" style={{ background: color }} />
+      <p className="font-bold text-white text-sm text-center leading-tight">{desk.name}</p>
+      <p className="text-xs text-white/60">{label}</p>
+    </div>
+  );
+}
+
+// ── Legend ────────────────────────────────────────────────────
+function Legend() {
+  const items = [
+    { color: S_FREE,     label: 'Wolne' },
+    { color: S_RESERVED, label: 'Zarezerwowane' },
+    { color: S_OCCUPIED, label: 'Zajęte' },
+    { color: S_OFFLINE,  label: 'Offline' },
+  ];
+  return (
+    <div className="flex gap-6 justify-center mt-6">
+      {items.map(({ color, label }) => (
+        <span key={label} className="flex items-center gap-2 text-sm text-white/50">
+          <span className="w-3 h-3 rounded-full" style={{ background: color }} />
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────
+export function KioskPage() {
+  const { t }              = useTranslation();
+  const [params]           = useSearchParams();
+  const locationId          = params.get('location') ?? '';
+  const pinParam            = params.get('pin') ?? '0000';
+
+  const [desks,     setDesks]     = useState<any[]>([]);
+  const [location,  setLocation]  = useState<any>(null);
+  const [loading,   setLoading]   = useState(true);
+  const [lastUpdate,setLastUpdate]= useState(new Date());
+  const [pinOpen,   setPinOpen]   = useState(false);
+  const [exiting,   setExiting]   = useState(false);
+
+  const load = useCallback(async () => {
+    if (!locationId) return;
+    try {
+      const res = await appApi.desks.status(locationId);
+      setDesks(res?.desks ?? res ?? []);
+      setLastUpdate(new Date());
+    } catch {}
+    setLoading(false);
+  }, [locationId]);
+
+  useEffect(() => {
+    // Załaduj dane lokalizacji
+    appApi.locations.listAll()
+      .then(locs => setLocation(locs.find((l: any) => l.id === locationId) ?? null))
+      .catch(() => {});
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  // Fullscreen request
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+    return () => { document.exitFullscreen?.().catch(() => {}); };
+  }, []);
+
+  const grouped = useMemo(() => {
+    const zones = new Map<string, any[]>();
+    for (const d of desks) {
+      const z = d.zone ?? 'Biurka';
+      if (!zones.has(z)) zones.set(z, []);
+      zones.get(z)!.push(d);
+    }
+    return zones;
+  }, [desks]);
+
+  const stats = useMemo(() => ({
+    free:     desks.filter(d => d.isOnline && !d.isOccupied && !d.currentReservation).length,
+    occupied: desks.filter(d => d.isOccupied).length,
+    total:    desks.filter(d => d.status === 'ACTIVE').length,
+  }), [desks]);
+
+  const handlePinSuccess = () => {
+    setExiting(true);
+    document.exitFullscreen?.().catch(() => {});
+    window.history.back();
+  };
+
+  if (loading) return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white select-none overflow-auto">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur px-6 py-4 border-b border-zinc-800
+        flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-[#B53578] font-black text-2xl">R</span>
+          <div>
+            <p className="font-bold text-lg leading-none">{location?.name ?? 'Biuro'}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {t('kiosk.last_update')}: {lastUpdate.toLocaleTimeString()}
+            </p>
+          </div>
+        </div>
+
+        {/* KPI row */}
+        <div className="flex gap-4 text-center">
+          <div>
+            <p className="text-2xl font-bold text-emerald-400">{stats.free}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Wolne</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-indigo-400">{stats.occupied}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Zajęte</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-zinc-400">{stats.total}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Łącznie</p>
+          </div>
+        </div>
+
+        {/* Exit button */}
+        <button onClick={() => setPinOpen(true)}
+          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-2
+            border border-zinc-800 rounded-xl hover:border-zinc-600">
+          {t('kiosk.exit_btn')}
+        </button>
+      </div>
+
+      {/* Desk grid */}
+      <div className="px-6 py-6">
+        {Array.from(grouped.entries()).map(([zone, zDesks]) => (
+          <div key={zone} className="mb-8">
+            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+              {zDesks.map(d => <DeskTile key={d.id} desk={d} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Legend />
+
+      {/* PIN exit modal */}
+      {pinOpen && !exiting && (
+        <PinModal
+          correctPin={pinParam}
+          onClose={() => setPinOpen(false)}
+          onSuccess={handlePinSuccess}
+        />
+      )}
+    </div>
+  );
+}
