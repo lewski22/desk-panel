@@ -75,12 +75,29 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Owner Panel — plan i metadane klienta
-  plan           String    @default("starter")  // starter | pro | enterprise
-  planExpiresAt  DateTime?
-  trialEndsAt    DateTime?
+  plan           String    @default("starter")  // starter | pro | enterprise | trial
+  planExpiresAt  DateTime?                       // null = bezterminowy (Enterprise legacy)
+  trialEndsAt    DateTime?                       // null = nie trial
   notes          String?   @db.Text
   contactEmail   String?
   createdBy      String?
+
+  // Limity zasobów (null = nieograniczony — Enterprise)
+  // Miękkie: przekroczenie ostrzega, nie blokuje
+  limitDesks     Int?      // null = ∞
+  limitUsers     Int?      // null = ∞
+  limitGateways  Int?      // null = ∞
+  limitLocations Int?      // null = ∞
+
+  // Billing (wypełniane ręcznie przez Ownera)
+  billingEmail   String?
+  mrr            Int?      // Monthly Recurring Revenue w groszach PLN
+  nextInvoiceAt  DateTime?
+
+  // Moduły aktywne dla organizacji (Owner konfiguruje)
+  // Możliwe wartości: 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW'
+  // Pusta tablica = wszystkie moduły aktywne (backward compat)
+  enabledModules String[]  @default([])
 
   // M365 / Entra ID SSO (opcjonalne — per firma)
   azureTenantId  String?          // Tenant ID z Entra ID firmy-klienta
@@ -88,6 +105,7 @@ model Organization {
 
   locations              Location[]
   users                  User[]
+  subscriptionEvents     SubscriptionEvent[]
   events                 Event[]
   notificationSettings   NotificationSetting[]
   smtpConfig             OrganizationSmtpConfig?
@@ -109,11 +127,26 @@ model Location {
   closeTime      String   @default("17:00")
   maxDaysAhead   Int      @default(14)   // Max N dni do przodu przy rezerwacji
   maxHoursPerDay Int      @default(8)    // Max długość jednej rezerwacji w godzinach
+
+  // ── Kiosk mode (Sprint H3) ──────────────────────────────
+  kioskPin       String?               // 4-cyfrowy PIN do wyjścia z kiosk mode
+
+  // ── Kiosk mode (Sprint H3) ───────────────────────────────
+  kioskPin       String?               // 4-cyfrowy PIN do wyjścia z kiosk mode
+
+  // ── Floor Plan Editor (Sprint D) ─────────────────────────
+  floorPlanUrl   String?               // URL lub base64 obrazu tła (PNG/SVG)
+  floorPlanW     Int?                  // szerokość canvas w px
+  floorPlanH     Int?                  // wysokość canvas w px
+  gridSize       Int?     @default(40) // px na jednostkę siatki
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id])
   desks        Desk[]
+  resources    Resource[]
+  visitors     Visitor[]
   gateways     Gateway[]
   users        User[]            @relation("LocationUsers")
   setupTokens  GatewaySetupToken[]
@@ -130,6 +163,14 @@ model Desk {
   zone       String?
   status     DeskStatus @default(ACTIVE)
   qrToken    String     @unique @default(cuid())
+
+  // ── Floor Plan Editor (Sprint D) ─────────────────────────
+  posX       Float?                    // 0–100 — % szerokości canvas
+  posY       Float?                    // 0–100 — % wysokości canvas
+  rotation   Int?       @default(0)   // 0 / 90 / 180 / 270 stopni
+  width      Float?     @default(2)   // szerokość tokenu (j. siatki)
+  height     Float?     @default(1)   // wysokość tokenu (j. siatki)
+
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 
@@ -239,6 +280,8 @@ model User {
   refreshTokens RefreshToken[]
   events              Event[]             @relation("ActorEvents")
   inAppNotifications  InAppNotification[]
+  bookings            Booking[]
+  pushSubscriptions   PushSubscription[]
 }
 
 // ─── Refresh Tokens ──────────────────────────────────────────
@@ -267,6 +310,9 @@ model Reservation {
   notes     String?
   checkedInAt  DateTime?      // kiedy nastąpił check-in (NFC lub QR)
   checkedInMethod String?     // NFC | QR | MANUAL
+  // ── Cykliczne rezerwacje (Sprint G1) ────────────────────────
+  recurrenceRule    String?   // iCal RRULE np. 'FREQ=WEEKLY;BYDAY=MO;COUNT=4'
+  recurrenceGroupId String?   // łączy instancje tej samej serii
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 
@@ -408,6 +454,11 @@ enum InAppNotifType {
   RESERVATION_CHECKIN_MISSED    // Brak check-in → biurko zwolnione
   SYSTEM_ANNOUNCEMENT           // Ogłoszenie od Ownera do firm
   GATEWAY_KEY_ROTATION_FAILED   // Rotacja klucza gateway nieudana — klucz niespójny
+  // Sprint B — Subskrypcje
+  SUBSCRIPTION_EXPIRING         // Plan wygasa za < 14 dni
+  SUBSCRIPTION_EXPIRED          // Plan wygasł
+  TRIAL_EXPIRING                // Trial wygasa za < 7 dni
+  LIMIT_WARNING                 // Utilization > 80% (zasoby)
 }
 
 // Reguły powiadomień — Owner decyduje kto widzi co
@@ -445,3 +496,114 @@ model InAppNotification {
   @@index([organizationId, type, createdAt])
 }
 
+// ─── Resources (Sale / Parking / Equipment) — Sprint E2 ─────
+
+enum ResourceType {
+  ROOM
+  PARKING
+  EQUIPMENT
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Resource {
+  id           String       @id @default(cuid())
+  locationId   String
+  type         ResourceType @default(ROOM)
+  name         String
+  code         String
+  description  String?
+  // Sala konferencyjna
+  capacity     Int?
+  amenities    String[]     @default([])  // ["TV", "whiteboard", "videoconf"]
+  // Parking
+  vehicleType  String?                    // "car" | "moto" | "bike"
+  // Wspólne
+  floor        String?
+  zone         String?
+  // Pozycja na floor plan (współna z Desk)
+  posX         Float?
+  posY         Float?
+  rotation     Int?         @default(0)
+  status       String       @default("ACTIVE")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  location Location  @relation(fields: [locationId], references: [id])
+  bookings Booking[]
+
+  @@unique([locationId, code])
+}
+
+model Booking {
+  id         String        @id @default(cuid())
+  resourceId String
+  userId     String
+  date       DateTime      @db.Date
+  startTime  DateTime
+  endTime    DateTime
+  status     BookingStatus @default(CONFIRMED)
+  notes      String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+// ─── PWA Push Subscriptions — Sprint G2 ──────────────────────
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ─── Visitor Management — Sprint J ───────────────────────────
+
+model Visitor {
+  id           String   @id @default(cuid())
+  locationId   String
+  hostUserId   String
+  firstName    String
+  lastName     String
+  email        String
+  company      String?
+  visitDate    DateTime
+  purpose      String?
+  status       String   @default("INVITED")  // INVITED|CHECKED_IN|CHECKED_OUT|CANCELLED
+  qrToken      String   @unique @default(cuid())
+  checkedInAt  DateTime?
+  checkedOutAt DateTime?
+  badgePrinted Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id])
+  host     User     @relation("HostedVisitors", fields: [hostUserId], references: [id])
+}
+
+// ─── Subscription Events — Sprint B ──────────────────────────
+
+model SubscriptionEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // plan_changed | renewed | expired | trial_started | limit_exceeded
+  previousPlan   String?
+  newPlan        String?
+  changedBy      String?  // userId OWNERa
+  note           String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
