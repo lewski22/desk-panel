@@ -280,6 +280,7 @@ model User {
   inAppNotifications  InAppNotification[]
   bookings            Booking[]
   pushSubscriptions   PushSubscription[]
+  hostedVisitors      Visitor[]           @relation("HostedVisitors")
 }
 
 // ─── Refresh Tokens ──────────────────────────────────────────
