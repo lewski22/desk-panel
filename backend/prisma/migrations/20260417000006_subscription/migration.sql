@@ -2,6 +2,8 @@
 -- Dodaje pola billing/limitów do Organization i tabelę SubscriptionEvent
 
 -- Nowe pola Organization — limity i billing
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 ALTER TABLE "Organization"
   ADD COLUMN IF NOT EXISTS "limitDesks"     INTEGER,
   ADD COLUMN IF NOT EXISTS "limitUsers"     INTEGER,

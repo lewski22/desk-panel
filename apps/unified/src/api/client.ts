@@ -163,6 +163,7 @@ export const appApi = {
     list:      (orgId: string)              => req<any[]>(`/organizations/${orgId}/locations`),
     create:    (_orgId: string, d: any)     => req<any>('/locations', { method: 'POST', body: JSON.stringify(d) }),
     update:    (id: string, d: any)         => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    attendance:(locId: string, week: string) => req<any>(`/locations/${locId}/attendance?week=${encodeURIComponent(week)}`),
     occupancy: (locId: string)              => req<any>(`/locations/${locId}/analytics/occupancy`),
     issues:    (locId: string)              => req<any>(`/locations/${locId}/issues`),
         floorPlan: {
