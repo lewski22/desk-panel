@@ -1,6 +1,6 @@
 -- Migration: visitor_management (Sprint J)
 
-CREATE TABLE "Visitor" (
+CREATE TABLE IF NOT EXISTS "Visitor" (
   "id"           TEXT         NOT NULL DEFAULT gen_random_uuid(),
   "locationId"   TEXT         NOT NULL,
   "hostUserId"   TEXT         NOT NULL,

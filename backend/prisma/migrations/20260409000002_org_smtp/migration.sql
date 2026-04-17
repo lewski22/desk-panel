@@ -1,7 +1,7 @@
 -- Migration: org_smtp
 -- Adds per-organization SMTP configuration table
 
-CREATE TABLE "OrganizationSmtpConfig" (
+CREATE TABLE IF NOT EXISTS "OrganizationSmtpConfig" (
   "id"             TEXT NOT NULL DEFAULT gen_random_uuid(),
   "organizationId" TEXT NOT NULL,
   "host"           TEXT NOT NULL,

@@ -1,5 +1,6 @@
 -- Migration: inapp_notifications
 
+DO $$ BEGIN
 CREATE TYPE "InAppNotifType" AS ENUM (
   'GATEWAY_OFFLINE',
   'GATEWAY_BACK_ONLINE',
@@ -9,9 +10,11 @@ CREATE TYPE "InAppNotifType" AS ENUM (
   'RESERVATION_CHECKIN_MISSED',
   'SYSTEM_ANNOUNCEMENT'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
 -- Reguły — Owner konfiguruje kto widzi co
-CREATE TABLE "NotificationRule" (
+CREATE TABLE IF NOT EXISTS "NotificationRule" (
   "id"          TEXT      NOT NULL DEFAULT gen_random_uuid(),
   "type"        "InAppNotifType" NOT NULL,
   "targetRoles" TEXT[]    NOT NULL DEFAULT ARRAY[]::TEXT[],
@@ -30,10 +33,11 @@ INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled") VALUES
   ('FIRMWARE_UPDATE',          ARRAY['SUPER_ADMIN'],                true),
   ('GATEWAY_RESET_NEEDED',     ARRAY['SUPER_ADMIN'],                true),
   ('RESERVATION_CHECKIN_MISSED', ARRAY['OFFICE_ADMIN','STAFF'],     false),
-  ('SYSTEM_ANNOUNCEMENT',      ARRAY['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], true);
+  ('SYSTEM_ANNOUNCEMENT',      ARRAY['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], true)
+ON CONFLICT DO NOTHING;
 
 -- Instancje powiadomień per user
-CREATE TABLE "InAppNotification" (
+CREATE TABLE IF NOT EXISTS "InAppNotification" (
   "id"             TEXT      NOT NULL DEFAULT gen_random_uuid(),
   "userId"         TEXT      NOT NULL,
   "organizationId" TEXT,

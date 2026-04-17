@@ -1,10 +1,16 @@
 -- Migration: resources_bookings (Sprint E2)
 -- Sale konferencyjne, parkingi, equipment — nowy model Resource + Booking
 
+DO $$ BEGIN
 CREATE TYPE "ResourceType"  AS ENUM ('ROOM', 'PARKING', 'EQUIPMENT');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
+DO $$ BEGIN
 CREATE TYPE "BookingStatus" AS ENUM ('CONFIRMED', 'CANCELLED', 'COMPLETED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
-CREATE TABLE "Resource" (
+CREATE TABLE IF NOT EXISTS "Resource" (
   "id"          TEXT         NOT NULL DEFAULT gen_random_uuid(),
   "locationId"  TEXT         NOT NULL,
   "type"        "ResourceType" NOT NULL DEFAULT 'ROOM',
@@ -28,7 +34,7 @@ CREATE TABLE "Resource" (
     FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE "Booking" (
+CREATE TABLE IF NOT EXISTS "Booking" (
   "id"         TEXT            NOT NULL DEFAULT gen_random_uuid(),
   "resourceId" TEXT            NOT NULL,
   "userId"     TEXT            NOT NULL,

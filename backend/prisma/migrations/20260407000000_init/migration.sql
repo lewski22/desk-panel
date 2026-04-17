@@ -5,6 +5,7 @@
 
 -- ─── Enums ──────────────────────────────────────────────────
 
+DO $$ BEGIN
 CREATE TYPE "UserRole" AS ENUM (
   'OWNER',
   'SUPER_ADMIN',
@@ -12,13 +13,19 @@ CREATE TYPE "UserRole" AS ENUM (
   'STAFF',
   'END_USER'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
+DO $$ BEGIN
 CREATE TYPE "DeskStatus" AS ENUM (
   'ACTIVE',
   'INACTIVE',
   'MAINTENANCE'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
+DO $$ BEGIN
 CREATE TYPE "ReservationStatus" AS ENUM (
   'PENDING',
   'CONFIRMED',
@@ -26,13 +33,19 @@ CREATE TYPE "ReservationStatus" AS ENUM (
   'EXPIRED',
   'COMPLETED'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
+DO $$ BEGIN
 CREATE TYPE "CheckinMethod" AS ENUM (
   'NFC',
   'QR',
   'MANUAL'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
+DO $$ BEGIN
 CREATE TYPE "EventType" AS ENUM (
   'DESK_CREATED',
   'DESK_UPDATED',
@@ -54,10 +67,12 @@ CREATE TYPE "EventType" AS ENUM (
   'USER_UPDATED',
   'OWNER_IMPERSONATION'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
 -- ─── Organization ────────────────────────────────────────────
 
-CREATE TABLE "Organization" (
+CREATE TABLE IF NOT EXISTS "Organization" (
   "id"              TEXT NOT NULL,
   "name"            TEXT NOT NULL,
   "slug"            TEXT NOT NULL,
@@ -79,7 +94,7 @@ CREATE UNIQUE INDEX "Organization_slug_key" ON "Organization"("slug");
 
 -- ─── Location ────────────────────────────────────────────────
 
-CREATE TABLE "Location" (
+CREATE TABLE IF NOT EXISTS "Location" (
   "id"             TEXT NOT NULL,
   "organizationId" TEXT NOT NULL,
   "name"           TEXT NOT NULL,
@@ -96,7 +111,7 @@ CREATE TABLE "Location" (
 
 -- ─── Gateway ─────────────────────────────────────────────────
 
-CREATE TABLE "Gateway" (
+CREATE TABLE IF NOT EXISTS "Gateway" (
   "id"          TEXT NOT NULL,
   "locationId"  TEXT NOT NULL,
   "name"        TEXT NOT NULL,
@@ -112,7 +127,7 @@ CREATE TABLE "Gateway" (
 
 -- ─── GatewaySetupToken ───────────────────────────────────────
 
-CREATE TABLE "GatewaySetupToken" (
+CREATE TABLE IF NOT EXISTS "GatewaySetupToken" (
   "id"         TEXT NOT NULL,
   "token"      TEXT NOT NULL,
   "locationId" TEXT NOT NULL,
@@ -129,7 +144,7 @@ CREATE INDEX "GatewaySetupToken_locationId_idx" ON "GatewaySetupToken"("location
 
 -- ─── Desk ────────────────────────────────────────────────────
 
-CREATE TABLE "Desk" (
+CREATE TABLE IF NOT EXISTS "Desk" (
   "id"         TEXT NOT NULL,
   "locationId" TEXT NOT NULL,
   "name"       TEXT NOT NULL,
@@ -148,7 +163,7 @@ CREATE UNIQUE INDEX "Desk_locationId_code_key" ON "Desk"("locationId", "code");
 
 -- ─── Device ──────────────────────────────────────────────────
 
-CREATE TABLE "Device" (
+CREATE TABLE IF NOT EXISTS "Device" (
   "id"               TEXT NOT NULL,
   "deskId"           TEXT,
   "gatewayId"        TEXT,
@@ -170,7 +185,7 @@ CREATE UNIQUE INDEX "Device_mqttUsername_key" ON "Device"("mqttUsername");
 
 -- ─── User ────────────────────────────────────────────────────
 
-CREATE TABLE "User" (
+CREATE TABLE IF NOT EXISTS "User" (
   "id"                  TEXT NOT NULL,
   "organizationId"      TEXT,
   "email"               TEXT NOT NULL,
@@ -196,7 +211,7 @@ CREATE UNIQUE INDEX "User_azureObjectId_key" ON "User"("azureObjectId");
 
 -- ─── User ↔ Location (many-to-many) ─────────────────────────
 
-CREATE TABLE "_LocationUsers" (
+CREATE TABLE IF NOT EXISTS "_LocationUsers" (
   "A" TEXT NOT NULL,
   "B" TEXT NOT NULL
 );
@@ -206,7 +221,7 @@ CREATE INDEX "_LocationUsers_B_index"          ON "_LocationUsers"("B");
 
 -- ─── RefreshToken ─────────────────────────────────────────────
 
-CREATE TABLE "RefreshToken" (
+CREATE TABLE IF NOT EXISTS "RefreshToken" (
   "id"        TEXT NOT NULL,
   "userId"    TEXT NOT NULL,
   "token"     TEXT NOT NULL,
@@ -219,7 +234,7 @@ CREATE UNIQUE INDEX "RefreshToken_token_key" ON "RefreshToken"("token");
 
 -- ─── Reservation ─────────────────────────────────────────────
 
-CREATE TABLE "Reservation" (
+CREATE TABLE IF NOT EXISTS "Reservation" (
   "id"               TEXT NOT NULL,
   "deskId"           TEXT NOT NULL,
   "userId"           TEXT NOT NULL,
@@ -240,7 +255,7 @@ CREATE UNIQUE INDEX "Reservation_qrToken_key" ON "Reservation"("qrToken");
 
 -- ─── Checkin ─────────────────────────────────────────────────
 
-CREATE TABLE "Checkin" (
+CREATE TABLE IF NOT EXISTS "Checkin" (
   "id"            TEXT NOT NULL,
   "reservationId" TEXT,
   "deskId"        TEXT NOT NULL,
@@ -257,7 +272,7 @@ CREATE UNIQUE INDEX "Checkin_reservationId_key" ON "Checkin"("reservationId");
 
 -- ─── Event ───────────────────────────────────────────────────
 
-CREATE TABLE "Event" (
+CREATE TABLE IF NOT EXISTS "Event" (
   "id"             TEXT NOT NULL,
   "organizationId" TEXT,
   "type"           "EventType" NOT NULL,

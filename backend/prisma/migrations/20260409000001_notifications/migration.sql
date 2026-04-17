@@ -1,6 +1,7 @@
 -- Migration: notifications
 -- Adds NotificationType enum, NotificationSetting and NotificationLog tables
 
+DO $$ BEGIN
 CREATE TYPE "NotificationType" AS ENUM (
   'FIRMWARE_UPDATE_AVAILABLE',
   'GATEWAY_OFFLINE',
@@ -11,8 +12,10 @@ CREATE TYPE "NotificationType" AS ENUM (
   'CHECKIN_MISSED',
   'DAILY_REPORT'
 );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;;
 
-CREATE TABLE "NotificationSetting" (
+CREATE TABLE IF NOT EXISTS "NotificationSetting" (
   "id"             TEXT NOT NULL DEFAULT gen_random_uuid(),
   "organizationId" TEXT NOT NULL,
   "type"           "NotificationType" NOT NULL,
@@ -27,7 +30,7 @@ CREATE TABLE "NotificationSetting" (
     FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE
 );
 
-CREATE TABLE "NotificationLog" (
+CREATE TABLE IF NOT EXISTS "NotificationLog" (
   "id"             TEXT NOT NULL DEFAULT gen_random_uuid(),
   "organizationId" TEXT,
   "type"           "NotificationType" NOT NULL,

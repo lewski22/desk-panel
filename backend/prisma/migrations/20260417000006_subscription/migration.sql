@@ -1,9 +1,13 @@
 -- Migration: subscription (Sprint B)
 -- Dodaje pola billing/limitów do Organization i tabelę SubscriptionEvent
+--
+-- UWAGA: ALTER TYPE ADD VALUE musi być poza transakcją.
+-- Prisma 5.x respektuje komentarz "This migration requires no transaction."
+-- który wyłącza automatyczne BEGIN/COMMIT wokół całej migracji.
+
+-- This migration requires no transaction.
 
 -- Nowe pola Organization — limity i billing
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 ALTER TABLE "Organization"
   ADD COLUMN IF NOT EXISTS "limitDesks"     INTEGER,
   ADD COLUMN IF NOT EXISTS "limitUsers"     INTEGER,
@@ -31,14 +35,13 @@ CREATE TABLE IF NOT EXISTS "SubscriptionEvent" (
 CREATE INDEX IF NOT EXISTS "SubscriptionEvent_organizationId_createdAt_idx"
   ON "SubscriptionEvent"("organizationId", "createdAt" DESC);
 
--- Nowe wartości InAppNotifType dla powiadomień subskrypcji
--- Używamy DO block żeby uniknąć błędu gdy wartość już istnieje
-DO $$ BEGIN ALTER TYPE "InAppNotifType" ADD VALUE 'SUBSCRIPTION_EXPIRING'; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TYPE "InAppNotifType" ADD VALUE 'SUBSCRIPTION_EXPIRED';  EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TYPE "InAppNotifType" ADD VALUE 'TRIAL_EXPIRING';        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TYPE "InAppNotifType" ADD VALUE 'LIMIT_WARNING';         EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Nowe wartości InAppNotifType — poza transakcją (dzięki "no transaction" wyżej)
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
 
--- Domyślne reguły dla nowych typów powiadomień
+-- Domyślne reguły powiadomień
 INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled")
 VALUES
   ('SUBSCRIPTION_EXPIRING', ARRAY['SUPER_ADMIN'], true),
