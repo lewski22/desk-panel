@@ -56,7 +56,7 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
       {resource.type === 'PARKING' && resource.vehicleType && (
         <div className="text-xs text-zinc-600 flex items-center gap-1.5">
           <span>{resource.vehicleType === 'car' ? '🚗' : resource.vehicleType === 'moto' ? '🏍' : '🚲'}</span>
-          <span>{t(`resource.vehicle.${resource.vehicleType}`, resource.vehicleType)}</span>
+          <span>{String(t(`resource.vehicle.${resource.vehicleType}`))}</span>
         </div>
       )}
 

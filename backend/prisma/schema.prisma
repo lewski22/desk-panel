@@ -131,9 +131,6 @@ model Location {
   // ── Kiosk mode (Sprint H3) ──────────────────────────────
   kioskPin       String?               // 4-cyfrowy PIN do wyjścia z kiosk mode
 
-  // ── Kiosk mode (Sprint H3) ───────────────────────────────
-  kioskPin       String?               // 4-cyfrowy PIN do wyjścia z kiosk mode
-
   // ── Floor Plan Editor (Sprint D) ─────────────────────────
   floorPlanUrl   String?               // URL lub base64 obrazu tła (PNG/SVG)
   floorPlanW     Int?                  // szerokość canvas w px
@@ -282,6 +279,7 @@ model User {
   inAppNotifications  InAppNotification[]
   bookings            Booking[]
   pushSubscriptions   PushSubscription[]
+  hostedVisitors      Visitor[]           @relation("HostedVisitors")
 }
 
 // ─── Refresh Tokens ──────────────────────────────────────────

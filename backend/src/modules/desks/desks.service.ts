@@ -144,6 +144,11 @@ export class DesksService {
           where: { checkedOutAt: null },
           take: 1,
           orderBy: { checkedInAt: 'desc' },
+                  select: {
+            userId: true,
+            checkedInAt: true,
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
         },
         reservations: {
           where: {

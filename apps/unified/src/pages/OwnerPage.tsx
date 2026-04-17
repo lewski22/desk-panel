@@ -228,7 +228,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
 
 
 // ─── Modal edycji planu subskrypcji (Owner) ──────────────────
-function SubPlanModal({ org, onClose }: { org: any; onClose: () => void }) {
+function LegacySubPlanModal({ org, onClose }: { org: any; onClose: () => void }) {
   const [plan,          setPlan]          = useState(org.plan ?? 'starter');
   const [planExpiresAt, setPlanExpiresAt] = useState(org.planExpiresAt ? org.planExpiresAt.slice(0,10) : '');
   const [mrr,           setMrr]           = useState(String(org.mrr ? (org.mrr / 100).toFixed(0) : ''));
@@ -687,9 +687,7 @@ export function OwnerPage() {
             </tbody>
           </table>
         )}
-      </div>
-
-      {activeTab === 'orgs' && null /* closing brace handled below */}
+      </div>}
 
       {/* Zakładka Subskrypcje */}
       {activeTab === 'sub' && (
@@ -702,10 +700,9 @@ export function OwnerPage() {
 
       {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} onCreated={load} />}
       {editOrg    && <EditOrgModal org={editOrg} onClose={() => setEditOrg(null)} onSaved={load} />}
-      </> /* end activeTab === orgs */}
 
       {/* Modal edycji planu subskrypcji */}
-      {subModal && <SubPlanModal org={subModal} onClose={() => { setSubModal(null); load(); }} />}
+      {subEditOrg && <SubPlanModal org={subEditOrg} onClose={() => setSubEditOrg(null)} onSaved={load} />}
     </div>
   );
 }
