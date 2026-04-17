@@ -687,9 +687,7 @@ export function OwnerPage() {
             </tbody>
           </table>
         )}
-      </div>
-
-      {activeTab === 'orgs' && null /* closing brace handled below */}
+      </div>}
 
       {/* Zakładka Subskrypcje */}
       {activeTab === 'sub' && (
@@ -702,7 +700,6 @@ export function OwnerPage() {
 
       {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} onCreated={load} />}
       {editOrg    && <EditOrgModal org={editOrg} onClose={() => setEditOrg(null)} onSaved={load} />}
-      </> /* end activeTab === orgs */}
 
       {/* Modal edycji planu subskrypcji */}
       {subModal && <SubPlanModal org={subModal} onClose={() => { setSubModal(null); load(); }} />}
