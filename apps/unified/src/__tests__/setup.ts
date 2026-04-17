@@ -2,7 +2,6 @@
  * Vitest global setup — Sprint I1
  */
 import '@testing-library/jest-dom';
-import { createElement } from 'react';
 import { vi } from 'vitest';
 
 // Mock react-i18next — zwraca klucz jako tłumaczenie (bez plików locale)
@@ -30,7 +29,7 @@ vi.mock('react-router-dom', async () => {
     useParams:       () => ({}),
     NavLink: ({ to, children, className }: any) => {
       const cls = typeof className === 'function' ? className({ isActive: false }) : className;
-      return createElement('a', { href: to, className: cls }, children);
+      return <a href={to} className={cls}>{children}</a>;
     },
   };
 });

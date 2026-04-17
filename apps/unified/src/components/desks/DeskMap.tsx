@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { DeskMapItem, LocationLimits } from '../../types/index';
 import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
-import { RecurringToggle, type RecurrenceConfig } from '../reservations/RecurringToggle';
 
 interface Props {
   desks: DeskMapItem[];

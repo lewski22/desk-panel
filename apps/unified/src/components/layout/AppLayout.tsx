@@ -7,10 +7,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from '../LanguageSwitcher';
-import { appApi } from '../../api/client';
-import { useOrgModules, type AppModule } from '../../hooks';
-import { BottomNav } from './BottomNav';
+import { LanguageSwitcher } from '../LanguageSwitcher';
 import { NotificationBell } from './NotificationBell';
 
 interface User { id: string; email: string; role: string; organizationId?: string; firstName?: string; lastName?: string; }
@@ -294,7 +291,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       {/* Bottom Nav — tylko mobile (md:hidden) */}
       <div className="md:hidden">
-        <BottomNav userRole={user.role} />
+        <BottomNav user={user} onLogout={doLogout} />
       </div>
 
       {/* Bottom nav — mobile only */}

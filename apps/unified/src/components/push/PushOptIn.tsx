@@ -41,7 +41,7 @@ export function PushOptIn({ compact = false, onSuccess }: Props) {
     try {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') { setState('denied'); return; }
-      const { publicKey } = await appApi.push.getVapidKey();
+      const { publicKey } = await appApi.push.vapidKey();
       if (!publicKey) throw new Error('VAPID key not configured');
       const sub  = await registerPushSubscription(publicKey);
       const json = sub.toJSON();
