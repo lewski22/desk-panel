@@ -186,38 +186,12 @@ CREATE INDEX IF NOT EXISTS "SubscriptionEvent_organizationId_createdAt_idx"
   ON "SubscriptionEvent"("organizationId", "createdAt" DESC);
 
 -- ─── Sprint B: Nowe typy InAppNotifType ──────────────────────
--- CREATE TYPE with all values first, then INSERT default rules
+-- ALTER TYPE ADD VALUE wymaga braku transakcji (stąd no-transaction wyżej)
 
-DO $$ BEGIN
-  CREATE TYPE "InAppNotifType" AS ENUM (
-    'GATEWAY_OFFLINE',
-    'GATEWAY_BACK_ONLINE',
-    'BEACON_OFFLINE',
-    'FIRMWARE_UPDATE',
-    'GATEWAY_RESET_NEEDED',
-    'RESERVATION_CHECKIN_MISSED',
-    'SYSTEM_ANNOUNCEMENT',
-    'GATEWAY_KEY_ROTATION_FAILED',
-    'SUBSCRIPTION_EXPIRING',
-    'SUBSCRIPTION_EXPIRED',
-    'TRIAL_EXPIRING',
-    'LIMIT_WARNING'
-  );
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
--- ─── Sprint B: NotificationRule table ─────────────────────────
-
-CREATE TABLE IF NOT EXISTS "NotificationRule" (
-  "id"          TEXT           NOT NULL DEFAULT gen_random_uuid(),
-  "type"        "InAppNotifType" NOT NULL UNIQUE,
-  "targetRoles" TEXT[]         NOT NULL DEFAULT ARRAY[]::TEXT[],
-  "enabled"     BOOLEAN        NOT NULL DEFAULT true,
-  "createdAt"   TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"   TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "NotificationRule_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "NotificationRule_type_key" UNIQUE ("type")
-);
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
 
 -- Domyślne reguły powiadomień
 INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled")
