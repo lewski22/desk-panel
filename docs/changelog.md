@@ -1,138 +1,141 @@
-# Changelog — Reserti Desk Management System
+# Changelog — Reserti Desk Management
 
-Format: `[wersja] — data — opis`
+## [0.12.0] — 2026-04-17 — Sprinty A–B + naprawa Prisma
+
+### Sprinty zrealizowane
+
+**Sprint A — UI Quick Wins** (`67cbef9`)
+- Dashboard: KPI cards z trendem ↑↓%, Quick Actions strip, Today's Issues widget
+- Mapa biurek: Location Tabs z live occupancy (kolor <70%/70-89%/≥90%), avatary inicjały
+- Tabele: sortowanie URL state (`useSortable`), bulk cancel rezerwacji, OTA progress bar
+- Nawigacja: sidebar z grupami (WORKSPACE/ZARZĄDZANIE/ANALITYKA/KONFIGURACJA/OPERATOR)
+- Nowe komponenty: `EmptyState`, `TrendBadge`, `SortHeader`
+
+**Sprint D — Floor Plan Editor** (`6276f47`)
+- Schema: `Desk.posX/posY/rotation/width/height`, `Location.floorPlanUrl/W/H/gridSize`
+- Backend: `PATCH /desks/batch-positions`, `GET|POST /locations/:id/floor-plan`
+- Frontend: `useFloorPlanEditor` (reducer: MOVE/ROTATE/UNDO/REDO), `DeskToken` (drag+touch),
+  `FloorPlanCanvas`, `FloorPlanToolbar`, `FloorPlanEditor`, `FloorPlanEditorPage`
+- Widok: `DeskPin` + `FloorPlanView` (readonly, DeskInfoCard popup), toggle Plan/Karty
+
+**Sprint E — Weekly View + Sale/Parking** (`b2ff6c0`)
+- Backend: `getAttendance(locationId, week)` — ISO week, Checkin + Reservation aggregate
+- Frontend: `WeeklyViewPage` — siatka 5×N, nawigator tygodnia, KPI, search
+- Schema: `Resource` + `Booking` (ROOM/PARKING/EQUIPMENT, conflict detection co 30 min)
+- Frontend: `ResourceCard`, `BookingModal` (slot picker), `ResourcesPage` (admin CRUD)
+- DeskMapPage: zakładki `[🪑 Biurka] [🏛 Sale] [🅿️ Parking]`
+
+**Owner: Module Management** (`d275d18`)
+- Schema: `Organization.enabledModules String[]` ([] = wszystkie aktywne)
+- Backend: `PATCH /owner/organizations/:id/modules`, whitelist walidacja
+- Frontend: `EditOrgModal` z 5 toggle switches (DESKS/ROOMS/PARKING/FLOOR_PLAN/WEEKLY_VIEW)
+- Guards: DeskMapPage tabs, AppLayout nav, ResourcesPage redirect
+- Hook: `useOrgModules()` — `isEnabled(AppModule)`
+- `login()` zwraca `enabledModules` w odpowiedzi
+
+**Sprint G — Recurring + PWA Push** (`467c053`)
+- Schema: `Reservation.recurrenceRule/recurrenceGroupId`, `PushSubscription`
+- Backend: `createRecurring()` z RRULE parserem (bez bibliotek), `cancelRecurring(scope)`
+- Frontend: `RecurringToggle` — preset buttons + custom builder + preview dat
+- Backend: `PushService` (dynamic import web-push, graceful fallback), `PushController`
+- Frontend: `PushOptIn` (compact + card mode, Web Push API)
+
+**Sprint H — Mobile UX** (`467c053`)
+- `BottomNav.tsx` — 4 przyciski mobile, badge aktywnych rezerwacji, safe-area-inset
+- `KioskPage.tsx` — `/kiosk?location=&pin=`, fullscreen, auto-refresh 30s, NumPad PIN exit
+
+**Sprint H2 — Swipe Gestures** (`ead8e05`)
+- `useSwipe.ts` hook (zero bibliotek), touch events z threshold + drift detection
+- `MyReservationsPage` z swipe-left → reveal Anuluj (iOS Mail pattern), real-time translateX
+
+**Sprint I — Vitest Tests** (`ead8e05`)
+- Konfiguracja: Vitest + @testing-library/react + jsdom + coverage
+- `src/__tests__/setup.ts` — mocki i18n/router/localStorage/appApi
+- 48 testów: ui.test, useFloorPlanEditor.test, useOrgModules.test, useSortable.test, UsageBar.test
+
+**Sprint J — Visitor Management** (`ead8e05`)
+- Schema: `Visitor` (INVITED→CHECKED_IN→CHECKED_OUT, qrToken unique)
+- Backend: `VisitorsService` + 6 endpointów (invite, checkin, checkinByQr, checkout, cancel)
+- Frontend: `VisitorsPage` — KPI row, tabela hover-reveal, `InviteModal`, route `/visitors`
+
+**Sprint B — Subscriptions** (`b2b85f4`)
+- Schema: `Organization` +7 pól billing/limits, `SubscriptionEvent`, InAppNotifType +4 wartości
+- Backend: `SubscriptionsService` — `PLAN_LIMITS` stała, `getStatus()`, `getDashboard()`
+- Crony: `checkExpiringSubscriptions()` (0 8 * * *) + `checkResourceLimits()` (0 */6 * * *)
+- Frontend: `PlanBadge`, `UsageBar` (semantic color), `SubscriptionPage`
+- `ExpiryBanner` w AppLayout — polling co 5min, dismiss localStorage
+- OwnerPage: zakładki `[🏢 Firmy] [💳 Subskrypcje]`, MRR KPI, `SubPlanModal` z historią
+
+### Naprawa migracji Prisma (`a78fa0d`, `b047d02`, `d97b4ad`)
+
+**Problemy zdiagnozowane:**
+- Duplikat folderu `20260417000004` (dwa foldery z tym samym numerem — P3009)
+- `COMMIT; ALTER TYPE; BEGIN;` trick — zostawia migrację w stanie failed przy retry
+- `DO $$ BEGIN ALTER TYPE ... END $$` — nie działa w transakcji PostgreSQL
+- `CREATE TYPE/TABLE` bez `IF NOT EXISTS` — fail przy idempotentnym retry
+
+**Rozwiązanie:**
+- 6 osobnych migracji sprintów zastąpiono jedną: `20260417000001_sprints_schema`
+- `-- This migration requires no transaction.` jako pierwsza linia przy ALTER TYPE
+- Wszystkie `CREATE TYPE` w `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$`
+- Wszystkie `CREATE TABLE` z `IF NOT EXISTS`
+- `ON CONFLICT DO NOTHING` dla lookup table inserts
+- `entrypoint.sh` z auto-resolve failed migrations (UPDATE SET rolled_back_at)
 
 ---
 
 ## [0.11.0] — 2026-04-15 — i18n + PWA + Testy + OTA + Notyfikacje
 
-### Nowe funkcje
-
-**Internacjonalizacja (i18n) — PL/EN**
-- 427 kluczy tłumaczeń (PL i EN, pełna paryteta)
-- `useTranslation()` we wszystkich 28 plikach `.tsx` (100% pokrycie)
-- Dynamiczny locale dla `date-fns` i `toLocaleDateString` (`pl-PL`/`en-GB`)
-- `LanguageSwitcher` komponent w headerze
-- 0 `alert()` w kodzie produkcyjnym — wszystko zamienione na inline error state
-
-**Progressive Web App (PWA)**
-- `vite-plugin-pwa` — manifest, service worker, auto-update
-- Skróty: `/map` (Mapa biurek), `/my-reservations` (Rezerwacje)
-- Workbox: `NetworkFirst` dla `/api/`, `CacheFirst` dla fontów
-- Ikony SVG 192×192 i 512×512 z brandem Reserti
-- Meta tagi iOS (`apple-mobile-web-app-capable`, `viewport-fit=cover`)
-
-**OTA aktualizacje firmware beacon (4 fazy)**
-- GitHub Actions CI — build `.bin` i upload do GitHub Releases przy tagu `v*`
-- `GET /firmware/latest` — pobiera wersję i URL z GitHub Releases API
-- `POST /devices/:id/ota` — wysyła `OTA_UPDATE` przez gateway → beacon, org isolation
-- `POST /devices/ota-all` — bulk OTA dla wszystkich biurek w lokalizacji (5s throttle)
-- `otaStatus` tracking: `null | in_progress | success | failed`
-- `timeoutStaleOta()` cron — failuje OTA >10 min bez potwierdzenia
-- `OtaBadge` komponent — pulsujące wskaźniki statusu w ProvisioningPage
-- Firmware ESP32: handler `OTA_UPDATE`, HTTP OTA, żółty LED podczas pobierania
-
-**Powiadomienia email (8 typów)**
-- Per-organizacja konfiguracja SMTP (`OrganizationSmtpConfig`, AES-256-GCM)
-- Fallback na globalny SMTP z env
-- Typy: gateway offline/online, beacon offline, firmware update, check-in missed,
-  rotacja klucza, ogłoszenia systemowe, powiadomienia testowe
-- Deduplikacja (24h cooldown per typ+org)
-- `POST /notifications/settings/test` — test wysyłki
-
-**Powiadomienia in-app (dzwoneczek)**
-- `InAppNotification` model — polling co 15s, badge z liczbą nieprzeczytanych
-- `NotificationBell` komponent — dropdown z listą, markAllRead
-- Reguły per rola (`NotificationRule`) — OWNER konfiguruje kto widzi co
-- `POST /notifications/inapp/announce` — ogłoszenie systemowe do wybranych ról
-- 7 typów eventów: GATEWAY_OFFLINE, GATEWAY_BACK_ONLINE, BEACON_OFFLINE,
-  FIRMWARE_UPDATE, GATEWAY_RESET_NEEDED, RESERVATION_CHECKIN_MISSED, SYSTEM_ANNOUNCEMENT
-
-**Testy jednostkowe i integracyjne (178 testów)**
-- P1 — Backend service specs (64 testy): reservations.service, checkins.service, devices.service
-- P2 — Gateway Python (63 testy): test_cache, test_command_handler, test_handle_status, test_provisioning
-- P3 — Kontrolery + auth (51 testów): auth.service, reservations.controller, devices.controller
-
-### Fixes
-
-- `getQrToken()` — walidacja właściciela rezerwacji
-- `autoCheckout()` — stale walkin > 12h automatyczny checkout
-- `DeskCard` — `getDeskConfig(desk, t)` z przekazaniem `t` jako argument
-- `TableEmpty` helper component z `t('table.empty')`
-- `GatewaySection` — `gwErr` state zamiast `alert()` (4 miejsca)
-- `OwnerPage` — `setErr()` zamiast `alert()` w handleImpersonate/Deactivate/Activate
+- i18n PL/EN — 427 kluczy, 100% pokrycie, 0 `alert()` w kodzie produkcyjnym
+- PWA: manifest, service worker (Workbox), ikony SVG, skróty, offline cache
+- Testy: 178 (P1 64 unit + P2 63 gateway + P3 51 integration)
+- OTA firmware: 4 fazy — GitHub Actions CI, status tracking, org isolation, panel trigger
+- Powiadomienia email: 8 typów, SMTP per org AES-256-GCM, deduplikacja
+- Powiadomienia in-app: dzwoneczek, reguły per rola, ogłoszenia OWNER
 
 ---
 
-## [0.10.1] — 2026-04-07 — Code review fixes + security
+## [0.10.1] — 2026-04-07 — Code Review Fixes + Security
 
-### Bugs naprawione
-
-- **#1 NFC check-in LED** — `ledEvents.emit()` zamiast `mqtt.sendLedCommand()` (zły broker)
-- **#2 Checkout bez auth** — `checkout(id, actorId, actorRole)` weryfikacja właściciela
-- **#3 GET /reservations bez @Roles** — `@Roles(STAFF+)` na GET / i GET /:id
-- **#4 Gateway sync bez auth** — `x-gateway-secret` + `x-gateway-provision-key`
-
-### Refaktoryzacja
-
-- Usunięto dead code: `markOffline()`, `getCommandTarget()`, `sendLedCommand()`, `notifyUser()`, `broadcast()`
-- `GatewaysService.addBeaconCredentials()` — ujednolicona metoda
-- `endOfWorkInTz()` — pure TypeScript Intl, bez bibliotek zewnętrznych
-- `SendCommandDto` — `@IsIn(['REBOOT','IDENTIFY','SET_LED'])` walidacja
+- 10+ security fixes: multi-tenant isolation, org guards, MQTT ACL
+- LED event bus: LedEventsService (rxjs Subject, zero circular dep)
+- Auto-assign NFC: 60s listening session dla UNAUTHORIZED_SCAN
+- Limity rezerwacji: maxDaysAhead, maxHoursPerDay per lokalizacja
+- Rotacja kluczy gateway: 15-minutowe okno nakładki (stary + nowy klucz)
+- `prisma migrate deploy` zamiast `db push` (baseline migration `20260407000000_init`)
 
 ---
 
-## [0.10.0] — 2026-04-07 — LED event bus + responsywność mobile
+## [0.10.0] — 2026-04-07 — LED Flow + Mobile
 
-### Naprawione błędy
-
-- LED po QR check-in (LedEventsService rxjs Subject — zero circular dep)
-- Strefa czasowa +2h (localDateStr + localDateTimeISO)
-- Mapa biurek END_USER (getCurrentStatus, filter ACTIVE)
-- Anulowanie rezerwacji → LED FREE + zamknięcie Checkin
-- Beacon FREE→OCCUPIED po restarcie (TTL 1h w NVS queue)
-- Duplikaty w seed (upsert idempotentny)
-
-### Nowe funkcje
-
-- ReservationModal unified (END_USER bez ID + Staff dropdown)
-- Reassign beacon do biurka z panelu
-- Trwałe usuwanie biurka (2-etap: dezaktywuj → usuń trwale)
-- AppLayout: hamburger sidebar drawer mobile
-- Session warning (5min timeout, ostrzeżenie 1min przed)
+- LED event bus: circular dependency fix przez SharedModule @Global
+- QR check-in: timezone fix, walkin + checkin z rezerwacji
+- Mobile: hamburger sidebar drawer, session warning (5min timeout)
+- Date utils: `localDateStr()`, `localDateTimeISO()` (lokalna strefa, nie UTC)
 
 ---
 
 ## [0.9.0] — 2026-04-01 — Unified Panel
 
-- `apps/unified/` — scalenie wszystkich ról w jednej aplikacji
-- MyReservationsPage — aktywne + historyczne rezerwacje
-- ChangePasswordPage (z paskiem siły hasła)
-- DeskMapPage — picker biura z API
-- Owner Panel — impersonacja, stats per org
+- `apps/unified/` — scalenie admin/staff/owner ról w jednej aplikacji
+- MyReservationsPage, ChangePasswordPage, DeskMapPage z location picker
+- Owner Panel: impersonacja, stats per org, health
 
 ---
 
-## [0.8.0] — 2026-03-31 — Gateway Python + provisioning
+## [0.8.0] — 2026-03-31 — Gateway Python + Provisioning
 
-- `desk-gateway-python` — Cache, SyncService, MqttBridge, DeviceMonitor, MqttAdmin
+- `desk-gateway-python`: Cache, SyncService, MqttBridge, DeviceMonitor, MqttAdmin
 - Gateway provisioning: tokeny jednorazowe (24h) + InstallController + bash script
-- Panel: `+ Gateway` → `InstallTokenModal` → komenda curl
 
 ---
 
-## [0.7.0] — 2026-03-15 — Entra ID SSO (M1)
+## [0.7.0] — 2026-03-15 — Entra ID SSO
 
-- Azure JWKS validation (`jwks-rsa` + `jsonwebtoken`)
-- JIT provisioning: nowy user z `azureObjectId` + `passwordHash = 'AZURE_SSO_ONLY'`
-- `AzureConfigModal` — SUPER_ADMIN konfiguruje Tenant ID per org
-- `GET /auth/azure/check` — public endpoint sprawdzający czy org ma SSO (20/min)
+- Azure JWKS validation, JIT provisioning, `AzureConfigModal`
 
 ---
 
 ## [0.6.0] — 2026-03-01 — Owner Panel
 
-- `OwnerModule` — CRUD organizacji, impersonacja (JWT 30min), stats
-- `OwnerHealthService` — globalHealth, orgHealth (stale/offline kryterium 5/10min)
-- `OWNER` enum w UserRole (najwyższy poziom hierarchii)
-- `OWNER_IMPERSONATION` EventType (audit trail)
+- `OwnerModule`: CRUD org, impersonacja (JWT 30min), stats, health
