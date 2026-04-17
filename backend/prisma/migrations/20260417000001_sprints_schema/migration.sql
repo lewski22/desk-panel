@@ -17,39 +17,6 @@
 -- This migration requires no transaction.
 -- (potrzebne dla ALTER TYPE ADD VALUE i ALTER TYPE RENAME)
 
--- ─── Ensure InAppNotifType enum exists (recovered from failed migration) ─
-
-DO $$ BEGIN
-  CREATE TYPE "InAppNotifType" AS ENUM (
-    'GATEWAY_OFFLINE',
-    'GATEWAY_BACK_ONLINE',
-    'BEACON_OFFLINE',
-    'FIRMWARE_UPDATE',
-    'GATEWAY_RESET_NEEDED',
-    'RESERVATION_CHECKIN_MISSED',
-    'SYSTEM_ANNOUNCEMENT',
-    'GATEWAY_KEY_ROTATION_FAILED',
-    'SUBSCRIPTION_EXPIRING',
-    'SUBSCRIPTION_EXPIRED',
-    'TRIAL_EXPIRING',
-    'LIMIT_WARNING'
-  );
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
--- ─── Ensure NotificationRule table exists (recovered from failed migration) ─
-
-CREATE TABLE IF NOT EXISTS "NotificationRule" (
-  "id"          TEXT      NOT NULL DEFAULT gen_random_uuid(),
-  "type"        "InAppNotifType" NOT NULL,
-  "targetRoles" TEXT[]    NOT NULL DEFAULT ARRAY[]::TEXT[],
-  "enabled"     BOOLEAN   NOT NULL DEFAULT true,
-  "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "NotificationRule_pkey"  PRIMARY KEY ("id"),
-  CONSTRAINT "NotificationRule_type_key" UNIQUE ("type")
-);
-
 -- ─── Sprint D: Floor Plan Editor ─────────────────────────────
 
 ALTER TABLE "Desk"
@@ -218,20 +185,19 @@ CREATE TABLE IF NOT EXISTS "SubscriptionEvent" (
 CREATE INDEX IF NOT EXISTS "SubscriptionEvent_organizationId_createdAt_idx"
   ON "SubscriptionEvent"("organizationId", "createdAt" DESC);
 
--- ─── Sprint B: Seed default notification rules ──────────────
+-- ─── Sprint B: Nowe typy InAppNotifType ──────────────────────
+-- ALTER TYPE ADD VALUE wymaga braku transakcji (stąd no-transaction wyżej)
 
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
+ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
+
+-- Domyślne reguły powiadomień
 INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled")
 VALUES
-  ('GATEWAY_OFFLINE',          ARRAY['SUPER_ADMIN','OFFICE_ADMIN'], true),
-  ('GATEWAY_BACK_ONLINE',      ARRAY['SUPER_ADMIN','OFFICE_ADMIN'], true),
-  ('BEACON_OFFLINE',           ARRAY['SUPER_ADMIN','OFFICE_ADMIN'], true),
-  ('FIRMWARE_UPDATE',          ARRAY['SUPER_ADMIN'],                true),
-  ('GATEWAY_RESET_NEEDED',     ARRAY['SUPER_ADMIN'],                true),
-  ('RESERVATION_CHECKIN_MISSED', ARRAY['OFFICE_ADMIN','STAFF'],     false),
-  ('SYSTEM_ANNOUNCEMENT',      ARRAY['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], true),
-  ('GATEWAY_KEY_ROTATION_FAILED', ARRAY['SUPER_ADMIN'], true),
-  ('SUBSCRIPTION_EXPIRING',    ARRAY['SUPER_ADMIN'], true),
-  ('SUBSCRIPTION_EXPIRED',     ARRAY['SUPER_ADMIN'], true),
-  ('TRIAL_EXPIRING',           ARRAY['SUPER_ADMIN'], true),
-  ('LIMIT_WARNING',            ARRAY['SUPER_ADMIN'], true)
+  ('SUBSCRIPTION_EXPIRING', ARRAY['SUPER_ADMIN'], true),
+  ('SUBSCRIPTION_EXPIRED',  ARRAY['SUPER_ADMIN'], true),
+  ('TRIAL_EXPIRING',        ARRAY['SUPER_ADMIN'], true),
+  ('LIMIT_WARNING',         ARRAY['SUPER_ADMIN'], true)
 ON CONFLICT ("type") DO NOTHING;
