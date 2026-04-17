@@ -132,12 +132,13 @@ export class OwnerService {
     return this.prisma.organization.update({
       where: { id },
       data: {
-        ...(dto.plan         !== undefined && { plan:         dto.plan }),
-        ...(dto.isActive     !== undefined && { isActive:     dto.isActive }),
-        ...(dto.notes        !== undefined && { notes:        dto.notes }),
-        ...(dto.contactEmail !== undefined && { contactEmail: dto.contactEmail }),
-        ...(dto.planExpiresAt && { planExpiresAt: new Date(dto.planExpiresAt) }),
-        ...(dto.trialEndsAt  && { trialEndsAt:   new Date(dto.trialEndsAt) }),
+        ...(dto.plan           !== undefined && { plan:           dto.plan }),
+        ...(dto.isActive       !== undefined && { isActive:       dto.isActive }),
+        ...(dto.notes          !== undefined && { notes:          dto.notes }),
+        ...(dto.contactEmail   !== undefined && { contactEmail:   dto.contactEmail }),
+        ...(dto.enabledModules !== undefined && { enabledModules: dto.enabledModules }),
+        ...(dto.planExpiresAt  && { planExpiresAt: new Date(dto.planExpiresAt) }),
+        ...(dto.trialEndsAt    && { trialEndsAt:   new Date(dto.trialEndsAt) }),
       },
     });
   }
@@ -248,11 +249,12 @@ export class OwnerService {
     );
 
     return {
-      id:           org.id,
-      name:         org.name,
-      slug:         org.slug,
-      plan:         org.plan ?? 'starter',
-      isActive:     org.isActive,
+      id:             org.id,
+      name:           org.name,
+      slug:           org.slug,
+      plan:           org.plan ?? 'starter',
+      isActive:       org.isActive,
+      enabledModules: org.enabledModules ?? [],
       contactEmail: org.contactEmail,
       trialEndsAt:  org.trialEndsAt,
       planExpiresAt:org.planExpiresAt,

@@ -75,4 +75,23 @@ export class ReservationsController {
     const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.cancel(id, req.user.id, req.user.role, actorOrgId);
   }
+
+  // ── Sprint G1: Cykliczne rezerwacje ──────────────────────────
+  @Post('recurring')
+  @ApiOperation({ summary: 'Create recurring reservation series (RRULE)' })
+  createRecurring(@Body() body: any, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.createRecurring(req.user.id, body, actorOrgId);
+  }
+
+  @Post(':id/cancel-recurring')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cancel one/following/all instances of a recurring series' })
+  cancelRecurring(
+    @Param('id') id: string,
+    @Body() body:    { scope: 'single' | 'following' | 'all' },
+    @Request() req:  any,
+  ) {
+    return this.svc.cancelRecurring(id, body.scope, req.user.id, req.user.role);
+  }
 }

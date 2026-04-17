@@ -141,4 +141,264 @@ export class LocationsService {
 
     return { weekData, hourly, topDesks, weekTrend, thisWeekCount, lastWeekCount, methods };
   }
+
+  /** Sprint A1 — "Today's Issues" widget na dashboardzie */
+  async getTodayIssues(locationId: string) {
+    const now   = new Date();
+    const ago30 = new Date(now.getTime() - 30  * 60 * 1000);  // 30 min
+    const ago3h = new Date(now.getTime() - 3   * 60 * 60 * 1000);  // 3h
+    const ago10 = new Date(now.getTime() - 10  * 60 * 1000);  // 10 min gateway offline
+
+    const [beaconsOffline, longCheckins, otaFailed, noCheckins] = await Promise.all([
+      // Beacony offline > 30min (isOnline=true ale lastSeen stale)
+      this.prisma.device.findMany({
+        where: {
+          desk: { locationId },
+          isOnline: true,
+          lastSeen: { lt: ago30 },
+        },
+        select: { id: true, hardwareId: true, desk: { select: { id: true, name: true, code: true } } },
+        take: 10,
+      }),
+      // Biurka OCCUPIED > 3h bez check-out
+      this.prisma.checkin.findMany({
+        where: {
+          desk:         { locationId },
+          checkedOutAt: null,
+          checkedInAt:  { lt: ago3h },
+        },
+        select: {
+          id:          true,
+          checkedInAt: true,
+          desk:        { select: { id: true, name: true, code: true } },
+          user:        { select: { firstName: true, lastName: true } },
+        },
+        take: 10,
+      }),
+      // Beacony z failed OTA
+      this.prisma.device.findMany({
+        where: {
+          desk: { locationId },
+          otaStatus: 'failed',
+        },
+        select: { id: true, hardwareId: true, firmwareVersion: true, desk: { select: { id: true, name: true } } },
+        take: 10,
+      }),
+      // Rezerwacje bez check-in > 30min po startTime (tylko dziś)
+      this.prisma.reservation.findMany({
+        where: {
+          desk:      { locationId },
+          status:    'CONFIRMED',
+          startTime: { lt: ago30, gte: new Date(now.setHours(0,0,0,0)) },
+          checkedInAt: null,
+        },
+        select: {
+          id:        true,
+          startTime: true,
+          desk:      { select: { id: true, name: true, code: true } },
+          user:      { select: { firstName: true, lastName: true } },
+        },
+        take: 10,
+      }),
+    ]);
+
+    return {
+      beaconsOffline: beaconsOffline.map(d => ({
+        type:    'BEACON_OFFLINE' as const,
+        id:      d.id,
+        label:   d.desk?.name ?? d.hardwareId,
+        deskId:  d.desk?.id,
+        detail:  d.hardwareId,
+        navTo:   '/provisioning',
+      })),
+      longCheckins: longCheckins.map(c => ({
+        type:    'LONG_CHECKIN' as const,
+        id:      c.id,
+        label:   c.desk?.name ?? '—',
+        deskId:  c.desk?.id,
+        detail:  `${c.user?.firstName ?? ''} ${c.user?.lastName ?? ''}`.trim(),
+        since:   c.checkedInAt,
+        navTo:   '/reservations',
+      })),
+      otaFailed: otaFailed.map(d => ({
+        type:    'OTA_FAILED' as const,
+        id:      d.id,
+        label:   d.desk?.name ?? d.hardwareId,
+        deskId:  d.desk?.id,
+        detail:  d.firmwareVersion ?? '',
+        navTo:   '/provisioning',
+      })),
+      noCheckins: noCheckins.map(r => ({
+        type:    'NO_CHECKIN' as const,
+        id:      r.id,
+        label:   r.desk?.name ?? '—',
+        deskId:  r.desk?.id,
+        detail:  `${r.user?.firstName ?? ''} ${r.user?.lastName ?? ''}`.trim(),
+        since:   r.startTime,
+        navTo:   '/reservations',
+      })),
+      total: beaconsOffline.length + longCheckins.length + otaFailed.length + noCheckins.length,
+    };
+  }
+
+
+  // ── Sprint D: Floor Plan ──────────────────────────────────────
+
+  async getFloorPlan(locationId: string) {
+    const loc = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
+    });
+    if (!loc) throw new Error('Location not found');
+    return loc;
+  }
+
+  async uploadFloorPlan(
+    locationId: string,
+    data: { floorPlanUrl: string; floorPlanW?: number; floorPlanH?: number; gridSize?: number },
+  ) {
+    // Walidacja rozmiaru — base64 PNG/SVG max ~2MB (po enkodowaniu ~2.7MB string)
+    if (data.floorPlanUrl && data.floorPlanUrl.length > 3_000_000) {
+      throw new Error('Plik jest za duży (max 2MB)');
+    }
+    return this.prisma.location.update({
+      where: { id: locationId },
+      data: {
+        floorPlanUrl: data.floorPlanUrl,
+        ...(data.floorPlanW  && { floorPlanW:  data.floorPlanW }),
+        ...(data.floorPlanH  && { floorPlanH:  data.floorPlanH }),
+        ...(data.gridSize    && { gridSize:     data.gridSize }),
+      },
+      select: { id: true, floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
+    });
+  }
+
+  async deleteFloorPlan(locationId: string) {
+    return this.prisma.location.update({
+      where: { id: locationId },
+      data:  { floorPlanUrl: null, floorPlanW: null, floorPlanH: null },
+      select: { id: true },
+    });
+  }
+
+
+  // ── Sprint E1: Weekly attendance — kto kiedy w biurze ────────
+  // Tygodniowe zestawienie obecności per user × dzień
+  // Agreguje z Checkin (faktyczna obecność) i Reservation (planowana)
+  async getAttendance(locationId: string, weekParam: string) {
+    // Parsuj tydzień — format: '2026-W20' lub 'YYYY-Www'
+    const weekMatch = weekParam.match(/^(\d{4})-W(\d{1,2})$/);
+    let monday: Date;
+    if (weekMatch) {
+      const [, year, week] = weekMatch;
+      // ISO week: tygodnie liczone od poniedziałku
+      monday = this._isoWeekToDate(parseInt(year), parseInt(week));
+    } else {
+      // fallback: bieżący tydzień
+      monday = this._currentMonday();
+    }
+
+    // Dni: Pon–Pt (5 dni)
+    const days: Date[] = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+
+    const friday = new Date(monday);
+    friday.setDate(friday.getDate() + 4);
+    friday.setHours(23, 59, 59, 999);
+
+    // Pobierz użytkowników org tej lokalizacji
+    const location = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { organizationId: true },
+    });
+    if (!location) throw new Error('Location not found');
+
+    const [users, checkins, reservations] = await Promise.all([
+      // Aktywni użytkownicy tej org (limit 50 — weekly view UI)
+      this.prisma.user.findMany({
+        where: {
+          organizationId: location.organizationId,
+          isActive:       true,
+          role:           { in: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
+        },
+        select: { id: true, firstName: true, lastName: true, role: true },
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+        take: 50,
+      }),
+      // Check-iny z tego tygodnia w tej lokalizacji
+      this.prisma.checkin.findMany({
+        where: {
+          desk:        { locationId },
+          checkedInAt: { gte: monday, lte: friday },
+        },
+        select: { userId: true, checkedInAt: true, checkedOutAt: true },
+      }),
+      // Rezerwacje z tego tygodnia w tej lokalizacji
+      this.prisma.reservation.findMany({
+        where: {
+          desk:   { locationId },
+          status: { in: ['CONFIRMED','COMPLETED'] },
+          date:   { gte: monday, lte: friday },
+        },
+        select: { userId: true, date: true, status: true },
+      }),
+    ]);
+
+    const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+
+    // Zbuduj mapę userId → date → status
+    const presenceMap = new Map<string, Map<string, string>>();
+
+    for (const c of checkins) {
+      const dateStr = toDateStr(c.checkedInAt);
+      if (!presenceMap.has(c.userId)) presenceMap.set(c.userId, new Map());
+      presenceMap.get(c.userId)!.set(dateStr, 'office');
+    }
+    for (const r of reservations) {
+      const dateStr = toDateStr(new Date(r.date));
+      if (!presenceMap.has(r.userId)) presenceMap.set(r.userId, new Map());
+      if (!presenceMap.get(r.userId)!.has(dateStr)) {
+        presenceMap.get(r.userId)!.set(dateStr, 'reserved');
+      }
+    }
+
+    const rows = users.map(u => ({
+      user:    { id: u.id, firstName: u.firstName ?? '', lastName: u.lastName ?? '', role: u.role },
+      days:    days.map(d => ({
+        date:   toDateStr(d),
+        status: presenceMap.get(u.id)?.get(toDateStr(d)) ?? 'unknown',
+      })),
+    }));
+
+    return {
+      week:  weekParam,
+      monday: toDateStr(monday),
+      days:   days.map(d => ({ date: toDateStr(d), label: d.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' }) })),
+      rows,
+    };
+  }
+
+  private _currentMonday(): Date {
+    const d   = new Date();
+    const day = d.getDay(); // 0=Sun, 1=Mon…
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  private _isoWeekToDate(year: number, week: number): Date {
+    // Jan 4 is always in week 1
+    const jan4 = new Date(year, 0, 4);
+    const startOfW1 = new Date(jan4);
+    startOfW1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
+    const target = new Date(startOfW1);
+    target.setDate(startOfW1.getDate() + (week - 1) * 7);
+    target.setHours(0, 0, 0, 0);
+    return target;
+  }
+
 }

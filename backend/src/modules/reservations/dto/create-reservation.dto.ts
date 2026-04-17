@@ -25,6 +25,16 @@ export class CreateReservationDto {
   @ApiPropertyOptional({ description: 'Admin/Staff only — create reservation on behalf of this user' })
   @IsOptional() @IsString()
   targetUserId?: string;
+
+  /** Sprint G1: iCal RRULE dla cyklicznych rezerwacji
+   *  Przykłady:
+   *    'FREQ=WEEKLY;BYDAY=MO;COUNT=4'    → co poniedziałek, 4 razy
+   *    'FREQ=DAILY;COUNT=5'              → 5 kolejnych dni
+   *    'FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20261231T000000Z'
+   */
+  @ApiPropertyOptional({ example: 'FREQ=WEEKLY;BYDAY=MO;COUNT=4' })
+  @IsOptional() @IsString()
+  recurrenceRule?: string;
 }
 
 // Wewnętrzne pole — ustawiane przez kontroler z JWT, nie przez klienta

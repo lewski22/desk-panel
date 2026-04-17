@@ -188,6 +188,17 @@ export class DesksService {
         status:     d.status,
         isOnline:   d.device?.isOnline ?? false,
         isOccupied: d.checkins.length > 0,
+        // Floor Plan position (Sprint D)
+        posX:       d.posX     ?? null,
+        posY:       d.posY     ?? null,
+        rotation:   d.rotation ?? 0,
+        width:      d.width    ?? 2,
+        height:     d.height   ?? 1,
+        currentCheckin: d.checkins[0] ? {
+          userId:      d.checkins[0].userId,
+          checkedInAt: d.checkins[0].checkedInAt.toISOString(),
+          user:        d.checkins[0].user,
+        } : null,
         currentReservation: res ? {
           id:        res.id,
           userId:    res.userId,
@@ -307,4 +318,42 @@ export class DesksService {
     const takenIds = new Set(taken.map(r => r.deskId));
     return desks.filter(d => !takenIds.has(d.id));
   }
+
+  // ── Sprint D: Batch update positions na floor plan ────────────
+  // Przyjmuje tablicę { id, posX, posY, rotation, width, height }
+  // Zapisuje wszystkie biurka w jednej transakcji (user klika "Zapisz")
+  async batchUpdatePositions(
+    updates:    { id: string; posX?: number; posY?: number; rotation?: number; width?: number; height?: number }[],
+    actorOrgId?: string,
+  ) {
+    // Walidacja org — każde biurko musi należeć do org aktora
+    if (actorOrgId && updates.length > 0) {
+      const ids   = updates.map(u => u.id);
+      const desks = await this.prisma.desk.findMany({
+        where:   { id: { in: ids } },
+        include: { location: { select: { organizationId: true } } },
+      });
+      const forbidden = desks.find(d => d.location?.organizationId !== actorOrgId);
+      if (forbidden) {
+        throw new Error(`Biurko ${forbidden.id} nie należy do Twojej organizacji`);
+      }
+    }
+
+    // Transakcja — atomic update wszystkich pozycji
+    const ops = updates.map(u =>
+      this.prisma.desk.update({
+        where: { id: u.id },
+        data:  {
+          ...(u.posX     !== undefined && { posX:     u.posX }),
+          ...(u.posY     !== undefined && { posY:     u.posY }),
+          ...(u.rotation !== undefined && { rotation: u.rotation }),
+          ...(u.width    !== undefined && { width:    u.width }),
+          ...(u.height   !== undefined && { height:   u.height }),
+        },
+        select: { id: true, posX: true, posY: true, rotation: true, width: true, height: true },
+      })
+    );
+    return this.prisma.$transaction(ops);
+  }
+
 }

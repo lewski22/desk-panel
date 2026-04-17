@@ -55,6 +55,18 @@ export class OwnerController {
     return this.svc.updateOrganization(id, dto);
   }
 
+  // ── Module management — Sprint E ─────────────────────────────
+  @Patch('organizations/:id/modules')
+  @ApiOperation({ summary: 'Ustaw aktywne moduły dla organizacji (Owner)' })
+  setModules(
+    @Param('id')  id:   string,
+    @Body()       body: { enabledModules: string[] },
+  ) {
+    const VALID = ['DESKS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW'];
+    const modules = (body.enabledModules ?? []).filter((m: string) => VALID.includes(m));
+    return this.svc.updateOrganization(id, { enabledModules: modules });
+  }
+
   @Delete('organizations/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Dezaktywuj firmę (soft delete, isActive=false)' })

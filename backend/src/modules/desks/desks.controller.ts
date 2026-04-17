@@ -44,6 +44,20 @@ export class DesksController {
     return this.desks.findAvailable(locationId, date, startTime, endTime, req.user.organizationId);
   }
 
+  // ── Sprint D: Batch update floor plan positions ─────────────
+  @Patch('desks/batch-positions')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Batch update desk positions on floor plan (Sprint D)' })
+  async batchPositions(
+    @Body() body: { updates: { id: string; posX?: number; posY?: number; rotation?: number; width?: number; height?: number }[] },
+    @Request() req: any,
+  ) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.batchUpdatePositions(body.updates ?? [], actorOrgId);
+  }
+
   @Get('desks/qr/:token')
   @ApiOperation({ summary: 'Desk info by QR token (public)' })
   getByQrToken(@Param('token') token: string) {

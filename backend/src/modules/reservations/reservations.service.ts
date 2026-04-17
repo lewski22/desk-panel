@@ -282,4 +282,283 @@ export class ReservationsService {
       // niestety gateway niedostępny — beacon użyje request_sync przy następnym połączeniu
     }
   }
+
+  // ── Sprint G1: Cykliczne rezerwacje ──────────────────────────
+  /**
+   * Generuje serię rezerwacji z reguły RRULE (uproszczona — daily/weekly/COUNT).
+   * Sprawdza każdą instancję pod kątem konfliktów.
+   * Zwraca: { created[], conflicts[], groupId }
+   */
+  async createRecurring(
+    actorId:  string,
+    dto:      CreateReservationDto & { recurrenceRule: string },
+    actorOrgId?: string,
+  ) {
+    const groupId  = `rg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const dates    = this._expandRule(new Date(dto.startTime), dto.recurrenceRule);
+    const created:   any[]   = [];
+    const conflicts: string[] = [];
+
+    for (const date of dates) {
+      const startTime = new Date(date);
+      const endTime   = new Date(date);
+      // Przenieś godziny z oryginalnego dto
+      const origStart = new Date(dto.startTime);
+      const origEnd   = new Date(dto.endTime);
+      startTime.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
+      endTime.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
+
+      // Sprawdź konflikt
+      const conflict = await this.prisma.reservation.findFirst({
+        where: {
+          deskId: dto.deskId,
+          status: { in: ['CONFIRMED', 'PENDING'] },
+          startTime: { lt: endTime },
+          endTime:   { gt: startTime },
+        },
+      });
+
+      if (conflict) {
+        conflicts.push(date.toISOString().split('T')[0]);
+        continue;
+      }
+
+      const res = await this.prisma.reservation.create({
+        data: {
+          deskId:           dto.deskId,
+          userId:           actorId,
+          date:             startTime,
+          startTime,
+          endTime,
+          notes:            dto.notes,
+          status:           'CONFIRMED',
+          recurrenceRule:   dto.recurrenceRule,
+          recurrenceGroupId: groupId,
+        },
+      });
+      created.push(res);
+    }
+
+    return { groupId, created, conflicts, total: dates.length };
+  }
+
+  /**
+   * Anuluj instancje w grupie:
+   * 'single' — tylko ta; 'following' — ta i następne; 'all' — cała seria
+   */
+  async cancelRecurring(
+    reservationId: string,
+    scope:         'single' | 'following' | 'all',
+    actorId:       string,
+    actorRole:     string,
+  ) {
+    const res = await this.prisma.reservation.findUniqueOrThrow({ where: { id: reservationId } });
+    if (!res.recurrenceGroupId) {
+      // Brak grupy — anuluj jedną
+      return this.cancel(reservationId, actorId, actorRole);
+    }
+
+    let where: any = {};
+    if (scope === 'single') {
+      where = { id: reservationId };
+    } else if (scope === 'following') {
+      where = {
+        recurrenceGroupId: res.recurrenceGroupId,
+        startTime:         { gte: res.startTime },
+        status:            { in: ['CONFIRMED','PENDING'] },
+      };
+    } else {
+      where = {
+        recurrenceGroupId: res.recurrenceGroupId,
+        status:            { in: ['CONFIRMED','PENDING'] },
+      };
+    }
+
+    const { count } = await this.prisma.reservation.updateMany({
+      where,
+      data: { status: 'CANCELLED' },
+    });
+    return { cancelled: count, scope };
+  }
+
+  /** Uproszczony parser RRULE — obsługuje FREQ=DAILY/WEEKLY + COUNT/UNTIL + BYDAY */
+  private _expandRule(startDate: Date, rule: string): Date[] {
+    const parts: Record<string, string> = {};
+    rule.replace(/^RRULE:/, '').split(';').forEach(part => {
+      const [k, v] = part.split('=');
+      parts[k] = v;
+    });
+
+    const freq   = parts['FREQ']  ?? 'WEEKLY';
+    const count  = parts['COUNT'] ? parseInt(parts['COUNT']) : 10;
+    const byday  = parts['BYDAY'] ? parts['BYDAY'].split(',') : null;
+    const until  = parts['UNTIL'] ? new Date(parts['UNTIL']) : null;
+
+    const DAY_MAP: Record<string, number> = { MO:1, TU:2, WE:3, TH:4, FR:5, SA:6, SU:0 };
+    const targetDays = byday ? byday.map(d => DAY_MAP[d] ?? 1) : null;
+
+    const dates: Date[] = [];
+    const cur = new Date(startDate);
+    cur.setHours(0, 0, 0, 0);
+
+    let iterations = 0;
+    const MAX_ITER = 365; // safety cap
+
+    while (dates.length < count && iterations < MAX_ITER) {
+      iterations++;
+      const dayOfWeek = cur.getDay();
+
+      const matches =
+        (freq === 'DAILY') ||
+        (freq === 'WEEKLY' && (!targetDays || targetDays.includes(dayOfWeek)));
+
+      if (matches) {
+        if (until && cur > until) break;
+        dates.push(new Date(cur));
+      }
+
+      cur.setDate(cur.getDate() + (freq === 'DAILY' ? 1 : 1));
+      if (freq === 'WEEKLY' && !targetDays && dates.length < count) {
+        cur.setDate(cur.getDate() + 6); // skok do następnego tygodnia
+      }
+    }
+
+    return dates;
+  }
+
+
+  // ── Sprint G1: Cykliczne rezerwacje ──────────────────────────
+  // Parsuje RRULE, generuje daty i tworzy instancje rezerwacji
+  // Zwraca: { created[], skipped[] } — skipped gdy konflikt lub limit przekroczony
+  async createRecurring(actorId: string, dto: CreateReservationDto, actorOrgId?: string) {
+    if (!dto.recurrenceRule) {
+      // Jeśli brak reguły — utwórz pojedynczą rezerwację
+      const single = await this.create(actorId, dto, actorOrgId);
+      return { created: [single], skipped: [], groupId: null };
+    }
+
+    const dates = this._expandRRule(dto.recurrenceRule, new Date(dto.date));
+    if (dates.length === 0) throw new ConflictException('Reguła RRULE nie generuje żadnych dat');
+    if (dates.length > 60)  throw new ConflictException('Seria może mieć maksymalnie 60 instancji');
+
+    // Wspólne groupId łączące całą serię
+    const groupId = `rg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const created: any[] = [];
+    const skipped: { date: string; reason: string }[] = [];
+
+    for (const date of dates) {
+      const dateStr = date.toISOString().split('T')[0];
+      // Przesuń startTime i endTime na właściwą datę
+      const origStart = new Date(dto.startTime);
+      const origEnd   = new Date(dto.endTime);
+      const diffMs    = origEnd.getTime() - origStart.getTime();
+
+      const newStart = new Date(date);
+      newStart.setHours(origStart.getUTCHours(), origStart.getUTCMinutes(), 0, 0);
+      const newEnd = new Date(newStart.getTime() + diffMs);
+
+      try {
+        const res = await this.create(actorId, {
+          ...dto,
+          date:             dateStr,
+          startTime:        newStart.toISOString(),
+          endTime:          newEnd.toISOString(),
+          recurrenceRule:   dto.recurrenceRule,
+          recurrenceGroupId: groupId,
+        } as any, actorOrgId);
+        created.push(res);
+      } catch (e: any) {
+        skipped.push({ date: dateStr, reason: e.message ?? 'Konflikt' });
+      }
+    }
+
+    if (created.length === 0) {
+      throw new ConflictException('Żadna instancja serii nie mogła zostać zarezerwowana — konflikty we wszystkich terminach');
+    }
+
+    return { created, skipped, groupId, total: dates.length };
+  }
+
+  // Anulowanie całej serii
+  async cancelGroup(groupId: string, actorId: string, actorOrgId?: string) {
+    const reservations = await this.prisma.reservation.findMany({
+      where: {
+        recurrenceGroupId: groupId,
+        status: { in: ['CONFIRMED', 'PENDING'] },
+      },
+    });
+
+    // Walidacja org
+    if (actorOrgId) {
+      const ids = reservations.map(r => r.id);
+      const desks = await this.prisma.desk.findMany({
+        where:   { reservations: { some: { id: { in: ids } } } },
+        include: { location: { select: { organizationId: true } } },
+      });
+      if (desks.some(d => d.location?.organizationId !== actorOrgId)) {
+        throw new ForbiddenException('Brak dostępu do tej serii rezerwacji');
+      }
+    }
+
+    await this.prisma.reservation.updateMany({
+      where: { recurrenceGroupId: groupId, status: { in: ['CONFIRMED', 'PENDING'] } },
+      data:  { status: 'CANCELLED' },
+    });
+
+    return { cancelled: reservations.length, groupId };
+  }
+
+  // ── RRULE parser (minimalny — bez zewnętrznych bibliotek) ─────
+  private _expandRRule(rule: string, startDate: Date, maxOccurrences = 60): Date[] {
+    const params: Record<string, string> = {};
+    rule.split(';').forEach(p => {
+      const [k, v] = p.split('=');
+      if (k && v) params[k.trim().toUpperCase()] = v.trim();
+    });
+
+    const freq   = params['FREQ']  ?? 'WEEKLY';
+    const count  = params['COUNT'] ? parseInt(params['COUNT']) : null;
+    const until  = params['UNTIL'] ? this._parseRRuleDate(params['UNTIL']) : null;
+    const byDay  = params['BYDAY'] ? params['BYDAY'].split(',').map(d => d.trim().toUpperCase()) : null;
+
+    const DAY_MAP: Record<string, number> = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 };
+    const targetDays = byDay ? byDay.map(d => DAY_MAP[d]).filter(n => n !== undefined) : null;
+
+    const dates: Date[] = [];
+    const cursor = new Date(startDate);
+    cursor.setHours(0, 0, 0, 0);
+
+    const maxDate = new Date(); maxDate.setFullYear(maxDate.getFullYear() + 1);
+    let iterations = 0;
+
+    while (dates.length < (count ?? maxOccurrences) && iterations < 500) {
+      iterations++;
+
+      const dayOk = !targetDays || targetDays.includes(cursor.getDay());
+      if (dayOk) {
+        if (until && cursor > until) break;
+        if (cursor > maxDate) break;
+        dates.push(new Date(cursor));
+      }
+
+      // Przesuń cursor
+      if (freq === 'DAILY')   cursor.setDate(cursor.getDate() + 1);
+      else if (freq === 'WEEKLY') cursor.setDate(cursor.getDate() + (targetDays ? 1 : 7));
+      else if (freq === 'MONTHLY') cursor.setMonth(cursor.getMonth() + 1);
+      else break; // nieznana częstotliwość
+    }
+
+    return dates;
+  }
+
+  private _parseRRuleDate(s: string): Date {
+    // Format: YYYYMMDDTHHMMSSZ lub YYYYMMDD
+    const clean = s.replace('Z', '');
+    const y = parseInt(clean.slice(0,4));
+    const m = parseInt(clean.slice(4,6)) - 1;
+    const d = parseInt(clean.slice(6,8));
+    return new Date(Date.UTC(y, m, d));
+  }
+
 }

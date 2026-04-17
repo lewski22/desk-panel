@@ -12,7 +12,11 @@ import { OrganizationsModule }  from './modules/organizations/organizations.modu
 import { LocationsModule }      from './modules/locations/locations.module';
 import { DesksModule }          from './modules/desks/desks.module';
 import { DevicesModule }        from './modules/devices/devices.module';
-import { GatewaysModule }       from './modules/gateways/gateways.module';
+import { GatewaysModule }
+import { ResourcesModule } from './modules/resources/resources.module';
+import { PushModule }       from './modules/push/push.module';
+import { VisitorsModule }       from './modules/visitors/visitors.module';
+import { SubscriptionsModule }  from './modules/subscriptions/subscriptions.module';
 import { ReservationsModule }   from './modules/reservations/reservations.module';
 import { CheckinsModule }       from './modules/checkins/checkins.module';
 import { MqttModule }           from './mqtt/mqtt.module';
@@ -42,6 +46,10 @@ import { InAppNotificationsModule } from './modules/inapp-notifications/inapp-no
     DesksModule,
     DevicesModule,
     GatewaysModule,
+    ResourcesModule,
+    PushModule,
+    VisitorsModule,
+    SubscriptionsModule,
     ReservationsModule,
     CheckinsModule,
     MqttModule,

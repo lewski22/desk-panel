@@ -37,15 +37,27 @@ export class AuthService {
       data: { userId: user.id, token: refreshToken, expiresAt },
     });
 
+    // Pobierz enabledModules z organizacji — frontend używa do guardzenia UI
+    let enabledModules: string[] = [];
+    if (user.organizationId) {
+      const org = await this.prisma.organization.findUnique({
+        where:  { id: user.organizationId },
+        select: { enabledModules: true },
+      });
+      enabledModules = org?.enabledModules ?? [];
+    }
+
     return {
       accessToken,
       refreshToken,
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
+        id:             user.id,
+        email:          user.email,
+        firstName:      user.firstName,
+        lastName:       user.lastName,
+        role:           user.role,
+        organizationId: user.organizationId,
+        enabledModules,
       },
     };
   }

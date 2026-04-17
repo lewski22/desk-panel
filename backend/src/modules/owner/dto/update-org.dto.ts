@@ -1,4 +1,4 @@
-import { IsString, IsBoolean, IsEmail, IsOptional, IsDateString } from 'class-validator';
+import { IsString, IsBoolean, IsEmail, IsOptional, IsDateString, IsArray } from 'class-validator';
 
 export class UpdateOrgDto {
   @IsOptional() @IsString()
@@ -18,4 +18,8 @@ export class UpdateOrgDto {
 
   @IsOptional() @IsEmail()
   contactEmail?: string;
+
+  /** Moduły aktywne dla org. Pusta [] = wszystkie aktywne (backward compat). */
+  @IsOptional() @IsArray()
+  enabledModules?: string[];
 }
