@@ -193,7 +193,10 @@ export class ReservationsService {
       throw new ForbiddenException('Not allowed to cancel this reservation');
     }
 
-    if ([ReservationStatus.CANCELLED, ReservationStatus.COMPLETED].includes(reservation.status)) {
+    if (
+      reservation.status === ReservationStatus.CANCELLED ||
+      reservation.status === ReservationStatus.COMPLETED
+    ) {
       throw new ConflictException('Reservation already closed');
     }
 
