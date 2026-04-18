@@ -24,24 +24,12 @@ async function bootstrap() {
   });
 
   // /install/* serwuje skrypt bash — poza prefixem /api/v1
-app.setGlobalPrefix('api/v1', {
-  exclude: [
-    // Istniejące
-    { path: 'install/{*path}',   method: RequestMethod.GET },
-    { path: 'metrics',           method: RequestMethod.GET },
-    { path: 'health',            method: RequestMethod.GET },
-
-    // Google OAuth2 callback — Google przekierowuje bez /api/v1
-    { path: 'auth/google/callback',  method: RequestMethod.GET },
-
-    // Microsoft Graph OAuth2 — redirect + callback poza prefixem
-    { path: 'auth/graph/redirect',   method: RequestMethod.GET },
-    { path: 'auth/graph/callback',   method: RequestMethod.GET },
-
-    // Microsoft Graph webhook — MUSI być publiczny i poza prefixem
-    // Microsoft wysyła POST bez żadnego tokenu auth
-    { path: 'graph/webhook',         method: RequestMethod.POST },
-  ],
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      { path: 'install/{*path}', method: RequestMethod.GET },
+      { path: 'metrics',      method: RequestMethod.GET },  // Prometheus scraper
+      { path: 'health',       method: RequestMethod.GET },  // health check
+    ],
   });
 
   if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_ENABLED === 'true') {
