@@ -1,184 +1,234 @@
-# Reserti — Paczka wdrożeniowa v0.17.0
-> Sesja: 2026-04-18 | Gałąź docelowa: `main` repozytoria `desk-panel`
+# Reserti — Desk Management System
+
+**SaaS do zarządzania hot-deskami z IoT beaconami** (ESP32 + NFC + LED).
+Pracownicy rezerwują biurka przez panel webowy lub Microsoft Teams.
+Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 
 ---
 
-## Struktura paczki
+## Repozytoria systemu
+
+| Repo | URL | Opis |
+|------|-----|------|
+| `desk-panel` | github.com/lewski22/desk-panel | Backend NestJS + Unified Panel (React) |
+| `desk-gateway-python` | github.com/lewski22/desk-gateway-python | Gateway Python (Raspberry Pi) |
+| `desk-firmware` | github.com/lewski22/desk-firmware | Firmware ESP32 (PlatformIO) |
+
+**Produkcja:**
+- API: `https://api.prohalw2026.ovh/api/v1`
+- App: `https://app.prohalw2026.ovh`
+- Deploy: Coolify na Proxmox LXC + Cloudflare Tunnel
+
+---
+
+## Architektura systemu
 
 ```
-reserti-deploy/
-├── backend/                        NestJS backend
+┌─────────────────────────────────────────────────────────────────┐
+│  CLOUD (Coolify / Proxmox)                                       │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  desk-panel                                               │   │
+│  │  ┌─────────────────────┐  ┌───────────────────────────┐  │   │
+│  │  │ NestJS Backend       │  │ Unified Panel (React)     │  │   │
+│  │  │ Prisma + PostgreSQL  │  │ PWA + i18n PL/EN          │  │   │
+│  │  │ MQTT client         │  │ app.prohalw2026.ovh        │  │   │
+│  │  │ Prometheus /metrics  │  └───────────────────────────┘  │   │
+│  │  └──────────┬──────────┘                                  │   │
+│  └─────────────┼──────────────────────────────────────────────┘  │
+│                │ HTTPS + MQTT (Cloudflare Tunnel)                 │
+└────────────────┼────────────────────────────────────────────────┘
+                 │
+┌────────────────┼────────────────────────────────────────────────┐
+│  SIEĆ LOKALNA BIURA                                              │
+│  ┌─────────────▼────────────────────────────────────────────┐   │
+│  │  Raspberry Pi 3B+ / 4 / Zero 2W                          │   │
+│  │  ┌────────────────────┐  ┌──────────────────────────┐    │   │
+│  │  │ gateway.py (systemd)│  │ Mosquitto (MQTT broker)  │    │   │
+│  │  │ SyncService         │  │ port 1883 + auth + ACL   │    │   │
+│  │  │ Cache (SQLite)      │  └──────────┬───────────────┘    │   │
+│  │  │ DeviceMonitor       │             │ MQTT                │   │
+│  │  │ /metrics :9100      │  ┌──────────▼───────────────┐    │   │
+│  │  └────────────────────┘  │  ESP32 Beacony (per biurko)│   │   │
+│  └───────────────────────────│  WS2812B LED + PN532 NFC   │───┘   │
+│                              └───────────────────────────┘        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Stack technologiczny
+
+| Warstwa | Technologia | Wersja |
+|---------|-------------|--------|
+| Backend | NestJS + Prisma + PostgreSQL | NestJS 10, Prisma 5, PG 15 |
+| Frontend | React + Vite + Tailwind + i18next + vite-plugin-pwa | React 18 |
+| Gateway | Python + paho-mqtt + sqlite3 | Python 3.8+ |
+| Firmware | ESP32 + PlatformIO + ArduinoJson + PN532 | Arduino framework |
+| Infra | Docker + Coolify + Mosquitto + Cloudflare Tunnel | — |
+| Monitoring | Prometheus + Grafana (planowane) | prom-client 14 |
+
+---
+
+## Funkcjonalności
+
+### ✅ Produkcja (v0.11.0)
+
+**Rezerwacje i check-in**
+- Rezerwacja biurek przez panel webowy lub QR kod
+- Check-in NFC (karta przy beaconie), QR (scan QR na biurku), ręczny (STAFF)
+- Walk-in przez QR bez rezerwacji
+- LED beacon: zielony (wolne), niebieski (zarezerwowane), czerwony (zajęte)
+- Auto-wygasanie rezerwacji co 15 min, auto-checkout walkin po 12h
+
+**Multi-tenant i role**
+- 5 ról: OWNER > SUPER_ADMIN > OFFICE_ADMIN > STAFF > END_USER
+- Impersonacja: OWNER wchodzi do panelu klienta (JWT 30min + audit log)
+- SSO Entra ID (Microsoft 365) per organizacja
+
+**IoT — provisioning**
+- Gateway: automatyczna instalacja curl + systemd (jednorazowy token 24h)
+- Beacon: provisioning przez Serial Monitor (PROVISION:{...} JSON)
+- OTA firmware: GitHub Actions CI → GitHub Releases → HTTP OTA na ESP32
+- Reassign beacona do biurka z panelu
+
+**Powiadomienia**
+- Email: 8 typów, per-org SMTP (AES-256-GCM), fallback globalny
+- In-app: dzwoneczek, polling 15s, ogłoszenia systemowe (OWNER)
+
+**Jakość**
+- i18n: 427 kluczy PL + EN, 100% pokrycie UI
+- PWA: instalacja na telefon, offline cache, skróty
+- Testy: 178 testów (backend NestJS + gateway Python)
+- Monitoring: Prometheus metrics (backend + gateway)
+
+### 🚧 Planowane (v0.12.0 — Q2 2026)
+
+**Moduł subskrypcji**
+- SUPER_ADMIN: plan, ważność, utilizacja zasobów (biurka/users/gateways)
+- OWNER: zarządzanie planami klientów, MRR dashboard
+- Powiadomienia: 30/14/7/1 dzień przed wygaśnięciem
+- Szczegóły: `docs/subscription.md`
+
+**Grafana dashboards**
+- Owner: System Health, Fleet Overview
+- Client: Desk Analytics, IoT Health
+
+---
+
+## Struktura repo
+
+```
+desk-panel/
+├── backend/                      NestJS REST API
 │   ├── src/
-│   │   ├── main.ts.patch.ts        ← PATCH: dodaj exclude dla Graph/Google routes
-│   │   ├── app.module.patch.ts     ← PATCH: dodaj GraphSyncModule, IntegrationsModule
-│   │   └── modules/
-│   │       ├── auth/               Azure SSO (backward compat) + Google SSO
-│   │       ├── reports/            Sprint C — CSV/XLSX export
-│   │       ├── recommendations/    Sprint K1 — AI desk scoring
-│   │       ├── insights/           Sprint K2 — utilization patterns + cron
-│   │       ├── integrations/       Sprint F — Slack/Teams/Webhook/Azure/Google
-│   │       │   ├── providers/
-│   │       │   └── types/
-│   │       ├── graph-sync/         M4 — Microsoft Graph Calendar Sync
-│   │       ├── notifications/      Tech Debt: visitor email invite
-│   │       ├── locations/          Tech Debt: Floor Plan CDN (R2/S3)
-│   │       └── visitors/           Tech Debt: visitor service patch
-│   ├── prisma/migrations/          4 nowe migracje SQL
-│   ├── tests/e2e/                  Playwright E2E (auth, reservations, checkin)
-│   ├── playwright.config.ts
-│   └── generate-vapid-keys.js      Tech Debt: web-push VAPID
+│   │   ├── modules/              Moduły domenowe (auth, users, desks, ...)
+│   │   ├── mqtt/                 MQTT service + handlers
+│   │   ├── shared/               LedEventsService (rxjs event bus)
+│   │   ├── metrics/              Prometheus exporter
+│   │   └── database/
+│   │       ├── prisma.service.ts
+│   │       └── seeds/seed.ts
+│   ├── prisma/
+│   │   └── schema.prisma         16 modeli
+│   └── src/modules/
+│       ├── auth/                 JWT + Entra ID SSO
+│       ├── organizations/        Multi-tenant + Azure config
+│       ├── locations/            Biura (godziny, limity rezerwacji)
+│       ├── desks/                CRUD + live status + QR
+│       ├── devices/              Beacony + OTA
+│       ├── gateways/             Gateway setup + heartbeat
+│       ├── reservations/         CRUD + konflikty
+│       ├── checkins/             NFC/QR/manual + LED event
+│       ├── users/                Konta + NFC card
+│       ├── notifications/        Email + in-app
+│       └── owner/                Owner Panel API
 │
 ├── apps/
-│   ├── unified/src/               Staff Panel (React)
-│   │   ├── pages/                 IntegrationsPage, ReportsPage, login patch
-│   │   ├── components/
-│   │   │   ├── integrations/      ProviderCard + 5 formularzy konfiguracji
-│   │   │   ├── insights/          InsightsWidget (K2)
-│   │   │   ├── recommendations/   RecommendationBanner (K1)
-│   │   │   ├── calendar/          CalendarSyncSection + GraphConnectButton
-│   │   │   └── KioskLinkButton.tsx
-│   │   ├── locales/pl/integrations.json
-│   │   ├── locales/en/integrations.json
-│   │   ├── locales/graph-google.i18n.json
-│   │   └── _patches/              api.client.ts patches (połącz ręcznie)
-│   │
-│   └── teams/                     Teams App (nowy katalog)
-│       ├── src/{auth,api,pages,components}
-│       ├── manifest/manifest.json
-│       ├── Dockerfile + nginx.conf
-│       └── package.json
+│   └── unified/                  React Unified Panel (wszystkie role)
+│       ├── src/
+│       │   ├── pages/            18 stron
+│       │   ├── components/       DeskMap, NfcCardModal, NotificationBell, ...
+│       │   ├── locales/          pl/ en/ (427 kluczy każdy)
+│       │   └── api/client.ts     Wszystkie wywołania API
+│       └── public/               favicon.svg, icon-192.svg, icon-512.svg
 │
-├── monitoring/                     Grafana + Prometheus stack
-│   ├── docker-compose.yml
-│   ├── prometheus.yml
-│   └── grafana/{dashboards,provisioning}
+├── docs/
+│   ├── AI_CONTEXT.md             Główny kontekst dla AI (ten plik na start)
+│   ├── AI_BACKEND_CONTEXT.md     Szczegóły backendu
+│   ├── AI_OWNER_CONTEXT.md       Owner Panel + subskrypcje
+│   ├── AI_M365_CONTEXT.md        Microsoft 365 integracja
+│   ├── api.md                    REST API reference
+│   ├── architecture.md           Architektura systemu
+│   ├── roadmap.md                Plan rozwoju
+│   ├── subscription.md           Specyfikacja modułu subskrypcji
+│   ├── changelog.md              Historia wersji
+│   ├── roles.md                  Role i uprawnienia
+│   ├── deployment.md             Wdrożenie produkcyjne
+│   ├── hardware.md               ESP32 + RPi specyfikacja
+│   ├── mqtt.md                   Tematy i protokół MQTT
+│   ├── metrics.md                Prometheus metryki
+│   └── provisioning.md           Provisioning gateway i beaconów
 │
-├── firmware/
-│   ├── time_utils.h               NTP sync (Tech Debt #6)
-│   └── ntp_patch.cpp
-│
-├── .env.example.additions         Nowe zmienne środowiskowe
-└── README.md                      Ten plik
+└── docker-compose.yml            Backend + Mosquitto
 ```
 
 ---
 
-## Kolejność aplikowania (obowiązkowa)
+## Szybki start (development)
 
-### Krok 1 — Migracje Prisma
 ```bash
+# 1. Backend
 cd backend
+cp .env.example .env   # uzupełnij DATABASE_URL, JWT_SECRET, ...
+npm install
+npx prisma db push
+npx prisma db seed
+npm run start:dev      # http://localhost:3000/api/v1
 
-# Skopiuj migracje
-cp prisma/migrations/20260418000001_add_floor_plan_key.sql    prisma/migrations/20260418000001_add_floor_plan_key/migration.sql
-cp prisma/migrations/20260418000002_add_utilization_insight.sql prisma/migrations/20260418000002_add_utilization_insight/migration.sql
-cp prisma/migrations/20260418000003_add_org_integration.sql   prisma/migrations/20260418000003_add_org_integration/migration.sql
-cp prisma/migrations/20260418000004_add_graph_sync.sql        prisma/migrations/20260418000004_add_graph_sync/migration.sql
+# 2. Frontend
+cd apps/unified
+npm install
+npm run dev            # http://localhost:3010
 
-# Dodaj modele do schema.prisma (patrz patche w migration/)
-# Następnie:
-npx prisma migrate deploy
-npx prisma generate
-```
+# 3. Gateway (opcjonalnie)
+cd desk-gateway-python
+pip install paho-mqtt requests
+cp .env.example .env
+python3 gateway.py
 
-### Krok 2 — Backend modules
-Skopiuj katalogi z `backend/src/modules/` do odpowiednich miejsc w repo:
-- `modules/reports/` → nowy moduł
-- `modules/recommendations/` → nowy moduł
-- `modules/insights/` → nowy moduł
-- `modules/integrations/` → nowy moduł (@Global)
-- `modules/graph-sync/` → nowy moduł
-- `modules/auth/` → **podmień** `azure-auth.service.ts` i `auth.module.ts`, **dodaj** `google-auth.service.ts`
-
-### Krok 3 — main.ts + app.module.ts
-Zastosuj patche z `backend/src/`:
-- `main.ts.patch.ts` — dodaj 4 trasy do exclude list
-- `app.module.patch.ts` — dodaj GraphSyncModule, IntegrationsModule
-
-### Krok 4 — Patche serwisów (wklej ręcznie)
-```
-backend/src/modules/reservations.service.patch.ts    → wklej do reservations.service.ts
-backend/src/modules/checkins.service.patch.ts        → wklej do checkins.service.ts
-backend/src/modules/inapp-notifications.service.patch.ts → wklej do inapp-notifications.service.ts
-backend/src/modules/reservations.module.ts           → podmień plik
-backend/src/modules/notifications/notifications.service.patch.ts → wklej do notifications.service.ts
-backend/src/modules/locations/locations.service.patch.ts → wklej do locations.service.ts
-backend/src/modules/visitors/visitors.service.patch.ts → wklej do visitors.service.ts
-```
-
-### Krok 5 — Frontend
-Skopiuj do repo:
-```
-apps/unified/src/pages/IntegrationsPage.tsx
-apps/unified/src/pages/ReportsPage.tsx
-apps/unified/src/components/**
-apps/unified/src/locales/pl/integrations.json  → połącz z istniejącym translation.json
-apps/unified/src/locales/en/integrations.json  → połącz z istniejącym translation.json
-```
-
-Zastosuj `_patches/api.client.*.patch.ts` — wklej metody do `api/client.ts`.
-
-### Krok 6 — Teams App
-```bash
-# Skopiuj cały katalog jako nowy app
-cp -r apps/teams/ <repo>/apps/teams/
-```
-
-Podmień placeholdery w `apps/teams/manifest/manifest.json`:
-- `REPLACE-WITH-GUID` → nowe UUID
-- `REPLACE-WITH-AZURE-CLIENT-ID` → Azure Client ID
-
-### Krok 7 — Monitoring
-```bash
-cp -r monitoring/ <repo>/monitoring/
-```
-Uruchom stack w Coolify jako osobny serwis Docker Compose.
-
-### Krok 8 — Firmware (OTA update)
-Skopiuj `firmware/time_utils.h` do `desk-firmware/src/utils/`.
-Wdróż przez OTA z panelu provisioning.
-
-### Krok 9 — env vars
-Dodaj zmienne z `.env.example.additions` do `.env` backendu:
-```
-INTEGRATION_ENCRYPTION_KEY=<64 hex chars>
-VAPID_PUBLIC_KEY=
-VAPID_PRIVATE_KEY=
-VAPID_SUBJECT=mailto:admin@reserti.pl
+# 4. Testy
+cd backend && npx jest --coverage
+cd desk-gateway-python && python3 -m unittest discover -s tests/ -v
 ```
 
 ---
 
-## Nowe zmienne środowiskowe
+## Konta testowe
 
-| Zmienna | Wymagana | Opis |
-|---------|----------|------|
-| `INTEGRATION_ENCRYPTION_KEY` | ✅ TAK | AES-256-GCM dla integracji (64 hex) |
-| `VAPID_PUBLIC_KEY` | ✅ TAK | Web-push notifications |
-| `VAPID_PRIVATE_KEY` | ✅ TAK | Web-push notifications |
-| `VAPID_SUBJECT` | ✅ TAK | np. `mailto:admin@reserti.pl` |
-| `CORS_ORIGINS` | Aktualizacja | Dodaj `teams.prohalw2026.ovh` |
-
-Generowanie kluczy:
-```bash
-# VAPID
-node backend/generate-vapid-keys.js
-
-# INTEGRATION_ENCRYPTION_KEY
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
+| Email | Hasło | Rola |
+|-------|-------|------|
+| `owner@reserti.pl` | `Owner1234!` | OWNER |
+| `superadmin@reserti.pl` | `Admin1234!` | SUPER_ADMIN |
+| `admin@demo-corp.pl` | `Admin1234!` | OFFICE_ADMIN |
+| `staff@demo-corp.pl` | `Staff1234!` | STAFF |
+| `user@demo-corp.pl` | `User1234!` | END_USER |
 
 ---
 
-## Co jest nowe w tej wersji
+## Dokumentacja
 
-| Sprint | Wersja | Co |
-|--------|--------|----|
-| Tech Debt | v0.12.2 | VAPID, visitor email, Floor Plan CDN, Kiosk link, Playwright E2E, Beacon NTP |
-| Sprint C | v0.12.1 | Grafana dashboards (4 szt.), CSV/XLSX export, ReportsPage |
-| Sprint K | v0.15.1 | AI desk recommendations (K1), Utilization insights (K2) |
-| Sprint F | v0.17.0 | Integration marketplace: Azure, Slack, Google, Teams, Webhooks |
-| Patch 4 | v0.17.0 | IntegrationEventService hookup w reservations/checkins/inapp |
-| Teams App | v0.17.0 | Nowa aplikacja apps/teams/ — rezerwacje z Microsoft Teams |
-| Graph Sync | v0.17.0 | Microsoft Graph Calendar ↔ Outlook synchronizacja (M4) |
-| Google Auth | v0.17.0 | Google Workspace SSO per-org (F3) |
+| Dokument | Zawartość |
+|----------|-----------|
+| `docs/AI_CONTEXT.md` | **Start tutaj** — pełny kontekst dla AI |
+| `docs/AI_BACKEND_CONTEXT.md` | Moduły NestJS, Prisma, wzorce |
+| `docs/AI_OWNER_CONTEXT.md` | Owner Panel, impersonacja, subskrypcje |
+| `docs/subscription.md` | Specyfikacja modułu subskrypcji (v0.12.0) |
+| `docs/api.md` | REST API reference |
+| `docs/roadmap.md` | Plan rozwoju + versioning |
+| `docs/roles.md` | Role i tabela uprawnień |
+| `docs/hardware.md` | ESP32, RPi, NFC, LED specyfikacja |
+| `docs/mqtt.md` | Tematy MQTT i flow komunikacji |
+| `docs/provisioning.md` | Provisioning gateway i beaconów krok po kroku |
+| `docs/metrics.md` | Prometheus metryki (backend + gateway) |
+| `docs/deployment.md` | Wdrożenie na Coolify + Cloudflare Tunnel |
