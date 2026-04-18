@@ -193,6 +193,28 @@ ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
 
+-- Naprawa schema: upewnij się że NotificationRule ma kolumnę type i unikalny constraint
+-- (potrzebne gdy poprzednia wersja migracji częściowo zawiodła i stworzyła tabelę bez tej kolumny)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'NotificationRule'
+      AND column_name = 'type'
+  ) THEN
+    ALTER TABLE "NotificationRule" ADD COLUMN "type" "InAppNotifType";
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = '"NotificationRule"'::regclass
+      AND conname = 'NotificationRule_type_key'
+  ) THEN
+    ALTER TABLE "NotificationRule" ADD CONSTRAINT "NotificationRule_type_key" UNIQUE ("type");
+  END IF;
+END $$;
+
 -- Domyślne reguły powiadomień
 INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled")
 VALUES
