@@ -1,0 +1,137 @@
+{
+  "uid": "reserti-iot-health",
+  "title": "IoT Health",
+  "tags": ["reserti", "client", "iot"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "schemaVersion": 38,
+  "templating": {
+    "list": [
+      {
+        "name": "org_id",
+        "type": "query",
+        "label": "Organization",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(reserti_beacon_rssi_dbm, org_id)",
+        "refresh": 2
+      },
+      {
+        "name": "location_id",
+        "type": "query",
+        "label": "Location",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(reserti_beacon_rssi_dbm{org_id=~\"$org_id\"}, location_id)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Beacon RSSI (dBm) — all devices",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "reserti_beacon_rssi_dbm{org_id=~\"$org_id\", location_id=~\"$location_id\"}",
+          "legendFormat": "{{device_id}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "dBm", "min": -100, "max": 0 } }
+    },
+    {
+      "id": 2,
+      "title": "Beacon last seen (seconds ago)",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "reserti_beacon_last_seen_seconds{org_id=~\"$org_id\", location_id=~\"$location_id\"}",
+          "legendFormat": "{{device_id}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [
+              { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 120 }, { "color": "red", "value": 300 }] } },
+              { "id": "custom.displayMode", "value": "color-background" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "title": "Gateway sync lag",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "gateway_sync_duration_seconds",
+          "legendFormat": "{{gateway_ip}} sync duration"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "title": "Gateway offline queue size",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "gateway_offline_queue_size",
+          "legendFormat": "{{gateway_ip}} queue"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Value" },
+            "properties": [{ "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 10 }, { "color": "red", "value": 50 }] } }]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "title": "Gateway MQTT disconnect events",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "increase(gateway_mqtt_disconnect_total[5m])",
+          "legendFormat": "{{gateway_ip}} disconnects/5m"
+        }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "red", "mode": "fixed" } } }
+    },
+    {
+      "id": 6,
+      "title": "Gateway forward errors",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "increase(gateway_forward_errors_total[5m])",
+          "legendFormat": "{{gateway_ip}} {{type}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "orange", "mode": "fixed" } } }
+    }
+  ]
+}
