@@ -24,6 +24,7 @@ import { OwnerModule }          from './modules/owner/owner.module';
 import { MetricsModule }        from './metrics/metrics.module';
 import { NotificationsModule }  from './modules/notifications/notifications.module';
 import { InAppNotificationsModule } from './modules/inapp-notifications/inapp-notifications.module';
+import { GraphSyncModule } from './modules/graph-sync/graph-sync.module';
 
 @Module({
   imports: [
@@ -57,6 +58,10 @@ import { InAppNotificationsModule } from './modules/inapp-notifications/inapp-no
     MetricsModule,
     NotificationsModule,
     InAppNotificationsModule,
+    IntegrationsModule,
+    RecommendationsModule,
+    InsightsModule,
+    GraphSyncModule,
   ],
   providers: [
     // ThrottlerGuard globalnie — działa na wszystkich endpointach
