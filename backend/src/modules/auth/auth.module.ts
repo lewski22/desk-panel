@@ -12,7 +12,7 @@ import { ConfigService }    from '@nestjs/config';
 import { AuthController }   from './auth.controller';
 import { AuthService }      from './auth.service';
 import { AzureAuthService } from './azure-auth.service';
-import { GoogleAuthService } from './google-auth.service';
+import { GoogleAuthService } from './google-auth.service';   // ← NOWY
 import { JwtStrategy }      from './strategies/jwt.strategy';
 import { LocalStrategy }    from './strategies/local.strategy';
 import { UsersModule }      from '../users/users.module';
@@ -36,14 +36,14 @@ import { DatabaseModule }   from '../../database/db.module';
   providers: [
     AuthService,
     AzureAuthService,
-    GoogleAuthService,
+    GoogleAuthService,    // ← DODAJ
     JwtStrategy,
     LocalStrategy,
   ],
   exports: [
     AuthService,
     AzureAuthService,
-    GoogleAuthService,
+    GoogleAuthService,    // ← DODAJ (jeśli inne moduły potrzebują)
   ],
 })
 export class AuthModule {}
