@@ -1,0 +1,130 @@
+{
+  "uid": "reserti-fleet-overview",
+  "title": "Fleet Overview",
+  "tags": ["reserti", "owner", "iot"],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": { "from": "now-6h", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Organizations — active",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_organizations_total{status='active'})", "legendFormat": "active" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" } } }
+    },
+    {
+      "id": 2,
+      "title": "Gateways — online",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_gateways_total{status='online'})", "legendFormat": "online" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" } } }
+    },
+    {
+      "id": 3,
+      "title": "Gateways — offline",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_gateways_total{status='offline'})", "legendFormat": "offline" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "red", "mode": "fixed" } } }
+    },
+    {
+      "id": 4,
+      "title": "Beacons — online",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_beacons_total{status='online'})", "legendFormat": "online" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "green", "mode": "fixed" } } }
+    },
+    {
+      "id": 5,
+      "title": "Beacons — offline",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_beacons_total{status='offline'})", "legendFormat": "offline" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "red", "mode": "fixed" } } }
+    },
+    {
+      "id": 6,
+      "title": "FW outdated beacons (per org)",
+      "type": "stat",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_beacons_firmware_outdated_total)", "legendFormat": "outdated" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "orange", "mode": "fixed" } } }
+    },
+    {
+      "id": 7,
+      "title": "Gateway online/offline over time",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_gateways_total{status='online'})", "legendFormat": "online" },
+        { "expr": "sum(reserti_gateways_total{status='offline'})", "legendFormat": "offline" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 8,
+      "title": "Beacon status over time",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_beacons_total{status='online'})", "legendFormat": "online" },
+        { "expr": "sum(reserti_beacons_total{status='offline'})", "legendFormat": "offline" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 9,
+      "title": "Gateway last seen — seconds ago (all)",
+      "type": "table",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "reserti_gateway_last_seen_seconds",
+          "legendFormat": "{{gateway_id}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 10,
+      "title": "Provisioning errors (24h) per org",
+      "type": "table",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "reserti_provisioning_errors_24h_total > 0",
+          "legendFormat": "{{org_id}}",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}
