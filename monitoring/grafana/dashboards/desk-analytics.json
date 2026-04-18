@@ -1,0 +1,145 @@
+{
+  "uid": "reserti-desk-analytics",
+  "title": "Desk Analytics",
+  "tags": ["reserti", "client", "desks"],
+  "timezone": "browser",
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "schemaVersion": 38,
+  "templating": {
+    "list": [
+      {
+        "name": "org_id",
+        "type": "query",
+        "label": "Organization",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(reserti_desks_total, org_id)",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": false
+      },
+      {
+        "name": "location_id",
+        "type": "query",
+        "label": "Location",
+        "datasource": { "uid": "prometheus" },
+        "query": "label_values(reserti_desks_total{org_id=~\"$org_id\"}, location_id)",
+        "refresh": 2,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Desks total",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_desks_total{org_id=~\"$org_id\", location_id=~\"$location_id\"})", "legendFormat": "total" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Desks occupied now",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_desks_occupied_now{org_id=~\"$org_id\", location_id=~\"$location_id\"})", "legendFormat": "occupied" }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "orange", "mode": "fixed" } } }
+    },
+    {
+      "id": 3,
+      "title": "Occupancy %",
+      "type": "gauge",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "100 * sum(reserti_desks_occupied_now{org_id=~\"$org_id\", location_id=~\"$location_id\"}) / sum(reserti_desks_total{org_id=~\"$org_id\", location_id=~\"$location_id\"})",
+          "legendFormat": "%"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 4,
+      "title": "Reservations today",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "sum(reserti_reservations_today_total{org_id=~\"$org_id\", location_id=~\"$location_id\"})", "legendFormat": "today" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Check-ins today (by method)",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        { "expr": "increase(reserti_checkins_total{org_id=~\"$org_id\", location_id=~\"$location_id\"}[24h])", "legendFormat": "{{method}}" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Occupancy over time",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 16, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "100 * sum(reserti_desks_occupied_now{org_id=~\"$org_id\", location_id=~\"$location_id\"}) / sum(reserti_desks_total{org_id=~\"$org_id\", location_id=~\"$location_id\"})",
+          "legendFormat": "occupancy %"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } }
+    },
+    {
+      "id": 7,
+      "title": "Check-in method breakdown",
+      "type": "piechart",
+      "gridPos": { "x": 16, "y": 4, "w": 8, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "increase(reserti_checkins_total{org_id=~\"$org_id\", location_id=~\"$location_id\"}[24h])",
+          "legendFormat": "{{method}}"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Desk status breakdown",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(reserti_desks_total{org_id=~\"$org_id\", location_id=~\"$location_id\"}) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Unauthorized NFC scans",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "increase(reserti_unauthorized_scans_total{org_id=~\"$org_id\"}[5m])",
+          "legendFormat": "gateway {{gateway_id}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "color": { "fixedColor": "red", "mode": "fixed" } } }
+    }
+  ]
+}

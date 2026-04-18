@@ -1,0 +1,151 @@
+{
+  "uid": "reserti-system-health",
+  "title": "System Health",
+  "tags": ["reserti", "owner", "system"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "id": 1,
+      "title": "API — Request rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(reserti_http_requests_total[1m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" } }
+      }
+    },
+    {
+      "id": 2,
+      "title": "API — Error rate (5xx)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(reserti_http_errors_total[1m])) by (status_code)",
+          "legendFormat": "HTTP {{status_code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "fixedColor": "red", "mode": "fixed" } }
+      }
+    },
+    {
+      "id": 3,
+      "title": "API — p50 / p95 / p99 latency",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(reserti_http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(reserti_http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(reserti_http_request_duration_seconds_bucket[1m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 4,
+      "title": "DB — Query duration p95 by model",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(reserti_db_query_duration_seconds_bucket[1m])) by (le, model))",
+          "legendFormat": "{{model}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 5,
+      "title": "MQTT — Messages throughput",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(reserti_mqtt_messages_received_total[1m])) by (topic_type)",
+          "legendFormat": "in: {{topic_type}}"
+        },
+        {
+          "expr": "sum(rate(reserti_mqtt_messages_published_total[1m])) by (topic_type)",
+          "legendFormat": "out: {{topic_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "msg/s" }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Node.js — Heap used",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "process_heap_bytes",
+          "legendFormat": "heap used"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Event loop lag",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "rate(nodejs_eventloop_lag_seconds[1m])",
+          "legendFormat": "lag"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 8,
+      "title": "DB errors/min",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "datasource": { "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(reserti_db_errors_total[1m])) by (model, operation)",
+          "legendFormat": "{{model}}.{{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    }
+  ]
+}
