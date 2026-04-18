@@ -1,0 +1,149 @@
+// ── PATCH: apps/unified/src/locales/pl/translation.json ──────────────────────
+// Dodaj klucz "integrations" do głównego obiektu JSON (obok "dashboard", "desk", itp.)
+
+{
+  "integrations": {
+    "page_title": "Integracje",
+    "page_sub": "Połącz Reserti z zewnętrznymi narzędziami używanymi przez Twoją firmę",
+    "connected": "Połączone",
+    "not_configured": "Nieskonfigurowane",
+    "disabled": "Wyłączone",
+    "enabled": "Włączone",
+    "configure": "Skonfiguruj",
+    "edit": "Edytuj",
+    "enable": "Włącz",
+    "disable": "Wyłącz",
+    "remove": "Usuń",
+    "remove_confirm": "Czy na pewno chcesz usunąć tę integrację? Utracisz całą konfigurację.",
+    "test": "Testuj połączenie",
+    "testing": "Testowanie...",
+    "test_ok": "Połączenie OK",
+    "test_fail": "Test nieudany",
+    "save": "Zapisz",
+    "saving": "Zapisywanie...",
+    "saved": "Zapisano",
+    "cancel": "Anuluj",
+    "last_tested": "Ostatni test",
+    "never_tested": "Nie testowano",
+    "has_config": "Konfiguracja zapisana",
+    "no_config": "Brak konfiguracji",
+
+    "providers": {
+      "AZURE_ENTRA": {
+        "name": "Azure Entra ID",
+        "description": "Logowanie SSO przez Microsoft — pracownicy logują się kontem firmowym Microsoft"
+      },
+      "SLACK": {
+        "name": "Slack",
+        "description": "Powiadomienia na kanale Slack — rezerwacje, check-iny, alerty IoT"
+      },
+      "GOOGLE_WORKSPACE": {
+        "name": "Google Workspace",
+        "description": "Logowanie SSO przez Google — pracownicy logują się kontem Google firmowym"
+      },
+      "MICROSOFT_TEAMS": {
+        "name": "Microsoft Teams",
+        "description": "Powiadomienia w kanale Teams — rezerwacje, check-iny, alerty beaconów"
+      },
+      "WEBHOOK_CUSTOM": {
+        "name": "Custom Webhook",
+        "description": "Własne integracje — wysyłaj eventy HTTP do dowolnego systemu"
+      }
+    },
+
+    "azure": {
+      "tenant_id": "Azure Tenant ID",
+      "tenant_id_hint": "Znajdziesz w: Azure Portal → Azure Active Directory → Overview → Tenant ID",
+      "tenant_id_placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "use_custom_app": "Użyj własnej aplikacji Azure (BYOA)",
+      "use_custom_app_hint": "Domyślnie używamy globalnej aplikacji Reserti. Wybierz tę opcję jeśli Twoja firma wymaga własnej App Registration.",
+      "client_id": "Client ID aplikacji",
+      "client_id_placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "client_secret": "Client Secret",
+      "client_secret_placeholder": "Pozostaw puste = bez zmian",
+      "allowed_domains": "Dozwolone domeny emaili",
+      "allowed_domains_hint": "Oddziel przecinkami (np. company.com, subsidiary.com). Puste = brak ograniczeń.",
+      "allowed_domains_placeholder": "company.com, subsidiary.com",
+      "admin_consent_title": "Krok 1: Zgoda administratora Azure",
+      "admin_consent_body": "Administrator Entra ID Twojej firmy musi zaakceptować aplikację Reserti. Otwórz poniższy link jako Global Admin i kliknij Akceptuj.",
+      "admin_consent_btn": "Otwórz stronę zgody (Global Admin)",
+      "tenant_id_title": "Krok 2: Wpisz Tenant ID",
+      "sso_enabled_label": "Włącz logowanie przez Microsoft",
+      "sso_enabled_hint": "Przycisk 'Zaloguj przez Microsoft' pojawi się na stronie logowania"
+    },
+
+    "slack": {
+      "bot_token": "Bot Token",
+      "bot_token_placeholder": "xoxb-...",
+      "bot_token_hint": "Pobierz z: api.slack.com → Twoja aplikacja → OAuth & Permissions → Bot User OAuth Token",
+      "signing_secret": "Signing Secret",
+      "signing_secret_placeholder": "Pozostaw puste = bez zmian",
+      "signing_secret_hint": "Pobierz z: api.slack.com → Basic Information → App Credentials",
+      "default_channel": "Domyślny kanał",
+      "default_channel_placeholder": "#desk-bookings",
+      "default_channel_hint": "Nazwa kanału (z #) lub ID kanału. Bot musi być zaproszony do kanału.",
+      "notify_reservation": "Powiadamiaj o nowych rezerwacjach",
+      "notify_checkin": "Powiadamiaj o check-inach",
+      "notify_beacon": "Powiadamiaj o alertach beaconów",
+      "notify_gateway": "Powiadamiaj o alertach gateway"
+    },
+
+    "google": {
+      "client_id": "Client ID (Google Cloud Console)",
+      "client_id_placeholder": "xxx.apps.googleusercontent.com",
+      "client_secret": "Client Secret",
+      "client_secret_placeholder": "Pozostaw puste = bez zmian",
+      "allowed_domain": "Domena firmy",
+      "allowed_domain_placeholder": "company.com",
+      "allowed_domain_hint": "Tylko konta z tej domeny Google będą mogły się zalogować",
+      "setup_title": "Jak skonfigurować Google OAuth",
+      "setup_step1": "Utwórz projekt w Google Cloud Console (console.cloud.google.com)",
+      "setup_step2": "Włącz Google+ API / Identity API",
+      "setup_step3": "Utwórz OAuth 2.0 Client ID (typ: Web application)",
+      "setup_step4": "Dodaj Authorized redirect URI",
+      "setup_step5": "Skopiuj Client ID i Client Secret"
+    },
+
+    "teams": {
+      "webhook_url": "Incoming Webhook URL",
+      "webhook_url_placeholder": "https://xxx.webhook.office.com/webhookb2/...",
+      "webhook_url_hint": "Pobierz z: Teams → kanał → ⋯ → Connectors → Incoming Webhook → Skonfiguruj",
+      "notify_reservation": "Powiadamiaj o nowych rezerwacjach",
+      "notify_checkin": "Powiadamiaj o check-inach",
+      "notify_beacon": "Powiadamiaj o alertach beaconów",
+      "notify_gateway": "Powiadamiaj o alertach gateway",
+      "setup_title": "Jak dodać Incoming Webhook w Teams",
+      "setup_step1": "Otwórz kanał Teams gdzie chcesz otrzymywać powiadomienia",
+      "setup_step2": "Kliknij ⋯ → Connectors",
+      "setup_step3": "Znajdź 'Incoming Webhook' → Skonfiguruj",
+      "setup_step4": "Nadaj nazwę (np. Reserti) → Utwórz",
+      "setup_step5": "Skopiuj wygenerowany URL i wklej tutaj"
+    },
+
+    "webhook": {
+      "url": "URL endpointu",
+      "url_placeholder": "https://your-system.com/reserti-hook",
+      "secret": "Signing Secret",
+      "secret_placeholder": "Silne hasło lub losowy ciąg znaków",
+      "secret_hint": "Użyj do weryfikacji nagłówka X-Reserti-Signature: sha256=<hmac>",
+      "events": "Subskrybowane eventy",
+      "timeout": "Timeout (ms)",
+      "max_retries": "Maksymalna liczba prób",
+      "headers": "Dodatkowe nagłówki (JSON)",
+      "headers_placeholder": "{\"Authorization\": \"Bearer xxx\"}",
+      "events_options": {
+        "reservation.created": "Rezerwacja — utworzona",
+        "reservation.cancelled": "Rezerwacja — anulowana",
+        "reservation.expired": "Rezerwacja — wygasła",
+        "checkin.nfc": "Check-in — NFC",
+        "checkin.qr": "Check-in — QR",
+        "checkin.manual": "Check-in — ręczny",
+        "checkout": "Checkout",
+        "beacon.offline": "Beacon — offline",
+        "beacon.online": "Beacon — online",
+        "gateway.offline": "Gateway — offline",
+        "gateway.online": "Gateway — online"
+      }
+    }
+  }
+}

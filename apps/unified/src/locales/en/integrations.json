@@ -1,0 +1,148 @@
+// ── PATCH: apps/unified/src/locales/en/translation.json ──────────────────────
+
+{
+  "integrations": {
+    "page_title": "Integrations",
+    "page_sub": "Connect Reserti with external tools used by your organisation",
+    "connected": "Connected",
+    "not_configured": "Not configured",
+    "disabled": "Disabled",
+    "enabled": "Enabled",
+    "configure": "Configure",
+    "edit": "Edit",
+    "enable": "Enable",
+    "disable": "Disable",
+    "remove": "Remove",
+    "remove_confirm": "Are you sure you want to remove this integration? All configuration will be lost.",
+    "test": "Test connection",
+    "testing": "Testing...",
+    "test_ok": "Connection OK",
+    "test_fail": "Test failed",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "last_tested": "Last tested",
+    "never_tested": "Never tested",
+    "has_config": "Configuration saved",
+    "no_config": "No configuration",
+
+    "providers": {
+      "AZURE_ENTRA": {
+        "name": "Azure Entra ID",
+        "description": "Microsoft SSO — employees log in with their corporate Microsoft account"
+      },
+      "SLACK": {
+        "name": "Slack",
+        "description": "Slack channel notifications — reservations, check-ins, IoT alerts"
+      },
+      "GOOGLE_WORKSPACE": {
+        "name": "Google Workspace",
+        "description": "Google SSO — employees log in with their corporate Google account"
+      },
+      "MICROSOFT_TEAMS": {
+        "name": "Microsoft Teams",
+        "description": "Teams channel notifications — reservations, check-ins, beacon alerts"
+      },
+      "WEBHOOK_CUSTOM": {
+        "name": "Custom Webhook",
+        "description": "Custom integrations — send HTTP events to any external system"
+      }
+    },
+
+    "azure": {
+      "tenant_id": "Azure Tenant ID",
+      "tenant_id_hint": "Find it at: Azure Portal → Azure Active Directory → Overview → Tenant ID",
+      "tenant_id_placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "use_custom_app": "Use your own Azure app (BYOA)",
+      "use_custom_app_hint": "By default we use Reserti's global app registration. Choose this if your company requires its own App Registration.",
+      "client_id": "App Client ID",
+      "client_id_placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "client_secret": "Client Secret",
+      "client_secret_placeholder": "Leave blank = keep current",
+      "allowed_domains": "Allowed email domains",
+      "allowed_domains_hint": "Comma-separated (e.g. company.com, subsidiary.com). Empty = no restriction.",
+      "allowed_domains_placeholder": "company.com, subsidiary.com",
+      "admin_consent_title": "Step 1: Azure admin consent",
+      "admin_consent_body": "Your company's Entra ID Global Admin must accept the Reserti app. Open the link below as Global Admin and click Accept.",
+      "admin_consent_btn": "Open consent page (Global Admin)",
+      "tenant_id_title": "Step 2: Enter Tenant ID",
+      "sso_enabled_label": "Enable Microsoft login",
+      "sso_enabled_hint": "'Sign in with Microsoft' button will appear on the login page"
+    },
+
+    "slack": {
+      "bot_token": "Bot Token",
+      "bot_token_placeholder": "xoxb-...",
+      "bot_token_hint": "Get from: api.slack.com → Your app → OAuth & Permissions → Bot User OAuth Token",
+      "signing_secret": "Signing Secret",
+      "signing_secret_placeholder": "Leave blank = keep current",
+      "signing_secret_hint": "Get from: api.slack.com → Basic Information → App Credentials",
+      "default_channel": "Default channel",
+      "default_channel_placeholder": "#desk-bookings",
+      "default_channel_hint": "Channel name (with #) or channel ID. Bot must be invited to the channel.",
+      "notify_reservation": "Notify on new reservations",
+      "notify_checkin": "Notify on check-ins",
+      "notify_beacon": "Notify on beacon alerts",
+      "notify_gateway": "Notify on gateway alerts"
+    },
+
+    "google": {
+      "client_id": "Client ID (Google Cloud Console)",
+      "client_id_placeholder": "xxx.apps.googleusercontent.com",
+      "client_secret": "Client Secret",
+      "client_secret_placeholder": "Leave blank = keep current",
+      "allowed_domain": "Company domain",
+      "allowed_domain_placeholder": "company.com",
+      "allowed_domain_hint": "Only accounts from this Google domain will be able to log in",
+      "setup_title": "How to set up Google OAuth",
+      "setup_step1": "Create a project in Google Cloud Console (console.cloud.google.com)",
+      "setup_step2": "Enable Google+ API / Identity API",
+      "setup_step3": "Create OAuth 2.0 Client ID (type: Web application)",
+      "setup_step4": "Add the Authorized redirect URI",
+      "setup_step5": "Copy Client ID and Client Secret"
+    },
+
+    "teams": {
+      "webhook_url": "Incoming Webhook URL",
+      "webhook_url_placeholder": "https://xxx.webhook.office.com/webhookb2/...",
+      "webhook_url_hint": "Get from: Teams → channel → ⋯ → Connectors → Incoming Webhook → Configure",
+      "notify_reservation": "Notify on new reservations",
+      "notify_checkin": "Notify on check-ins",
+      "notify_beacon": "Notify on beacon alerts",
+      "notify_gateway": "Notify on gateway alerts",
+      "setup_title": "How to add Incoming Webhook in Teams",
+      "setup_step1": "Open the Teams channel where you want to receive notifications",
+      "setup_step2": "Click ⋯ → Connectors",
+      "setup_step3": "Find 'Incoming Webhook' → Configure",
+      "setup_step4": "Give it a name (e.g. Reserti) → Create",
+      "setup_step5": "Copy the generated URL and paste it here"
+    },
+
+    "webhook": {
+      "url": "Endpoint URL",
+      "url_placeholder": "https://your-system.com/reserti-hook",
+      "secret": "Signing Secret",
+      "secret_placeholder": "Strong passphrase or random string",
+      "secret_hint": "Use to verify the X-Reserti-Signature: sha256=<hmac> header",
+      "events": "Subscribed events",
+      "timeout": "Timeout (ms)",
+      "max_retries": "Max retries",
+      "headers": "Additional headers (JSON)",
+      "headers_placeholder": "{\"Authorization\": \"Bearer xxx\"}",
+      "events_options": {
+        "reservation.created": "Reservation — created",
+        "reservation.cancelled": "Reservation — cancelled",
+        "reservation.expired": "Reservation — expired",
+        "checkin.nfc": "Check-in — NFC",
+        "checkin.qr": "Check-in — QR",
+        "checkin.manual": "Check-in — manual",
+        "checkout": "Checkout",
+        "beacon.offline": "Beacon — offline",
+        "beacon.online": "Beacon — online",
+        "gateway.offline": "Gateway — offline",
+        "gateway.online": "Gateway — online"
+      }
+    }
+  }
+}
