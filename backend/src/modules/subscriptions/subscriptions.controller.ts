@@ -2,7 +2,7 @@
  * SubscriptionsController — Sprint B
  */
 import {
-  Controller, Get, Post, Param, Body,
+  Controller, Get, Post, Put, Param, Body,
   UseGuards, Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -60,5 +60,22 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Owner MRR dashboard — all orgs summary' })
   getDashboard() {
     return this.svc.getDashboard();
+  }
+
+  @Get('owner/subscription/plans')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Get all plan templates (Owner)' })
+  getPlanTemplates() {
+    return this.svc.getPlanTemplates();
+  }
+
+  @Put('owner/subscription/plans/:plan')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Update plan template globally (Owner)' })
+  updatePlanTemplate(
+    @Param('plan') plan: string,
+    @Body()        body: any,
+  ) {
+    return this.svc.updatePlanTemplate(plan, body);
   }
 }

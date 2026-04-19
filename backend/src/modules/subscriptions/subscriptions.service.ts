@@ -8,7 +8,7 @@ import { PrismaService }         from '../../database/prisma.service';
 import { InAppNotificationsService } from '../inapp-notifications/inapp-notifications.service';
 import { NotificationsService }      from '../notifications/notifications.service';
 
-// ── Definicja planów — limity i funkcje ──────────────────────
+// ── Definicja planów — limity i funkcje (hardcoded defaults) ─
 export const PLAN_LIMITS: Record<string, {
   desks: number | null; users: number | null;
   gateways: number | null; locations: number | null;
@@ -21,6 +21,13 @@ export const PLAN_LIMITS: Record<string, {
   enterprise: { desks: null, users: null, gateways: null, locations: null, ota: true, sso: true, smtp: true, api: true, label: 'Enterprise', color: 'yellow' },
 };
 
+const PLAN_COLORS: Record<string, string> = {
+  starter: 'zinc', trial: 'amber', pro: 'indigo', enterprise: 'yellow',
+};
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter', trial: 'Trial', pro: 'Pro', enterprise: 'Enterprise',
+};
+
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
@@ -30,6 +37,58 @@ export class SubscriptionsService {
     private inapp:    InAppNotificationsService,
     private notifications: NotificationsService,
   ) {}
+
+  // ── Szablony planów ───────────────────────────────────────────
+  async getPlanTemplates() {
+    const rows = await this.prisma.planTemplate.findMany();
+    const result: Record<string, any> = {};
+    for (const [plan, def] of Object.entries(PLAN_LIMITS)) {
+      const row = rows.find(r => r.plan === plan);
+      result[plan] = {
+        plan,
+        label:     PLAN_LABELS[plan] ?? plan,
+        color:     PLAN_COLORS[plan] ?? 'zinc',
+        desks:     row?.desks     ?? def.desks,
+        users:     row?.users     ?? def.users,
+        gateways:  row?.gateways  ?? def.gateways,
+        locations: row?.locations ?? def.locations,
+        ota:       row?.ota       ?? def.ota,
+        sso:       row?.sso       ?? def.sso,
+        smtp:      row?.smtp      ?? def.smtp,
+        api:       row?.api       ?? def.api,
+      };
+    }
+    return result;
+  }
+
+  async updatePlanTemplate(plan: string, dto: {
+    desks?: number | null; users?: number | null;
+    gateways?: number | null; locations?: number | null;
+    ota?: boolean; sso?: boolean; smtp?: boolean; api?: boolean;
+  }) {
+    return this.prisma.planTemplate.upsert({
+      where:  { plan },
+      create: { plan, ...dto, updatedAt: new Date() },
+      update: { ...dto, updatedAt: new Date() },
+    });
+  }
+
+  private async _getPlanDef(plan: string) {
+    const tpl = await this.prisma.planTemplate.findUnique({ where: { plan } }).catch(() => null);
+    const def = PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
+    return {
+      desks:     tpl?.desks     ?? def.desks,
+      users:     tpl?.users     ?? def.users,
+      gateways:  tpl?.gateways  ?? def.gateways,
+      locations: tpl?.locations ?? def.locations,
+      ota:       tpl?.ota       ?? def.ota,
+      sso:       tpl?.sso       ?? def.sso,
+      smtp:      tpl?.smtp      ?? def.smtp,
+      api:       tpl?.api       ?? def.api,
+      label:     PLAN_LABELS[plan] ?? plan,
+      color:     PLAN_COLORS[plan] ?? 'zinc',
+    };
+  }
 
   // ── Oblicz status subskrypcji ─────────────────────────────────
   private _calcStatus(org: any): 'active' | 'expiring_soon' | 'expired' | 'trial' | 'trial_expiring' {
@@ -74,9 +133,9 @@ export class SubscriptionsService {
       },
     });
 
-    const planDef = PLAN_LIMITS[org.plan] ?? PLAN_LIMITS.starter;
+    const planDef = await this._getPlanDef(org.plan);
 
-    // Limity: z DB jeśli ustawione, inaczej z planu
+    // Limity: z DB (per-org override) jeśli ustawione, inaczej z szablonu planu
     const limitDesks     = org.limitDesks     ?? planDef.desks;
     const limitUsers     = org.limitUsers     ?? planDef.users;
     const limitGateways  = org.limitGateways  ?? planDef.gateways;

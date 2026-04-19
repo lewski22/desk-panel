@@ -90,6 +90,14 @@ export const appApi = {
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
   },
 
+  // ── Organizations ────────────────────────────────────────────
+  orgs: {
+    list:              ()                       => req<any[]>('/organizations'),
+    getAzureConfig:    (orgId: string)          => req<any>(`/organizations/${orgId}/azure`),
+    updateAzureConfig: (orgId: string, body: any) =>
+      req<any>(`/organizations/${orgId}/azure`, { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
   // ── Locations ────────────────────────────────────────────────
   locations: {
     list:         ()                         => req<any[]>('/locations/my'),
@@ -225,7 +233,10 @@ export const appApi = {
     getOrgStatus: (id: string)      => req<any>(`/owner/organizations/${id}/subscription`),
     updatePlan:   (id: string, body: any) => req<any>(`/owner/organizations/${id}/subscription`, { method: 'POST', body: JSON.stringify(body) }),
     getEvents:    (id: string)      => req<any[]>(`/owner/organizations/${id}/subscription/events`),
-    getDashboard: ()                => req<any>('/owner/subscription/dashboard'),
+    getDashboard:       ()                    => req<any>('/owner/subscription/dashboard'),
+    getPlans:           ()                    => req<any>('/owner/subscription/plans'),
+    updatePlanTemplate: (plan: string, body: any) =>
+      req<any>(`/owner/subscription/plans/${plan}`, { method: 'PUT', body: JSON.stringify(body) }),
   },
 
   // ── Visitors ─────────────────────────────────────────────────
@@ -254,7 +265,7 @@ export const appApi = {
     deleteOne:    (id: string)         => req<any>(`/notifications/inapp/${id}`, { method: 'DELETE' }),
     getSettings:  (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
     saveSettings: (orgId: string, type: string, body: any) =>
-      req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+      req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
     testSend:     (orgId: string, type: string) =>
       req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
     getLog:       (orgId: string)      => req<any[]>(`/notifications/log?organizationId=${orgId}`),

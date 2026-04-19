@@ -50,8 +50,8 @@ function ReportsPage() {
 
   // Pobierz lokalizacje na start
   useEffect(() => {
-    appApi.get('/locations').then(r => {
-      setLocations(r.data?.data ?? r.data ?? []);
+    appApi.locations.list().then(r => {
+      setLocations(Array.isArray(r) ? r : []);
     }).catch(() => {});
   }, []);
 
@@ -63,8 +63,7 @@ function ReportsPage() {
     try {
       const params: Record<string, string> = { from, to };
       if (locationId) params.locationId = locationId;
-      const r = await appApi.get('/reports/heatmap', { params });
-      const cells: HeatmapCell[] = r.data;
+      const cells: HeatmapCell[] = await appApi.reports.heatmap(params);
       setHeatmap(cells);
       setMaxCount(Math.max(...cells.map(c => c.count), 1));
     } catch (e: any) {
@@ -82,13 +81,10 @@ function ReportsPage() {
     try {
       const params: Record<string, string> = { from, to, format };
       if (locationId) params.locationId = locationId;
-      const r = await appApi.get('/reports/export', {
-        params,
-        responseType: 'blob',
-      });
+      const blob     = await appApi.reports.export(params);
       const ext      = format === 'xlsx' ? 'xlsx' : 'csv';
       const filename = `reserti-report-${from}-${to}.${ext}`;
-      const url      = URL.createObjectURL(new Blob([r.data]));
+      const url      = URL.createObjectURL(blob);
       const a        = document.createElement('a');
       a.href         = url;
       a.download     = filename;

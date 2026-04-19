@@ -446,6 +446,19 @@ model SubscriptionEvent {
   organization Organization @relation(fields: [organizationId], references: [id])
 }
 
+model PlanTemplate {
+  plan      String   @id
+  desks     Int?
+  users     Int?
+  gateways  Int?
+  locations Int?
+  ota       Boolean  @default(false)
+  sso       Boolean  @default(false)
+  smtp      Boolean  @default(false)
+  api       Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
 // ─── Notifications ───────────────────────────────────────────
 
 model NotificationSetting {

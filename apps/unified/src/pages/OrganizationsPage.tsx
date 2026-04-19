@@ -268,7 +268,7 @@ export function OrganizationsPage() {
     try {
       if (modal === 'create') {
         const orgId = form.organizationId || user?.organizationId;
-        await appApi.locations.create(orgId, {
+        await appApi.locations.create({
           name: form.name, address: form.address, city: form.city,
           openTime: form.openTime, closeTime: form.closeTime,
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,

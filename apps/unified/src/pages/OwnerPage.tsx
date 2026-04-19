@@ -8,15 +8,14 @@ import { PlanBadge } from '../components/subscription/PlanBadge';
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
   const { t } = useTranslation();
-  const [name, setName]         = useState('');
-  const [slug, setSlug]         = useState('');
-  const [plan, setPlan]         = useState('starter');
-  const [email, setEmail]       = useState('');
-  const [firstName, setFirst]   = useState('');
-  const [lastName,  setLast]    = useState('');
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState('');
-  const [result, setResult]     = useState<any>(null);
+  const [name,      setName]    = useState('');
+  const [slug,      setSlug]    = useState('');
+  const [plan,      setPlan]    = useState('starter');
+  const [email,     setEmail]   = useState('');
+  const [adminName, setAdmin]   = useState('');
+  const [saving,    setSaving]  = useState(false);
+  const [err,       setErr]     = useState('');
+  const [result,    setResult]  = useState<any>(null);
 
   // Auto-slug z nazwy
   useEffect(() => {
@@ -26,7 +25,7 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
   const submit = async () => {
     setSaving(true); setErr('');
     try {
-      const r = await appApi.owner.createOrg({ name, slug, plan, adminEmail: email, adminFirstName: firstName, adminLastName: lastName });
+      const r = await appApi.owner.createOrg({ name, slug, plan, adminEmail: email, adminName });
       setResult(r);
       onCreated();
     } catch (e: any) { setErr(e.message); }
@@ -65,15 +64,14 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
         </div>
         <p className="text-xs text-zinc-400 pt-1 border-t border-zinc-100">Konto SUPER_ADMIN (hasło tymczasowe):</p>
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Imię *" value={firstName} onChange={e => setFirst(e.target.value)} placeholder="Jan" />
-          <Input label="Nazwisko *" value={lastName} onChange={e => setLast(e.target.value)} placeholder="Kowalski" />
+          <Input label="Imię i nazwisko *" value={adminName} onChange={e => setAdmin(e.target.value)} placeholder="Jan Kowalski" />
+          <Input label="Email admina *" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@firma.pl" />
         </div>
-        <Input label="Email admina *" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@firma.pl" />
         {err && <p className="text-sm text-red-500">{err}</p>}
         <div className="flex gap-2 justify-end pt-2">
           <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
           <Btn onClick={submit} loading={saving}
-            disabled={!name || !slug || !email || !firstName || !lastName}>
+            disabled={!name || !slug || !email || !adminName}>
             Utwórz firmę
           </Btn>
         </div>
@@ -357,13 +355,14 @@ function LegacySubPlanModal({ org, onClose }: { org: any; onClose: () => void })
 
 function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
   const { t } = useTranslation();
+  const [planTemplates, setPlanTemplates] = useState<Record<string, any>>({});
   const [form, setForm] = useState({
     plan:           org.plan           ?? 'starter',
     planExpiresAt:  org.planExpiresAt  ? (typeof org.planExpiresAt === 'string' ? org.planExpiresAt.slice(0,10) : new Date(org.planExpiresAt).toISOString().slice(0,10)) : '',
-    limitDesks:     org.limitDesks     ?? '',
-    limitUsers:     org.limitUsers     ?? '',
-    limitGateways:  org.limitGateways  ?? '',
-    limitLocations: org.limitLocations ?? '',
+    limitDesks:     org.limitDesks     != null ? String(org.limitDesks)     : '',
+    limitUsers:     org.limitUsers     != null ? String(org.limitUsers)     : '',
+    limitGateways:  org.limitGateways  != null ? String(org.limitGateways)  : '',
+    limitLocations: org.limitLocations != null ? String(org.limitLocations) : '',
     mrr:            org.mrr            ?? '',
     billingEmail:   org.billingEmail   ?? '',
     note: '',
@@ -372,6 +371,23 @@ function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   const [err, setErr]       = useState('');
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
   const toNum = (v: string | number) => v === '' || v === null ? null : Number(v);
+
+  useEffect(() => {
+    appApi.subscription.getPlans().then(setPlanTemplates).catch(() => {});
+  }, []);
+
+  const applyPlanDefaults = (p: string) => {
+    const tpl = planTemplates[p];
+    if (!tpl) { set('plan', p); return; }
+    setForm(f => ({
+      ...f,
+      plan:           p,
+      limitDesks:     tpl.desks     != null ? String(tpl.desks)     : '',
+      limitUsers:     tpl.users     != null ? String(tpl.users)     : '',
+      limitGateways:  tpl.gateways  != null ? String(tpl.gateways)  : '',
+      limitLocations: tpl.locations != null ? String(tpl.locations) : '',
+    }));
+  };
 
   const submit = async () => {
     setSaving(true); setErr('');
@@ -392,15 +408,28 @@ function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
     setSaving(false);
   };
 
+  const tpl = planTemplates[form.plan];
+
   return (
     <Modal title={`Subskrypcja: ${org.name}`} onClose={onClose}>
       <div className="space-y-3">
         <div>
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
-          <select value={form.plan} onChange={e => set('plan', e.target.value)}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm">
-            {['trial','starter','pro','enterprise'].map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
+          <div className="flex gap-2 flex-wrap">
+            {['trial','starter','pro','enterprise'].map(p => (
+              <button key={p} type="button" onClick={() => applyPlanDefaults(p)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all capitalize ${
+                  form.plan === p ? 'border-[#B53578] bg-[#B53578]/10 text-[#B53578]' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                }`}>
+                {p}
+              </button>
+            ))}
+          </div>
+          {tpl && (
+            <p className="text-[10px] text-zinc-400 mt-1.5">
+              Domyślne limity szablonu: biurka {tpl.desks ?? '∞'} · użytkownicy {tpl.users ?? '∞'} · gatewaye {tpl.gateways ?? '∞'} · biura {tpl.locations ?? '∞'}
+            </p>
+          )}
         </div>
         <Input label="Ważny do (puste = bezterminowy)" type="date" value={String(form.planExpiresAt)}
           onChange={e => set('planExpiresAt', e.target.value)} />
@@ -422,6 +451,144 @@ function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
         </div>
       </div>
     </Modal>
+  );
+}
+
+// ─── Edytor szablonów planów ──────────────────────────────────
+function PlanTemplatesTab() {
+  const [templates, setTemplates] = useState<Record<string, any>>({});
+  const [editing,   setEditing]   = useState<string | null>(null);
+  const [form,      setForm]      = useState<any>({});
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState<string | null>(null);
+  const [err,       setErr]       = useState('');
+
+  useEffect(() => {
+    appApi.subscription.getPlans().then(setTemplates).catch(() => {});
+  }, []);
+
+  const startEdit = (plan: string) => {
+    setEditing(plan);
+    const t = templates[plan] ?? {};
+    setForm({
+      desks:     t.desks     != null ? String(t.desks)     : '',
+      users:     t.users     != null ? String(t.users)     : '',
+      gateways:  t.gateways  != null ? String(t.gateways)  : '',
+      locations: t.locations != null ? String(t.locations) : '',
+      ota:  !!t.ota,
+      sso:  !!t.sso,
+      smtp: !!t.smtp,
+      api:  !!t.api,
+    });
+    setErr('');
+  };
+
+  const save = async () => {
+    if (!editing) return;
+    setSaving(true); setErr('');
+    const toNum = (v: string) => v === '' ? null : Number(v);
+    try {
+      const updated = await appApi.subscription.updatePlanTemplate(editing, {
+        desks:     toNum(form.desks),
+        users:     toNum(form.users),
+        gateways:  toNum(form.gateways),
+        locations: toNum(form.locations),
+        ota:  form.ota,
+        sso:  form.sso,
+        smtp: form.smtp,
+        api:  form.api,
+      });
+      setTemplates(prev => ({ ...prev, [editing]: { ...prev[editing], ...updated } }));
+      setSaved(editing);
+      setEditing(null);
+      setTimeout(() => setSaved(null), 3000);
+    } catch (e: any) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const PLANS = ['trial', 'starter', 'pro', 'enterprise'];
+  const FEATURES: [string, string][] = [['ota','OTA Updates'],['sso','SSO / Azure'],['smtp','Custom SMTP'],['api','API Access']];
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
+        Zmiany szablonów wpływają na domyślne limity przy przypisywaniu planu oraz na limity organizacji, które nie mają ustawionych indywidualnych overridów.
+      </div>
+      {PLANS.map(plan => {
+        const tpl = templates[plan] ?? {};
+        const isEditing = editing === plan;
+        return (
+          <div key={plan} className="bg-white border border-zinc-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-zinc-800 capitalize">{plan}</span>
+                {saved === plan && <span className="text-xs text-emerald-600 font-medium">✓ Zapisano</span>}
+              </div>
+              {!isEditing
+                ? <Btn size="sm" variant="secondary" onClick={() => startEdit(plan)}>Edytuj</Btn>
+                : <div className="flex gap-2">
+                    <Btn size="sm" variant="secondary" onClick={() => setEditing(null)}>Anuluj</Btn>
+                    <Btn size="sm" onClick={save} loading={saving}>Zapisz</Btn>
+                  </div>
+              }
+            </div>
+
+            {!isEditing ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                {[
+                  ['Biurka',       tpl.desks     ?? '∞'],
+                  ['Użytkownicy',  tpl.users     ?? '∞'],
+                  ['Gatewaye',     tpl.gateways  ?? '∞'],
+                  ['Biura',        tpl.locations ?? '∞'],
+                ].map(([label, val]) => (
+                  <div key={label as string} className="bg-zinc-50 rounded-lg px-3 py-2">
+                    <p className="text-zinc-400 mb-0.5">{label}</p>
+                    <p className="font-semibold text-zinc-700">{val}</p>
+                  </div>
+                ))}
+                <div className="col-span-2 sm:col-span-4 flex gap-3 mt-1">
+                  {FEATURES.map(([key, label]) => (
+                    <span key={key} className={`text-[10px] px-2 py-0.5 rounded font-medium ${tpl[key] ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-400'}`}>
+                      {tpl[key] ? '✓' : '✗'} {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ['desks',     'Biurka (puste=∞)'],
+                    ['users',     'Użytkownicy'],
+                    ['gateways',  'Gatewaye'],
+                    ['locations', 'Biura'],
+                  ].map(([key, label]) => (
+                    <div key={key}>
+                      <label className="block text-[11px] text-zinc-500 mb-1">{label}</label>
+                      <input type="number" value={form[key]}
+                        onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.value }))}
+                        placeholder="∞"
+                        className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B03472]/20" />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {FEATURES.map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2 cursor-pointer text-sm text-zinc-600">
+                      <input type="checkbox" checked={!!form[key]}
+                        onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.checked }))}
+                        className="rounded" />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                {err && <p className="text-xs text-red-500">{err}</p>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -504,7 +671,7 @@ export function OwnerPage() {
   const [stats, setStats]       = useState<any>(null);
   const [orgs,  setOrgs]        = useState<any[]>([]);
   const [subDash, setSubDash]   = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'orgs'|'sub'>(
+  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'>(
     searchParams.get('tab') === 'sub' ? 'sub' : 'orgs'
   );
   const [search, setSearch]     = useState('');
@@ -606,7 +773,7 @@ export function OwnerPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-5 w-fit">
-        {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje']] as const).map(([tab, label]) => (
+        {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów']] as const).map(([tab, label]) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
@@ -703,6 +870,9 @@ export function OwnerPage() {
           onEdit={setSubEditOrg}
         />
       )}
+
+      {/* Zakładka Szablony planów */}
+      {activeTab === 'plans' && <PlanTemplatesTab />}
 
       {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} onCreated={load} />}
       {editOrg    && <EditOrgModal org={editOrg} onClose={() => setEditOrg(null)} onSaved={load} />}
