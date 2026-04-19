@@ -70,7 +70,7 @@ export function NotificationBell({ role }: { role: string }) {
   // Polling count ogni 30s
   const fetchCount = useCallback(async () => {
     try {
-      const r = await appApi.inapp.unreadCount();
+      const r = await appApi.notifications.countUnread();
       setUnread(r.count);
     } catch { }
   }, []);
@@ -97,7 +97,7 @@ export function NotificationBell({ role }: { role: string }) {
     setOpen(true);
     setLoading(true);
     try {
-      const data = await appApi.inapp.getAll();
+      const data = await appApi.notifications.inapp();
       setItems(data);
       setUnread(data.filter((n: any) => !n.read).length);
     } catch { }
@@ -105,20 +105,20 @@ export function NotificationBell({ role }: { role: string }) {
   };
 
   const handleRead = async (id: string) => {
-    await appApi.inapp.markRead([id]);
+    await appApi.notifications.markRead([id]);
     setItems(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     setUnread(prev => Math.max(0, prev - 1));
   };
 
   const handleReadAll = async () => {
-    await appApi.inapp.markAllRead();
+    await appApi.notifications.markAllRead();
     setItems(prev => prev.map(n => ({ ...n, read: true })));
     setUnread(0);
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await appApi.inapp.deleteOne(id);
+    await appApi.notifications.deleteOne(id);
     const deleted = items.find(n => n.id === id);
     setItems(prev => prev.filter(n => n.id !== id));
     if (deleted && !deleted.read) setUnread(prev => Math.max(0, prev - 1));

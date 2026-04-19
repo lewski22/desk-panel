@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input, Spinner } from '../components/ui';
@@ -499,10 +500,13 @@ function SubscriptionTab({ orgs, subDash, onEdit }: {
 
 export function OwnerPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const [stats, setStats]       = useState<any>(null);
   const [orgs,  setOrgs]        = useState<any[]>([]);
   const [subDash, setSubDash]   = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'orgs'|'sub'>('orgs');
+  const [activeTab, setActiveTab] = useState<'orgs'|'sub'>(
+    searchParams.get('tab') === 'sub' ? 'sub' : 'orgs'
+  );
   const [search, setSearch]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading]   = useState(true);

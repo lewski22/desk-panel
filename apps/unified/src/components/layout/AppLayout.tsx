@@ -81,6 +81,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ['OWNER'],
     items: [
       { to: '/owner',              icon: '⚙️', labelKey: 'layout.nav.owner',             roles: ['OWNER'] },
+      { to: '/owner?tab=sub',      icon: '💳', labelKey: 'layout.nav.subscription',      roles: ['OWNER'] },
       { to: '/notification-rules', icon: '🔔', labelKey: 'layout.nav.notification_rules', roles: ['OWNER'] },
     ],
   },
