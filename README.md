@@ -240,12 +240,36 @@ cd desk-gateway-python && python3 -m unittest discover -s tests/ -v
 
 | # | Zadanie | Status | Opis |
 |---|---------|--------|------|
-| 1 | **Web-push VAPID keys** | ✅ Zrobione | `web-push` zainstalowany, `push.service.ts` obsługuje VAPID. Wymagane ustawienie env vars `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` w Coolify. |
+| 1 | **Web-push VAPID keys** | ✅ Zrobione | `web-push` zainstalowany, `push.service.ts` obsługuje VAPID. Wymagane ustawienie env vars w Coolify — patrz sekcja [Konfiguracja VAPID](#konfiguracja-vapid-web-push) niżej. |
 | 2 | **Visitor email invite** | ❌ Do zrobienia | `visitors.service.ts` tworzy rekord gościa, ale nie wysyła emaila zaproszenia. Należy wstrzyknąć `NotificationsService` i wywołać `sendEmail()` po `prisma.visitor.create()`. |
 | 3 | **Floor Plan CDN** | ❌ Do zrobienia | Floor plan przechowywany jako base64 w kolumnie `floorPlanUrl` w bazie danych (~2–3 MB per rekord). Należy zmigrować upload do S3 / Cloudflare R2 i zapisywać tylko URL. |
 | 4 | **Kiosk link w UI** | ❌ Do zrobienia | Brak przycisku `/kiosk?location=...` w `OrganizationsPage.tsx`. Jedna linia kodu — przycisk otwierający kiosk dla danej lokalizacji. |
 | 5 | **Playwright E2E** | ✅ Zrobione | `playwright.config.ts` skonfigurowany, testy: `auth.spec.ts`, `checkin.spec.ts`, `reservation.spec.ts` w `backend/tests/e2e/`. |
 | 6 | **Beacon RTC timestamp** | ❓ Nieweryfikowalne | Kod firmware beacona/gateway nie jest w tym repozytorium — nie można potwierdzić implementacji NTP sync. |
+
+---
+
+## Konfiguracja VAPID (Web Push)
+
+Klucze VAPID generuje się **jeden raz** na serwerze — nie regeneruj po deploymencie (istniejące subskrypcje przestają działać).
+
+```bash
+# Na serwerze produkcyjnym (SSH do Coolify LXC):
+cd /path/to/desk-panel/backend
+node generate-vapid-keys.js
+```
+
+Wynik wklej jako zmienne środowiskowe w Coolify (sekcja Environment):
+
+| Zmienna | Opis |
+|---------|------|
+| `VAPID_PUBLIC_KEY` | Klucz publiczny (base64url) — przekazywany też do frontendu |
+| `VAPID_PRIVATE_KEY` | Klucz prywatny — trzymaj w sekrecie, nigdy nie commituj |
+| `VAPID_SUBJECT` | `mailto:admin@reserti.pl` |
+
+Po ustawieniu zmiennych — restart backendu. Jeśli `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` nie są ustawione, backend loguje `VAPID keys not configured — push notifications disabled` i push jest wyłączony (bez błędu krytycznego).
+
+---
 
 ### Sprint K — AI Features (zweryfikowano 2026-04-19)
 

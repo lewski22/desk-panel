@@ -49,6 +49,16 @@ export class AuthController {
     return this.auth.logout(dto.refreshToken);
   }
 
+  // ── Bieżący użytkownik (świeże enabledModules) ───────────────
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Zwraca profil zalogowanego użytkownika z aktualnymi enabledModules' })
+  me(@Request() req) {
+    return this.auth.getMe(req.user.id);
+  }
+
   // ── Zmiana hasła ──────────────────────────────────────────────
   @Patch('change-password')
   @HttpCode(HttpStatus.NO_CONTENT)

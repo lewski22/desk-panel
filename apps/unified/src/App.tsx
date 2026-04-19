@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { appApi }              from './api/client';
 import { AppLayout }           from './components/layout/AppLayout';
@@ -55,6 +55,11 @@ export default function App() {
     const u = appApi.auth.user();
     return u;
   });
+
+  useEffect(() => {
+    if (!user) return;
+    appApi.auth.getMe().then(setUser).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     appApi.auth.logout();

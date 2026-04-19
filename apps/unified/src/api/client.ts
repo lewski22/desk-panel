@@ -88,6 +88,13 @@ export const appApi = {
     },
     changePassword: (currentPassword: string, newPassword: string) =>
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+    async getMe() {
+      const u = await req<any>('/auth/me');
+      const existing = JSON.parse(localStorage.getItem(KEYS.user) ?? '{}');
+      const updated = { ...existing, ...u };
+      localStorage.setItem(KEYS.user, JSON.stringify(updated));
+      return updated;
+    },
   },
 
   // ── Organizations ────────────────────────────────────────────

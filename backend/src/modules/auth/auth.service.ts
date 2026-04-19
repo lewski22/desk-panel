@@ -37,6 +37,15 @@ export class AuthService {
     return this.login(record.user);
   }
   async logout(refreshToken: string) { await this.prisma.refreshToken.deleteMany({ where: { token: refreshToken } }); }
+  async getMe(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    let enabledModules: string[] = [];
+    if ((user as any).organizationId) {
+      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true } });
+      enabledModules = org?.enabledModules ?? [];
+    }
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules };
+  }
   /**
    * Shared JIT provisioning for SSO providers (Azure, Google).
    * Finds existing user by email (and optionally by ssoId), creates if missing.

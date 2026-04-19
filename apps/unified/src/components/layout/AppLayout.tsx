@@ -40,10 +40,10 @@ const NAV_GROUPS: NavGroup[] = [
     key:   'layout.group.workspace',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'],
     items: [
-      { to: '/map',             icon: '⬡',  labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
-      { to: '/weekly',          icon: '📅', labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
-      { to: '/my-reservations', icon: '📋', labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
-      { to: '/reservations',    icon: '📂', labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/map',             icon: '⬡',  labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' as AppModule },
+      { to: '/weekly',          icon: '📅', labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'WEEKLY_VIEW' as AppModule },
+      { to: '/my-reservations', icon: '📋', labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' as AppModule },
+      { to: '/reservations',    icon: '📂', labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],            module: 'DESKS' as AppModule },
     ],
   },
   {
@@ -54,7 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/users',        icon: '👥', labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/devices',      icon: '🔌', labelKey: 'layout.nav.devices',      roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
       { to: '/provisioning', icon: '📡', labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/resources',    icon: '🏛',  labelKey: 'layout.nav.resources',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/resources',    icon: '🏛',  labelKey: 'layout.nav.resources',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' as AppModule },
       { to: '/visitors',     icon: '👤', labelKey: 'layout.nav.visitors',     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
     ],
   },
