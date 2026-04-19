@@ -261,6 +261,7 @@ function PushOptInSection() {
 
 export function NotificationsPage() {
   const { t, i18n } = useTranslation();
+  const orgId = appApi.auth.user()?.organizationId ?? '';
   const [settings, setSettings]   = useState<any[]>([]);
   const [loading,  setLoading]    = useState(true);
   const [saving,   setSaving]     = useState(false);
@@ -276,8 +277,8 @@ export function NotificationsPage() {
     setLoading(true);
     try {
       const [s, l] = await Promise.all([
-        appApi.notifications.getSettings(),
-        appApi.notifications.getLog(),
+        appApi.notifications.getSettings(orgId),
+        appApi.notifications.getLog(orgId),
       ]);
       setSettings(Array.isArray(s) ? s : []);
       setLog(Array.isArray(l) ? l : []);
@@ -295,12 +296,13 @@ export function NotificationsPage() {
   const handleSave = async () => {
     setSaving(true); setErr(''); setSaved(false);
     try {
-      await appApi.notifications.saveSettings(settings.map(s => ({
-        type:         s.type,
-        enabled:      s.enabled,
-        recipients:   s.recipients ?? [],
-        thresholdMin: s.thresholdMin,
-      })));
+      await Promise.all(settings.map(s =>
+        appApi.notifications.saveSettings(orgId, s.type, {
+          enabled:      s.enabled,
+          recipients:   s.recipients ?? [],
+          thresholdMin: s.thresholdMin,
+        })
+      ));
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) { setErr(e.message); }
@@ -308,11 +310,10 @@ export function NotificationsPage() {
   };
 
   const handleTest = async () => {
-    if (!testEmail) return;
     setTesting(true); setTestResult(null);
     try {
-      const r = await appApi.notifications.testSend(testEmail);
-      setTestResult(r.ok ? 'ok' : `Błąd: ${r.error}`);
+      await appApi.notifications.testSmtp(orgId);
+      setTestResult('ok');
     } catch (e: any) { setTestResult(`Błąd: ${e.message}`); }
     setTesting(false);
   };
@@ -388,13 +389,6 @@ export function NotificationsPage() {
                   Wyślij testowy email aby sprawdzić czy serwer pocztowy jest poprawnie skonfigurowany.
                 </p>
                 <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={testEmail}
-                    onChange={e => setTestEmail(e.target.value)}
-                    placeholder="twoj@email.pl"
-                    className="flex-1 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none"
-                  />
                   <Btn size="sm" onClick={handleTest} loading={testing}>{t('notifications.settings.test_email')}</Btn>
                 </div>
                 {testResult && (
