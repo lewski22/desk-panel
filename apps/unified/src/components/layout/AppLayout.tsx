@@ -217,27 +217,41 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </div>
       )}
 
-      <div className="px-3 py-2.5 border-t border-zinc-800 flex items-center justify-between gap-2">
-        {(!collapsed || mobile) && <LanguageSwitcher />}
-        <NotificationBell role={user.role} />
-        {(!collapsed || mobile) && (
-          <button
-            onClick={doLogout}
-            className={`text-zinc-500 hover:text-zinc-200 text-xs p-1.5 rounded-lg hover:bg-zinc-800 transition-colors ${!collapsed ? 'flex-1 text-left' : ''}`}
-          >
-            {t('layout.logout')}
-          </button>
-        )}
-        {!mobile && (
+      {collapsed && !mobile ? (
+        /* Collapsed desktop — stack vertically so both items fit in w-14 */
+        <div className="py-2 border-t border-zinc-800 flex flex-col items-center gap-1">
+          <NotificationBell role={user.role} />
           <button
             onClick={toggleCollapsed}
-            className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-xs"
-            title={collapsed ? t('layout.expand') : t('layout.collapse')}
+            className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-sm leading-none"
+            title={t('layout.expand')}
           >
-            {collapsed ? '›' : '‹'}
+            ›
           </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="px-3 py-2.5 border-t border-zinc-800 flex items-center justify-between gap-2">
+          {(!collapsed || mobile) && <LanguageSwitcher />}
+          <NotificationBell role={user.role} />
+          {(!collapsed || mobile) && (
+            <button
+              onClick={doLogout}
+              className="text-zinc-500 hover:text-zinc-200 text-xs p-1.5 rounded-lg hover:bg-zinc-800 transition-colors flex-1 text-left"
+            >
+              {t('layout.logout')}
+            </button>
+          )}
+          {!mobile && (
+            <button
+              onClick={toggleCollapsed}
+              className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-xs"
+              title={t('layout.collapse')}
+            >
+              ‹
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 
