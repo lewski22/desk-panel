@@ -141,7 +141,7 @@ export default function App() {
                     <Guard user={user} allowed={ALL_ROLES}><MyReservationsPage /></Guard>
                   } />
                   <Route path="/devices" element={
-                    <Guard user={user} allowed={STAFF_ONLY}><DevicesPage /></Guard>
+                    <Guard user={user} allowed={STAFF_ROLES}><DevicesPage /></Guard>
                   } />
                   <Route path="/change-password" element={
                     <Guard user={user} allowed={[...ALL_ROLES, 'OWNER']}><ChangePasswordPage /></Guard>
