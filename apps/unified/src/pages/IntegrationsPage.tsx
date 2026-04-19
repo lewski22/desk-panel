@@ -18,6 +18,11 @@ import { SlackConfigForm }   from '../components/integrations/forms/SlackConfigF
 import { GoogleConfigForm }  from '../components/integrations/forms/GoogleConfigForm';
 import { TeamsConfigForm }   from '../components/integrations/forms/TeamsConfigForm';
 import { WebhookConfigForm } from '../components/integrations/forms/WebhookConfigForm';
+import { EntraIdSection }    from '../components/integrations/EntraIdSection';
+
+function getUser() {
+  try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
+}
 
 // ── Typy ────────────────────────────────────────────────────────
 type Provider = 'AZURE_ENTRA' | 'SLACK' | 'GOOGLE_WORKSPACE' | 'MICROSOFT_TEAMS' | 'WEBHOOK_CUSTOM';
@@ -47,6 +52,7 @@ const PROVIDER_ORDER: Provider[] = [
 export default function IntegrationsPage() {
   const { t } = useTranslation();
 
+  const user = getUser();
   const [integrations, setIntegrations] = useState<Map<Provider, Integration>>(new Map());
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
