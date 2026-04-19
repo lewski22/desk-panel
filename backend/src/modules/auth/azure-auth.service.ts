@@ -16,7 +16,6 @@ import { ConfigService }     from '@nestjs/config';
 import * as jwt              from 'jsonwebtoken';
 import * as jwksRsa          from 'jwks-rsa';
 import { PrismaService }     from '../../database/prisma.service';
-import { UserRole }          from '@prisma/client';
 import { AuthService }       from './auth.service';
 import { IntegrationsService } from '../integrations/integrations.service'; // ← NOWY import
 
@@ -239,41 +238,19 @@ export class AzureAuthService {
   }
 
   private async _getOrCreateUser(claims: AzureClaims, orgId: string) {
-    const oid       = claims.oid;
-    const email     = claims.email ?? claims.preferred_username ?? '';
-    const firstName = claims.given_name ?? claims.name?.split(' ')[0] ?? '';
-    const lastName  = claims.family_name ?? claims.name?.split(' ').slice(1).join(' ') ?? '';
-
+    const email = claims.email ?? claims.preferred_username ?? '';
     if (!email) throw new UnauthorizedException('Token Azure nie zawiera adresu email');
 
-    let user = await this.prisma.user.findFirst({
-      where: { OR: [{ azureObjectId: oid }, { email: email.toLowerCase() }] },
-    });
-
-    if (user) {
-      if (!user.azureObjectId) {
-        user = await this.prisma.user.update({
-          where: { id: user.id },
-          data:  { azureObjectId: oid, azureTenantId: claims.tid },
-        });
-      }
-      if (!user.isActive) throw new UnauthorizedException('Konto jest nieaktywne');
-      return user;
-    }
-
-    this.logger.log(`JIT provisioning: ${email} (oid: ${oid}, org: ${orgId})`);
-    return this.prisma.user.create({
-      data: {
-        email:          email.toLowerCase(),
-        passwordHash:   'AZURE_SSO_ONLY',
-        firstName:      firstName || null,
-        lastName:       lastName  || null,
-        role:           UserRole.END_USER,
-        organizationId: orgId,
-        azureObjectId:  oid,
-        azureTenantId:  claims.tid,
-        isActive:       true,
-      },
+    this.logger.log(`JIT provisioning: ${email} (oid: ${claims.oid}, org: ${orgId})`);
+    return this.auth.provisionSsoUser({
+      email,
+      orgId,
+      firstName:      claims.given_name ?? claims.name?.split(' ')[0],
+      lastName:       claims.family_name ?? claims.name?.split(' ').slice(1).join(' '),
+      passwordMarker: 'AZURE_SSO_ONLY',
+      ssoId:          claims.oid,
+      ssoIdField:     'azureObjectId',
+      extraData:      { azureTenantId: claims.tid },
     });
   }
 }

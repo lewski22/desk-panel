@@ -252,58 +252,6 @@ export class NotificationsService {
   // CRON JOBS
   // ══════════════════════════════════════════════════════════════
 
-  /** Co 15 min sprawdź gateway/beacon offline i wyślij alerty */
-  @Cron('0 */15 * * * *')
-  async checkInfrastructureAlerts() {
-    const thresholdDefault = 10; // minut
-    const now = new Date();
-
-    // Pobierz aktywne ustawienia alertów infrastruktury
-    const gwSettings = await this.prisma.notificationSetting.findMany({
-      where: { type: NotificationType.GATEWAY_OFFLINE, enabled: true },
-    });
-
-    for (const s of gwSettings) {
-      const thresholdMs = (s.thresholdMin ?? thresholdDefault) * 60 * 1000;
-      const cutoff      = new Date(now.getTime() - thresholdMs);
-
-      const offlineGws = await this.prisma.gateway.findMany({
-        where: {
-          isOnline:  true,   // marked as online but...
-          lastSeen:  { lt: cutoff },  // ...hasn't sent heartbeat
-          location:  { organizationId: s.organizationId },
-        },
-        select: { id: true },
-      });
-
-      for (const gw of offlineGws) {
-        await this.alertGatewayOffline(gw.id);
-      }
-    }
-
-    const beaconSettings = await this.prisma.notificationSetting.findMany({
-      where: { type: NotificationType.BEACON_OFFLINE, enabled: true },
-    });
-
-    for (const s of beaconSettings) {
-      const thresholdMs = (s.thresholdMin ?? thresholdDefault) * 60 * 1000;
-      const cutoff      = new Date(now.getTime() - thresholdMs);
-
-      const offlineDevices = await this.prisma.device.findMany({
-        where: {
-          isOnline: true,
-          lastSeen: { lt: cutoff },
-          desk:     { location: { organizationId: s.organizationId } },
-        },
-        select: { id: true },
-      });
-
-      for (const dev of offlineDevices) {
-        await this.alertBeaconOffline(dev.id);
-      }
-    }
-  }
-
   /** Codziennie o 07:00 — dzienny raport zajętości */
   @Cron('0 0 7 * * *')
   async sendDailyReports() {

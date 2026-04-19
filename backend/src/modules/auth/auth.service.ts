@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
-import { User } from '@prisma/client';
+import { User, UserRole } from '@prisma/client';
 @Injectable()
 export class AuthService {
   constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) {}
@@ -37,6 +37,55 @@ export class AuthService {
     return this.login(record.user);
   }
   async logout(refreshToken: string) { await this.prisma.refreshToken.deleteMany({ where: { token: refreshToken } }); }
+  /**
+   * Shared JIT provisioning for SSO providers (Azure, Google).
+   * Finds existing user by email (and optionally by ssoId), creates if missing.
+   */
+  async provisionSsoUser(opts: {
+    email:          string;
+    orgId:          string;
+    firstName?:     string;
+    lastName?:      string;
+    passwordMarker: string;
+    ssoId?:         string;
+    ssoIdField?:    string;
+    extraData?:     Record<string, string>;
+  }): Promise<User> {
+    const emailLower = opts.email.toLowerCase();
+
+    const whereOr: any[] = [{ email: emailLower }];
+    if (opts.ssoId && opts.ssoIdField) {
+      whereOr.push({ [opts.ssoIdField]: opts.ssoId });
+    }
+
+    let user = await this.prisma.user.findFirst({ where: { OR: whereOr } });
+
+    if (user) {
+      if (!user.isActive) throw new UnauthorizedException('Konto jest nieaktywne');
+      if (opts.ssoId && opts.ssoIdField && !(user as any)[opts.ssoIdField]) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data:  { [opts.ssoIdField]: opts.ssoId, ...(opts.extraData ?? {}) },
+        });
+      }
+      return user;
+    }
+
+    return this.prisma.user.create({
+      data: {
+        email:          emailLower,
+        passwordHash:   opts.passwordMarker,
+        firstName:      opts.firstName ?? null,
+        lastName:       opts.lastName  ?? null,
+        role:           UserRole.END_USER,
+        organizationId: opts.orgId,
+        isActive:       true,
+        ...(opts.ssoId && opts.ssoIdField ? { [opts.ssoIdField]: opts.ssoId } : {}),
+        ...(opts.extraData ?? {}),
+      },
+    });
+  }
+
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');

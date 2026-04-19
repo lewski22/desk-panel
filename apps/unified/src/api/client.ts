@@ -237,6 +237,14 @@ export const appApi = {
     cancel:   (id: string)                   => req<any>(`/visitors/${id}/cancel`, { method: 'POST', body: '{}' }),
   },
 
+  // ── In-App Notification Rules (Owner) ────────────────────────
+  inapp: {
+    getRules:   ()             => req<any[]>('/notifications/inapp/rules'),
+    saveRules:  (rules: any[]) => req<any[]>('/notifications/inapp/rules', { method: 'POST', body: JSON.stringify({ rules }) }),
+    announce:   (body: { title: string; body: string; targetRoles: string[] }) =>
+      req<{ count: number }>('/notifications/inapp/announce', { method: 'POST', body: JSON.stringify(body) }),
+  },
+
   // ── Notifications ─────────────────────────────────────────────
   notifications: {
     inapp:        (unreadOnly = false) => req<any[]>(`/notifications/inapp${unreadOnly ? '?unread=true' : ''}`),
@@ -244,22 +252,13 @@ export const appApi = {
     markRead:     (ids: string[])      => req<any>('/notifications/inapp/read', { method: 'PATCH', body: JSON.stringify({ ids }) }),
     markAllRead:  ()                   => req<any>('/notifications/inapp/read-all', { method: 'PATCH' }),
     deleteOne:    (id: string)         => req<any>(`/notifications/inapp/${id}`, { method: 'DELETE' }),
-    settings:     (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
-    // Aliases: GH pages use getSettings/saveSettings/testSend
     getSettings:  (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
     saveSettings: (orgId: string, type: string, body: any) =>
       req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    updateSetting: (orgId: string, type: string, body: any) =>
-      req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    testEmail:    (orgId: string, type: string) =>
-      req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
     testSend:     (orgId: string, type: string) =>
       req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
     getLog:       (orgId: string)      => req<any[]>(`/notifications/log?organizationId=${orgId}`),
-    smtpConfig:   (orgId: string)      => req<any>(`/notifications/smtp?organizationId=${orgId}`),
     getSmtp:      (orgId: string)      => req<any>(`/notifications/smtp?organizationId=${orgId}`),
-    updateSmtp:   (orgId: string, body: any) =>
-      req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
     saveSmtp:     (orgId: string, body: any) =>
       req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
     deleteSmtp:   (orgId: string)      =>
@@ -270,18 +269,13 @@ export const appApi = {
 
   // ── Owner ─────────────────────────────────────────────────────
   owner: {
-    orgs:           ()                         => req<any[]>('/owner/organizations'),
     listOrgs:       ()                         => req<any[]>('/owner/organizations'),
     createOrg:      (d: any)                   => req<any>('/owner/organizations', { method: 'POST', body: JSON.stringify(d) }),
     updateOrg:      (id: string, d: any)       => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    deleteOrg:      (id: string)               => req<any>(`/owner/organizations/${id}`, { method: 'DELETE' }),
     deactivateOrg:  (id: string)               => req<any>(`/owner/organizations/${id}`, { method: 'DELETE' }),
     impersonate:    (id: string)               => req<any>(`/owner/organizations/${id}/impersonate`, { method: 'POST', body: '{}' }),
     stopImpersonation: ()                      => req<any>('/owner/stop-impersonation', { method: 'POST', body: '{}' }),
-    globalStats:    ()                         => req<any>('/owner/stats'),
     getStats:       ()                         => req<any>('/owner/stats'),
-    updateModules:  (id: string, modules: string[]) =>
-      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
     setModules:     (id: string, modules: string[]) =>
       req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
   },
@@ -290,9 +284,6 @@ export const appApi = {
   organizations: {
     getAzureConfig:    (id: string)         => req<any>(`/organizations/${id}/azure`),
     updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
-    orgs:              ()                   => req<any[]>('/owner/organizations'),
-    list:              ()                   => req<any[]>('/owner/organizations'),
-    update:            (id: string, d: any, _extra?: any) => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
   },
 
   // ── Push Notifications ────────────────────────────────────────

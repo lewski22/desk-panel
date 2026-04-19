@@ -17,7 +17,6 @@ import { AuthService }         from './auth.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { GoogleProvider }      from '../integrations/providers/google.provider';
 import type { GoogleWorkspaceConfig } from '../integrations/types/integration-config.types';
-import { UserRole }            from '@prisma/client';
 
 // In-memory nonce store — TTL 10min, cleaned up after use
 // For production with multiple instances: use Redis
@@ -189,37 +188,15 @@ export class GoogleAuthService {
     claims: { sub: string; email: string; name: string; hd?: string },
     orgId:  string,
   ) {
-    // Szukaj po emailu (Google sub może się zmienić przy re-autoryzacji)
-    let user = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: claims.email.toLowerCase() },
-        ],
-      },
-    });
-
-    if (user) {
-      if (!user.isActive) {
-        throw new UnauthorizedException('Konto jest nieaktywne');
-      }
-      return user;
-    }
-
-    // Utwórz nowe konto przez JIT
     const nameParts = claims.name.split(' ');
-    user = await this.prisma.user.create({
-      data: {
-        email:          claims.email.toLowerCase(),
-        passwordHash:   'GOOGLE_SSO_ONLY',
-        firstName:      nameParts[0] ?? null,
-        lastName:       nameParts.slice(1).join(' ') || null,
-        role:           UserRole.END_USER,
-        organizationId: orgId,
-        isActive:       true,
-      },
+    const user = await this.auth.provisionSsoUser({
+      email:          claims.email,
+      orgId,
+      firstName:      nameParts[0],
+      lastName:       nameParts.slice(1).join(' ') || undefined,
+      passwordMarker: 'GOOGLE_SSO_ONLY',
     });
-
-    this.logger.log(`Google JIT user created: ${user.id} (${claims.email}) → org=${orgId}`);
+    this.logger.log(`Google SSO user: ${user.id} (${claims.email}) → org=${orgId}`);
     return user;
   }
 

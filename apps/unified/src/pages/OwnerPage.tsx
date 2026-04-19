@@ -9,7 +9,7 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
   const { t } = useTranslation();
   const [name, setName]         = useState('');
   const [slug, setSlug]         = useState('');
-  const [plan, setPlan]         = useState('basic');
+  const [plan, setPlan]         = useState('starter');
   const [email, setEmail]       = useState('');
   const [firstName, setFirst]   = useState('');
   const [lastName,  setLast]    = useState('');
@@ -56,8 +56,9 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
           <select value={plan} onChange={e => setPlan(e.target.value)}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
+            <option value="trial">Trial</option>
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
             <option value="enterprise">Enterprise</option>
           </select>
         </div>
@@ -126,7 +127,7 @@ function ModuleToggle({
 function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
   const { t } = useTranslation();
   const [name,  setName]  = useState(org.name);
-  const [plan,  setPlan]  = useState(org.plan ?? 'basic');
+  const [plan,  setPlan]  = useState(org.plan ?? 'starter');
   const [notes, setNotes] = useState(org.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
@@ -175,8 +176,9 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
           <select value={plan} onChange={e => setPlan(e.target.value)}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-            <option value="basic">Basic</option>
-            <option value="standard">Standard</option>
+            <option value="trial">Trial</option>
+            <option value="starter">Starter</option>
+            <option value="pro">Pro</option>
             <option value="enterprise">Enterprise</option>
           </select>
         </div>

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron }                from '@nestjs/schedule';
 import { PrismaService }       from '../../database/prisma.service';
 import { IntegrationEventService } from '../integrations/integration-event.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export enum InAppNotifType {
   GATEWAY_OFFLINE          = 'GATEWAY_OFFLINE',
@@ -37,6 +38,7 @@ export class InAppNotificationsService {
   constructor(
     private readonly prisma:            PrismaService,
     private readonly integrationEvents: IntegrationEventService,
+    private readonly notifications:     NotificationsService,
   ) {}
 
   // ── Utwórz powiadomienie (z deduplication) ────────────────────
@@ -140,6 +142,27 @@ export class InAppNotificationsService {
     });
   }
 
+  async announce(title: string, body: string, targetRoles: string[]): Promise<{ count: number }> {
+    const users = await this.prisma.user.findMany({
+      where:  { role: { in: targetRoles as any }, isActive: true },
+      select: { id: true },
+    });
+
+    for (const u of users) {
+      await this.prisma.inAppNotification.create({
+        data: {
+          userId:    u.id,
+          type:      InAppNotifType.SYSTEM_ANNOUNCEMENT,
+          title,
+          body,
+          dedupeKey: null,
+        },
+      }).catch(() => {});
+    }
+
+    return { count: users.length };
+  }
+
   // ── Cron: co 15 min — skanuj offline gateway/beacon ──────────
   @Cron('0 */15 * * * *')
   async scanInfrastructure() {
@@ -167,6 +190,9 @@ export class InAppNotificationsService {
         meta:           { gatewayId: gw.id, locationName: gw.location?.name },
       }, `inapp:gw:${gw.id}:offline`, 120);
 
+      // Email alert (with its own dedup via notificationLog)
+      this.notifications.alertGatewayOffline(gw.id).catch(() => {});
+
       // Sprint F — dispatch do Slack/Teams/Webhook
       if (orgId) {
         this.integrationEvents.onGatewayOffline(orgId, {
@@ -175,7 +201,7 @@ export class InAppNotificationsService {
         }).catch(() => {});
       }
 
-      // Zaktualizuj isOnline = false w DB
+      // Zaktualizuj isOnline = false w DB (po wysłaniu alertów)
       await this.prisma.gateway.update({
         where: { id: gw.id },
         data:  { isOnline: false },
@@ -203,6 +229,9 @@ export class InAppNotificationsService {
         meta:           { deviceId: dev.id, hardwareId: dev.hardwareId, deskName: dev.desk?.name },
       }, `inapp:beacon:${dev.id}:offline`, 120);
 
+      // Email alert (with its own dedup via notificationLog)
+      this.notifications.alertBeaconOffline(dev.id).catch(() => {});
+
       // Sprint F — dispatch do Slack/Teams/Webhook
       if (orgId) {
         const lastSeenAgo = dev.lastSeen
@@ -217,7 +246,7 @@ export class InAppNotificationsService {
         }).catch(() => {});
       }
 
-      // Zaktualizuj isOnline = false w DB
+      // Zaktualizuj isOnline = false w DB (po wysłaniu alertów)
       await this.prisma.device.update({
         where: { id: dev.id },
         data:  { isOnline: false },
