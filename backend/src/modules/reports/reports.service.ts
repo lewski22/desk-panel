@@ -187,8 +187,8 @@ export class ReportsService {
   }
 
   validateDateRange(from?: string, to?: string): { fromDate: Date; toDate: Date } {
-    const fromDate = new Date(from);
-    const toDate   = new Date(to);
+    const fromDate = new Date(from ?? '');
+    const toDate   = new Date(to ?? '');
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       throw new BadRequestException('Invalid date format');
     }
