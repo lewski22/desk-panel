@@ -115,9 +115,19 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const { t }       = useTranslation();
   const navigate    = useNavigate();
   const location    = useLocation();
-  const [collapsed,   setCollapsed]   = useState(false);
+  const [collapsed,   setCollapsed]   = useState(() => {
+    const saved = localStorage.getItem('sidebar_collapsed');
+    if (saved !== null) return saved === 'true';
+    return typeof window !== 'undefined' && window.innerWidth < 1280;
+  });
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [showChangePwd, setShowChangePwd] = useState(false);
+
+  const toggleCollapsed = () => setCollapsed(c => {
+    const next = !c;
+    localStorage.setItem('sidebar_collapsed', String(next));
+    return next;
+  });
 
   const isImpersonated = localStorage.getItem('app_impersonated') === 'true';
 
@@ -220,7 +230,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         )}
         {!mobile && (
           <button
-            onClick={() => setCollapsed(c => !c)}
+            onClick={toggleCollapsed}
             className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-xs"
             title={collapsed ? t('layout.expand') : t('layout.collapse')}
           >
@@ -287,7 +297,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-zinc-50">
+        <main className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-24 md:pb-6">
           {children}
         </main>
       </div>

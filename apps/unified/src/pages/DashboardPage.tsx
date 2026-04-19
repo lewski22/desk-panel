@@ -374,7 +374,7 @@ export function DashboardPage() {
       <QuickActions locationId={locationId} onRefresh={load} />
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <KpiCard
           label={t('dashboard.kpi.occupancy_now')}
           value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
@@ -424,7 +424,7 @@ export function DashboardPage() {
       </Card>
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
         <HourlyChart hourly={ext?.hourly} />
 
         {/* Zone occupancy */}
@@ -453,7 +453,7 @@ export function DashboardPage() {
       </div>
 
       {/* Bottom row: Top desks + Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.top.title')}</p>
           <div className="space-y-2">

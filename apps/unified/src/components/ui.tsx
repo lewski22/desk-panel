@@ -156,12 +156,12 @@ export function PageHeader({ title, subtitle, sub, action }: {
   title: string; subtitle?: string; sub?: string; action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between mb-6">
-      <div>
-        <h1 className="text-xl font-semibold text-zinc-800">{title}</h1>
+    <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+      <div className="min-w-0">
+        <h1 className="text-xl font-semibold text-zinc-800 leading-tight">{title}</h1>
         {(subtitle || sub) && <p className="text-xs text-zinc-400 mt-0.5">{subtitle ?? sub}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 }
