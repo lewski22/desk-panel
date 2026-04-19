@@ -12,10 +12,11 @@ FROM node:20-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl postgresql-client
-COPY --from=builder /app/dist         ./dist
-COPY --from=builder /app/node_modules ./node_modules
+COPY package*.json ./
+RUN npm ci --only=production --legacy-peer-deps
 COPY --from=builder /app/prisma       ./prisma
-COPY --from=builder /app/package.json ./
+RUN npx prisma generate
+COPY --from=builder /app/dist         ./dist
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 CMD ["sh", "entrypoint.sh"]
