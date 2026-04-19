@@ -18,4 +18,6 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   }
+,
+  "exclude": ["**/*.spec.ts", "**/*.spec.js", "node_modules"]
 }

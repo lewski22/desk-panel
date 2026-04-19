@@ -109,7 +109,7 @@ export class ReportsService {
         locationId:     loc?.id ?? '',
         locationName:   loc?.name ?? '',
         deskId:         desk?.id ?? '',
-        deskLabel:      desk?.label ?? '',
+        deskLabel:      desk?.name ?? '',
         checkinMethod:  ci.method ?? null,
         checkedInAt:    ci.checkedInAt?.toISOString() ?? null,
         checkedOutAt:   ci.checkedOutAt?.toISOString() ?? null,
@@ -186,7 +186,7 @@ export class ReportsService {
     return val;
   }
 
-  validateDateRange(from: string, to: string): { fromDate: Date; toDate: Date } {
+  validateDateRange(from?: string, to?: string): { fromDate: Date; toDate: Date } {
     const fromDate = new Date(from);
     const toDate   = new Date(to);
     if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {

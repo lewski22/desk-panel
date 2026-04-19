@@ -261,7 +261,7 @@ export class ReservationsService {
 
     // Parsuj RRULE — np. 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=4'
     const dates = this._expandRRule(rule, new Date(date));
-    const results = [];
+    const results: any[] = [];
 
     for (const d of dates) {
       const dayStr = d.toISOString().slice(0, 10);
