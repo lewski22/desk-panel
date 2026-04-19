@@ -271,6 +271,59 @@ Po ustawieniu zmiennych — restart backendu. Jeśli `VAPID_PUBLIC_KEY` / `VAPID
 
 ---
 
+---
+
+## Teams Bot Framework (slash commands)
+
+Zaimplementowano 2026-04-19. Moduł: `backend/src/modules/teams-bot/`.
+
+### Architektura
+
+| Plik | Opis |
+|------|------|
+| `teams-bot.module.ts` | `CloudAdapter` z auth Bot Framework + rejestracja modułu |
+| `teams-bot.controller.ts` | `POST /api/v1/bot/messages` — endpoint dla Bot Framework Service |
+| `teams-bot.service.ts` | `TeamsActivityHandler` — routing komend + Messaging Extensions |
+| `teams-bot-cards.ts` | Adaptive Cards: formularz rezerwacji, lista, success/error |
+| `apps/teams/manifest/manifest.json` | Manifest v1.17 — dodano sekcje `bots` i `composeExtensions` |
+
+### Komendy (wiadomość bezpośrednia do bota)
+
+| Komenda | Opis |
+|---------|------|
+| `book` / `zarezerwuj` | Pokaż dostępne biurka + Adaptive Card z formularzem |
+| `reservations` / `moje` | Lista 5 nadchodzących rezerwacji z przyciskiem Anuluj |
+| `cancel <id>` | Anuluj rezerwację po ID |
+| `help` | Lista komend |
+
+### Slash commands (okno kompozycji Teams)
+
+Dostępne przez przycisk `...` → Reserti lub wpisanie `/` w compose box:
+
+| Komenda | Typ | Opis |
+|---------|-----|------|
+| `/book` | action | Otwiera task module z formularzem rezerwacji |
+| `/reservations` | action | Otwiera task module z listą rezerwacji |
+
+### Konfiguracja produkcyjna
+
+**Zmienne środowiskowe w Coolify:**
+
+| Zmienna | Wartość |
+|---------|---------|
+| `BOT_APP_ID` | App ID z Azure Bot Registration |
+| `BOT_APP_PASSWORD` | Client Secret z Azure Bot Registration |
+
+**Azure Bot Service** → Messaging Endpoint: `https://api.prohalw2026.ovh/api/v1/bot/messages`
+
+**Manifest** (`apps/teams/manifest/manifest.json`) — zastąp oba `REPLACE-WITH-BOT-APP-ID` tym samym App ID co `BOT_APP_ID`.
+
+### Wymaganie: azureObjectId
+
+Bot identyfikuje użytkownika przez pole `User.azureObjectId` (ustawiane przy logowaniu przez Entra ID SSO). Użytkownicy, którzy logują się wyłącznie przez email/hasło, nie będą rozpoznawani przez bota.
+
+---
+
 ### Sprint K — AI Features (zweryfikowano 2026-04-19)
 
 | Element | Status | Uwagi |

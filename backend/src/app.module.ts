@@ -30,6 +30,7 @@ import { IntegrationsModule }       from './modules/integrations/integrations.mo
 import { RecommendationsModule }    from './modules/recommendations/recommendations.module';
 import { InsightsModule }           from './modules/insights/insights.module';
 import { GraphSyncModule }          from './modules/graph-sync/graph-sync.module';
+import { TeamsBotModule }           from './modules/teams-bot/teams-bot.module';
 
 @Module({
   imports: [
@@ -66,6 +67,7 @@ import { GraphSyncModule }          from './modules/graph-sync/graph-sync.module
     RecommendationsModule,  // K1 — AI desk recommendations
     InsightsModule,         // K2 — utilization insights + cron
     GraphSyncModule,        // M4 — Microsoft Graph Calendar Sync
+    TeamsBotModule,         // Teams Bot Framework — slash commands
   ],
   providers: [
     { provide: APP_GUARD,       useClass: ThrottlerGuard },
