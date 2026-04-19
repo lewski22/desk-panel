@@ -13,7 +13,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl postgresql-client
 COPY package*.json ./
-RUN npm ci --only=production --legacy-peer-deps
+RUN npm install --omit=dev --legacy-peer-deps
 COPY --from=builder /app/prisma       ./prisma
 RUN npx prisma generate
 COPY --from=builder /app/dist         ./dist
