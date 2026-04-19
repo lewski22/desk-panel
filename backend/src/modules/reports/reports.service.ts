@@ -29,7 +29,7 @@ export class ReportsService {
 
   // ── Heatmap: check-ins pogrupowane po dniu tygodnia × godzinie ──
   async getHeatmap(orgId: string, from: Date, to: Date, locationId?: string): Promise<HeatmapCell[]> {
-    const checkins = await this.prisma.checkIn.findMany({
+    const checkins = await this.prisma.checkin.findMany({
       where: {
         reservation: {
           desk: {
@@ -73,7 +73,7 @@ export class ReportsService {
     to:    Date,
     locationId?: string,
   ): Promise<OccupancyRow[]> {
-    const checkins = await this.prisma.checkIn.findMany({
+    const checkins = await this.prisma.checkin.findMany({
       where: {
         reservation: {
           desk: {
@@ -149,9 +149,9 @@ export class ReportsService {
   // ── XLSX ────────────────────────────────────────────────────────
   async rowsToXlsx(rows: OccupancyRow[]): Promise<Buffer> {
     // Dynamiczny import — xlsx jest opcjonalną zależnością
-    let xlsx: typeof import('xlsx');
+    let xlsx: any;
     try {
-      xlsx = await import('xlsx');
+      xlsx = await import('xlsx').catch(() => null);
     } catch {
       throw new BadRequestException(
         'xlsx package not installed. Run: npm install xlsx --save',

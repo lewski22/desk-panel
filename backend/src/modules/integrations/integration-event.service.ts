@@ -128,7 +128,7 @@ export class IntegrationEventService {
       this.webhook.dispatch(orgId, {
         event: 'beacon.offline',
         organizationId: orgId,
-        data: { deviceId: data.deviceId, ...data },
+        data: { ...data },
         timestamp: new Date().toISOString(),
       }),
     ]);
@@ -148,7 +148,7 @@ export class IntegrationEventService {
       this.webhook.dispatch(orgId, {
         event: 'gateway.offline',
         organizationId: orgId,
-        data: { gatewayId: data.gatewayId, ...data },
+        data: { ...data },
         timestamp: new Date().toISOString(),
       }),
     ]);

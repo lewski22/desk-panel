@@ -400,20 +400,21 @@ model Booking {
 model Visitor {
   id           String    @id @default(cuid())
   locationId   String
-  hostId       String
-  name         String
+  hostUserId   String
+  firstName    String
+  lastName     String?
   email        String?
   company      String?
+  visitDate    DateTime
   purpose      String?
   status       String    @default("INVITED")
   qrToken      String    @unique @default(cuid())
-  invitedAt    DateTime  @default(now())
   checkedInAt  DateTime?
   checkedOutAt DateTime?
   createdAt    DateTime  @default(now())
 
   location Location @relation(fields: [locationId], references: [id])
-  host     User     @relation("HostedVisitors", fields: [hostId], references: [id])
+  host     User     @relation("HostedVisitors", fields: [hostUserId], references: [id])
 }
 
 // ─── Push Subscription ───────────────────────────────────────

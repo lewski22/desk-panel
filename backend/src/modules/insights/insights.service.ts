@@ -154,7 +154,7 @@ export class InsightsService {
     since.setDate(since.getDate() - PERIOD_DAYS);
 
     // ── Dane bazowe ─────────────────────────────────────────────
-    const checkins = await this.prisma.checkIn.findMany({
+    const checkins = await this.prisma.checkin.findMany({
       where: {
         desk: { locationId },
         checkedInAt: { gte: since },

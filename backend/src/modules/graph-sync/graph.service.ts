@@ -430,8 +430,8 @@ export class GraphService {
     const azureCfg = await this.integrations.getAzureConfig(record.organizationId);
     if (!azureCfg?.tenantId) return null;
 
-    const clientId     = azureCfg.clientId     ?? this.config.get('AZURE_CLIENT_ID', '');
-    const clientSecret = azureCfg.clientSecret  ?? this.config.get('AZURE_CLIENT_SECRET', '');
+    const clientId     = (azureCfg.clientId     ?? this.config.get('AZURE_CLIENT_ID', '')) as string;
+    const clientSecret = (azureCfg.clientSecret  ?? this.config.get('AZURE_CLIENT_SECRET', '')) as string;
 
     const body = new URLSearchParams({
       client_id:     clientId,

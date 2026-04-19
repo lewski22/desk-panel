@@ -1,36 +1,38 @@
-/**
- * VisitorsService — Sprint J
- * Zarządzanie gośćmi biura (Visitor Management)
- */
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable, NotFoundException, ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class VisitorsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  // ── Lista gości per lokalizacja + dzień ───────────────────────
+  // ── Lista gości dla lokalizacji ───────────────────────────────
   async findAll(locationId: string, date?: string, actorOrgId?: string) {
-    const loc = await this.prisma.location.findUnique({ where: { id: locationId }, select: { organizationId: true } });
-    if (actorOrgId && loc?.organizationId !== actorOrgId) throw new ForbiddenException();
+    // Org isolation: sprawdź czy location należy do actorOrg
+    if (actorOrgId) {
+      const loc = await this.prisma.location.findUnique({ where: { id: locationId }, select: { organizationId: true } });
+      if (!loc || loc.organizationId !== actorOrgId) throw new ForbiddenException('Brak dostępu');
+    }
 
     const where: any = { locationId };
     if (date) {
-      const day   = new Date(date + 'T00:00:00.000Z');
-      const next  = new Date(day); next.setDate(next.getDate() + 1);
-      where.visitDate = { gte: day, lt: next };
+      const d = new Date(date); d.setHours(0,0,0,0);
+      const next = new Date(d); next.setDate(next.getDate() + 1);
+      where.visitDate = { gte: d, lt: next };
     }
+
     return this.prisma.visitor.findMany({
       where,
-      include: { host: { select: { firstName: true, lastName: true, email: true } } },
       orderBy: { visitDate: 'asc' },
+      include: { host: { select: { firstName: true, lastName: true, email: true } } },
     });
   }
 
   // ── Zaproś gościa ─────────────────────────────────────────────
   async invite(locationId: string, hostUserId: string, dto: {
-    firstName: string; lastName: string; email: string;
-    visitDate: string; company?: string; purpose?: string;
+    firstName: string; lastName?: string; email?: string; company?: string;
+    visitDate: string; purpose?: string;
   }) {
     const visitor = await this.prisma.visitor.create({
       data: {
@@ -45,7 +47,6 @@ export class VisitorsService {
       },
       include: { host: { select: { firstName: true, lastName: true } } },
     });
-    // TODO: send invite email with QR token (przez NotificationsService/SMTP)
     return visitor;
   }
 
@@ -60,7 +61,6 @@ export class VisitorsService {
     });
   }
 
-  // ── Check-in przez QR token (publiczny endpoint) ──────────────
   async checkinByQr(qrToken: string) {
     const v = await this.prisma.visitor.findUnique({ where: { qrToken } });
     if (!v) throw new NotFoundException('Nieważny QR token wizyty');
@@ -68,25 +68,16 @@ export class VisitorsService {
     return this.checkin(v.id);
   }
 
-  // ── Check-out ─────────────────────────────────────────────────
   async checkout(id: string) {
-    return this.prisma.visitor.update({
-      where: { id },
-      data:  { status: 'CHECKED_OUT', checkedOutAt: new Date() },
-    });
+    return this.prisma.visitor.update({ where: { id }, data: { status: 'CHECKED_OUT', checkedOutAt: new Date() } });
   }
 
-  // ── Anuluj wizytę ─────────────────────────────────────────────
   async cancel(id: string) {
-    return this.prisma.visitor.update({
-      where: { id },
-      data:  { status: 'CANCELLED' },
-    });
+    return this.prisma.visitor.update({ where: { id }, data: { status: 'CANCELLED' } });
   }
 
-  // ── Dzisiaj — quick count dla dashboardu ─────────────────────
   async todayCount(locationId: string) {
-    const now  = new Date(); now.setHours(0,0,0,0);
+    const now = new Date(); now.setHours(0,0,0,0);
     const next = new Date(now); next.setDate(next.getDate() + 1);
     return this.prisma.visitor.count({
       where: { locationId, visitDate: { gte: now, lt: next }, status: { not: 'CANCELLED' } },

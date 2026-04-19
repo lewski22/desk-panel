@@ -5,23 +5,27 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import { ReservationStatus } from '@prisma/client';
-import { PrismaService } from '../../database/prisma.service';
-import { LedEventsService } from '../../shared/led-events.service';
-import { GatewaysService } from '../gateways/gateways.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import { CreateReservationDto } from './dto/create-reservation.dto';
+import { Cron }                    from '@nestjs/schedule';
+import { ReservationStatus }       from '@prisma/client';
+import { PrismaService }           from '../../database/prisma.service';
+import { LedEventsService }        from '../../shared/led-events.service';
+import { GatewaysService }         from '../gateways/gateways.service';
+import { NotificationsService }    from '../notifications/notifications.service';
+import { IntegrationEventService } from '../integrations/integration-event.service';
+import { GraphService }            from '../graph-sync/graph.service';
+import { CreateReservationDto }    from './dto/create-reservation.dto';
 
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private ledEvents: LedEventsService,
-    private gateways: GatewaysService,
-    private notify: NotificationsService,
+    private prisma:            PrismaService,
+    private ledEvents:         LedEventsService,
+    private gateways:          GatewaysService,
+    private notify:            NotificationsService,
+    private integrationEvents: IntegrationEventService,
+    private graphService:      GraphService,
   ) {}
 
   async findAll(filters: {
@@ -45,7 +49,7 @@ export class ReservationsService {
         ...(filters.userId && { userId: filters.userId }),
         ...(filters.date &&
           (() => {
-            const d = new Date(`${filters.date}T00:00:00.000Z`);
+            const d    = new Date(`${filters.date}T00:00:00.000Z`);
             const next = new Date(d);
             next.setUTCDate(next.getUTCDate() + 1);
             return { date: { gte: d, lt: next } };
@@ -71,114 +75,124 @@ export class ReservationsService {
         checkin: true,
       },
     });
-    if (!reservation) {
-      throw new NotFoundException(`Reservation ${id} not found`);
-    }
+    if (!reservation) throw new NotFoundException(`Reservation ${id} not found`);
 
     if (actorOrgId && reservation.desk?.location?.organizationId !== actorOrgId) {
-      throw new ForbiddenException('Brak dostepu do tej rezerwacji');
+      throw new ForbiddenException('Brak dostępu do tej rezerwacji');
     }
-
     return reservation;
   }
 
+  async findMy(userId: string, date?: string, take = 50) {
+    return this.prisma.reservation.findMany({
+      where: {
+        userId,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
+        ...(date && (() => {
+          const d    = new Date(`${date}T00:00:00.000Z`);
+          const next = new Date(d);
+          next.setUTCDate(next.getUTCDate() + 1);
+          return { date: { gte: d, lt: next } };
+        })()),
+      },
+      include: {
+        desk: { select: { name: true, code: true, floor: true, zone: true, location: { select: { name: true } } } },
+        checkin: { select: { id: true, method: true, checkedInAt: true, checkedOutAt: true } },
+      },
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+      take: Math.min(take, 100),
+    });
+  }
+
   async create(actorId: string, dto: CreateReservationDto, actorOrgId?: string) {
-    const userId = dto.targetUserId ?? actorId;
+    const userId = (dto as any).targetUserId ?? actorId;
 
     const desk = await this.prisma.desk.findUnique({
-      where: { id: dto.deskId },
+      where:   { id: dto.deskId },
       include: {
         location: {
           select: {
             organizationId: true,
-            openTime: true,
-            closeTime: true,
-            maxDaysAhead: true,
-            maxHoursPerDay: true,
+            openTime: true, closeTime: true,
+            maxDaysAhead: true, maxHoursPerDay: true,
             timezone: true,
           },
         },
       },
     });
-    if (!desk) {
-      throw new NotFoundException('Biurko nie istnieje');
-    }
+
+    if (!desk) throw new NotFoundException(`Desk ${dto.deskId} not found`);
 
     if (actorOrgId && desk.location?.organizationId !== actorOrgId) {
-      throw new ForbiddenException('Biurko nie nalezy do Twojej organizacji');
+      throw new ForbiddenException('Biurko należy do innej organizacji');
     }
 
-    const loc = desk.location;
-    const now = new Date();
-    const resDate = new Date(`${dto.date}T00:00:00.000Z`);
-    const startTime = new Date(dto.startTime);
-    const endTime = new Date(dto.endTime);
-
-    const maxDate = new Date(now);
-    maxDate.setUTCDate(maxDate.getUTCDate() + loc.maxDaysAhead);
-    maxDate.setUTCHours(23, 59, 59, 999);
-    if (resDate > maxDate) {
-      throw new ConflictException(
-        `Rezerwacja mozliwa maksymalnie ${loc.maxDaysAhead} dni do przodu`,
-      );
-    }
-
-    const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-    if (durationHours > loc.maxHoursPerDay) {
-      throw new ConflictException(
-        `Rezerwacja nie moze trwac dluzej niz ${loc.maxHoursPerDay} godzin`,
-      );
-    }
-    if (durationHours <= 0) {
-      throw new ConflictException('Czas zakonczenia musi byc pozniejszy niz startu');
-    }
-
-    const [openH, openM] = loc.openTime.split(':').map(Number);
-    const [closeH, closeM] = loc.closeTime.split(':').map(Number);
-    const startHHMM = startTime.getUTCHours() * 60 + startTime.getUTCMinutes();
-    const endHHMM = endTime.getUTCHours() * 60 + endTime.getUTCMinutes();
-    const openMin = openH * 60 + openM;
-    const closeMin = closeH * 60 + closeM;
-    if (startHHMM < openMin || endHHMM > closeMin) {
-      throw new ConflictException(
-        `Rezerwacja musi miescic sie w godzinach pracy biura (${loc.openTime}-${loc.closeTime})`,
-      );
+    if (desk.status !== 'ACTIVE') {
+      throw new ConflictException('Desk is not available for booking');
     }
 
     const conflict = await this.prisma.reservation.findFirst({
       where: {
         deskId: dto.deskId,
-        date: new Date(dto.date),
+        date:   new Date(dto.date),
         status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
         OR: [
           {
             startTime: { lt: new Date(dto.endTime) },
-            endTime: { gt: new Date(dto.startTime) },
+            endTime:   { gt: new Date(dto.startTime) },
           },
         ],
       },
     });
-    if (conflict) {
-      throw new ConflictException('Desk is already reserved for this time slot');
-    }
+    if (conflict) throw new ConflictException('Desk is already reserved for this time slot');
 
     const reservation = await this.prisma.reservation.create({
       data: {
-        deskId: dto.deskId,
+        deskId:    dto.deskId,
         userId,
-        date: new Date(dto.date),
+        date:      new Date(dto.date),
         startTime: new Date(dto.startTime),
-        endTime: new Date(dto.endTime),
-        notes: dto.notes,
-        status: ReservationStatus.CONFIRMED,
+        endTime:   new Date(dto.endTime),
+        notes:     dto.notes,
+        status:    ReservationStatus.CONFIRMED,
       },
       include: {
         desk: { select: { name: true, code: true } },
       },
     });
 
+    // ── Notify beacon (LED: RESERVED state) ─────────────────────
     this._notifyBeaconReservation(dto.deskId, reservation.startTime, reservation.endTime).catch(() => {});
+
+    // ── Email notification ───────────────────────────────────────
     this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});
+
+    // ── Sprint F — Integration dispatcher (Slack/Teams/Webhook) ─
+    this.integrationEvents.onReservationCreated(actorOrgId ?? desk.location?.organizationId ?? '', {
+      id:        reservation.id,
+      deskName:  reservation.desk?.name ?? dto.deskId,
+      date:      new Date(dto.date).toISOString().slice(0, 10),
+      startTime: new Date(dto.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+      endTime:   new Date(dto.endTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
+    }).catch(() => {});
+
+    // ── M4 — Microsoft Graph Calendar Sync ─────────────────────
+    // fire-and-forget — NIGDY nie blokuj odpowiedzi
+    this.graphService.createCalendarEvent(userId, {
+      reservationId: reservation.id,
+      subject:       `Biurko: ${reservation.desk?.name ?? dto.deskId}`,
+      start:         new Date(dto.startTime),
+      end:           new Date(dto.endTime),
+      location:      reservation.desk?.name,
+      bodyText:      `Rezerwacja biurka zarządzana przez Reserti.`,
+    }).then(graphEventId => {
+      if (graphEventId) {
+        this.prisma.reservation.update({
+          where: { id: reservation.id },
+          data:  { graphEventId },
+        }).catch(() => {});
+      }
+    }).catch(() => {});
 
     return reservation;
   }
@@ -202,19 +216,33 @@ export class ReservationsService {
 
     const updated = await this.prisma.reservation.update({
       where: { id },
-      data: { status: ReservationStatus.CANCELLED },
+      data:  { status: ReservationStatus.CANCELLED },
     });
 
     await this.prisma.checkin.updateMany({
       where: { reservationId: id, checkedOutAt: null },
-      data: { checkedOutAt: new Date() },
+      data:  { checkedOutAt: new Date() },
     });
 
     try {
       this.ledEvents.emit(reservation.deskId, 'FREE');
       this._notifyBeaconReservation(reservation.deskId, null, null).catch(() => {});
       this.notify.notifyReservationCancelled(reservation.id).catch(() => {});
-    } catch {}
+
+      // Sprint F — Integration dispatcher
+      this.integrationEvents.onReservationCancelled(actorOrgId ?? '', {
+        id:       id,
+        deskName: (reservation as any).desk?.name ?? reservation.deskId,
+      }).catch(() => {});
+
+      // M4 — usuń event z Outlook Calendar
+      if ((reservation as any).graphEventId) {
+        this.graphService.deleteCalendarEvent(
+          reservation.userId,
+          (reservation as any).graphEventId,
+        ).catch(() => {});
+      }
+    } catch (_) {}
 
     return updated;
   }
@@ -227,190 +255,131 @@ export class ReservationsService {
     return { qrToken: reservation.qrToken, deskId: reservation.deskId };
   }
 
+  // ── Cykliczne rezerwacje (Sprint G1) ──────────────────────────
+  async createRecurring(actorId: string, body: any, actorOrgId?: string) {
+    const { deskId, date, startTime, endTime, notes, rule } = body;
+
+    // Parsuj RRULE — np. 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=4'
+    const dates = this._expandRRule(rule, new Date(date));
+    const results = [];
+
+    for (const d of dates) {
+      const dayStr = d.toISOString().slice(0, 10);
+      const startDt = new Date(`${dayStr}T${startTime.slice(11, 16)}:00.000Z`);
+      const endDt   = new Date(`${dayStr}T${endTime.slice(11, 16)}:00.000Z`);
+
+      const conflict = await this.prisma.reservation.findFirst({
+        where: {
+          deskId, date: d,
+          status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
+          OR: [{ startTime: { lt: endDt }, endTime: { gt: startDt } }],
+        },
+      });
+      if (conflict) continue; // Pomiń dni z konfliktem
+
+      const res = await this.prisma.reservation.create({
+        data: {
+          deskId, userId: actorId,
+          date: d, startTime: startDt, endTime: endDt, notes,
+          status:           ReservationStatus.CONFIRMED,
+          recurrenceRule:   rule,
+          recurrenceGroupId: `${actorId}-${Date.now()}`,
+        },
+        include: { desk: { select: { name: true } } },
+      });
+      results.push(res);
+    }
+    return { created: results.length, reservations: results };
+  }
+
+  async cancelRecurring(id: string, scope: 'single' | 'following' | 'all', actorId: string, actorRole: string) {
+    const res = await this.findOne(id);
+    if (res.userId !== actorId && !['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(actorRole)) {
+      throw new ForbiddenException('Not allowed');
+    }
+
+    const groupId = (res as any).recurrenceGroupId;
+    if (!groupId || scope === 'single') {
+      return this.cancel(id, actorId, actorRole);
+    }
+
+    const where: any = {
+      recurrenceGroupId: groupId,
+      status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
+    };
+    if (scope === 'following') {
+      where.startTime = { gte: res.startTime };
+    }
+
+    const toCancel = await this.prisma.reservation.findMany({ where, select: { id: true } });
+    for (const r of toCancel) {
+      await this.cancel(r.id, actorId, actorRole);
+    }
+    return { cancelled: toCancel.length };
+  }
+
+  // ── Cron: co 15 min wygaś stare rezerwacje ────────────────────
   @Cron('0 */15 * * * *')
   async expireOld() {
     const now = new Date();
     const result = await this.prisma.reservation.updateMany({
       where: {
-        status: ReservationStatus.CONFIRMED,
+        status:  ReservationStatus.CONFIRMED,
         endTime: { lt: now },
       },
       data: { status: ReservationStatus.EXPIRED },
     });
-
-    if (result.count > 0) {
-      this.logger.log(`Expired ${result.count} stale reservation(s)`);
-    }
-
+    if (result.count > 0) this.logger.log(`Expired ${result.count} stale reservation(s)`);
     return result.count;
   }
 
-  async findMy(userId: string, date?: string, take = 50) {
-    return this.prisma.reservation.findMany({
-      where: {
-        userId,
-        status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
-        ...(date ? { date: new Date(date) } : {}),
-      },
-      include: {
-        desk: { select: { id: true, name: true, code: true, floor: true, location: { select: { name: true } } } },
-      },
-      orderBy: { startTime: 'asc' },
-      take,
-    });
-  }
-
+  // ── Private helpers ──────────────────────────────────────────
   private async _notifyBeaconReservation(
     deskId: string,
     startTime: Date | null,
-    endTime: Date | null,
+    endTime:   Date | null,
   ) {
     try {
       const gatewayId = await this.gateways.findGatewayForDesk(deskId);
-      if (!gatewayId) {
-        return;
+      if (!gatewayId) return;
+
+      if (startTime && endTime) {
+        await this.gateways.sendBeaconCommand(gatewayId, deskId, 'SET_RESERVATION', {
+          startTime: startTime.getTime() / 1000,
+          endTime:   endTime.getTime()   / 1000,
+        });
+      } else {
+        await this.gateways.sendBeaconCommand(gatewayId, deskId, 'CLEAR_RESERVATION', {});
       }
-
-      await this.gateways.sendBeaconCommand(gatewayId, deskId, 'SET_RESERVATION', {
-        start_unix: startTime ? Math.floor(startTime.getTime() / 1000) : 0,
-        end_unix: endTime ? Math.floor(endTime.getTime() / 1000) : 0,
-      });
-    } catch {
-      // Gateway may be offline; beacon should resync later.
-    }
+    } catch (_) {}
   }
 
-  async createRecurring(
-    actorId: string,
-    dto: CreateReservationDto & { recurrenceRule: string },
-    actorOrgId?: string,
-  ) {
-    const groupId = `rg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    const dates = this._expandRule(new Date(dto.startTime), dto.recurrenceRule);
-    const created: any[] = [];
-    const conflicts: string[] = [];
-
-    for (const date of dates) {
-      const startTime = new Date(date);
-      const endTime = new Date(date);
-      const origStart = new Date(dto.startTime);
-      const origEnd = new Date(dto.endTime);
-      startTime.setHours(origStart.getHours(), origStart.getMinutes(), 0, 0);
-      endTime.setHours(origEnd.getHours(), origEnd.getMinutes(), 0, 0);
-
-      const conflict = await this.prisma.reservation.findFirst({
-        where: {
-          deskId: dto.deskId,
-          status: { in: ['CONFIRMED', 'PENDING'] },
-          startTime: { lt: endTime },
-          endTime: { gt: startTime },
-        },
-      });
-
-      if (conflict) {
-        conflicts.push(date.toISOString().split('T')[0]);
-        continue;
-      }
-
-      const reservation = await this.prisma.reservation.create({
-        data: {
-          deskId: dto.deskId,
-          userId: actorId,
-          date: startTime,
-          startTime,
-          endTime,
-          notes: dto.notes,
-          status: 'CONFIRMED',
-          recurrenceRule: dto.recurrenceRule,
-          recurrenceGroupId: groupId,
-        },
-      });
-      created.push(reservation);
-    }
-
-    return { groupId, created, conflicts, total: dates.length };
-  }
-
-  async cancelRecurring(
-    reservationId: string,
-    scope: 'single' | 'following' | 'all',
-    actorId: string,
-    actorRole: string,
-  ) {
-    const reservation = await this.prisma.reservation.findUniqueOrThrow({
-      where: { id: reservationId },
-    });
-
-    if (!reservation.recurrenceGroupId) {
-      return this.cancel(reservationId, actorId, actorRole);
-    }
-
-    let where: any = {};
-    if (scope === 'single') {
-      where = { id: reservationId };
-    } else if (scope === 'following') {
-      where = {
-        recurrenceGroupId: reservation.recurrenceGroupId,
-        startTime: { gte: reservation.startTime },
-        status: { in: ['CONFIRMED', 'PENDING'] },
-      };
-    } else {
-      where = {
-        recurrenceGroupId: reservation.recurrenceGroupId,
-        status: { in: ['CONFIRMED', 'PENDING'] },
-      };
-    }
-
-    const { count } = await this.prisma.reservation.updateMany({
-      where,
-      data: { status: 'CANCELLED' },
-    });
-
-    return { cancelled: count, scope };
-  }
-
-  private _expandRule(startDate: Date, rule: string): Date[] {
-    const parts: Record<string, string> = {};
-    rule.replace(/^RRULE:/, '').split(';').forEach((part) => {
+  private _expandRRule(rule: string, baseDate: Date): Date[] {
+    // Minimalistyczny parser RRULE — obsługuje FREQ=WEEKLY;BYDAY=...;COUNT=N
+    const params: Record<string, string> = {};
+    for (const part of rule.split(';')) {
       const [k, v] = part.split('=');
-      parts[k] = v;
-    });
+      if (k && v) params[k] = v;
+    }
 
-    const freq = parts.FREQ ?? 'WEEKLY';
-    const count = parts.COUNT ? parseInt(parts.COUNT, 10) : 10;
-    const byday = parts.BYDAY ? parts.BYDAY.split(',') : null;
-    const until = parts.UNTIL ? new Date(parts.UNTIL) : null;
+    const count  = parseInt(params['COUNT'] ?? '4', 10);
+    const freq   = params['FREQ'] ?? 'WEEKLY';
+    const bydays = params['BYDAY']?.split(',') ?? [];
 
-    const dayMap: Record<string, number> = { MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6, SU: 0 };
-    const targetDays = byday ? byday.map((day) => dayMap[day] ?? 1) : null;
-
-    const dates: Date[] = [];
-    const cursor = new Date(startDate);
-    cursor.setHours(0, 0, 0, 0);
+    const dayMap: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
+    const results: Date[] = [];
+    const cursor = new Date(baseDate);
 
     let iterations = 0;
-    const maxIter = 365;
-
-    while (dates.length < count && iterations < maxIter) {
-      iterations += 1;
-      const dayOfWeek = cursor.getDay();
-      const matches =
-        freq === 'DAILY' ||
-        (freq === 'WEEKLY' && (!targetDays || targetDays.includes(dayOfWeek)));
-
-      if (matches) {
-        if (until && cursor > until) {
-          break;
-        }
-        dates.push(new Date(cursor));
+    while (results.length < count && iterations < 365) {
+      iterations++;
+      const dow = cursor.getDay();
+      const dayKey = Object.keys(dayMap).find(k => dayMap[k] === dow);
+      if (!bydays.length || (dayKey && bydays.includes(dayKey))) {
+        results.push(new Date(cursor));
       }
-
-      cursor.setDate(cursor.getDate() + 1);
-      if (freq === 'WEEKLY' && !targetDays && dates.length < count) {
-        cursor.setDate(cursor.getDate() + 6);
-      }
+      cursor.setDate(cursor.getDate() + (freq === 'DAILY' ? 1 : 1));
     }
-
-    return dates;
+    return results;
   }
 }

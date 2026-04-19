@@ -43,30 +43,22 @@ export class VisitorsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @HttpCode(200)
   @ApiOperation({ summary: 'Manual check-in visitor' })
-  checkin(@Param('id') id: string) {
-    return this.svc.checkin(id);
-  }
+  checkin(@Param('id') id: string) { return this.svc.checkin(id); }
 
   @Post('visitors/qr/:token')
   @HttpCode(200)
-  @ApiOperation({ summary: 'QR code check-in (public — no auth)' })
-  checkinQr(@Param('token') token: string) {
-    return this.svc.checkinByQr(token);
-  }
+  @ApiOperation({ summary: 'QR code check-in' })
+  checkinQr(@Param('token') token: string) { return this.svc.checkinByQr(token); }
 
   @Post('visitors/:id/checkout')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @HttpCode(200)
   @ApiOperation({ summary: 'Check-out visitor' })
-  checkout(@Param('id') id: string) {
-    return this.svc.checkout(id);
-  }
+  checkout(@Param('id') id: string) { return this.svc.checkout(id); }
 
   @Post('visitors/:id/cancel')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @HttpCode(200)
   @ApiOperation({ summary: 'Cancel visit invitation' })
-  cancel(@Param('id') id: string) {
-    return this.svc.cancel(id);
-  }
+  cancel(@Param('id') id: string) { return this.svc.cancel(id); }
 }
