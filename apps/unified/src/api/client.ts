@@ -101,6 +101,14 @@ export const appApi = {
     attendance:   (id: string, week?: string) => req<any>(`/locations/${id}/attendance${week ? `?week=${week}` : ''}`),
     verifyKioskPin: (id: string, pin: string) =>
       req<any>(`/locations/${id}/kiosk/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }),
+    // Floor plan aliases used by GH pages
+    floorPlan: {
+      get:    (id: string)        => req<any>(`/locations/${id}/floor-plan`),
+      update: (id: string, d: any) => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
+    },
+    // Dashboard extended / issues
+    extended: (id: string)      => req<any>(`/locations/${id}/extended`),
+    issues:   (id: string)      => req<any>(`/locations/${id}/issues`),
   },
 
   // ── Desks ────────────────────────────────────────────────────
@@ -120,6 +128,9 @@ export const appApi = {
     // Sprint K1 — AI recommendation
     getRecommended: (params: { locationId: string; date: string; start?: string; end?: string }) =>
       req<any>(`/desks/recommended?${new URLSearchParams(params as Record<string,string>).toString()}`),
+    // Aliases used by GH DesksPage
+    activate:   (id: string)   => req<any>(`/desks/${id}/activate`, { method: 'POST', body: '{}' }),
+    hardDelete: (id: string)   => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
   },
 
   // ── Devices ─────────────────────────────────────────────────
@@ -228,40 +239,60 @@ export const appApi = {
 
   // ── Notifications ─────────────────────────────────────────────
   notifications: {
-    inapp:     (unreadOnly = false) => req<any[]>(`/notifications/inapp${unreadOnly ? '?unread=true' : ''}`),
-    countUnread: ()                 => req<{ count: number }>('/notifications/inapp/count'),
-    markRead:  (ids: string[])      => req<any>('/notifications/inapp/read', { method: 'PATCH', body: JSON.stringify({ ids }) }),
-    markAllRead: ()                 => req<any>('/notifications/inapp/read-all', { method: 'PATCH' }),
-    deleteOne: (id: string)         => req<any>(`/notifications/inapp/${id}`, { method: 'DELETE' }),
-    settings:  (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
+    inapp:        (unreadOnly = false) => req<any[]>(`/notifications/inapp${unreadOnly ? '?unread=true' : ''}`),
+    countUnread:  ()                   => req<{ count: number }>('/notifications/inapp/count'),
+    markRead:     (ids: string[])      => req<any>('/notifications/inapp/read', { method: 'PATCH', body: JSON.stringify({ ids }) }),
+    markAllRead:  ()                   => req<any>('/notifications/inapp/read-all', { method: 'PATCH' }),
+    deleteOne:    (id: string)         => req<any>(`/notifications/inapp/${id}`, { method: 'DELETE' }),
+    settings:     (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
+    // Aliases: GH pages use getSettings/saveSettings/testSend
+    getSettings:  (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
+    saveSettings: (orgId: string, type: string, body: any) =>
+      req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
     updateSetting: (orgId: string, type: string, body: any) =>
       req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    testEmail:   (orgId: string, type: string) =>
+    testEmail:    (orgId: string, type: string) =>
       req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
-    smtpConfig: (orgId: string)     => req<any>(`/notifications/smtp?organizationId=${orgId}`),
-    updateSmtp: (orgId: string, body: any) =>
+    testSend:     (orgId: string, type: string) =>
+      req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
+    getLog:       (orgId: string)      => req<any[]>(`/notifications/log?organizationId=${orgId}`),
+    smtpConfig:   (orgId: string)      => req<any>(`/notifications/smtp?organizationId=${orgId}`),
+    getSmtp:      (orgId: string)      => req<any>(`/notifications/smtp?organizationId=${orgId}`),
+    updateSmtp:   (orgId: string, body: any) =>
       req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
-    testSmtp:   (orgId: string)     =>
+    saveSmtp:     (orgId: string, body: any) =>
+      req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
+    deleteSmtp:   (orgId: string)      =>
+      req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'DELETE' }),
+    testSmtp:     (orgId: string)      =>
       req<any>(`/notifications/smtp/test?organizationId=${orgId}`, { method: 'POST', body: '{}' }),
   },
 
   // ── Owner ─────────────────────────────────────────────────────
   owner: {
     orgs:           ()                         => req<any[]>('/owner/organizations'),
+    listOrgs:       ()                         => req<any[]>('/owner/organizations'),
     createOrg:      (d: any)                   => req<any>('/owner/organizations', { method: 'POST', body: JSON.stringify(d) }),
     updateOrg:      (id: string, d: any)       => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     deleteOrg:      (id: string)               => req<any>(`/owner/organizations/${id}`, { method: 'DELETE' }),
+    deactivateOrg:  (id: string)               => req<any>(`/owner/organizations/${id}`, { method: 'DELETE' }),
     impersonate:    (id: string)               => req<any>(`/owner/organizations/${id}/impersonate`, { method: 'POST', body: '{}' }),
     stopImpersonation: ()                      => req<any>('/owner/stop-impersonation', { method: 'POST', body: '{}' }),
     globalStats:    ()                         => req<any>('/owner/stats'),
+    getStats:       ()                         => req<any>('/owner/stats'),
     updateModules:  (id: string, modules: string[]) =>
+      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
+    setModules:     (id: string, modules: string[]) =>
       req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
   },
 
   // ── Organizations ─────────────────────────────────────────────
   organizations: {
-    getAzureConfig:    (id: string)      => req<any>(`/organizations/${id}/azure`),
+    getAzureConfig:    (id: string)         => req<any>(`/organizations/${id}/azure`),
     updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
+    orgs:              ()                   => req<any[]>('/owner/organizations'),
+    list:              ()                   => req<any[]>('/owner/organizations'),
+    update:            (id: string, d: any, _extra?: any) => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
   },
 
   // ── Push Notifications ────────────────────────────────────────
