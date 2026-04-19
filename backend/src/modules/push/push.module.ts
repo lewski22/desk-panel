@@ -1,11 +1,4 @@
-import { Module }       from '@nestjs/common';
-import { PushService }  from './push.service';
-import { PushController } from './push.controller';
-import { PrismaService } from '../../database/prisma.service';
-
-@Module({
-  controllers: [PushController],
-  providers:   [PushService, PrismaService],
-  exports:     [PushService],
-})
+import { Module } from '@nestjs/common';
+import { PushService } from './push.service'; import { PushController } from './push.controller';
+@Module({ controllers:[PushController], providers:[PushService], exports:[PushService] })
 export class PushModule {}

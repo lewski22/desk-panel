@@ -23,12 +23,21 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // /install/* serwuje skrypt bash — poza prefixem /api/v1
   app.setGlobalPrefix('api/v1', {
     exclude: [
-      { path: 'install/{*path}', method: RequestMethod.GET },
-      { path: 'metrics',      method: RequestMethod.GET },  // Prometheus scraper
-      { path: 'health',       method: RequestMethod.GET },  // health check
+      // Skrypt instalacyjny gateway (Raspberry Pi)
+      { path: 'install/{*path}',       method: RequestMethod.GET  },
+      // Prometheus scraper — poza /api/v1
+      { path: 'metrics',               method: RequestMethod.GET  },
+      // Health check (Coolify, load balancer)
+      { path: 'health',                method: RequestMethod.GET  },
+      // Google OAuth2 — Google nie wie o /api/v1 prefiksie
+      { path: 'auth/google/callback',  method: RequestMethod.GET  },
+      // Microsoft Graph OAuth2 — redirect + callback poza prefixem
+      { path: 'auth/graph/redirect',   method: RequestMethod.GET  },
+      { path: 'auth/graph/callback',   method: RequestMethod.GET  },
+      // Microsoft Graph webhook — musi być publiczny (MS nie wysyła żadnego auth)
+      { path: 'graph/webhook',         method: RequestMethod.POST },
     ],
   });
 
@@ -36,7 +45,7 @@ async function bootstrap() {
     const config = new DocumentBuilder()
       .setTitle('Desk Beacon API')
       .setDescription('Reserti — desk/hotdesk management system')
-      .setVersion('0.1.0')
+      .setVersion('0.17.0')
       .addBearerAuth()
       .build();
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));

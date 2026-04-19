@@ -4,110 +4,45 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { User } from '@prisma/client';
-
 @Injectable()
 export class AuthService {
-  constructor(
-    private prisma: PrismaService,
-    private jwt: JwtService,
-    private config: ConfigService,
-  ) {}
-
-  async validateUser(email: string, password: string): Promise<User | null> {
+  constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) {}
+  async validateUser(email: string, password: string): Promise<User|null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return null;
-    // Konto Azure SSO — brak hasła, nie pozwól na logowanie email/password
-    if (user.passwordHash === 'AZURE_SSO_ONLY') return null;
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    return valid ? user : null;
+    if (user.passwordHash === 'AZURE_SSO_ONLY' || user.passwordHash === 'GOOGLE_SSO_ONLY') return null;
+    return await bcrypt.compare(password, user.passwordHash) ? user : null;
   }
-
   async login(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId };
     const accessToken = this.jwt.sign(payload);
-    const refreshToken = this.jwt.sign(payload, {
-      secret: this.config.get('JWT_REFRESH_SECRET'),
-      expiresIn: '7d',
-    });
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    await this.prisma.refreshToken.create({
-      data: { userId: user.id, token: refreshToken, expiresAt },
-    });
-
-    // Pobierz enabledModules z organizacji — frontend używa do guardzenia UI
+    const refreshToken = this.jwt.sign(payload, { secret: this.config.get('JWT_REFRESH_SECRET'), expiresIn: '7d' });
+    const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + 7);
+    await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
     let enabledModules: string[] = [];
-    if (user.organizationId) {
-      const org = await this.prisma.organization.findUnique({
-        where:  { id: user.organizationId },
-        select: { enabledModules: true },
-      });
+    if ((user as any).organizationId) {
+      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true } });
       enabledModules = org?.enabledModules ?? [];
     }
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id:             user.id,
-        email:          user.email,
-        firstName:      user.firstName,
-        lastName:       user.lastName,
-        role:           user.role,
-        organizationId: user.organizationId,
-        enabledModules,
-      },
-    };
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules } };
   }
-
-  async refresh(token: string) {
-    const record = await this.prisma.refreshToken.findUnique({
-      where:   { token },
-      include: { user: true },
-    });
-
+  async refresh(refreshToken: string) {
+    const record = await this.prisma.refreshToken.findUnique({ where: { token: refreshToken }, include: { user: true } });
     if (!record || record.expiresAt < new Date()) {
+      if (record) await this.prisma.refreshToken.delete({ where: { token: refreshToken } }).catch(() => {});
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
-
-    // FIX: reject refresh if account was deactivated after token was issued
-    if (!record.user.isActive || record.user.deletedAt) {
-      await this.prisma.refreshToken.delete({ where: { id: record.id } });
-      throw new UnauthorizedException('Konto jest nieaktywne');
-    }
-
-    // Rotate: delete old, issue new pair
-    await this.prisma.refreshToken.delete({ where: { id: record.id } });
+    if (!record.user.isActive) { await this.prisma.refreshToken.delete({ where: { token: refreshToken } }); throw new UnauthorizedException('Account deactivated'); }
+    await this.prisma.refreshToken.delete({ where: { token: refreshToken } });
     return this.login(record.user);
   }
-
+  async logout(refreshToken: string) { await this.prisma.refreshToken.deleteMany({ where: { token: refreshToken } }); }
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
-
-    // Konta SSO nie mają hasła — nie mogą go zmieniać
-    if (user.passwordHash === 'AZURE_SSO_ONLY') {
-      throw new BadRequestException('Konto SSO — hasło jest zarządzane przez Microsoft/Entra ID.');
-    }
-
-    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) {
-      throw new UnauthorizedException('Aktualne hasło jest nieprawidłowe.');
-    }
-
-    if (currentPassword === newPassword) {
-      throw new BadRequestException('Nowe hasło musi być inne niż aktualne.');
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 10);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-
-    // Unieważnij wszystkie refresh tokeny — zmuszamy do ponownego logowania
+    if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');
+    if (await bcrypt.compare(newPassword, user.passwordHash)) throw new BadRequestException('New password must differ from current');
+    const hash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
-  }
-
-  async logout(token: string) {
-    await this.prisma.refreshToken.deleteMany({ where: { token } });
   }
 }

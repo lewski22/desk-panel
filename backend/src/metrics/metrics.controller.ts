@@ -1,47 +1,14 @@
-import { Controller, Get, ForbiddenException, Req } from '@nestjs/common';
-import { Request } from 'express';
-import { register } from './metrics.registry';
-import { ConfigService } from '@nestjs/config';
-
-/**
- * MetricsController — endpoint /metrics dla Prometheus.
- *
- * Chroniony IP whitelist — nie wymaga JWT (Prometheus scraper
- * nie obsługuje tokenów). Skonfiguruj w .env:
- *   METRICS_ALLOWED_IPS=127.0.0.1,10.0.0.5
- *
- * Gdy METRICS_ALLOWED_IPS nie jest ustawione → localhost only.
- * Endpoint jest poza prefixem /api/v1 (patrz app.module.ts).
- */
+import { Controller, Get, Req, Res, HttpStatus } from '@nestjs/common';
+import { Request, Response } from 'express'; import { register } from 'prom-client';
 @Controller()
 export class MetricsController {
-  private readonly allowedIps: string[];
-
-  constructor(private readonly config: ConfigService) {
-    const raw = this.config.get<string>('METRICS_ALLOWED_IPS') ?? '127.0.0.1,::1';
-    this.allowedIps = raw.split(',').map(ip => ip.trim()).filter(Boolean);
-  }
-
   @Get('metrics')
-  async getMetrics(@Req() req: Request): Promise<string> {
-    const clientIp = (
-      (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ??
-      req.socket.remoteAddress ??
-      ''
-    );
-
-    if (!this.allowedIps.includes(clientIp)) {
-      throw new ForbiddenException(
-        `Metrics endpoint not accessible from ${clientIp}. ` +
-        `Set METRICS_ALLOWED_IPS env var to allow this IP.`
-      );
-    }
-
-    return register.metrics();
+  async metrics(@Req() req: Request, @Res() res: Response) {
+    const allowed=(process.env.METRICS_ALLOWED_IPS??'127.0.0.1').split(',');
+    const ip=req.ip?.replace('::ffff:','')?? '';
+    if(!allowed.includes(ip)&&!allowed.includes('*')) return res.status(HttpStatus.FORBIDDEN).send('Forbidden');
+    res.set('Content-Type',register.contentType); res.send(await register.metrics());
   }
-
   @Get('health')
-  getHealth(): object {
-    return { ok: true, ts: new Date().toISOString() };
-  }
+  health() { return { status:'ok', timestamp:new Date().toISOString(), version:'0.17.0' }; }
 }

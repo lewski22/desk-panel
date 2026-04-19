@@ -1,0 +1,61 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "REPLACE-WITH-GUID",
+  "packageName": "pl.reserti.deskbooking",
+  "developer": {
+    "name":         "Reserti",
+    "websiteUrl":   "https://reserti.pl",
+    "privacyUrl":   "https://reserti.pl/privacy",
+    "termsOfUseUrl": "https://reserti.pl/terms"
+  },
+  "name": {
+    "short": "Reserti",
+    "full":  "Reserti — Desk Booking"
+  },
+  "description": {
+    "short": "Zarezerwuj biurko w biurze",
+    "full":  "Reserti pozwala rezerwować biurka hot-desk bezpośrednio z Microsoft Teams. Sprawdź dostępność, zarezerwuj i zarządzaj swoimi rezerwacjami bez wychodzenia z Teams."
+  },
+  "icons": {
+    "color":   "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#B53578",
+  "staticTabs": [
+    {
+      "entityId":    "home",
+      "name":        "Moje biurko",
+      "contentUrl":  "https://teams.prohalw2026.ovh/",
+      "websiteUrl":  "https://teams.prohalw2026.ovh/",
+      "scopes":      ["personal"]
+    },
+    {
+      "entityId":    "book",
+      "name":        "Rezerwuj",
+      "contentUrl":  "https://teams.prohalw2026.ovh/book",
+      "websiteUrl":  "https://teams.prohalw2026.ovh/book",
+      "scopes":      ["personal"]
+    },
+    {
+      "entityId":    "mybookings",
+      "name":        "Moje rezerwacje",
+      "contentUrl":  "https://teams.prohalw2026.ovh/my-bookings",
+      "websiteUrl":  "https://teams.prohalw2026.ovh/my-bookings",
+      "scopes":      ["personal"]
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "teams.prohalw2026.ovh",
+    "api.prohalw2026.ovh"
+  ],
+  "webApplicationInfo": {
+    "id":       "REPLACE-WITH-AZURE-CLIENT-ID",
+    "resource": "api://teams.prohalw2026.ovh/REPLACE-WITH-AZURE-CLIENT-ID"
+  }
+}
