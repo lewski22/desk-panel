@@ -34,12 +34,12 @@ export class InAppNotificationsController {
   // ── Owner/Admin — notification rules ─────────────────────────
   @Get('rules')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   getRules() { return this.svc.getRules(); }
 
   @Post('rules')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   async saveRules(@Body() body: { rules: { type: string; enabled: boolean; targetRoles: string[] }[] }) {
     for (const r of body.rules) {
       await this.svc.upsertRule(r.type as any, r.enabled, r.targetRoles);
@@ -50,7 +50,7 @@ export class InAppNotificationsController {
   // ── Owner — system announcement ──────────────────────────────
   @Post('announce')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN)
   announce(@Body() body: { title: string; body: string; targetRoles: string[] }) {
     return this.svc.announce(body.title, body.body, body.targetRoles);
   }

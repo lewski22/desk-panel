@@ -755,110 +755,113 @@ export function OwnerPage() {
 
       {/* Statystyki platformy */}
       {statCards.length > 0 && (
-        <div className="grid grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
           {statCards.map(({ label, val, sub, icon }) => (
             <div key={label} className="bg-white border border-zinc-100 rounded-xl p-4">
               <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-xs text-zinc-400 uppercase tracking-wide font-medium">{label}</p>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-wide font-semibold truncate">{label}</p>
                   <p className="text-2xl font-bold text-zinc-800 mt-1">{val ?? '—'}</p>
                   <p className="text-xs text-zinc-400 mt-0.5">{sub}</p>
                 </div>
-                <span className="text-2xl">{icon}</span>
+                <span className="text-xl shrink-0 ml-1">{icon}</span>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-5 w-fit">
-        {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów']] as const).map(([tab, label]) => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
-            }`}>
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs + filtry */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 overflow-x-auto">
+          {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów']] as const).map(([tab, label]) => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
 
-      {/* Filtry — tylko dla zakładki Organizacje */}
-      {activeTab === 'orgs' && (
-      <div className="flex gap-2 mb-4 items-center">
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Szukaj firmy..."
-          className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none min-w-[200px]"
-        />
-        <button onClick={load}
-          className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg text-zinc-500 hover:bg-zinc-50">
-          ↺ Odśwież
-        </button>
-        <span className="text-xs text-zinc-400 ml-auto">{filtered.length} firm</span>
+        {activeTab === 'orgs' && (
+          <div className="flex gap-2 items-center flex-1 min-w-0">
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Szukaj firmy…"
+              className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none flex-1 min-w-[160px] max-w-[280px]"
+            />
+            <button onClick={load}
+              className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg text-zinc-500 hover:bg-zinc-50 shrink-0">
+              ↺
+            </button>
+            <span className="text-xs text-zinc-400 shrink-0">{filtered.length} firm</span>
+          </div>
+        )}
       </div>
-      )}
 
       {/* Tabela organizacji */}
       {activeTab === 'orgs' && <div className="bg-white border border-zinc-100 rounded-xl overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-zinc-400 text-sm">{t('btn.saving').replace('…','')}</div>
+          <div className="py-16 text-center text-zinc-400 text-sm">Ładowanie…</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-zinc-400 text-sm">
-            {err ? t('qr.error_title') : t('organizations.no_locations')}
+            {err ? t('qr.error_title') : 'Brak organizacji'}
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100">
-                {[t('organizations.label_office'), 'Slug', 'Plan', t('users.table.name'), t('desks.col.status'), t('desks.col.actions')].map(h => (
-                  <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((org, i) => (
-                <tr key={org.id} className={`border-b border-zinc-50 ${i % 2 === 1 ? 'bg-zinc-50/50' : ''} ${!org.isActive ? 'opacity-50' : ''}`}>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-zinc-800 text-sm">{org.name}</div>
-                    {org.notes && <div className="text-xs text-zinc-400 mt-0.5 truncate max-w-[200px]">{org.notes}</div>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <code className="text-xs bg-zinc-100 text-zinc-500 px-1.5 py-0.5 rounded">{org.slug}</code>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
-                      org.plan === 'enterprise' ? 'bg-yellow-100 text-yellow-700' :
-                      org.plan === 'standard'   ? 'bg-purple-100 text-purple-700' :
-                      'bg-blue-100 text-blue-700'
-                    }`}>{org.plan ?? 'basic'}</span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-zinc-500">
-                    {org.usersCount ?? org._count?.users ?? '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${org.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                      {org.isActive ? 'aktywna' : 'nieaktywna'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1.5 flex-wrap">
-                      <Btn size="sm" onClick={() => handleImpersonate(org)}
-                        loading={impersonating === org.id}>
-                        🔑 Wejdź
-                      </Btn>
-                      <Btn size="sm" variant="secondary" onClick={() => setEditOrg(org)}>{t('users.actions.edit')}</Btn>
-                      {org.isActive
-                        ? <Btn size="sm" variant="danger" onClick={() => handleDeactivate(org)}>{t('desks.actions_extra.deactivate')}</Btn>
-                        : <Btn size="sm" variant="secondary" onClick={() => handleActivate(org)}>{t('desks.actions.activate')}</Btn>
-                      }
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="border-b border-zinc-100 bg-zinc-50/80">
+                  {['Firma', 'Slug', 'Plan', 'Użytkownicy', 'Status', 'Akcje'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-zinc-50">
+                {filtered.map(org => (
+                  <tr key={org.id} className={`hover:bg-zinc-50/60 transition-colors ${!org.isActive ? 'opacity-60' : ''}`}>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-zinc-800 text-sm">{org.name}</div>
+                      {org.notes && <div className="text-xs text-zinc-400 mt-0.5 truncate max-w-[180px]">{org.notes}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <code className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-md">{org.slug}</code>
+                    </td>
+                    <td className="px-4 py-3">
+                      <PlanBadge plan={org.plan ?? 'basic'} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-500 tabular-nums">
+                      {org.usersCount ?? org._count?.users ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        org.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${org.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
+                        {org.isActive ? 'Aktywna' : 'Nieaktywna'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1.5 items-center flex-wrap">
+                        <Btn size="sm" onClick={() => handleImpersonate(org)} loading={impersonating === org.id}>
+                          🔑 Wejdź
+                        </Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => setEditOrg(org)}>
+                          ✏️ Edytuj
+                        </Btn>
+                        {org.isActive
+                          ? <Btn size="sm" variant="danger" onClick={() => handleDeactivate(org)}>Dezaktywuj</Btn>
+                          : <Btn size="sm" variant="secondary" onClick={() => handleActivate(org)}>Aktywuj</Btn>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>}
 

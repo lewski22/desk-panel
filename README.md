@@ -232,3 +232,31 @@ cd desk-gateway-python && python3 -m unittest discover -s tests/ -v
 | `docs/provisioning.md` | Provisioning gateway i beaconów krok po kroku |
 | `docs/metrics.md` | Prometheus metryki (backend + gateway) |
 | `docs/deployment.md` | Wdrożenie na Coolify + Cloudflare Tunnel |
+
+
+---
+
+## TODO — Dług techniczny (zweryfikowano 2026-04-19)
+
+| # | Zadanie | Status | Opis |
+|---|---------|--------|------|
+| 1 | **Web-push VAPID keys** | ✅ Zrobione | `web-push` zainstalowany, `push.service.ts` obsługuje VAPID. Wymagane ustawienie env vars `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` w Coolify. |
+| 2 | **Visitor email invite** | ❌ Do zrobienia | `visitors.service.ts` tworzy rekord gościa, ale nie wysyła emaila zaproszenia. Należy wstrzyknąć `NotificationsService` i wywołać `sendEmail()` po `prisma.visitor.create()`. |
+| 3 | **Floor Plan CDN** | ❌ Do zrobienia | Floor plan przechowywany jako base64 w kolumnie `floorPlanUrl` w bazie danych (~2–3 MB per rekord). Należy zmigrować upload do S3 / Cloudflare R2 i zapisywać tylko URL. |
+| 4 | **Kiosk link w UI** | ❌ Do zrobienia | Brak przycisku `/kiosk?location=...` w `OrganizationsPage.tsx`. Jedna linia kodu — przycisk otwierający kiosk dla danej lokalizacji. |
+| 5 | **Playwright E2E** | ✅ Zrobione | `playwright.config.ts` skonfigurowany, testy: `auth.spec.ts`, `checkin.spec.ts`, `reservation.spec.ts` w `backend/tests/e2e/`. |
+| 6 | **Beacon RTC timestamp** | ❓ Nieweryfikowalne | Kod firmware beacona/gateway nie jest w tym repozytorium — nie można potwierdzić implementacji NTP sync. |
+
+### Sprint K — AI Features (zweryfikowano 2026-04-19)
+
+| Element | Status | Uwagi |
+|---------|--------|-------|
+| K1: `recommendations.service.ts` — algorytm rule-based | ✅ Zrobione | Historia 20 rez., scoring wag, wykluczanie konfliktów |
+| K1: `GET /desks/recommended` controller | ✅ Zrobione | |
+| K1: `appApi.desks.getRecommended()` | ✅ Zrobione | |
+| K1: `RecommendationBanner.tsx` komponent | ✅ Zrobione | |
+| K1: **Banner podpięty w `DeskMapPage`** | ❌ Do zrobienia | Import + `<RecommendationBanner>` nad mapą |
+| K2: `insights.service.ts` — template engine + cron 07:00 | ✅ Zrobione | 6 typów insightów, cachowane w DB |
+| K2: `GET /insights`, `POST /insights/refresh` | ✅ Zrobione | |
+| K2: `InsightsWidget.tsx` + `OrgInsightsWidget.tsx` | ✅ Zrobione | |
+| K2: **`InsightsWidget` podpięty w `DashboardPage`** | ❌ Do zrobienia | Import + `<InsightsWidget>` w sekcji dashboardu |

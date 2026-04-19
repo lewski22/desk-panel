@@ -142,24 +142,28 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {/* Logo */}
-      <div className={`flex items-center gap-2 px-4 py-4 border-b border-zinc-800 shrink-0 ${mobile ? '' : ''}`}>
+      {/* Logo + toggle */}
+      <div className="flex items-center gap-2 px-3 py-3 border-b border-zinc-800 shrink-0">
+        <span className="text-[#B53578] font-black text-xl shrink-0">R</span>
         {(!collapsed || mobile) && (
-          <>
-            <span className="text-[#B53578] font-black text-xl">R</span>
-            <div className="min-w-0">
-              <div className="text-white font-bold text-sm tracking-widest">RESERTI</div>
-              <div className="text-zinc-500 text-[10px] truncate max-w-[140px]">
-                {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
-              </div>
-              <div className="text-[#B53578] text-[9px] font-semibold uppercase tracking-wider mt-0.5">
-                {ROLE_LABEL[user.role] ?? user.role}
-              </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-white font-bold text-sm tracking-widest">RESERTI</div>
+            <div className="text-zinc-500 text-[10px] truncate">
+              {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
             </div>
-          </>
+            <div className="text-[#B53578] text-[9px] font-semibold uppercase tracking-wider mt-0.5">
+              {ROLE_LABEL[user.role] ?? user.role}
+            </div>
+          </div>
         )}
-        {collapsed && !mobile && (
-          <span className="text-[#B53578] font-black text-xl mx-auto">R</span>
+        {!mobile && (
+          <button
+            onClick={toggleCollapsed}
+            className="shrink-0 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-800 transition-colors text-sm"
+            title={collapsed ? t('layout.expand') : t('layout.collapse')}
+          >
+            {collapsed ? '›' : '‹'}
+          </button>
         )}
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
@@ -202,56 +206,32 @@ export function AppLayout({ user, onLogout, children }: Props) {
         })}
       </nav>
 
-      {/* ── BOTTOM: Zmień hasło / Language / Logout / Collapse ── */}
-
-      {/* Zmień hasło — nad language+logout */}
-      {(!collapsed || mobile) && (
-        <div className="px-3 pt-2 pb-1 border-t border-zinc-800">
-          <button
-            onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
-            className="w-full flex items-center gap-2 text-zinc-400 hover:text-zinc-100 text-xs py-2 px-2 rounded-xl hover:bg-zinc-800 transition-colors text-left"
-          >
-            <span>🔑</span>
-            <span>{t('layout.change_password')}</span>
-          </button>
-        </div>
-      )}
-
-      {collapsed && !mobile ? (
-        /* Collapsed desktop — stack vertically so both items fit in w-14 */
-        <div className="py-2 border-t border-zinc-800 flex flex-col items-center gap-1">
-          <NotificationBell role={user.role} />
-          <button
-            onClick={toggleCollapsed}
-            className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-sm leading-none"
-            title={t('layout.expand')}
-          >
-            ›
-          </button>
-        </div>
-      ) : (
-        <div className="px-3 py-2.5 border-t border-zinc-800 flex items-center justify-between gap-2">
+      {/* ── BOTTOM: Zmień hasło / Language / Logout ── */}
+      <div className="border-t border-zinc-800 shrink-0">
+        {(!collapsed || mobile) && (
+          <div className="px-3 pt-2 pb-1">
+            <button
+              onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
+              className="w-full flex items-center gap-2 text-zinc-400 hover:text-zinc-100 text-xs py-2 px-2 rounded-xl hover:bg-zinc-800 transition-colors text-left"
+            >
+              <span>🔑</span>
+              <span>{t('layout.change_password')}</span>
+            </button>
+          </div>
+        )}
+        <div className={`px-3 py-2.5 flex items-center gap-2 ${collapsed && !mobile ? 'flex-col justify-center' : 'justify-between'}`}>
           {(!collapsed || mobile) && <LanguageSwitcher />}
           <NotificationBell role={user.role} />
           {(!collapsed || mobile) && (
             <button
               onClick={doLogout}
-              className="text-zinc-500 hover:text-zinc-200 text-xs p-1.5 rounded-lg hover:bg-zinc-800 transition-colors flex-1 text-left"
+              className="text-zinc-500 hover:text-zinc-200 text-xs p-1.5 rounded-lg hover:bg-zinc-800 transition-colors flex-1 text-right"
             >
               {t('layout.logout')}
             </button>
           )}
-          {!mobile && (
-            <button
-              onClick={toggleCollapsed}
-              className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors text-xs"
-              title={t('layout.collapse')}
-            >
-              ‹
-            </button>
-          )}
         </div>
-      )}
+      </div>
     </>
   );
 
