@@ -34,11 +34,8 @@ export function DevicesPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await (fetch as any)(
-        `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'}/devices`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('app_access')}` } }
-      ).then((r: Response) => r.json());
-      setDevices(data);
+      const data = await api.devices.list();
+      setDevices(Array.isArray(data) ? data : []);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
