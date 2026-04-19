@@ -1,4 +1,4 @@
-import { CardFactory, Attachment } from '@microsoft/botbuilder';
+import { CardFactory, Attachment } from 'botbuilder';
 
 export function helpCard(): Attachment {
   return CardFactory.adaptiveCard({

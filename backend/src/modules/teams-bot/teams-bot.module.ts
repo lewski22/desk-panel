@@ -4,7 +4,7 @@ import {
   CloudAdapter,
   ConfigurationBotFrameworkAuthentication,
   ConfigurationServiceClientCredentialFactory,
-} from '@microsoft/botbuilder';
+} from 'botbuilder';
 import { TeamsBotController } from './teams-bot.controller';
 import { TeamsBotService }    from './teams-bot.service';
 

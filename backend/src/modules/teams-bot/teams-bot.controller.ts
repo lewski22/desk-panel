@@ -2,7 +2,7 @@ import { Controller, Post, Req, Res, HttpCode, HttpStatus, Logger } from '@nestj
 import { ApiTags, ApiOperation }                                     from '@nestjs/swagger';
 import { SkipThrottle }                                              from '@nestjs/throttler';
 import { Request, Response }                                         from 'express';
-import { CloudAdapter }                                              from '@microsoft/botbuilder';
+import { CloudAdapter }                                              from 'botbuilder';
 import { TeamsBotService }                                           from './teams-bot.service';
 
 @ApiTags('teams-bot')

@@ -15,8 +15,8 @@
  *   composeExtension/submitAction — przetwórz formularz
  */
 import { Injectable, Logger }           from '@nestjs/common';
-import { TeamsActivityHandler, TurnContext, MessageFactory } from '@microsoft/botbuilder';
-import type { MessagingExtensionAction, MessagingExtensionActionResponse } from '@microsoft/botbuilder';
+import { TeamsActivityHandler, TurnContext, MessageFactory } from 'botbuilder';
+import type { MessagingExtensionAction, MessagingExtensionActionResponse } from 'botbuilder';
 import { PrismaService }                from '../../database/prisma.service';
 import {
   helpCard, bookingFormCard, reservationsCard,
