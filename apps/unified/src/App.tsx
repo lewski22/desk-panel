@@ -26,7 +26,7 @@ import { KioskPage }           from './pages/KioskPage';
 import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
-import { IntegrationsPage }    from './pages/IntegrationsPage';
+import IntegrationsPage         from './pages/IntegrationsPage';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
