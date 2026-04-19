@@ -277,13 +277,20 @@ export class GraphService {
   /**
    * processWebhookNotification — obsłuż notyfikację od Microsoft Graph.
    * Weryfikuje clientState, pobiera zmieniony event, syncuje z Reserti.
+   * Przy błędzie przejściowym — jeden retry po 1s.
    */
   async processWebhookNotification(notifications: any[]): Promise<void> {
     for (const notification of notifications) {
       try {
         await this._processOne(notification);
       } catch (err: any) {
-        this.logger.warn(`Webhook processing error: ${err.message}`);
+        this.logger.warn(`Webhook processing error (retrying): ${err.message}`);
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          await this._processOne(notification);
+        } catch (err2: any) {
+          this.logger.error(`Webhook processing failed after retry: ${err2.message}`);
+        }
       }
     }
   }
@@ -407,15 +414,37 @@ export class GraphService {
     const reservationId = event.transactionId;
     if (!reservationId) return;
 
-    // Zaktualizuj czasy rezerwacji na podstawie eventu Outlook
     const newStart = new Date(event.start?.dateTime);
     const newEnd   = new Date(event.end?.dateTime);
 
     if (isNaN(newStart.getTime()) || isNaN(newEnd.getTime())) return;
     if (newEnd <= newStart) return;
 
-    await this.prisma.reservation.updateMany({
-      where: { id: reservationId, status: { in: ['PENDING', 'CONFIRMED'] as any } },
+    // Pobierz rezerwację żeby znać deskId
+    const reservation = await this.prisma.reservation.findUnique({
+      where:  { id: reservationId },
+      select: { id: true, deskId: true, status: true },
+    });
+    if (!reservation || !['PENDING', 'CONFIRMED'].includes(reservation.status)) return;
+
+    // Sprawdź konflikt z innymi rezerwacjami na tym biurku
+    const conflict = await this.prisma.reservation.findFirst({
+      where: {
+        deskId:    reservation.deskId,
+        id:        { not: reservationId },
+        status:    { in: ['PENDING', 'CONFIRMED'] as any },
+        startTime: { lt: newEnd },
+        endTime:   { gt: newStart },
+      },
+    });
+
+    if (conflict) {
+      this.logger.warn(`Graph webhook: time change for reservation=${reservationId} conflicts with ${conflict.id} — skipped`);
+      return;
+    }
+
+    await this.prisma.reservation.update({
+      where: { id: reservationId },
       data:  { startTime: newStart, endTime: newEnd },
     }).catch(() => {});
 
