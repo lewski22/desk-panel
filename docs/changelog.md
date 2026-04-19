@@ -1,5 +1,93 @@
 # Changelog — Reserti Desk Management
 
+## [0.17.0] — 2026-04-19 — Teams Bot + Graph Sync + Integracje + AI Insights
+
+### Added
+
+**Teams App (`apps/teams/`)**
+- Samodzielna aplikacja React jako personal tab w Microsoft Teams
+- `BookPage`, `HomePage`, `MyBookingsPage` — pełny flow rezerwacji biurka w Teams
+- `teamsAuth.ts` — SSO przez Teams SDK (tokeny Entra ID bez ponownego logowania)
+- `manifest.json` v1.1.0 — personal tabs + bot commands + messaging extensions
+
+**Teams Bot Framework**
+- `TeamsBotService` (extends `TeamsActivityHandler`) — komendy DM: `book`, `reservations`, `cancel <id>`, `help`
+- `TeamsBotController` — `POST /bot/messages` (endpoint Azure Bot Service, `@SkipThrottle`)
+- Adaptive Cards: formularz rezerwacji, lista rezerwacji, confirmacja, błąd
+- Messaging Extensions: `/book` i `/reservations` przez `composeExtension/fetchTask`
+- Dodano pakiet `botbuilder ^4.23.3` do backendu
+
+**Microsoft Graph Calendar Sync (dwukierunkowa)**
+- `GraphSyncModule` — przechowywanie tokenów OAuth2, sync kalendarza Outlook ↔ Reserti
+- Webhook notifications dla zmian czasowych rezerwacji (Outlook → Reserti)
+- Retry 1× po 1s przy przejściowych błędach Graph API
+- Sprawdzanie konfliktów przed nadpisaniem czasu rezerwacji ze zmiany Outlook
+
+**Integrations module** (per-org)
+- `IntegrationsModule` z dostawcami: Slack, Teams, Webhook, Azure AD, Google Workspace
+- `IntegrationsPage.tsx` — włącz/wyłącz/konfiguruj każdą integrację
+- Szyfrowanie konfiguracji OAuth AES-256-GCM (`integration-crypto.service.ts`)
+- Formularze: `SlackConfigForm`, `TeamsConfigForm`, `WebhookConfigForm`, `AzureConfigForm`, `GoogleConfigForm`
+
+**AI Recommendations (Sprint K1)**
+- `RecommendationBanner.tsx` — podpowiedzi optymalnego biurka na podstawie historii
+- `RecommendationsService` + `GET /recommendations` (ranking według scoring)
+
+**Utilization Insights (Sprint K2)**
+- `InsightsWidget.tsx` — wyświetla insighty zajętości (`PEAK_DAY`, `UNDERUTILIZED_ZONE`, `GHOST_DESKS`)
+- `InsightsService` z cron job (codzienne obliczanie)
+- `GET /insights` — lista insightów dla org/lokalizacji
+
+**Web Push Notifications (VAPID)**
+- `PushService` — inicjalizacja `web-push` z kluczami VAPID z env: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`
+- `generate-vapid-keys.js` — skrypt pomocniczy do jednorazowego wygenerowania kluczy
+- Automatyczne usuwanie wygasłych endpointów push
+
+**Auth — `GET /auth/me`**
+- Nowy endpoint zwracający świeże dane użytkownika + `enabledModules` bez ponownego logowania
+- Frontend (`App.tsx`) odświeża stan po każdym zamontowaniu aplikacji
+
+**Monitoring**
+- `monitoring/` — Docker Compose z Prometheus + Grafana
+- 4 dashboardy Grafana: `desk-analytics`, `fleet-overview`, `iot-health`, `system-health`
+
+**Owner Panel — Plan Templates**
+- Tabela `PlanTemplate` w bazie (starter/trial/pro/enterprise) z edytowalnymi limitami
+- Zakładka „Szablony planów" w OwnerPage — edycja limitów biurek, użytkowników, bramek, lokalizacji, flagi OTA/SSO/SMTP/API
+- Picker planu przy tworzeniu nowej organizacji
+
+**UI**
+- `KioskLinkButton.tsx` — przycisk generowania linku do kiosku na stronie organizacji
+- `EntraIdSection.tsx` — sekcja konfiguracji Entra ID w IntegrationsPage
+- `ChangePasswordModal.tsx` — zmiana hasła dostępna z sidebara (dla użytkowników bez SSO)
+- `CalendarSyncSection.tsx` + `GraphConnectButton.tsx` — UI połączenia kalendarza Microsoft Graph
+- `NotificationRulesPage.tsx` — konfiguracja reguł powiadomień in-app
+
+---
+
+### Changed
+
+- **AppLayout.tsx** — dodano właściwość `module` do nav items (DESKS, ROOMS, WEEKLY_VIEW), dzięki czemu filtr `hasModule()` faktycznie działa; poprawiono layout sidebara w trybie collapsed desktop
+- **Graph Sync** — `_syncEventToReservation()` sprawdza konflikty na tym samym biurku przed zaktualizowaniem czasu; dodano retry 1× na błędy przejściowe
+- **OwnerPage.tsx** — dialog tworzenia org z pickerem planu; nowa zakładka PlanTemplatesTab
+- **Azure + Google auth services** — uproszczona logika JIT provisioning
+- **NotificationsPage.tsx** — używa `appApi.notifications.getSettings/getLog/saveSettings/testSmtp` (poprzednio brak wsparcia dla org-level settings)
+- **Subscriptions service** — wymuszanie limitów planu przy przydzielaniu planu do org
+
+---
+
+### Fixed
+
+- **NotificationBell** — wywoływał `appApi.inapp.*` (nieistniejąca przestrzeń nazw) zamiast `appApi.notifications.*`; powodowało to ciche błędy i brak powiadomień
+- **Widoczność modułów** — nav items nie miały ustawionej właściwości `module`, więc pozycje jak `/map` czy `/resources` były zawsze widoczne, nawet gdy moduł był wyłączony przez OWNER
+- **Stale enabledModules** — po wyłączeniu modułu przez OWNER zalogowani użytkownicy dalej widzieli moduł do czasu ponownego logowania (naprawione przez `GET /auth/me` przy każdym mount)
+- **DevicesPage** — crash gdy `api.devices.list()` zwracało nie-tablicę
+- **Floor plan toolbar** — błędy CORS i limitu rozmiaru body przy wgrywaniu planu piętra
+- **InAppNotifType migration** — enum tworzony bez `IF NOT EXISTS`, powodujący błąd przy retry migracji (`20260419000001_fix_notiftype_to_text`)
+- **botbuilder npm package** — zła nazwa pakietu `@microsoft/botbuilder` (nie istnieje w npm registry) → poprawiono na `botbuilder ^4.23.3`; Docker build kończył się błędem E404
+
+---
+
 ## [0.12.0] — 2026-04-17 — Sprinty A–B + naprawa Prisma
 
 ### Sprinty zrealizowane
