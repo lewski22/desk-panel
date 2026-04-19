@@ -2,6 +2,9 @@ import { IsString, IsBoolean, IsEmail, IsOptional, IsDateString, IsArray } from 
 
 export class UpdateOrgDto {
   @IsOptional() @IsString()
+  name?: string;
+
+  @IsOptional() @IsString()
   plan?: string;
 
   @IsOptional() @IsBoolean()
