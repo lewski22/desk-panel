@@ -111,8 +111,10 @@ export const appApi = {
       req<any>(`/locations/${id}/kiosk/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }),
     // Floor plan aliases used by GH pages
     floorPlan: {
-      get:    (id: string)        => req<any>(`/locations/${id}/floor-plan`),
+      get:    (id: string)         => req<any>(`/locations/${id}/floor-plan`),
       update: (id: string, d: any) => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
+      upload: (id: string, d: any) => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
+      delete: (id: string)         => req<any>(`/locations/${id}/floor-plan/delete`, { method: 'POST' }),
     },
     // Dashboard extended / issues
     extended: (id: string)      => req<any>(`/locations/${id}/extended`),
@@ -288,7 +290,7 @@ export const appApi = {
     stopImpersonation: ()                      => req<any>('/owner/stop-impersonation', { method: 'POST', body: '{}' }),
     getStats:       ()                         => req<any>('/owner/stats'),
     setModules:     (id: string, modules: string[]) =>
-      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
+      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ enabledModules: modules }) }),
   },
 
   // ── Organizations ─────────────────────────────────────────────
