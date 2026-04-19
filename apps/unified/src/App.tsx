@@ -26,6 +26,7 @@ import { KioskPage }           from './pages/KioskPage';
 import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
+import { IntegrationsPage }    from './pages/IntegrationsPage';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
@@ -104,6 +105,9 @@ export default function App() {
                     <Guard user={user} allowed={SUPER_ONLY}><OrganizationsPage /></Guard>
                   } />
 
+                  <Route path="/integrations" element={
+                    <Guard user={user} allowed={ADMIN_ROLES}><IntegrationsPage /></Guard>
+                  } />
                   <Route path="/notifications" element={
                     <Guard user={user} allowed={SUPER_ONLY}><NotificationsPage /></Guard>
                   } />
