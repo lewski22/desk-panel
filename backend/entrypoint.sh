@@ -15,7 +15,7 @@ if [ "$MT" = "t" ]; then
   fi
 fi
 echo "→ prisma migrate deploy..."
-npx prisma migrate deploy
+npx prisma@5 migrate deploy
 echo "→ seed..."
 node dist/database/seeds/seed.js
 echo "→ Starting..."

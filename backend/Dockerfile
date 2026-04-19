@@ -14,9 +14,10 @@ ENV NODE_ENV=production
 RUN apk add --no-cache openssl postgresql-client
 COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps
-COPY --from=builder /app/prisma       ./prisma
-RUN npx prisma generate
-COPY --from=builder /app/dist         ./dist
+COPY --from=builder /app/prisma                        ./prisma
+COPY --from=builder /app/node_modules/.prisma          ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma/client   ./node_modules/@prisma/client
+COPY --from=builder /app/dist                          ./dist
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 CMD ["sh", "entrypoint.sh"]
