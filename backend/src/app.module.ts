@@ -24,6 +24,7 @@ import { OwnerModule }              from './modules/owner/owner.module';
 import { MetricsModule }            from './metrics/metrics.module';
 import { NotificationsModule }      from './modules/notifications/notifications.module';
 import { InAppNotificationsModule } from './modules/inapp-notifications/inapp-notifications.module';
+import { ReportsModule }            from './modules/reports/reports.module';
 // ── Nowe moduły v0.17.0 (2026-04-18) ─────────────────────────────────────────
 import { IntegrationsModule }       from './modules/integrations/integrations.module';
 import { RecommendationsModule }    from './modules/recommendations/recommendations.module';
@@ -59,6 +60,7 @@ import { GraphSyncModule }          from './modules/graph-sync/graph-sync.module
     MetricsModule,
     NotificationsModule,
     InAppNotificationsModule,
+    ReportsModule,
     // ── v0.17.0 ───────────────────────────────────────────────
     IntegrationsModule,     // @Global — Slack/Teams/Webhook/Azure/Google per-org
     RecommendationsModule,  // K1 — AI desk recommendations

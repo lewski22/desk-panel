@@ -3,12 +3,22 @@ import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule }                     from './app.module';
 
+// CommonJS `require` is always available at runtime; declared here because
+// @types/node is a devDep and may not be resolved by the IDE language server.
+declare function require(module: string): any;
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: process.env.NODE_ENV === 'production'
       ? ['error', 'warn']
       : ['log', 'error', 'warn', 'debug'],
+    bodyParser: false,
   });
+
+  // Increase body limit to handle base64-encoded floor plan images (~2 MB file → ~2.7 MB JSON)
+  const bodyParser = require('body-parser');
+  app.use(bodyParser.json({ limit: '10mb' }));
+  app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
   app.useGlobalPipes(
     new ValidationPipe({
