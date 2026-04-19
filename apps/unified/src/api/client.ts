@@ -1,6 +1,11 @@
+/**
+ * apps/unified/src/api/client.ts
+ * GH baseline + Sprint C (reports) + Sprint F (integrations) +
+ * Sprint K (recommendations, insights) + M4 (graph) + Google SSO
+ */
+
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
-// Unified localStorage keys — zastępują admin_access/access_token itd.
 const KEYS = {
   access:  'app_access',
   refresh: 'app_refresh',
@@ -46,12 +51,13 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
   if (res.status === 204) return undefined as unknown as T;
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
-    throw new Error(e.message ?? res.statusText);
+    throw new Error((e as any).message ?? res.statusText);
   }
   return res.json();
 }
 
 export const appApi = {
+  // ── Auth ────────────────────────────────────────────────────
   auth: {
     async login(email: string, password: string) {
       const d = await req<any>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
@@ -68,233 +74,252 @@ export const appApi = {
       return { ...d.user, accessToken: d.accessToken };
     },
     async checkSso(email: string): Promise<{ available: boolean; tenantId?: string }> {
-      return req<any>(`/auth/azure/check?email=${encodeURIComponent(email)}`);
+      return req('/auth/azure/check?email=' + encodeURIComponent(email));
     },
     logout() {
       const rt = localStorage.getItem(KEYS.refresh);
-      if (rt) fetch(`${BASE}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt }),
-      }).catch(() => {});
-      Object.values(KEYS).forEach(k => localStorage.removeItem(k));
-      localStorage.removeItem('app_impersonated');
+      if (rt) req('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: rt }) }).catch(() => {});
+      localStorage.removeItem(KEYS.access);
+      localStorage.removeItem(KEYS.refresh);
+      localStorage.removeItem(KEYS.user);
     },
-    user(): any {
+    user() {
       try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
     },
-    changePassword(currentPassword: string, newPassword: string): Promise<void> {
-      return req<void>('/auth/change-password', {
-        method: 'PATCH',
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-    },
+    changePassword: (currentPassword: string, newPassword: string) =>
+      req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
   },
 
-  orgs: {
-    list:              ()                              => req<any[]>('/organizations'),
-    create:            (d: any)                        => req<any>('/organizations', { method: 'POST', body: JSON.stringify(d) }),
-    update:            (id: string, d: any)            => req<any>(`/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    getAzureConfig:    (id: string)                    => req<any>(`/organizations/${id}/azure`),
-    updateAzureConfig: (id: string, d: any)            => req<any>(`/organizations/${id}/azure`, { method: 'PATCH', body: JSON.stringify(d) }),
-  },
-
-
-
-
-  inapp: {
-    getAll:       (unreadOnly?: boolean) => req<any[]>(`/inapp${unreadOnly ? '?unreadOnly=true' : ''}`),
-    unreadCount:  ()                     => req<{ count: number }>('/inapp/unread-count'),
-    markRead:     (ids: string[])        => req<void>('/inapp/read',     { method: 'PATCH', body: JSON.stringify({ ids }) }),
-    markAllRead:  ()                     => req<void>('/inapp/read-all', { method: 'PATCH' }),
-    deleteOne:    (id: string)           => req<void>(`/inapp/${id}`,    { method: 'DELETE' }),
-    // Owner — reguły
-    getRules:     ()                     => req<any[]>('/inapp/rules'),
-    saveRules:    (rules: any[])         => req<any[]>('/inapp/rules',   { method: 'PATCH', body: JSON.stringify(rules) }),
-    announce:     (d: { title: string; body: string; targetRoles?: string[] }) =>
-      req<any>('/inapp/announce', { method: 'POST', body: JSON.stringify(d) }),
-  },
-  notifications: {
-    getSettings:  ()                 => req<any[]>('/notifications/settings'),
-    saveSettings: (settings: any[]) => req<any[]>('/notifications/settings', {
-      method: 'PUT', body: JSON.stringify(settings),
-    }),
-    getLog:       (limit?: number)  => req<any[]>(`/notifications/log${limit ? '?limit=' + limit : ''}`),
-    testSend:     (email: string)   => req<any>('/notifications/test', {
-      method: 'POST', body: JSON.stringify({ email }),
-    }),
-    getTypes:     ()                => req<any[]>('/notifications/types'),
-    // SMTP per org
-    getSmtp:      ()                => req<any>('/notifications/smtp'),
-    saveSmtp:     (d: any)          => req<any>('/notifications/smtp', { method: 'PUT', body: JSON.stringify(d) }),
-    testSmtp:     (email: string)   => req<any>('/notifications/smtp/test', { method: 'POST', body: JSON.stringify({ email }) }),
-    deleteSmtp:   ()                => req<any>('/notifications/smtp/delete', { method: 'POST' }),
-  },
-  owner: {
-    // Statystyki platformy (firmy, gateway, beacony, check-iny)
-    getStats:        ()                     => req<any>('/owner/stats'),
-    // Lista wszystkich firm z metrykami
-    listOrgs:        (params?: { search?: string; isActive?: string }) => {
-      const qs = new URLSearchParams(params as any).toString();
-      return req<any[]>(`/owner/organizations${qs ? '?' + qs : ''}`);
-    },
-    // Szczegóły firmy (biura, gateway, beacony)
-    getOrg:          (id: string)           => req<any>(`/owner/organizations/${id}`),
-    // Utwórz nową firmę + pierwszego SUPER_ADMIN
-    createOrg:       (d: any)               => req<any>('/owner/organizations', { method: 'POST', body: JSON.stringify(d) }),
-    // Edytuj firmę (plan, status, notatki)
-    updateOrg:       (id: string, d: any)   => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    setModules:      (id: string, modules: string[]) =>
-      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ enabledModules: modules }) }),
-    // Dezaktywuj firmę (soft delete)
-    deactivateOrg:   (id: string)           => req<void>(`/owner/organizations/${id}`, { method: 'DELETE' }),
-    // Impersonacja — wejdź jako SUPER_ADMIN firmy (JWT 30 min)
-    impersonate:     (id: string)           => req<{ token: string; adminUrl: string; org: any }>(`/owner/organizations/${id}/impersonate`, { method: 'POST' }),
-    // Health globalny
-    getHealth:       (params?: { status?: string; orgId?: string }) => {
-      const qs = new URLSearchParams(params as any).toString();
-      return req<any>(`/owner/health${qs ? '?' + qs : ''}`);
-    },
-    // Health jednej firmy
-    getOrgHealth:    (orgId: string)        => req<any>(`/owner/health/${orgId}`),
-  },
+  // ── Locations ────────────────────────────────────────────────
   locations: {
-    listAll:   ()                           => req<any[]>('/locations'),
-    list:      (orgId: string)              => req<any[]>(`/organizations/${orgId}/locations`),
-    create:    (_orgId: string, d: any)     => req<any>('/locations', { method: 'POST', body: JSON.stringify(d) }),
-    update:    (id: string, d: any)         => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    attendance:(locId: string, week: string) => req<any>(`/locations/${locId}/attendance?week=${encodeURIComponent(week)}`),
-    occupancy: (locId: string)              => req<any>(`/locations/${locId}/analytics/occupancy`),
-    issues:    (locId: string)              => req<any>(`/locations/${locId}/issues`),
-        floorPlan: {
-      get:    (locId: string)                          => req<any>(`/locations/${locId}/floor-plan`),
-      upload: (locId: string, body: any)               => req<any>(`/locations/${locId}/floor-plan`, { method: 'POST', body: JSON.stringify(body) }),
-      delete: (locId: string)                          => req<any>(`/locations/${locId}/floor-plan/delete`, { method: 'POST', body: '{}' }),
-    },
-    extended:  (locId: string)              => req<any>(`/locations/${locId}/analytics/extended`),
+    list:         ()                         => req<any[]>('/locations/my'),
+    listAll:      ()                         => req<any[]>('/locations'),
+    create:       (d: any)                   => req<any>('/locations', { method: 'POST', body: JSON.stringify(d) }),
+    update:       (id: string, d: any)       => req<any>(`/locations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    remove:       (id: string)               => req<any>(`/locations/${id}`, { method: 'DELETE' }),
+    uploadFloorPlan: (id: string, d: any)    => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
+    attendance:   (id: string, week?: string) => req<any>(`/locations/${id}/attendance${week ? `?week=${week}` : ''}`),
+    verifyKioskPin: (id: string, pin: string) =>
+      req<any>(`/locations/${id}/kiosk/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }),
   },
 
+  // ── Desks ────────────────────────────────────────────────────
   desks: {
-    list:        (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
-    status:      (locId: string)            => req<{ locationLimits: any; desks: any[] }>(`/locations/${locId}/desks/status`),
-    create:      (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify((({ locId: _l, ...rest }) => rest)(d)) }),
-    update:      (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    remove:      (id: string)               => req<any>(`/desks/${id}`, { method: 'DELETE' }),
-    activate:    (id: string)               => req<any>(`/desks/${id}/activate`, { method: 'PATCH' }),
-    hardDelete:  (id: string)               => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
-    unpair:      (id: string)               => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
-    batchPositions: (updates: any[]) => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
-    availability:(id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
-    getAvailable:(locId: string, start: string, end: string) =>
-      req<any[]>(`/desks/available?locationId=${locId}&startTime=${encodeURIComponent(start)}&endTime=${encodeURIComponent(end)}`),
+    list:         (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
+    status:       (locId: string)            => req<any>(`/locations/${locId}/desks/status`),
+    create:       (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
+    update:       (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    batchPositions: (desks: any[])           => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ desks }) }),
+    remove:        (id: string)              => req<any>(`/desks/${id}`, { method: 'DELETE' }),
+    permanentDelete: (id: string)            => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
+    unpair:        (id: string)              => req<any>(`/desks/${id}/unpair`, { method: 'DELETE' }),
+    getAvailable:  (locId: string, start: string, end: string) =>
+      req<any[]>(`/desks/available?locationId=${locId}&startTime=${start}&endTime=${end}`),
+    getByQr:       (token: string)           => req<any>(`/desks/qr/${token}`),
+    availability:  (id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
+    // Sprint K1 — AI recommendation
+    getRecommended: (params: { locationId: string; date: string; start?: string; end?: string }) =>
+      req<any>(`/desks/recommended?${new URLSearchParams(params as Record<string,string>).toString()}`),
   },
 
+  // ── Devices ─────────────────────────────────────────────────
   devices: {
-    list:      (gwId?: string)              => req<any[]>(`/devices${gwId ? `?gatewayId=${gwId}` : ''}`),
-    provision: (d: any)                     => req<any>('/devices/provision', { method: 'POST', body: JSON.stringify(d) }),
-    assign:    (id: string, deskId: string) => req<any>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
-    command:   (id: string, cmd: string, params?: any) =>
+    list:           (gwId?: string)                     => req<any[]>(`/devices${gwId ? `?gatewayId=${gwId}` : ''}`),
+    provision:      (d: any)                            => req<any>('/devices/provision', { method: 'POST', body: JSON.stringify(d) }),
+    assign:         (id: string, deskId: string)        => req<any>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
+    command:        (id: string, cmd: string, params?: any) =>
       req<any>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command: cmd, params }) }),
-    remove:         (id: string)                 => req<any>(`/devices/${id}`, { method: 'DELETE' }),
-    firmwareLatest: ()                           => req<any>('/devices/firmware/latest'),
-    triggerOta:     (id: string)                 => req<any>(`/devices/${id}/ota`,  { method: 'POST' }),
-    otaAll:         (locationId?: string)        => req<any>('/devices/ota-all', { method: 'POST', body: JSON.stringify({ locationId }) }),
+    remove:         (id: string)                        => req<any>(`/devices/${id}`, { method: 'DELETE' }),
+    firmwareLatest: ()                                  => req<any>('/devices/firmware/latest'),
+    triggerOta:     (id: string)                        => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
+    otaAll:         (locationId?: string)               => req<any>('/devices/ota-all', { method: 'POST', body: JSON.stringify({ locationId }) }),
   },
 
+  // ── Gateways ────────────────────────────────────────────────
   gateways: {
-    list:             (locId?: string)              => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
-    register:         (locId: string, name: string) => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
-    remove:           (id: string)                  => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
-    regenerateSecret: (id: string)                  => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
-    rotateSecret:      (id: string)                         => req<any>(`/gateway/${id}/rotate-secret`, { method: 'POST' }),
-    triggerUpdate:     (id: string, channel = 'main')      => req<any>(`/gateway/${id}/update`, { method: 'POST', body: JSON.stringify({ channel }) }),
-    createSetupToken: (locationId: string)          => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
-    listSetupTokens:  (locationId: string)          => req<any[]>(`/gateway/setup-tokens/${locationId}`),
-    revokeSetupToken: (tokenId: string)             => req<any>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
+    list:             (locId?: string)               => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
+    register:         (locId: string, name: string)  => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
+    remove:           (id: string)                   => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
+    regenerateSecret: (id: string)                   => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
+    rotateSecret:     (id: string)                   => req<any>(`/gateway/${id}/rotate-secret`, { method: 'POST' }),
+    triggerUpdate:    (id: string, channel = 'main') => req<any>(`/gateway/${id}/update`, { method: 'POST', body: JSON.stringify({ channel }) }),
+    createSetupToken: (locationId: string)           => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
+    listSetupTokens:  (locationId: string)           => req<any[]>(`/gateway/setup-tokens/${locationId}`),
+    revokeSetupToken: (tokenId: string)              => req<any>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
   },
 
+  // ── Users ────────────────────────────────────────────────────
   users: {
-    list:           (orgId?: string)                     => req<any[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
-    listDeactivated:(orgId?: string)                     => req<any[]>(`/users/deactivated${orgId ? `?organizationId=${orgId}` : ''}`),
-    create:         (d: any)                             => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
-    update:         (id: string, d: any)                 => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    assignCard:     (id: string, uid: string)            => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
-    nfcScanStart:   (id: string)                         => req<any>(`/users/${id}/nfc-scan-start`, { method: 'POST' }),
-    nfcScanStatus:  (id: string)                         => req<{ status: string; cardUid?: string; secondsLeft?: number }>(`/users/${id}/nfc-scan-status`),
-    deactivate:     (id: string, retentionDays?: number) => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
-    restore:        (id: string)                         => req<any>(`/users/${id}/restore`, { method: 'PATCH' }),
-    hardDelete:     (id: string)                         => req<any>(`/users/${id}/permanent`, { method: 'DELETE' }),
+    list:            (orgId?: string)                    => req<any[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
+    listDeactivated: (orgId?: string)                    => req<any[]>(`/users/deactivated${orgId ? `?organizationId=${orgId}` : ''}`),
+    create:          (d: any)                            => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
+    update:          (id: string, d: any)                => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    assignCard:      (id: string, uid: string)           => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
+    nfcScanStart:    (id: string)                        => req<any>(`/users/${id}/nfc-scan-start`, { method: 'POST' }),
+    nfcScanStatus:   (id: string)                        => req<{ status: string; cardUid?: string; secondsLeft?: number }>(`/users/${id}/nfc-scan-status`),
+    deactivate:      (id: string, retentionDays?: number) => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
+    restore:         (id: string)                        => req<any>(`/users/${id}/restore`, { method: 'PATCH' }),
+    hardDelete:      (id: string)                        => req<any>(`/users/${id}/permanent`, { method: 'DELETE' }),
   },
 
+  // ── Reservations ─────────────────────────────────────────────
   reservations: {
-    list:           (filters: Record<string, string>) =>
-      req<any[]>('/reservations?' + new URLSearchParams(filters).toString()),
-    getToday:       (locationId: string, userId?: string) => {
+    list:            (filters: Record<string, string>) => req<any[]>('/reservations?' + new URLSearchParams(filters).toString()),
+    getToday:        (locationId: string, userId?: string) => {
       const today = new Date().toISOString().slice(0, 10);
       const p = new URLSearchParams({ locationId, date: today });
       if (userId) p.set('userId', userId);
       return req<any[]>(`/reservations?${p}`);
     },
-    getUpcoming:    (locationId: string, userId?: string) => {
-      const p = new URLSearchParams({ locationId });
-      if (userId) p.set('userId', userId);
-      return req<any[]>(`/reservations?${p}`);
+    getMy:           (date?: string, limit?: number) => {
+      const p = new URLSearchParams();
+      if (date)  p.set('date',  date);
+      if (limit) p.set('limit', String(limit));
+      return req<any[]>(`/reservations/my?${p}`);
     },
-    getMy:          () => req<any[]>('/reservations/my'),
-    create:         (d: any) => req<any>('/reservations', { method: 'POST', body: JSON.stringify(d) }),
-    cancel:          (id: string) => req<any>(`/reservations/${id}`, { method: 'DELETE' }),
-    createRecurring: (body: any)  => req<any>('/reservations/recurring', { method: 'POST', body: JSON.stringify(body) }),
+    create:          (d: any)                          => req<any>('/reservations', { method: 'POST', body: JSON.stringify(d) }),
+    cancel:          (id: string)                      => req<any>(`/reservations/${id}`, { method: 'DELETE' }),
+    createRecurring: (body: any)                       => req<any>('/reservations/recurring', { method: 'POST', body: JSON.stringify(body) }),
     cancelRecurring: (id: string, scope: 'single' | 'following' | 'all') =>
       req<any>(`/reservations/${id}/cancel-recurring`, { method: 'POST', body: JSON.stringify({ scope }) }),
+    getQr:           (id: string)                      => req<any>(`/reservations/${id}/qr`),
   },
 
+  // ── Checkins ─────────────────────────────────────────────────
   checkins: {
     manual:   (deskId: string, userId: string, resId?: string) =>
       req<any>('/checkins/manual', { method: 'POST', body: JSON.stringify({ deskId, userId, reservationId: resId }) }),
-    checkout: (id: string) => req<any>(`/checkins/${id}/checkout`, { method: 'PATCH' }),
-    qr:       (deskId: string, qrToken: string) =>
-      req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
-    walkin:   (deskId: string) =>
-      req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),
+    checkout: (id: string)                        => req<any>(`/checkins/${id}/checkout`, { method: 'PATCH' }),
+    qr:       (deskId: string, qrToken: string)   => req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
+    walkin:   (deskId: string)                    => req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),
   },
 
-  // ── Sprint E1: Attendance ────────────────────────────────
-  // (locations.attendance dodane do bloku locations wyżej)
-
-  // ── Sprint E2: Sale / Parking / Equipment ────────────────
+  // ── Resources ─────────────────────────────────────────────────
   resources: {
-    list:         (locId: string, type?: string) =>
-      req<any[]>(`/locations/${locId}/resources${type ? `?type=${type}` : ''}`),
-    create:       (locId: string, body: any)     => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
-    update:       (id: string, body: any)        => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    remove:       (id: string)                   => req<any>(`/resources/${id}`, { method: 'DELETE' }),
-    availability: (id: string, date: string)     => req<any>(`/resources/${id}/availability?date=${date}`),
-    book:         (id: string, body: any)        => req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
+    list:         (locId: string, type?: string)  => req<any[]>(`/locations/${locId}/resources${type ? `?type=${type}` : ''}`),
+    create:       (locId: string, body: any)      => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
+    update:       (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove:       (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),
+    availability: (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
+    book:         (id: string, body: any)         => req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
   },
   bookings: {
     cancel: (id: string)    => req<any>(`/bookings/${id}/cancel`, { method: 'POST', body: '{}' }),
     myList: (from?: string) => req<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`),
   },
 
+  // ── Subscription ─────────────────────────────────────────────
   subscription: {
-    getStatus:  ()              => req<any>('/subscription/status'),
-    // Owner endpoints
-    getOrgStatus:  (id: string) => req<any>(`/owner/organizations/${id}/subscription`),
-    updatePlan:    (id: string, body: any) => req<any>(`/owner/organizations/${id}/subscription`, { method: 'POST', body: JSON.stringify(body) }),
-    getEvents:     (id: string) => req<any[]>(`/owner/organizations/${id}/subscription/events`),
-    getDashboard:  ()           => req<any>('/owner/subscription/dashboard'),
+    getStatus:    ()                => req<any>('/subscription/status'),
+    getOrgStatus: (id: string)      => req<any>(`/owner/organizations/${id}/subscription`),
+    updatePlan:   (id: string, body: any) => req<any>(`/owner/organizations/${id}/subscription`, { method: 'POST', body: JSON.stringify(body) }),
+    getEvents:    (id: string)      => req<any[]>(`/owner/organizations/${id}/subscription/events`),
+    getDashboard: ()                => req<any>('/owner/subscription/dashboard'),
   },
+
+  // ── Visitors ─────────────────────────────────────────────────
   visitors: {
-    list:     (locId: string, date?: string) =>
-      req<any[]>(`/locations/${locId}/visitors${date ? `?date=${date}` : ''}`),
-    invite:   (locId: string, body: any)    => req<any>(`/locations/${locId}/visitors`, { method: 'POST', body: JSON.stringify(body) }),
-    checkin:  (id: string)                  => req<any>(`/visitors/${id}/checkin`, { method: 'POST', body: '{}' }),
-    checkout: (id: string)                  => req<any>(`/visitors/${id}/checkout`, { method: 'POST', body: '{}' }),
-    cancel:   (id: string)                  => req<any>(`/visitors/${id}/cancel`, { method: 'POST', body: '{}' }),
+    list:     (locId: string, date?: string) => req<any[]>(`/locations/${locId}/visitors${date ? `?date=${date}` : ''}`),
+    invite:   (locId: string, body: any)     => req<any>(`/locations/${locId}/visitors`, { method: 'POST', body: JSON.stringify(body) }),
+    checkin:  (id: string)                   => req<any>(`/visitors/${id}/checkin`, { method: 'POST', body: '{}' }),
+    checkout: (id: string)                   => req<any>(`/visitors/${id}/checkout`, { method: 'POST', body: '{}' }),
+    cancel:   (id: string)                   => req<any>(`/visitors/${id}/cancel`, { method: 'POST', body: '{}' }),
   },
+
+  // ── Notifications ─────────────────────────────────────────────
+  notifications: {
+    inapp:     (unreadOnly = false) => req<any[]>(`/notifications/inapp${unreadOnly ? '?unread=true' : ''}`),
+    countUnread: ()                 => req<{ count: number }>('/notifications/inapp/count'),
+    markRead:  (ids: string[])      => req<any>('/notifications/inapp/read', { method: 'PATCH', body: JSON.stringify({ ids }) }),
+    markAllRead: ()                 => req<any>('/notifications/inapp/read-all', { method: 'PATCH' }),
+    deleteOne: (id: string)         => req<any>(`/notifications/inapp/${id}`, { method: 'DELETE' }),
+    settings:  (orgId: string)      => req<any[]>(`/notifications/settings?organizationId=${orgId}`),
+    updateSetting: (orgId: string, type: string, body: any) =>
+      req<any>(`/notifications/settings/${type}?organizationId=${orgId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    testEmail:   (orgId: string, type: string) =>
+      req<any>('/notifications/test-email', { method: 'POST', body: JSON.stringify({ organizationId: orgId, type }) }),
+    smtpConfig: (orgId: string)     => req<any>(`/notifications/smtp?organizationId=${orgId}`),
+    updateSmtp: (orgId: string, body: any) =>
+      req<any>(`/notifications/smtp?organizationId=${orgId}`, { method: 'PUT', body: JSON.stringify(body) }),
+    testSmtp:   (orgId: string)     =>
+      req<any>(`/notifications/smtp/test?organizationId=${orgId}`, { method: 'POST', body: '{}' }),
+  },
+
+  // ── Owner ─────────────────────────────────────────────────────
+  owner: {
+    orgs:           ()                         => req<any[]>('/owner/organizations'),
+    createOrg:      (d: any)                   => req<any>('/owner/organizations', { method: 'POST', body: JSON.stringify(d) }),
+    updateOrg:      (id: string, d: any)       => req<any>(`/owner/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    deleteOrg:      (id: string)               => req<any>(`/owner/organizations/${id}`, { method: 'DELETE' }),
+    impersonate:    (id: string)               => req<any>(`/owner/organizations/${id}/impersonate`, { method: 'POST', body: '{}' }),
+    stopImpersonation: ()                      => req<any>('/owner/stop-impersonation', { method: 'POST', body: '{}' }),
+    globalStats:    ()                         => req<any>('/owner/stats'),
+    updateModules:  (id: string, modules: string[]) =>
+      req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ modules }) }),
+  },
+
+  // ── Organizations ─────────────────────────────────────────────
+  organizations: {
+    getAzureConfig:    (id: string)      => req<any>(`/organizations/${id}/azure`),
+    updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
+  },
+
+  // ── Push Notifications ────────────────────────────────────────
   push: {
-    getVapidKey:  ()        => req<{ publicKey: string }>('/push/vapid-public-key'),
-    subscribe:    (sub: any) => req<any>('/push/subscribe',   { method: 'POST', body: JSON.stringify(sub) }),
-    unsubscribe:  (endpoint: string) => req<any>('/push/unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+    getVapidKey: () => req<{ publicKey: string }>('/push/vapid-key'),
+    subscribe:   (sub: any) => req<any>('/push/subscribe', { method: 'POST', body: JSON.stringify(sub) }),
+    unsubscribe: (endpoint: string) => req<any>('/push/unsubscribe', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+  },
+
+  // ── Sprint C — Reports ────────────────────────────────────────
+  reports: {
+    heatmap: (params: Record<string, string>) =>
+      req<any>('/reports/heatmap?' + new URLSearchParams(params).toString()),
+    export: (params: Record<string, string>): Promise<Blob> =>
+      fetch(`${BASE}/reports/export?${new URLSearchParams(params)}`, {
+        headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+      }).then(r => r.blob()),
+    // Generic — used by ReportsPage
+    get: (endpoint: string, params?: Record<string, string>): Promise<any> => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return req<any>(`/reports${endpoint}${qs}`);
+    },
+  },
+
+  // ── Sprint F — Integration Marketplace ───────────────────────
+  integrations: {
+    list:   ()                            => req<any>('/integrations'),
+    get:    (provider: string)            => req<any>(`/integrations/${provider}`),
+    upsert: (provider: string, body: any) => req<any>(`/integrations/${provider}`, { method: 'PUT',    body: JSON.stringify(body) }),
+    toggle: (provider: string, isEnabled: boolean) =>
+      req<any>(`/integrations/${provider}/toggle`, { method: 'PATCH', body: JSON.stringify({ isEnabled }) }),
+    remove: (provider: string)            => req<any>(`/integrations/${provider}`, { method: 'DELETE' }),
+    test:   (provider: string)            => req<any>(`/integrations/${provider}/test`, { method: 'POST', body: '{}' }),
+  },
+
+  // ── Sprint K — AI Insights ────────────────────────────────────
+  insights: {
+    getForLocation: (locationId: string) => req<any>(`/insights?locationId=${locationId}`),
+    getForOrg:      (orgId?: string)     => req<any>(`/insights/org${orgId ? `?orgId=${orgId}` : ''}`),
+    refresh:        (locationId: string) => req<any>(`/insights/refresh?locationId=${locationId}`, { method: 'POST', body: '{}' }),
+  },
+
+  // ── M4 — Microsoft Graph Calendar Sync ───────────────────────
+  graph: {
+    status:     () => req<any>('/graph/status'),
+    disconnect: () => req<any>('/graph/disconnect', { method: 'DELETE' }),
+    subscribe:  () => req<any>('/graph/subscribe',  { method: 'POST', body: '{}' }),
+  },
+
+  // ── Google SSO ────────────────────────────────────────────────
+  google: {
+    check: (email?: string, orgSlug?: string) => {
+      const p = new URLSearchParams();
+      if (email)   p.set('email',   email);
+      if (orgSlug) p.set('orgSlug', orgSlug);
+      return req<any>(`/auth/google/check?${p}`);
+    },
   },
 };
+
+export type AppApi = typeof appApi;

@@ -33,7 +33,7 @@ function cellColor(count: number, max: number): string {
 }
 
 // ── Component ─────────────────────────────────────────────────
-export default function ReportsPage() {
+function ReportsPage() {
   const { i18n } = useTranslation();
   const lang = i18n.language === 'pl' ? 'pl' : 'en';
   const DAYS = lang === 'pl' ? DAYS_PL : DAYS_EN;
@@ -292,3 +292,6 @@ const btnOutlineStyle: React.CSSProperties = {
   ...btnStyle,
   background: 'transparent',
 };
+
+export { ReportsPage };
+export default ReportsPage;
