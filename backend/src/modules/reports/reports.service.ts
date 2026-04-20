@@ -23,6 +23,17 @@ export interface OccupancyRow {
   userEmail:      string | null;
 }
 
+export interface ReservationsByDayRow { date: string; count: number }
+export interface ReservationsByMethodRow { method: string; count: number }
+export interface ReservationsByUserRow {
+  userId: string; email: string;
+  firstName: string | null; lastName: string | null;
+  count: number;
+}
+export interface ReservationsByDeskRow {
+  deskId: string; name: string; locationName: string; count: number;
+}
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -185,6 +196,113 @@ export class ReportsService {
     const wb = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(wb, ws, 'Occupancy');
     return Buffer.from(xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }));
+  }
+
+  // ── Rezerwacje per dzień ─────────────────────────────────────────
+  async getReservationsByDay(
+    orgId: string, from: Date, to: Date, locationId?: string,
+  ): Promise<ReservationsByDayRow[]> {
+    const reservations = await this.prisma.reservation.findMany({
+      where: {
+        desk: { location: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) } },
+        date: { gte: from, lte: to },
+      },
+      select: { date: true },
+      orderBy: { date: 'asc' },
+    });
+
+    const map = new Map<string, number>();
+    for (const r of reservations) {
+      const key = r.date.toISOString().slice(0, 10);
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([date, count]) => ({ date, count }));
+  }
+
+  // ── Rezerwacje per metoda ────────────────────────────────────────
+  async getReservationsByMethod(
+    orgId: string, from: Date, to: Date, locationId?: string,
+  ): Promise<ReservationsByMethodRow[]> {
+    const checkins = await this.prisma.checkin.findMany({
+      where: {
+        reservation: {
+          desk: { location: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) } },
+          date: { gte: from, lte: to },
+        },
+      },
+      select: { method: true },
+    });
+
+    const map = new Map<string, number>();
+    for (const ci of checkins) {
+      const key = ci.method ?? 'UNKNOWN';
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([method, count]) => ({ method, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  // ── Rezerwacje per użytkownik ────────────────────────────────────
+  async getReservationsByUser(
+    orgId: string, from: Date, to: Date, locationId?: string,
+  ): Promise<ReservationsByUserRow[]> {
+    const reservations = await this.prisma.reservation.findMany({
+      where: {
+        desk: { location: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) } },
+        date: { gte: from, lte: to },
+      },
+      select: {
+        userId: true,
+        user: { select: { email: true, firstName: true, lastName: true } },
+      },
+    });
+
+    const map = new Map<string, ReservationsByUserRow>();
+    for (const r of reservations) {
+      if (!r.userId) continue;
+      if (!map.has(r.userId)) {
+        map.set(r.userId, {
+          userId:    r.userId,
+          email:     r.user?.email ?? '',
+          firstName: r.user?.firstName ?? null,
+          lastName:  r.user?.lastName  ?? null,
+          count:     0,
+        });
+      }
+      map.get(r.userId)!.count++;
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }
+
+  // ── Rezerwacje per biurko ────────────────────────────────────────
+  async getReservationsByDesk(
+    orgId: string, from: Date, to: Date, locationId?: string,
+  ): Promise<ReservationsByDeskRow[]> {
+    const reservations = await this.prisma.reservation.findMany({
+      where: {
+        desk: { location: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) } },
+        date: { gte: from, lte: to },
+      },
+      select: {
+        deskId: true,
+        desk: { select: { name: true, location: { select: { name: true } } } },
+      },
+    });
+
+    const map = new Map<string, ReservationsByDeskRow>();
+    for (const r of reservations) {
+      if (!map.has(r.deskId)) {
+        map.set(r.deskId, {
+          deskId:       r.deskId,
+          name:         r.desk?.name ?? '',
+          locationName: r.desk?.location?.name ?? '',
+          count:        0,
+        });
+      }
+      map.get(r.deskId)!.count++;
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
   }
 
   // ── Utils ────────────────────────────────────────────────────────

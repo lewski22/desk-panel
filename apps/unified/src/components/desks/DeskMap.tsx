@@ -239,6 +239,19 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
     } catch (e: any) { setErr(t('desks.checkout_error', { msg: e.message })); }
   };
 
+  const handleCheckin = async (desk: DeskMapItem) => {
+    // If desk has an active reservation → manual check-in directly (Staff/Admin)
+    if (desk.currentReservation && !desk.isOccupied) {
+      try {
+        await api.checkins.manual(desk.id, desk.currentReservation.userId ?? '', desk.currentReservation.id);
+        onRefresh();
+      } catch (e: any) { setErr(t('desks.checkout_error', { msg: e.message })); }
+      return;
+    }
+    // No reservation — open modal to create one
+    setReservationTarget(desk);
+  };
+
   const handleReservationSuccess = () => {
     setReservationTarget(null);
     setReservedMsg(t('desks.reserve.success'));
@@ -314,7 +327,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
                 <DeskCard
                   key={desk.id}
                   desk={desk}
-                  onCheckin={() => setReservationTarget(desk)}
+                  onCheckin={handleCheckin}
                   onCheckout={handleCheckout}
                 />
               )

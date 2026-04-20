@@ -518,7 +518,56 @@
       "completed": "Zakończone",
       "cancelled": "Anulowane"
     },
-    "methods_title": "Metody check-in"
+    "methods_title": "Metody check-in",
+    "tabs": {
+      "heatmap":      "Heatmapa",
+      "reservations": "Rezerwacje",
+      "methods":      "Metody",
+      "by_user":      "Per osoba",
+      "by_desk":      "Per biurko"
+    },
+    "filter": {
+      "from":     "Od",
+      "to":       "Do",
+      "location": "Lokalizacja",
+      "all":      "Wszystkie",
+      "refresh":  "Odśwież"
+    },
+    "heatmap": {
+      "title":      "Heatmapa check-inów — dzień × godzina",
+      "peak_day":   "Szczyt (dzień)",
+      "peak_hour":  "Szczyt (godzina)",
+      "active_hrs": "Aktywne godziny",
+      "total":      "Łączne check-iny"
+    },
+    "reservations": {
+      "title":   "Liczba rezerwacji per dzień",
+      "count":   "Rezerwacji"
+    },
+    "methods": {
+      "title":   "Metody check-in",
+      "method":  "Metoda",
+      "count":   "Liczba"
+    },
+    "by_user": {
+      "title":   "Ranking użytkowników",
+      "user":    "Użytkownik",
+      "count":   "Rezerwacji",
+      "csv":     "Eksportuj CSV"
+    },
+    "by_desk": {
+      "title":    "Ranking biurek",
+      "desk":     "Biurko",
+      "location": "Lokalizacja",
+      "count":    "Rezerwacji",
+      "csv":      "Eksportuj CSV"
+    },
+    "export": {
+      "csv":        "↓ CSV",
+      "xlsx":       "↓ XLSX",
+      "loading":    "Pobieranie..."
+    },
+    "no_data":  "Brak danych dla wybranego okresu"
   },
   "organizations": {
     "create_action": "Utwórz",

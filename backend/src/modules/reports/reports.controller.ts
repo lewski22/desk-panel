@@ -9,6 +9,8 @@ import { RolesGuard }        from '../auth/guards/roles.guard';
 import { ReportsService }    from './reports.service';
 import { ExportReportDto }   from './dto/export-report.dto';
 
+const REPORT_ROLES = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN'] as const;
+
 /**
  * ReportsController — Sprint C
  *
@@ -25,7 +27,7 @@ export class ReportsController {
 
   // ── Heatmap ────────────────────────────────────────────────────
   @Get('heatmap')
-  @Roles('OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN')
+  @Roles(...REPORT_ROLES)
   async heatmap(
     @Query('from') from: string,
     @Query('to')   to:   string,
@@ -40,7 +42,7 @@ export class ReportsController {
 
   // ── Export CSV / XLSX ──────────────────────────────────────────
   @Get('export')
-  @Roles('OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN')
+  @Roles(...REPORT_ROLES)
   async export(
     @Query() dto: ExportReportDto,
     @Res()   res: Response,
@@ -64,6 +66,66 @@ export class ReportsController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.send(buf);
     }
+  }
+
+  // ── Rezerwacje per dzień ────────────────────────────────────────
+  @Get('reservations')
+  @Roles(...REPORT_ROLES)
+  async reservationsByDay(
+    @Query('from') from: string,
+    @Query('to')   to:   string,
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getReservationsByDay(resolvedOrgId, fromDate, toDate, locationId);
+  }
+
+  // ── Rezerwacje per metoda ────────────────────────────────────────
+  @Get('by-method')
+  @Roles(...REPORT_ROLES)
+  async reservationsByMethod(
+    @Query('from') from: string,
+    @Query('to')   to:   string,
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getReservationsByMethod(resolvedOrgId, fromDate, toDate, locationId);
+  }
+
+  // ── Rezerwacje per użytkownik ────────────────────────────────────
+  @Get('by-user')
+  @Roles(...REPORT_ROLES)
+  async reservationsByUser(
+    @Query('from') from: string,
+    @Query('to')   to:   string,
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getReservationsByUser(resolvedOrgId, fromDate, toDate, locationId);
+  }
+
+  // ── Rezerwacje per biurko ────────────────────────────────────────
+  @Get('by-desk')
+  @Roles(...REPORT_ROLES)
+  async reservationsByDesk(
+    @Query('from') from: string,
+    @Query('to')   to:   string,
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getReservationsByDesk(resolvedOrgId, fromDate, toDate, locationId);
   }
 
   // ── Helper ─────────────────────────────────────────────────────

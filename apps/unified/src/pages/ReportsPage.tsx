@@ -1,293 +1,524 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { appApi }         from '../api/client';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, PieChart, Pie, Cell,
+} from 'recharts';
+import { appApi }            from '../api/client';
+import { Card, EmptyState, Spinner } from '../components/ui';
 
-// ── Types ──────────────────────────────────────────────────────
-interface HeatmapCell {
-  day:   number;
-  hour:  number;
-  count: number;
-}
-
+// ── Constants ─────────────────────────────────────────────────────
+const ACCENT   = '#B53578';
 const DAYS_PL  = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const DAYS_EN  = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const METHOD_COLORS: Record<string, string> = {
+  NFC:     '#6366f1',
+  QR:      '#38bdf8',
+  WEB:     '#34d399',
+  MANUAL:  '#f59e0b',
+  UNKNOWN: '#a1a1aa',
+};
+const TABS = ['heatmap', 'reservations', 'methods', 'by_user', 'by_desk'] as const;
+type Tab = typeof TABS[number];
 
-// ── Utils ──────────────────────────────────────────────────────
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+// ── Utils ──────────────────────────────────────────────────────────
+function todayStr()    { return new Date().toISOString().slice(0, 10); }
 function monthAgoStr() {
-  const d = new Date();
-  d.setMonth(d.getMonth() - 1);
+  const d = new Date(); d.setMonth(d.getMonth() - 1);
   return d.toISOString().slice(0, 10);
 }
-
-// ── Heatmap cell coloring ──────────────────────────────────────
 function cellColor(count: number, max: number): string {
   if (max === 0 || count === 0) return 'hsl(220 14% 94%)';
   const t = count / max;
-  // purple ramp: light → deep
-  const l = Math.round(90 - t * 55);
-  const s = Math.round(40 + t * 40);
-  return `hsl(248 ${s}% ${l}%)`;
+  return `hsl(248 ${Math.round(40 + t * 40)}% ${Math.round(90 - t * 55)}%)`;
+}
+function downloadCsv(rows: string[][], filename: string) {
+  const csv  = rows.map(r => r.map(v => (String(v).includes(',') ? `"${v}"` : v)).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-// ── Component ─────────────────────────────────────────────────
-function ReportsPage() {
-  const { i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
-  const DAYS = lang === 'pl' ? DAYS_PL : DAYS_EN;
+// ── Shared filter bar props ────────────────────────────────────────
+interface Filters { from: string; to: string; locationId: string }
 
+// ── Heatmap Tab ────────────────────────────────────────────────────
+function HeatmapTab({ filters, onExport, exporting }: {
+  filters: Filters;
+  onExport: (fmt: 'csv' | 'xlsx') => void;
+  exporting: boolean;
+}) {
+  const { t, i18n }   = useTranslation();
+  const DAYS           = i18n.language === 'pl' ? DAYS_PL : DAYS_EN;
+  const [cells, setCells] = useState<{ day: number; hour: number; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const data = await appApi.reports.heatmap(params);
+      setCells(data);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const maxCount  = useMemo(() => Math.max(...cells.map(c => c.count), 1), [cells]);
+  const heatLookup = useMemo(() => new Map(cells.map(c => [`${c.day}:${c.hour}`, c.count])), [cells]);
+  const hours      = Array.from({ length: 24 }, (_, i) => i);
+  const total      = cells.reduce((s, c) => s + c.count, 0);
+
+  const peakDay = useMemo(() => {
+    const byDay = DAYS.map((_, d) => cells.filter(c => c.day === d).reduce((s, c) => s + c.count, 0));
+    const max   = Math.max(...byDay);
+    return `${DAYS[byDay.indexOf(max)]} (${max})`;
+  }, [cells, DAYS]);
+
+  const peakHour = useMemo(() => {
+    const byHour = hours.map(h => cells.filter(c => c.hour === h).reduce((s, c) => s + c.count, 0));
+    const max    = Math.max(...byHour);
+    return `${byHour.indexOf(max)}:00 (${max})`;
+  }, [cells]);
+
+  return (
+    <div className="space-y-4">
+      {/* Export */}
+      <div className="flex gap-2">
+        <button onClick={() => onExport('csv')} disabled={exporting}
+          className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:bg-zinc-50 disabled:opacity-50">
+          {t('reports.export.csv')}
+        </button>
+        <button onClick={() => onExport('xlsx')} disabled={exporting}
+          className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:bg-zinc-50 disabled:opacity-50">
+          {t('reports.export.xlsx')}
+        </button>
+        {exporting && <span className="text-xs text-zinc-400 self-center">{t('reports.export.loading')}</span>}
+      </div>
+
+      {/* Heatmap grid */}
+      <Card className="p-5">
+        <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.heatmap.title')}</p>
+        {loading ? (
+          <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="grid gap-[2px] min-w-[700px]" style={{ gridTemplateColumns: '52px repeat(24, 1fr)' }}>
+              <div />
+              {hours.map(h => (
+                <div key={h} className="text-center text-[10px] text-zinc-400 pb-1">
+                  {h % 3 === 0 ? `${h}h` : ''}
+                </div>
+              ))}
+              {DAYS.map((dayLabel, dayIdx) => (
+                <>
+                  <div key={`lbl-${dayIdx}`} className={`text-xs flex items-center pr-2 ${dayIdx < 5 ? 'text-zinc-500' : 'text-zinc-700 font-medium'}`}>
+                    {dayLabel}
+                  </div>
+                  {hours.map(hour => {
+                    const count = heatLookup.get(`${dayIdx}:${hour}`) ?? 0;
+                    return (
+                      <div
+                        key={`${dayIdx}-${hour}`}
+                        title={`${dayLabel} ${hour}:00 — ${count}`}
+                        className="aspect-square rounded-[3px]"
+                        style={{ background: cellColor(count, maxCount) }}
+                      />
+                    );
+                  })}
+                </>
+              ))}
+            </div>
+            {/* Legend */}
+            <div className="flex items-center gap-1.5 mt-3">
+              <span className="text-[11px] text-zinc-400">0</span>
+              {[0, 0.25, 0.5, 0.75, 1].map(v => (
+                <div key={v} className="w-5 h-3 rounded-sm" style={{ background: cellColor(v * maxCount, maxCount) }} />
+              ))}
+              <span className="text-[11px] text-zinc-400">{maxCount}</span>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Summary stats */}
+      {!loading && total > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: t('reports.heatmap.total'),      value: total.toLocaleString() },
+            { label: t('reports.heatmap.peak_day'),   value: peakDay },
+            { label: t('reports.heatmap.peak_hour'),  value: peakHour },
+            { label: t('reports.heatmap.active_hrs'), value: String(cells.filter(c => c.count > 0).length) },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-zinc-50 border border-zinc-100 rounded-xl p-4">
+              <p className="text-xs text-zinc-400 mb-1">{label}</p>
+              <p className="text-xl font-bold font-mono text-zinc-800">{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Reservations Tab ───────────────────────────────────────────────
+function ReservationsTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<{ date: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/reservations', params);
+      setData(rows);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const total = data.reduce((s, r) => s + r.count, 0);
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-zinc-700">{t('reports.reservations.title')}</p>
+        {total > 0 && (
+          <span className="text-xs text-zinc-400">
+            {t('reports.heatmap.total')}: <span className="font-semibold text-zinc-600">{total.toLocaleString()}</span>
+          </span>
+        )}
+      </div>
+      {loading ? (
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="📅" title={t('reports.no_data')} />
+      ) : (
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={data} barCategoryGap="30%">
+            <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#a1a1aa' }} axisLine={false} tickLine={false}
+              interval={Math.floor(data.length / 10)} />
+            <YAxis tick={{ fontSize: 11, fill: '#a1a1aa' }} axisLine={false} tickLine={false} width={28} />
+            <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e4e4e7', fontSize: 12 }}
+              cursor={{ fill: '#f9f9f9' }} />
+            <Bar dataKey="count" name={t('reports.reservations.count')} fill={ACCENT} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </Card>
+  );
+}
+
+// ── Methods Tab ────────────────────────────────────────────────────
+function MethodsTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<{ method: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/by-method', params);
+      setData(rows);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const total = data.reduce((s, r) => s + r.count, 0);
+
+  return (
+    <Card className="p-5">
+      <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.methods.title')}</p>
+      {loading ? (
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="📊" title={t('reports.no_data')} />
+      ) : (
+        <div className="flex flex-col md:flex-row gap-6 items-center">
+          <ResponsiveContainer width={200} height={200} className="shrink-0">
+            <PieChart>
+              <Pie data={data} dataKey="count" nameKey="method"
+                cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} stroke="none">
+                {data.map((entry, i) => (
+                  <Cell key={i} fill={METHOD_COLORS[entry.method] ?? METHOD_COLORS.UNKNOWN} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e4e4e7', fontSize: 11 }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="flex-1 w-full">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  <th className="text-left py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('reports.methods.method')}</th>
+                  <th className="text-right py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{t('reports.methods.count')}</th>
+                  <th className="text-right py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wide">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map(row => (
+                  <tr key={row.method} className="border-b border-zinc-50">
+                    <td className="py-2 flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: METHOD_COLORS[row.method] ?? METHOD_COLORS.UNKNOWN }} />
+                      <span className="font-medium text-zinc-700">{row.method}</span>
+                    </td>
+                    <td className="py-2 text-right font-mono text-zinc-700">{row.count}</td>
+                    <td className="py-2 text-right text-zinc-400">
+                      {total > 0 ? `${Math.round((row.count / total) * 100)}%` : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── By User Tab ────────────────────────────────────────────────────
+function ByUserTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<{ userId: string; email: string; firstName: string | null; lastName: string | null; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/by-user', params);
+      setData(rows);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const maxCount = data[0]?.count ?? 1;
+
+  const exportCsv = () => {
+    const header = [t('reports.by_user.user'), 'Email', t('reports.by_user.count')];
+    const rows   = data.map(r => [
+      [r.firstName, r.lastName].filter(Boolean).join(' ') || r.email,
+      r.email,
+      String(r.count),
+    ]);
+    downloadCsv([header, ...rows], `report-by-user-${filters.from}-${filters.to}.csv`);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-zinc-700">{t('reports.by_user.title')}</p>
+        {data.length > 0 && (
+          <button onClick={exportCsv}
+            className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+            {t('reports.by_user.csv')}
+          </button>
+        )}
+      </div>
+      {loading ? (
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="👤" title={t('reports.no_data')} />
+      ) : (
+        <div className="space-y-2">
+          {data.slice(0, 50).map((row, i) => {
+            const name = [row.firstName, row.lastName].filter(Boolean).join(' ') || row.email;
+            const pct  = Math.round((row.count / maxCount) * 100);
+            return (
+              <div key={row.userId}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-zinc-400 w-5 shrink-0">{i + 1}.</span>
+                    <span className="text-xs font-medium text-zinc-700 truncate">{name}</span>
+                    {name !== row.email && (
+                      <span className="text-[10px] text-zinc-400 truncate hidden sm:block">{row.email}</span>
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold text-zinc-600 shrink-0 ml-2">{row.count}</span>
+                </div>
+                <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: i === 0 ? ACCENT : '#d4d4d8' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── By Desk Tab ────────────────────────────────────────────────────
+function ByDeskTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<{ deskId: string; name: string; locationName: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/by-desk', params);
+      setData(rows);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const maxCount = data[0]?.count ?? 1;
+
+  const exportCsv = () => {
+    const header = [t('reports.by_desk.desk'), t('reports.by_desk.location'), t('reports.by_desk.count')];
+    const rows   = data.map(r => [r.name, r.locationName, String(r.count)]);
+    downloadCsv([header, ...rows], `report-by-desk-${filters.from}-${filters.to}.csv`);
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-zinc-700">{t('reports.by_desk.title')}</p>
+        {data.length > 0 && (
+          <button onClick={exportCsv}
+            className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+            {t('reports.by_desk.csv')}
+          </button>
+        )}
+      </div>
+      {loading ? (
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="🪑" title={t('reports.no_data')} />
+      ) : (
+        <div className="space-y-2">
+          {data.slice(0, 50).map((row, i) => {
+            const pct = Math.round((row.count / maxCount) * 100);
+            return (
+              <div key={row.deskId}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-zinc-400 w-5 shrink-0">{i + 1}.</span>
+                    <span className="text-xs font-medium text-zinc-700 truncate">{row.name}</span>
+                    <span className="text-[10px] text-zinc-400 truncate hidden sm:block">{row.locationName}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-zinc-600 shrink-0 ml-2">{row.count}</span>
+                </div>
+                <div className="h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: i === 0 ? ACCENT : '#d4d4d8' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────
+function ReportsPage() {
+  const { t } = useTranslation();
+  const [activeTab,  setActiveTab]  = useState<Tab>('heatmap');
   const [from,       setFrom]       = useState(monthAgoStr());
   const [to,         setTo]         = useState(todayStr());
   const [locationId, setLocationId] = useState('');
   const [locations,  setLocations]  = useState<{ id: string; name: string }[]>([]);
-  const [heatmap,    setHeatmap]    = useState<HeatmapCell[]>([]);
-  const [maxCount,   setMaxCount]   = useState(0);
-  const [loading,    setLoading]    = useState(false);
   const [exporting,  setExporting]  = useState(false);
-  const [error,      setError]      = useState('');
 
-  // Pobierz lokalizacje na start
+  const filters = useMemo<Filters>(() => ({ from, to, locationId }), [from, to, locationId]);
+
   useEffect(() => {
-    appApi.locations.list().then(r => {
-      setLocations(Array.isArray(r) ? r : []);
-    }).catch(() => {});
+    appApi.locations.list().then(r => setLocations(Array.isArray(r) ? r : [])).catch(() => {});
   }, []);
 
-  // Załaduj heatmapę
-  const loadHeatmap = useCallback(async () => {
-    if (!from || !to) return;
-    setLoading(true);
-    setError('');
-    try {
-      const params: Record<string, string> = { from, to };
-      if (locationId) params.locationId = locationId;
-      const cells: HeatmapCell[] = await appApi.reports.heatmap(params);
-      setHeatmap(cells);
-      setMaxCount(Math.max(...cells.map(c => c.count), 1));
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Error loading heatmap');
-    } finally {
-      setLoading(false);
-    }
-  }, [from, to, locationId]);
-
-  useEffect(() => { loadHeatmap(); }, [loadHeatmap]);
-
-  // Eksport pliku
   const handleExport = async (format: 'csv' | 'xlsx') => {
     setExporting(true);
     try {
       const params: Record<string, string> = { from, to, format };
       if (locationId) params.locationId = locationId;
       const blob     = await appApi.reports.export(params);
-      const ext      = format === 'xlsx' ? 'xlsx' : 'csv';
-      const filename = `reserti-report-${from}-${to}.${ext}`;
+      const filename = `reserti-report-${from}-${to}.${format}`;
       const url      = URL.createObjectURL(blob);
-      const a        = document.createElement('a');
-      a.href         = url;
-      a.download     = filename;
-      a.click();
+      Object.assign(document.createElement('a'), { href: url, download: filename }).click();
       URL.revokeObjectURL(url);
-    } catch {
-      setError('Export failed');
-    } finally {
-      setExporting(false);
-    }
+    } catch {}
+    setExporting(false);
   };
 
-  // Zbuduj lookup heatmapy: "day:hour" → count
-  const heatLookup = new Map(heatmap.map(c => [`${c.day}:${c.hour}`, c.count]));
-
-  const hours = Array.from({ length: 24 }, (_, i) => i);
-
   return (
-    <div style={{ padding: '24px 20px', maxWidth: 1100 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 500, marginBottom: 4, color: 'var(--color-text-primary)' }}>
-        {lang === 'pl' ? 'Raporty' : 'Reports'}
-      </h1>
-      <p style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 24 }}>
-        {lang === 'pl'
-          ? 'Analiza zajętości biurek i eksport danych.'
-          : 'Desk occupancy analysis and data export.'}
-      </p>
-
-      {/* ── Filters ─────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20, alignItems: 'flex-end' }}>
-        <div>
-          <label style={labelStyle}>{lang === 'pl' ? 'Od' : 'From'}</label>
-          <input type="date" value={from} max={to} onChange={e => setFrom(e.target.value)} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>{lang === 'pl' ? 'Do' : 'To'}</label>
-          <input type="date" value={to} min={from} max={todayStr()} onChange={e => setTo(e.target.value)} style={inputStyle} />
-        </div>
-        <div>
-          <label style={labelStyle}>{lang === 'pl' ? 'Lokalizacja' : 'Location'}</label>
-          <select value={locationId} onChange={e => setLocationId(e.target.value)} style={inputStyle}>
-            <option value="">{lang === 'pl' ? 'Wszystkie' : 'All'}</option>
-            {locations.map(l => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
-        </div>
-        <button onClick={loadHeatmap} disabled={loading} style={btnStyle}>
-          {loading ? '...' : (lang === 'pl' ? 'Odśwież' : 'Refresh')}
-        </button>
+    <div>
+      {/* Header */}
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reports.title', 'Reports')}</h1>
       </div>
 
-      {/* ── Export buttons ───────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-        <button onClick={() => handleExport('csv')} disabled={exporting} style={btnOutlineStyle}>
-          ↓ CSV
-        </button>
-        <button onClick={() => handleExport('xlsx')} disabled={exporting} style={btnOutlineStyle}>
-          ↓ XLSX
-        </button>
-        {exporting && <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', alignSelf: 'center' }}>
-          {lang === 'pl' ? 'Pobieranie...' : 'Downloading...'}
-        </span>}
-      </div>
-
-      {error && (
-        <div style={{ background: 'var(--color-background-danger)', color: 'var(--color-text-danger)', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 13 }}>
-          {error}
+      {/* Filter bar */}
+      <div className="flex flex-wrap gap-3 items-end mb-5 p-4 bg-white border border-zinc-100 rounded-xl">
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.from')}</label>
+          <input type="date" value={from} max={to}
+            onChange={e => setFrom(e.target.value)}
+            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
         </div>
-      )}
-
-      {/* ── Heatmap ──────────────────────────────────────────── */}
-      <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 16px', overflowX: 'auto' }}>
-        <h2 style={{ fontSize: 15, fontWeight: 500, marginBottom: 16, color: 'var(--color-text-primary)' }}>
-          {lang === 'pl' ? 'Heatmapa zajętości — dzień × godzina' : 'Occupancy heatmap — day × hour'}
-        </h2>
-
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)', fontSize: 14 }}>
-            {lang === 'pl' ? 'Ładowanie...' : 'Loading...'}
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `56px repeat(24, 1fr)`, gap: 2, minWidth: 700 }}>
-            {/* Header row: hours */}
-            <div />
-            {hours.map(h => (
-              <div key={h} style={{ textAlign: 'center', fontSize: 10, color: 'var(--color-text-tertiary)', paddingBottom: 4 }}>
-                {h % 3 === 0 ? `${h}h` : ''}
-              </div>
-            ))}
-
-            {/* Data rows: days */}
-            {DAYS.map((dayLabel, dayIdx) => (
-              <>
-                <div key={`label-${dayIdx}`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', paddingRight: 8, fontWeight: dayIdx < 5 ? 400 : 500 }}>
-                  {dayLabel}
-                </div>
-                {hours.map(hour => {
-                  const count = heatLookup.get(`${dayIdx}:${hour}`) ?? 0;
-                  const bg    = cellColor(count, maxCount);
-                  return (
-                    <div
-                      key={`${dayIdx}-${hour}`}
-                      title={`${dayLabel} ${hour}:00 — ${count} check-in${count !== 1 ? 's' : ''}`}
-                      style={{
-                        aspectRatio: '1',
-                        borderRadius: 3,
-                        background: bg,
-                        cursor: count > 0 ? 'pointer' : 'default',
-                      }}
-                    />
-                  );
-                })}
-              </>
-            ))}
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.to')}</label>
+          <input type="date" value={to} min={from} max={todayStr()}
+            onChange={e => setTo(e.target.value)}
+            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
+        </div>
+        {locations.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.location')}</label>
+            <select value={locationId} onChange={e => setLocationId(e.target.value)}
+              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]">
+              <option value="">{t('reports.filter.all')}</option>
+              {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
           </div>
         )}
-
-        {/* Legend */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 16 }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>0</span>
-          {[0, 0.25, 0.5, 0.75, 1].map(t => (
-            <div key={t} style={{ width: 20, height: 12, borderRadius: 2, background: cellColor(t * maxCount, maxCount) }} />
-          ))}
-          <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{maxCount} check-ins</span>
-        </div>
       </div>
 
-      {/* ── Summary stats ─────────────────────────────────────── */}
-      {heatmap.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginTop: 20 }}>
-          <StatCard
-            label={lang === 'pl' ? 'Łączne check-in' : 'Total check-ins'}
-            value={heatmap.reduce((s, c) => s + c.count, 0).toLocaleString()}
-          />
-          <StatCard
-            label={lang === 'pl' ? 'Szczyt (dzień)' : 'Peak day'}
-            value={(() => {
-              const byDay = DAYS.map((_, d) => heatmap.filter(c => c.day === d).reduce((s, c) => s + c.count, 0));
-              const max   = Math.max(...byDay);
-              return `${DAYS[byDay.indexOf(max)]} (${max})`;
-            })()}
-          />
-          <StatCard
-            label={lang === 'pl' ? 'Szczyt (godzina)' : 'Peak hour'}
-            value={(() => {
-              const byHour = hours.map(h => heatmap.filter(c => c.hour === h).reduce((s, c) => s + c.count, 0));
-              const max    = Math.max(...byHour);
-              return `${byHour.indexOf(max)}:00 (${max})`;
-            })()}
-          />
-          <StatCard
-            label={lang === 'pl' ? 'Aktywne godziny' : 'Active hours'}
-            value={String(heatmap.filter(c => c.count > 0).length)}
-          />
-        </div>
-      )}
+      {/* Tab bar */}
+      <div className="flex gap-1 mb-5 border-b border-zinc-100 overflow-x-auto">
+        {TABS.map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
+              activeTab === tab
+                ? 'border-[#B53578] text-[#B53578]'
+                : 'border-transparent text-zinc-500 hover:text-zinc-700'
+            }`}>
+            {t(`reports.tabs.${tab}`)}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === 'heatmap'      && <HeatmapTab filters={filters} onExport={handleExport} exporting={exporting} />}
+      {activeTab === 'reservations' && <ReservationsTab filters={filters} />}
+      {activeTab === 'methods'      && <MethodsTab filters={filters} />}
+      {activeTab === 'by_user'      && <ByUserTab filters={filters} />}
+      {activeTab === 'by_desk'      && <ByDeskTab filters={filters} />}
     </div>
   );
 }
-
-// ── Sub-components ─────────────────────────────────────────────
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ background: 'var(--color-background-secondary)', borderRadius: 8, padding: '12px 14px' }}>
-      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 500, color: 'var(--color-text-primary)' }}>{value}</div>
-    </div>
-  );
-}
-
-// ── Styles ─────────────────────────────────────────────────────
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 12,
-  color: 'var(--color-text-secondary)',
-  marginBottom: 4,
-};
-
-const inputStyle: React.CSSProperties = {
-  fontSize: 13,
-  padding: '6px 10px',
-  borderRadius: 8,
-  border: '0.5px solid var(--color-border-secondary)',
-  background: 'var(--color-background-primary)',
-  color: 'var(--color-text-primary)',
-  minWidth: 140,
-};
-
-const btnStyle: React.CSSProperties = {
-  fontSize: 13,
-  padding: '7px 16px',
-  borderRadius: 8,
-  border: '0.5px solid var(--color-border-secondary)',
-  background: 'var(--color-background-secondary)',
-  color: 'var(--color-text-primary)',
-  cursor: 'pointer',
-};
-
-const btnOutlineStyle: React.CSSProperties = {
-  ...btnStyle,
-  background: 'transparent',
-};
 
 export { ReportsPage };
 export default ReportsPage;

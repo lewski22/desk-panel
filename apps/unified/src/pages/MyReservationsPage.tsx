@@ -27,9 +27,11 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Swipeable reservation card ────────────────────────────────
 function ReservationCard({
-  r, locale, onCancel, cancelling,
+  r, locale, onCancel, cancelling, onCheckin, checkingIn,
 }: {
-  r: any; locale: string; onCancel: (id: string) => void; cancelling: string | null;
+  r: any; locale: string;
+  onCancel: (id: string) => void; cancelling: string | null;
+  onCheckin: (id: string) => void; checkingIn: string | null;
 }) {
   const { t }           = useTranslation();
   const [offset, setOffset] = useState(0);       // px translation
@@ -96,17 +98,36 @@ function ReservationCard({
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <StatusBadge status={r.status} />
-          {/* Desktop cancel button */}
-          <button
-            onClick={() => onCancel(r.id)}
-            disabled={cancelling === r.id}
-            className="hidden sm:block text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
-            {cancelling === r.id ? '…' : t('reservations.cancel')}
-          </button>
+          <div className="hidden sm:flex gap-1.5">
+            {canCheckin(r) && (
+              <button
+                onClick={() => onCheckin(r.id)}
+                disabled={checkingIn === r.id}
+                className="text-xs px-3 py-1.5 rounded-xl bg-[#B53578] text-white hover:bg-[#9d2d67] transition-colors font-medium disabled:opacity-40">
+                {checkingIn === r.id ? '…' : t('desks.actions.checkin', 'Check-in')}
+              </button>
+            )}
+            <button
+              onClick={() => onCancel(r.id)}
+              disabled={cancelling === r.id}
+              className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
+              {cancelling === r.id ? '…' : t('reservations.cancel')}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+function canCheckin(r: any): boolean {
+  if (r.status !== 'CONFIRMED') return false;
+  if (r.checkedInAt) return false; // already checked in
+  const now     = Date.now();
+  const start   = new Date(r.startTime).getTime();
+  const end     = new Date(r.endTime).getTime();
+  const grace   = 15 * 60 * 1000; // 15 min before start
+  return now >= start - grace && now <= end;
 }
 
 export function MyReservationsPage() {
@@ -115,6 +136,7 @@ export function MyReservationsPage() {
   const [loading,      setLoading]      = useState(true);
   const [err,          setErr]          = useState('');
   const [cancelling,   setCancelling]   = useState<string | null>(null);
+  const [checkingIn,   setCheckingIn]   = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
@@ -131,6 +153,13 @@ export function MyReservationsPage() {
     try { await appApi.reservations.cancel(id); await load(); }
     catch (e: any) { setErr(e.message); }
     setCancelling(null);
+  };
+
+  const checkin = async (id: string) => {
+    setCheckingIn(id);
+    try { await appApi.checkins.web(id); await load(); }
+    catch (e: any) { setErr(e?.response?.data?.message ?? e.message); }
+    setCheckingIn(null);
   };
 
   const locale   = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
@@ -171,7 +200,9 @@ export function MyReservationsPage() {
               <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.active')}</h2>
               <div className="space-y-3">
                 {active.map(r => (
-                  <ReservationCard key={r.id} r={r} locale={locale} onCancel={cancel} cancelling={cancelling} />
+                  <ReservationCard key={r.id} r={r} locale={locale}
+                    onCancel={cancel} cancelling={cancelling}
+                    onCheckin={checkin} checkingIn={checkingIn} />
                 ))}
               </div>
             </div>

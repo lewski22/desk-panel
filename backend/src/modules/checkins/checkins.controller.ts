@@ -22,6 +22,8 @@ export class CheckinsController {
   walkin(@Body('deskId') deskId: string, @Request() req: any) { return this.svc.walkinQr(req.user.id,deskId); }
   @Post('manual') @UseGuards(JwtAuthGuard,RolesGuard) @Roles(UserRole.SUPER_ADMIN,UserRole.OFFICE_ADMIN,UserRole.STAFF) @ApiOperation({summary:'Manual check-in'})
   manual(@Body() dto: any, @Request() req: any) { return this.svc.manual(dto.deskId,dto.userId,dto.reservationId,req.user.organizationId); }
+  @Post('web') @UseGuards(JwtAuthGuard) @HttpCode(HttpStatus.OK) @ApiOperation({summary:'Web check-in (self-service)'})
+  web(@Body('reservationId') reservationId: string, @Request() req: any) { return this.svc.checkinWeb(req.user.id, reservationId); }
   @Patch(':id/checkout') @UseGuards(JwtAuthGuard) @ApiOperation({summary:'Check out'})
   checkout(@Param('id') id: string, @Request() req: any) { return this.svc.checkout(id,req.user.id,req.user.role); }
 }

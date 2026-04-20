@@ -217,6 +217,7 @@ export const appApi = {
   checkins: {
     manual:   (deskId: string, userId: string, resId?: string) =>
       req<any>('/checkins/manual', { method: 'POST', body: JSON.stringify({ deskId, userId, reservationId: resId }) }),
+    web:      (reservationId: string)              => req<any>('/checkins/web', { method: 'POST', body: JSON.stringify({ reservationId }) }),
     checkout: (id: string)                        => req<any>(`/checkins/${id}/checkout`, { method: 'PATCH' }),
     qr:       (deskId: string, qrToken: string)   => req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
     walkin:   (deskId: string)                    => req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),

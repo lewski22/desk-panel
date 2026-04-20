@@ -271,6 +271,37 @@ export class CheckinsService {
     return checkin;
   }
 
+  // ── Web check-in — user self-checkin through browser ────────
+  async checkinWeb(userId: string, reservationId: string) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: {
+        id:     reservationId,
+        userId,
+        status: ReservationStatus.CONFIRMED,
+        endTime: { gte: new Date() },
+      },
+    });
+    if (!reservation) throw new ForbiddenException('Brak aktywnej rezerwacji lub brak dostępu');
+
+    const existing = await this.prisma.checkin.findUnique({ where: { reservationId } });
+    if (existing && !existing.checkedOutAt) return existing;
+
+    const now = new Date();
+    const [checkin] = await this.prisma.$transaction([
+      this.prisma.checkin.create({
+        data: { reservationId, deskId: reservation.deskId, userId, method: CheckinMethod.WEB },
+      }),
+      this.prisma.reservation.update({
+        where: { id: reservationId },
+        data:  { checkedInAt: now, checkedInMethod: 'WEB' },
+      }),
+    ]);
+
+    await this.logEvent(EventType.CHECKIN_MANUAL, { deskId: reservation.deskId, userId, checkinId: checkin.id, method: 'WEB' });
+    this.ledEvents.emit(reservation.deskId, 'OCCUPIED');
+    return checkin;
+  }
+
   // ── Checkout ─────────────────────────────────────────────────
   async checkout(reservationId: string, actorId: string, actorRole: string) {
     const checkin = await this.prisma.checkin.findUnique({ where: { reservationId } });
@@ -282,10 +313,17 @@ export class CheckinsService {
       throw new ForbiddenException('Nie możesz zrobić checkout dla innego użytkownika');
     }
 
-    const updated = await this.prisma.checkin.update({
-      where: { reservationId },
-      data:  { checkedOutAt: new Date() },
-    });
+    const now = new Date();
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.checkin.update({
+        where: { reservationId },
+        data:  { checkedOutAt: now },
+      }),
+      this.prisma.reservation.update({
+        where: { id: reservationId },
+        data:  { status: ReservationStatus.COMPLETED },
+      }),
+    ]);
 
     this.ledEvents.emit(checkin.deskId, 'FREE');
     return updated;
@@ -311,7 +349,15 @@ export class CheckinsService {
     if (toClose.length === 0) return;
 
     const ids = toClose.map(c => c.id);
-    await this.prisma.checkin.updateMany({ where: { id: { in: ids } }, data: { checkedOutAt: now } });
+    const reservationIds = expiredCheckins.map(c => c.reservationId).filter(Boolean) as string[];
+
+    await this.prisma.$transaction([
+      this.prisma.checkin.updateMany({ where: { id: { in: ids } }, data: { checkedOutAt: now } }),
+      ...(reservationIds.length > 0 ? [this.prisma.reservation.updateMany({
+        where: { id: { in: reservationIds } },
+        data:  { status: ReservationStatus.COMPLETED },
+      })] : []),
+    ]);
 
     const deskIds = [...new Set(toClose.map(c => c.deskId))];
     for (const deskId of deskIds) this.ledEvents.emit(deskId, 'FREE');

@@ -161,8 +161,9 @@ export class ReservationsService {
       },
     });
 
-    // ── Notify beacon (LED: RESERVED state) ─────────────────────
+    // ── Notify beacon + in-app map (LED: RESERVED state) ────────
     this._notifyBeaconReservation(dto.deskId, reservation.startTime, reservation.endTime).catch(() => {});
+    this.ledEvents.emit(dto.deskId, 'RESERVED');
 
     // ── Email notification ───────────────────────────────────────
     this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});

@@ -31,9 +31,11 @@ export interface DeskMapItem {
   } | null;
   currentReservation?: {
     id: string;
+    userId: string;
     user: { firstName: string; lastName: string };
     startTime: string;
     endTime: string;
+    qrToken?: string;
   } | null;
 }
 

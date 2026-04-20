@@ -518,7 +518,56 @@
       "completed": "Completed",
       "cancelled": "Cancelled"
     },
-    "methods_title": "Check-in methods"
+    "methods_title": "Check-in methods",
+    "tabs": {
+      "heatmap":      "Heatmap",
+      "reservations": "Reservations",
+      "methods":      "Methods",
+      "by_user":      "By person",
+      "by_desk":      "By desk"
+    },
+    "filter": {
+      "from":     "From",
+      "to":       "To",
+      "location": "Location",
+      "all":      "All",
+      "refresh":  "Refresh"
+    },
+    "heatmap": {
+      "title":      "Check-in heatmap — day × hour",
+      "peak_day":   "Peak day",
+      "peak_hour":  "Peak hour",
+      "active_hrs": "Active hours",
+      "total":      "Total check-ins"
+    },
+    "reservations": {
+      "title":   "Reservations per day",
+      "count":   "Reservations"
+    },
+    "methods": {
+      "title":   "Check-in methods",
+      "method":  "Method",
+      "count":   "Count"
+    },
+    "by_user": {
+      "title":   "Top users",
+      "user":    "User",
+      "count":   "Reservations",
+      "csv":     "Export CSV"
+    },
+    "by_desk": {
+      "title":    "Top desks",
+      "desk":     "Desk",
+      "location": "Location",
+      "count":    "Reservations",
+      "csv":      "Export CSV"
+    },
+    "export": {
+      "csv":        "↓ CSV",
+      "xlsx":       "↓ XLSX",
+      "loading":    "Downloading..."
+    },
+    "no_data":  "No data for the selected period"
   },
   "organizations": {
     "create_action": "Create",
