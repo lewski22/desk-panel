@@ -100,19 +100,29 @@ export class ReportsService {
       const res  = ci.reservation;
       const desk = res?.desk;
       const loc  = desk?.location;
+      const tz   = loc?.timezone ?? 'Europe/Warsaw';
       const durMs = ci.checkedInAt && ci.checkedOutAt
         ? ci.checkedOutAt.getTime() - ci.checkedInAt.getTime()
         : null;
 
+      const toLocal = (d: Date | null): string | null => {
+        if (!d) return null;
+        return new Intl.DateTimeFormat('sv-SE', {
+          timeZone: tz,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+        }).format(d).replace(' ', 'T');
+      };
+
       return {
-        date:           ci.checkedInAt?.toISOString().slice(0, 10) ?? '',
+        date:           ci.checkedInAt ? new Intl.DateTimeFormat('sv-SE', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ci.checkedInAt) : '',
         locationId:     loc?.id ?? '',
         locationName:   loc?.name ?? '',
         deskId:         desk?.id ?? '',
         deskLabel:      desk?.name ?? '',
         checkinMethod:  ci.method ?? null,
-        checkedInAt:    ci.checkedInAt?.toISOString() ?? null,
-        checkedOutAt:   ci.checkedOutAt?.toISOString() ?? null,
+        checkedInAt:    toLocal(ci.checkedInAt),
+        checkedOutAt:   toLocal(ci.checkedOutAt),
         durationMin:    durMs !== null ? Math.round(durMs / 60000) : null,
         reservationId:  res?.id ?? null,
         userId:         res?.user?.id ?? null,

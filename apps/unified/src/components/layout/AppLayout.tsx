@@ -1,15 +1,22 @@
 /**
- * AppLayout — v0.17.0
- * Sidebar z grupami nawigacyjnymi + zmiana hasła w dole sidebara
+ * AppLayout — v0.18.0
+ * Sidebar z grupami nawigacyjnymi + ikony Noun Project + zmiana hasła w dole sidebara
  */
-import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
 import { appApi } from '../../api/client';
 import { BottomNav } from './BottomNav';
 import { NotificationBell } from './NotificationBell';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import {
+  IconFloorPlan, IconCalendar, IconClipboard, IconFolder,
+  IconDesk, IconUsers, IconBeacon, IconProvisioning,
+  IconRoom, IconVisitor, IconBarChart, IconPieChart,
+  IconBuildings, IconLink, IconBell, IconCard,
+  IconGear, IconKey, IconLogout,
+} from '../icons/SidebarIcons';
 
 interface User {
   id: string;
@@ -19,20 +26,23 @@ interface User {
   firstName?: string;
   lastName?: string;
   enabledModules?: string[];
+  subscriptionStatus?: string | null;
 }
 interface Props { user: User; onLogout: () => void; children: React.ReactNode; }
 
-type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW';
+type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT';
 
 const ROLE_LABEL: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin', OFFICE_ADMIN: 'Office Admin',
   STAFF: 'Staff', END_USER: 'Użytkownik', OWNER: 'Operator',
 };
 
+type NavIcon = React.FC<{ className?: string; size?: number }>;
+
 interface NavGroup {
   key:   string;
   roles: string[];
-  items: { to: string; icon: string; labelKey: string; roles: string[]; module?: AppModule }[];
+  items: { to: string; icon: NavIcon; labelKey: string; roles: string[]; module?: AppModule }[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
@@ -40,81 +50,91 @@ const NAV_GROUPS: NavGroup[] = [
     key:   'layout.group.workspace',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'],
     items: [
-      { to: '/map',             icon: '⬡',  labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' as AppModule },
-      { to: '/weekly',          icon: '📅', labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'WEEKLY_VIEW' as AppModule },
-      { to: '/my-reservations', icon: '📋', labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' as AppModule },
-      { to: '/reservations',    icon: '📂', labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],            module: 'DESKS' as AppModule },
+      { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
+      { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'WEEKLY_VIEW' },
+      { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
+      { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],            module: 'DESKS' },
     ],
   },
   {
     key:   'layout.group.management',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],
     items: [
-      { to: '/desks',        icon: '🪑', labelKey: 'layout.nav.desks',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/users',        icon: '👥', labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/devices',      icon: '🔌', labelKey: 'layout.nav.devices',      roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
-      { to: '/provisioning', icon: '📡', labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/resources',    icon: '🏛',  labelKey: 'layout.nav.resources',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' as AppModule },
-      { to: '/visitors',     icon: '👤', labelKey: 'layout.nav.visitors',     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/desks',        icon: IconDesk,         labelKey: 'layout.nav.desks',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/users',        icon: IconUsers,        labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/provisioning', icon: IconProvisioning, labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/resources',    icon: IconRoom,         labelKey: 'layout.nav.resources',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' },
+      { to: '/visitors',     icon: IconVisitor,      labelKey: 'layout.nav.visitors',     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
     ],
   },
   {
     key:   'layout.group.analytics',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],
     items: [
-      { to: '/dashboard', icon: '📊', labelKey: 'layout.nav.dashboard', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
-      { to: '/reports',   icon: '📈', labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/dashboard', icon: IconBarChart,  labelKey: 'layout.nav.dashboard', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/reports',   icon: IconPieChart,  labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
     ],
   },
   {
     key:   'layout.group.config',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN'],
     items: [
-      { to: '/organizations',      icon: '🏢', labelKey: 'layout.nav.organizations',    roles: ['SUPER_ADMIN'] },
-      { to: '/integrations',       icon: '🔗', labelKey: 'layout.nav.integrations',     roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/notifications',      icon: '🔔', labelKey: 'layout.nav.notifications',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/subscription',       icon: '💳', labelKey: 'layout.nav.subscription',     roles: ['SUPER_ADMIN'] },
+      { to: '/organizations', icon: IconBuildings, labelKey: 'layout.nav.organizations', roles: ['SUPER_ADMIN'] },
+      { to: '/integrations',  icon: IconLink,      labelKey: 'layout.nav.integrations',  roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/notifications', icon: IconBell,      labelKey: 'layout.nav.notifications', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/subscription',  icon: IconCard,      labelKey: 'layout.nav.subscription',  roles: ['SUPER_ADMIN'] },
     ],
   },
   {
     key:   'layout.group.operator',
     roles: ['OWNER'],
     items: [
-      { to: '/owner',              icon: '⚙️', labelKey: 'layout.nav.owner',             roles: ['OWNER'] },
-      { to: '/owner?tab=sub',      icon: '💳', labelKey: 'layout.nav.subscription',      roles: ['OWNER'] },
-      { to: '/notification-rules', icon: '🔔', labelKey: 'layout.nav.notification_rules', roles: ['OWNER'] },
+      { to: '/owner',              icon: IconGear, labelKey: 'layout.nav.owner',             roles: ['OWNER'] },
+      { to: '/owner?tab=sub',      icon: IconCard, labelKey: 'layout.nav.subscription',      roles: ['OWNER'] },
+      { to: '/notification-rules', icon: IconBell, labelKey: 'layout.nav.notification_rules', roles: ['OWNER'] },
     ],
   },
 ];
 
 // ── NavItem ──────────────────────────────────────────────────
-function NavItem({ to, icon, label, collapsed, onClick }: {
-  to: string; icon: string; label: string; collapsed?: boolean; onClick?: () => void;
+function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
+  to: string; icon: NavIcon; label: string; collapsed?: boolean; onClick?: () => void;
 }) {
   return (
     <NavLink
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all duration-150 group ${
+        `relative flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-150 ${
           isActive
-            ? 'bg-[#B53578]/15 text-[#e06aaa] font-medium'
-            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
+            ? 'bg-[#B53578]/12 text-white'
+            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'
         }`
       }
       title={collapsed ? label : undefined}
     >
-      <span className="text-base shrink-0">{icon}</span>
-      {!collapsed && <span className="truncate">{label}</span>}
+      {({ isActive }) => (
+        <>
+          {/* Left-edge active indicator */}
+          {isActive && (
+            <span className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#B53578] rounded-r-full" />
+          )}
+          <Icon
+            size={16}
+            className={`shrink-0 ${isActive ? 'text-[#B53578]' : ''}`}
+          />
+          {!collapsed && <span className="truncate">{label}</span>}
+        </>
+      )}
     </NavLink>
   );
 }
 
 // ── Main component ───────────────────────────────────────────
 export function AppLayout({ user, onLogout, children }: Props) {
-  const { t }       = useTranslation();
-  const navigate    = useNavigate();
-  const location    = useLocation();
+  const { t }    = useTranslation();
+  const location = useLocation();
   const [collapsed,   setCollapsed]   = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) return saved === 'true';
@@ -142,27 +162,41 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {/* Logo + toggle */}
-      <div className="flex items-center gap-2 px-3 py-3 border-b border-zinc-800 shrink-0">
-        <span className="text-[#B53578] font-black text-xl shrink-0">R</span>
-        {(!collapsed || mobile) && (
-          <div className="min-w-0 flex-1">
-            <div className="text-white font-bold text-sm tracking-widest">RESERTI</div>
-            <div className="text-zinc-500 text-[10px] truncate">
-              {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
-            </div>
-            <div className="text-[#B53578] text-[9px] font-semibold uppercase tracking-wider mt-0.5">
-              {ROLE_LABEL[user.role] ?? user.role}
-            </div>
+      {/* Logo + user header */}
+      <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800/80 shrink-0">
+        {/* Avatar / Logo */}
+        {collapsed && !mobile ? (
+          <div className="w-8 h-8 rounded-full bg-[#B53578]/20 border border-[#B53578]/40 flex items-center justify-center shrink-0">
+            <span className="text-[#B53578] font-black text-sm">R</span>
           </div>
+        ) : (
+          <>
+            <div className="w-8 h-8 rounded-full bg-[#B53578] flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">
+              {user.firstName
+                ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
+                : user.email[0].toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-white text-xs font-semibold truncate">
+                {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
+              </div>
+              <div className="text-[#B53578] text-[10px] font-semibold uppercase tracking-wider mt-0.5">
+                {ROLE_LABEL[user.role] ?? user.role}
+              </div>
+            </div>
+          </>
         )}
         {!mobile && (
           <button
             onClick={toggleCollapsed}
-            className="shrink-0 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-800 transition-colors text-sm"
+            className="shrink-0 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-800 transition-colors"
             title={collapsed ? t('layout.expand') : t('layout.collapse')}
           >
-            {collapsed ? '›' : '‹'}
+            <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
+              {collapsed
+                ? <path d="M7 4l6 6-6 6V4z" />
+                : <path d="M13 4l-6 6 6 6V4z" />}
+            </svg>
           </button>
         )}
         {mobile && (
@@ -174,8 +208,8 @@ export function AppLayout({ user, onLogout, children }: Props) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 scrollbar-thin scrollbar-thumb-zinc-700">
-        {NAV_GROUPS.map(group => {
+      <nav className="flex-1 overflow-y-auto px-2 py-2 scrollbar-thin scrollbar-thumb-zinc-700">
+        {NAV_GROUPS.map((group, gi) => {
           if (!group.roles.includes(user.role)) return null;
           const visibleItems = group.items.filter(item => {
             if (!item.roles.includes(user.role)) return false;
@@ -185,49 +219,58 @@ export function AppLayout({ user, onLogout, children }: Props) {
           if (!visibleItems.length) return null;
 
           return (
-            <React.Fragment key={group.key}>
+            <div key={group.key} className={gi > 0 ? 'mt-1 pt-1 border-t border-zinc-800/70' : 'mt-0'}>
               {(!collapsed || mobile) && (
-                <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+                <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
                   {t(group.key)}
                 </div>
               )}
-              {visibleItems.map(item => (
-                <NavItem
-                  key={item.to}
-                  to={item.to}
-                  icon={item.icon}
-                  label={t(item.labelKey)}
-                  collapsed={collapsed && !mobile}
-                  onClick={mobile ? () => setMobileOpen(false) : undefined}
-                />
-              ))}
-            </React.Fragment>
+              <div className="space-y-0.5">
+                {visibleItems.map(item => (
+                  <NavItem
+                    key={item.to}
+                    to={item.to}
+                    icon={item.icon}
+                    label={t(item.labelKey)}
+                    collapsed={collapsed && !mobile}
+                    onClick={mobile ? () => setMobileOpen(false) : undefined}
+                  />
+                ))}
+              </div>
+            </div>
           );
         })}
       </nav>
 
-      {/* ── BOTTOM: Zmień hasło / Language / Logout ── */}
-      <div className="border-t border-zinc-800 shrink-0">
+      {/* ── BOTTOM: Change password / Language / Bell / Logout ── */}
+      <div className="border-t border-zinc-800/80 shrink-0 px-2 py-2 space-y-0.5">
         {(!collapsed || mobile) && (
-          <div className="px-3 pt-2 pb-1">
-            <button
-              onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
-              className="w-full flex items-center gap-2 text-zinc-400 hover:text-zinc-100 text-xs py-2 px-2 rounded-xl hover:bg-zinc-800 transition-colors text-left"
-            >
-              <span>🔑</span>
-              <span>{t('layout.change_password')}</span>
-            </button>
-          </div>
+          <button
+            onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-colors"
+          >
+            <IconKey size={16} className="shrink-0" />
+            <span className="truncate">{t('layout.change_password')}</span>
+          </button>
         )}
-        <div className={`px-3 py-2.5 flex items-center gap-2 ${collapsed && !mobile ? 'flex-col justify-center' : 'justify-between'}`}>
-          {(!collapsed || mobile) && <LanguageSwitcher />}
+        <div className={`flex items-center gap-1 px-1 ${collapsed && !mobile ? 'flex-col' : ''}`}>
+          {(!collapsed || mobile) && <div className="flex-1"><LanguageSwitcher /></div>}
           <NotificationBell role={user.role} />
-          {(!collapsed || mobile) && (
+          {collapsed && !mobile ? (
             <button
               onClick={doLogout}
-              className="text-zinc-500 hover:text-zinc-200 text-xs p-1.5 rounded-lg hover:bg-zinc-800 transition-colors flex-1 text-right"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+              title={t('layout.logout')}
             >
-              {t('layout.logout')}
+              <IconLogout size={16} />
+            </button>
+          ) : (
+            <button
+              onClick={doLogout}
+              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors text-xs"
+            >
+              <IconLogout size={14} />
+              <span>{t('layout.logout')}</span>
             </button>
           )}
         </div>
@@ -240,6 +283,20 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       {/* Change Password Modal — rendered at top level */}
       {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
+
+      {/* Subscription expiry banner */}
+      {user.subscriptionStatus === 'expired' && (
+        <div className="bg-red-600 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
+          <span className="truncate">⚠ Plan wygasł — funkcje są zablokowane. Odnów subskrypcję.</span>
+          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">Odnów</a>
+        </div>
+      )}
+      {user.subscriptionStatus === 'expiring_soon' && (
+        <div className="bg-amber-500 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
+          <span className="truncate">⏰ Plan wygasa wkrótce — sprawdź szczegóły subskrypcji.</span>
+          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">Szczegóły</a>
+        </div>
+      )}
 
       {/* Impersonation banner */}
       {isImpersonated && (
@@ -286,7 +343,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className={`hidden md:flex flex-col bg-zinc-900 transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-56'} border-r border-zinc-800`}>
+        <aside className={`hidden md:flex flex-col bg-zinc-900 transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'} border-r border-zinc-800`}>
           <SidebarContent />
         </aside>
 
@@ -297,7 +354,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
       </div>
 
       {/* Mobile bottom nav */}
-      <BottomNav userRole={user.role} />
+      <BottomNav userRole={user.role} enabledModules={enabledModules} />
     </div>
   );
 }

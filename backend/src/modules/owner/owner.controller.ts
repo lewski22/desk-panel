@@ -62,7 +62,7 @@ export class OwnerController {
     @Param('id')  id:   string,
     @Body()       body: { enabledModules: string[] },
   ) {
-    const VALID = ['DESKS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW'];
+    const VALID = ['DESKS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW', 'EQUIPMENT'];
     const modules = (body.enabledModules ?? []).filter((m: string) => VALID.includes(m));
     return this.svc.updateOrganization(id, { enabledModules: modules });
   }

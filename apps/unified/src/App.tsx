@@ -59,6 +59,14 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     appApi.auth.getMe().then(setUser).catch(() => {});
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        appApi.auth.getMe().then(setUser).catch(() => {});
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
   const handleLogout = () => {

@@ -223,7 +223,7 @@ export function OrganizationsPage() {
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
-    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8,
+    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
   });
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
@@ -245,7 +245,7 @@ export function OrganizationsPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8,
+    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
       organizationId: isSuperAdmin ? '' : (user?.organizationId ?? '') });
     setErr('');
     setModal('create');
@@ -257,6 +257,7 @@ export function OrganizationsPage() {
       name: loc.name, address: loc.address ?? '', city: loc.city ?? '',
       openTime: loc.openTime ?? '08:00', closeTime: loc.closeTime ?? '17:00',
       maxDaysAhead: loc.maxDaysAhead ?? 14, maxHoursPerDay: loc.maxHoursPerDay ?? 8,
+      timezone: loc.timezone ?? 'Europe/Warsaw',
       organizationId: loc.organizationId,
     });
     setErr('');
@@ -272,6 +273,7 @@ export function OrganizationsPage() {
           name: form.name, address: form.address, city: form.city,
           openTime: form.openTime, closeTime: form.closeTime,
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
+          timezone: form.timezone,
           organizationId: orgId,
         });
       } else if (target) {
@@ -279,6 +281,7 @@ export function OrganizationsPage() {
           name: form.name, address: form.address, city: form.city,
           openTime: form.openTime, closeTime: form.closeTime,
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
+          timezone: form.timezone,
         });
       }
       setModal(null);
@@ -340,6 +343,9 @@ export function OrganizationsPage() {
                 <p className="text-xs text-zinc-400 mt-0.5">godziny pracy</p>
                 <p className="text-xs text-zinc-500 mt-1 font-medium">
                   max {loc.maxDaysAhead ?? 14}d · {loc.maxHoursPerDay ?? 8}h
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  {loc.timezone ?? 'Europe/Warsaw'}
                 </p>
               </div>
               <div className="shrink-0 flex items-center gap-2">
@@ -406,6 +412,36 @@ export function OrganizationsPage() {
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
             </div>
           </div>
+          {/* Strefa czasowa */}
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">Strefa czasowa</label>
+            <select
+              value={form.timezone}
+              onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+            >
+              <option value="Europe/Warsaw">Europe/Warsaw (UTC+1/+2)</option>
+              <option value="Europe/London">Europe/London (UTC+0/+1)</option>
+              <option value="Europe/Berlin">Europe/Berlin (UTC+1/+2)</option>
+              <option value="Europe/Paris">Europe/Paris (UTC+1/+2)</option>
+              <option value="Europe/Prague">Europe/Prague (UTC+1/+2)</option>
+              <option value="Europe/Budapest">Europe/Budapest (UTC+1/+2)</option>
+              <option value="Europe/Bucharest">Europe/Bucharest (UTC+2/+3)</option>
+              <option value="Europe/Helsinki">Europe/Helsinki (UTC+2/+3)</option>
+              <option value="Europe/Kiev">Europe/Kiev (UTC+2/+3)</option>
+              <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
+              <option value="America/New_York">America/New_York (UTC-5/-4)</option>
+              <option value="America/Chicago">America/Chicago (UTC-6/-5)</option>
+              <option value="America/Denver">America/Denver (UTC-7/-6)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (UTC-8/-7)</option>
+              <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
+              <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+              <option value="Australia/Sydney">Australia/Sydney (UTC+10/+11)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+
           {/* Limity rezerwacji */}
           <div className="grid grid-cols-2 gap-3">
             <div>

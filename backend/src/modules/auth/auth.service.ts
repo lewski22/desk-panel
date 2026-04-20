@@ -20,11 +20,13 @@ export class AuthService {
     const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + 7);
     await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
     let enabledModules: string[] = [];
+    let subscriptionStatus: string | null = null;
     if ((user as any).organizationId) {
-      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true } });
+      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true } });
       enabledModules = org?.enabledModules ?? [];
+      subscriptionStatus = this._calcSubscriptionStatus(org);
     }
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules } };
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus } };
   }
   async refresh(refreshToken: string) {
     const record = await this.prisma.refreshToken.findUnique({ where: { token: refreshToken }, include: { user: true } });
@@ -40,11 +42,24 @@ export class AuthService {
   async getMe(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     let enabledModules: string[] = [];
+    let subscriptionStatus: string | null = null;
     if ((user as any).organizationId) {
-      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true } });
+      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true } });
       enabledModules = org?.enabledModules ?? [];
+      subscriptionStatus = this._calcSubscriptionStatus(org);
     }
-    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules };
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus };
+  }
+
+  private _calcSubscriptionStatus(org: { planExpiresAt?: Date | null; trialEndsAt?: Date | null } | null | undefined): string | null {
+    if (!org) return null;
+    const now = new Date();
+    const expiryDate = org.trialEndsAt ?? org.planExpiresAt;
+    if (!expiryDate) return null; // bezterminowy (Enterprise)
+    const days = Math.ceil((expiryDate.getTime() - now.getTime()) / 86_400_000);
+    if (days <= 0)  return 'expired';
+    if (days <= 14) return 'expiring_soon';
+    return null;
   }
   /**
    * Shared JIT provisioning for SSO providers (Azure, Google).

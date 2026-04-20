@@ -311,12 +311,15 @@ export function DashboardPage() {
   const isAdmin      = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(role);
   const locale       = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
-  const [ext,     setExt]     = useState<any>(null);
-  const [desks,   setDesks]   = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [ext,          setExt]          = useState<any>(null);
+  const [desks,        setDesks]        = useState<any[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     try {
       const [e, d] = await Promise.all([
         appApi.locations.extended(locationId),
@@ -324,11 +327,18 @@ export function DashboardPage() {
       ]);
       setExt(e);
       setDesks(d?.desks ?? d ?? []);
+      setLastRefreshed(new Date());
     } catch {}
     setLoading(false);
+    setRefreshing(false);
   }, [locationId]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const id = setInterval(() => load(true), 60_000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const zoneData = useMemo(() => {
     const zones = new Map<string, { free:number; occupied:number; reserved:number }>();
@@ -363,11 +373,31 @@ export function DashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-xl font-semibold text-zinc-800">{t('pages.dashboard.title')}</h1>
-        <p className="text-sm text-zinc-400 mt-0.5">
-          {now.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
-        </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-800">{t('pages.dashboard.title')}</h1>
+          <p className="text-sm text-zinc-400 mt-0.5">
+            {now.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 mt-1 shrink-0">
+          {lastRefreshed && (
+            <span className="text-[11px] text-zinc-400 hidden sm:block">
+              {lastRefreshed.toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit', second:'2-digit' })}
+            </span>
+          )}
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors disabled:opacity-40"
+            title={t('btn.refresh') ?? 'Refresh'}
+          >
+            <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13.7 2.3A7 7 0 1 0 15 8" />
+              <path d="M11 2h3V5" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Quick Actions — tylko dla Admin+ */}

@@ -481,7 +481,7 @@
     },
     "qa": {
       "book": "Reserve a desk",
-      "checkin": "Manual check-in",
+      "checkin": "Reservations",
       "announce": "Send announcement",
       "ann_title_ph": "Announcement title...",
       "ann_body_ph": "Announcement body...",
