@@ -255,7 +255,13 @@ function IssuesWidget({ locationId }: { locationId: string }) {
 // ── Hourly chart — mobile simplified ─────────────────────────
 function HourlyChart({ hourly }: { hourly: any[] }) {
   const { t } = useTranslation();
-  const isMobile = window.innerWidth < 640;
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 639px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const data = useMemo(() => {
     if (!hourly?.length) return [];

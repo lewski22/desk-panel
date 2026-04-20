@@ -1,4 +1,14 @@
 {
+  "pwa": {
+    "offline":       "No internet connection — working offline",
+    "update_ready":  "A new version of the app is available.",
+    "reload":        "Reload",
+    "offline_ready": "App is ready to work offline.",
+    "install_title": "Install Reserti",
+    "install_sub":   "Add to home screen for quick access",
+    "install_cta":   "Install",
+    "install_later": "Later"
+  },
   "table": {
     "empty": "No data"
   },

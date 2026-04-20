@@ -1,4 +1,14 @@
 {
+  "pwa": {
+    "offline":       "Brak połączenia z internetem — tryb offline",
+    "update_ready":  "Dostępna jest nowa wersja aplikacji.",
+    "reload":        "Odśwież",
+    "offline_ready": "Aplikacja gotowa do pracy offline.",
+    "install_title": "Zainstaluj Reserti",
+    "install_sub":   "Dodaj do ekranu głównego dla szybkiego dostępu",
+    "install_cta":   "Zainstaluj",
+    "install_later": "Później"
+  },
   "table": {
     "empty": "Brak danych"
   },

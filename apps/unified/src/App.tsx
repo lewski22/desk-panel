@@ -27,6 +27,7 @@ import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
 import IntegrationsPage         from './pages/IntegrationsPage';
+import { PwaBanners }           from './components/PwaBanners';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
@@ -76,6 +77,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <PwaBanners />
       <Routes>
         {/* Publiczne */}
         <Route path="/login" element={

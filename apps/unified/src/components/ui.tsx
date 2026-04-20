@@ -137,15 +137,23 @@ export function Modal({ open = true, title, onClose, children, wide = false }: {
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       style={{ background: 'rgba(0,0,0,0.5)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} max-h-[85vh] sm:max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 shrink-0">
-          <h3 className="font-semibold text-zinc-800">{title}</h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-md'} max-h-[92vh] sm:max-h-[90vh] flex flex-col`}>
+        {/* Drag handle — mobile only */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
+          <span className="w-10 h-1 bg-zinc-300 rounded-full" />
         </div>
-        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-zinc-100 shrink-0">
+          <h3 className="font-semibold text-zinc-800">{title}</h3>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none min-w-touch min-h-touch flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+        </div>
+        <div className="px-5 py-4 overflow-y-auto flex-1" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+          {children}
+        </div>
       </div>
     </div>
   );

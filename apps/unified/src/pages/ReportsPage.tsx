@@ -106,33 +106,68 @@ function HeatmapTab({ filters, onExport, exporting }: {
         {loading ? (
           <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
         ) : (
-          <div className="overflow-x-auto">
-            <div className="grid gap-[2px] min-w-[700px]" style={{ gridTemplateColumns: '52px repeat(24, 1fr)' }}>
-              <div />
-              {hours.map(h => (
-                <div key={h} className="text-center text-[10px] text-zinc-400 pb-1">
-                  {h % 3 === 0 ? `${h}h` : ''}
-                </div>
-              ))}
-              {DAYS.map((dayLabel, dayIdx) => (
-                <>
-                  <div key={`lbl-${dayIdx}`} className={`text-xs flex items-center pr-2 ${dayIdx < 5 ? 'text-zinc-500' : 'text-zinc-700 font-medium'}`}>
-                    {dayLabel}
+          <>
+            {/* Desktop/tablet: full day×hour matrix */}
+            <div className="hidden sm:block scroll-x-fade">
+              <div className="grid gap-[2px] min-w-[700px]" style={{ gridTemplateColumns: '52px repeat(24, 1fr)' }}>
+                <div />
+                {hours.map(h => (
+                  <div key={h} className="text-center text-[10px] text-zinc-400 pb-1">
+                    {h % 3 === 0 ? `${h}h` : ''}
                   </div>
-                  {hours.map(hour => {
-                    const count = heatLookup.get(`${dayIdx}:${hour}`) ?? 0;
-                    return (
-                      <div
-                        key={`${dayIdx}-${hour}`}
-                        title={`${dayLabel} ${hour}:00 — ${count}`}
-                        className="aspect-square rounded-[3px]"
-                        style={{ background: cellColor(count, maxCount) }}
-                      />
-                    );
-                  })}
-                </>
-              ))}
+                ))}
+                {DAYS.map((dayLabel, dayIdx) => (
+                  <>
+                    <div key={`lbl-${dayIdx}`} className={`text-xs flex items-center pr-2 ${dayIdx < 5 ? 'text-zinc-500' : 'text-zinc-700 font-medium'}`}>
+                      {dayLabel}
+                    </div>
+                    {hours.map(hour => {
+                      const count = heatLookup.get(`${dayIdx}:${hour}`) ?? 0;
+                      return (
+                        <div
+                          key={`${dayIdx}-${hour}`}
+                          title={`${dayLabel} ${hour}:00 — ${count}`}
+                          className="aspect-square rounded-[3px]"
+                          style={{ background: cellColor(count, maxCount) }}
+                        />
+                      );
+                    })}
+                  </>
+                ))}
+              </div>
             </div>
+
+            {/* Mobile: working hours only (8–20), grouped view */}
+            <div className="sm:hidden">
+              <div className="grid gap-[2px]" style={{ gridTemplateColumns: '40px repeat(12, 1fr)' }}>
+                <div />
+                {Array.from({ length: 12 }, (_, i) => i + 8).map(h => (
+                  <div key={h} className="text-center text-[9px] text-zinc-400 pb-1">
+                    {h % 2 === 0 ? `${h}` : ''}
+                  </div>
+                ))}
+                {DAYS.map((dayLabel, dayIdx) => (
+                  <>
+                    <div key={`lbl-${dayIdx}`} className={`text-[10px] flex items-center pr-1 ${dayIdx < 5 ? 'text-zinc-500' : 'text-zinc-700 font-medium'}`}>
+                      {dayLabel}
+                    </div>
+                    {Array.from({ length: 12 }, (_, i) => i + 8).map(hour => {
+                      const count = heatLookup.get(`${dayIdx}:${hour}`) ?? 0;
+                      return (
+                        <div
+                          key={`${dayIdx}-${hour}`}
+                          title={`${dayLabel} ${hour}:00 — ${count}`}
+                          className="aspect-square rounded-[2px]"
+                          style={{ background: cellColor(count, maxCount) }}
+                        />
+                      );
+                    })}
+                  </>
+                ))}
+              </div>
+              <p className="text-[10px] text-zinc-400 mt-2 text-center">08:00 – 20:00</p>
+            </div>
+
             {/* Legend */}
             <div className="flex items-center gap-1.5 mt-3">
               <span className="text-[11px] text-zinc-400">0</span>
@@ -141,7 +176,7 @@ function HeatmapTab({ filters, onExport, exporting }: {
               ))}
               <span className="text-[11px] text-zinc-400">{maxCount}</span>
             </div>
-          </div>
+          </>
         )}
       </Card>
 
@@ -471,24 +506,24 @@ function ReportsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex flex-wrap gap-3 items-end mb-5 p-4 bg-white border border-zinc-100 rounded-xl">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 items-end mb-5 p-3 sm:p-4 bg-white border border-zinc-100 rounded-xl">
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.from')}</label>
           <input type="date" value={from} max={to}
             onChange={e => setFrom(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
+            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
         </div>
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.to')}</label>
           <input type="date" value={to} min={from} max={todayStr()}
             onChange={e => setTo(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
+            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
         </div>
         {locations.length > 0 && (
-          <div>
+          <div className="col-span-2 sm:col-auto">
             <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.location')}</label>
             <select value={locationId} onChange={e => setLocationId(e.target.value)}
-              className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#B53578]">
+              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578] bg-white">
               <option value="">{t('reports.filter.all')}</option>
               {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
@@ -496,18 +531,20 @@ function ReportsPage() {
         )}
       </div>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 mb-5 border-b border-zinc-100 overflow-x-auto">
-        {TABS.map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
-              activeTab === tab
-                ? 'border-[#B53578] text-[#B53578]'
-                : 'border-transparent text-zinc-500 hover:text-zinc-700'
-            }`}>
-            {t(`reports.tabs.${tab}`)}
-          </button>
-        ))}
+      {/* Tab bar — scroll-x-fade hides scrollbar but allows swipe */}
+      <div className="scroll-x-fade -mx-4 sm:mx-0 px-4 sm:px-0 mb-5 border-b border-zinc-100">
+        <div className="flex gap-1 min-w-max sm:min-w-0">
+          {TABS.map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px min-h-touch ${
+                activeTab === tab
+                  ? 'border-[#B53578] text-[#B53578]'
+                  : 'border-transparent text-zinc-500 active:text-zinc-700'
+              }`}>
+              {t(`reports.tabs.${tab}`)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab content */}

@@ -5,15 +5,12 @@ import './i18n'; // musi być przed App
 import App from './App';
 import './index.css';
 
-// Rejestracja Service Workera PWA
-// autoUpdate: nowa wersja aplikacji jest ładowana automatycznie przy następnej wizycie
-registerSW({
+const updateSW = registerSW({
   onNeedRefresh() {
-    // Nowa wersja dostępna — autoUpdate obsługuje to samo, ale logujemy dla debugowania
-    console.info('[PWA] Nowa wersja dostępna — odśwież stronę');
+    window.dispatchEvent(new CustomEvent('pwa:update-ready', { detail: { updateSW } }));
   },
   onOfflineReady() {
-    console.info('[PWA] Aplikacja gotowa do pracy offline');
+    window.dispatchEvent(new CustomEvent('pwa:offline-ready'));
   },
 });
 

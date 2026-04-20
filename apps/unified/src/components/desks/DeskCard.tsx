@@ -156,7 +156,7 @@ export function DeskCard({ desk, onCheckin, onCheckout, onQuickBook, hideActions
         <div className="relative">
           <button
             onClick={e => { e.stopPropagation(); setShowPopover(v => !v); }}
-            className="w-full text-xs py-2 sm:py-1.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700 transition-colors font-medium">
+            className="w-full text-xs py-2 min-h-touch rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700 transition-colors font-medium">
             + {t('deskcard.book')}
           </button>
           {showPopover && (
@@ -175,13 +175,13 @@ export function DeskCard({ desk, onCheckin, onCheckout, onQuickBook, hideActions
         <div className="flex gap-1 mt-1">
           {!desk.isOccupied && (
             <button onClick={() => onCheckin(desk)}
-              className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium">
+              className="flex-1 text-xs py-2 min-h-touch rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 transition-colors font-medium">
               Check-in
             </button>
           )}
           {desk.isOccupied && (
             <button onClick={() => onCheckout(desk)}
-              className="flex-1 text-xs py-2 sm:py-1 rounded-lg bg-white/20 text-white hover:bg-white/30 active:bg-white/40 transition-colors border border-white/30 font-medium">
+              className="flex-1 text-xs py-2 min-h-touch rounded-lg bg-white/20 text-white hover:bg-white/30 active:bg-white/40 transition-colors border border-white/30 font-medium">
               Check-out
             </button>
           )}

@@ -105,16 +105,21 @@ function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm max-h-[92vh] flex flex-col">
+        {/* Drag handle — mobile only */}
+        <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
+          <span className="w-10 h-1 bg-zinc-300 rounded-full" />
+        </div>
+        <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-zinc-100 shrink-0">
           <div>
             <p className="font-semibold text-zinc-800">{t('desks.reserve.title')}</p>
             <p className="text-xs text-zinc-400 mt-0.5">{desk.name} · {desk.code}</p>
           </div>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl w-7 h-7 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl min-w-touch min-h-touch flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
         </div>
-        <div className="px-5 py-4 flex flex-col gap-4">
+        <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto flex-1"
+             style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
 
           {/* Staff/Admin — opcjonalny wybór pracownika */}

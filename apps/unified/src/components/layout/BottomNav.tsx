@@ -77,39 +77,38 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-zinc-900 border-t border-zinc-800 flex items-stretch safe-area-bottom"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-zinc-900 border-t border-zinc-800 flex items-stretch"
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft:   'env(safe-area-inset-left)',
+        paddingRight:  'env(safe-area-inset-right)',
+      }}
     >
       {entries.map(item => {
-        const active     = loc.pathname === item.to || loc.pathname.startsWith(item.to + '/');
-        const showBadge  = item.badge && badge > 0;
-        const Icon       = item.icon;
+        const active    = loc.pathname === item.to || loc.pathname.startsWith(item.to + '/');
+        const showBadge = item.badge && badge > 0;
+        const Icon      = item.icon;
 
         return (
           <NavLink
             key={item.to}
             to={item.to}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 px-1 relative min-w-0 transition-colors ${
-              active ? 'text-[#e06aaa]' : 'text-zinc-500 hover:text-zinc-300'
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 relative min-w-0 min-h-touch transition-colors ${
+              active ? 'text-[#e06aaa]' : 'text-zinc-500 active:text-zinc-300'
             }`}
           >
-            {/* Top active bar */}
             {active && (
               <span className="absolute top-0 inset-x-3 h-0.5 bg-[#B53578] rounded-b-full" />
             )}
-
-            {/* Icon with optional badge */}
             <span className="relative">
-              <Icon size={20} />
+              <Icon size={22} />
               {showBadge && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] bg-[#B53578] text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-[#B53578] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
                   {badge > 9 ? '9+' : badge}
                 </span>
               )}
             </span>
-
-            {/* Label — short i18n key, CSS truncation only */}
-            <span className="text-[9px] font-medium leading-none truncate max-w-full px-1">
+            <span className="text-[10px] font-medium leading-none truncate max-w-full px-0.5">
               {t(item.labelKey).split(' ').slice(0, 2).join(' ')}
             </span>
           </NavLink>

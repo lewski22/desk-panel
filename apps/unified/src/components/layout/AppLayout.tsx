@@ -311,11 +311,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </div>
       )}
 
-      {/* Mobile topbar */}
-      <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-zinc-900 border-b border-zinc-800 shrink-0 z-30">
+      {/* Mobile topbar — pt-safe handles PWA status bar on notched devices */}
+      <div className="md:hidden flex items-center gap-3 px-4 py-3 pt-safe bg-zinc-900 border-b border-zinc-800 shrink-0 z-30"
+           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button
           onClick={() => setMobileOpen(true)}
-          className="text-zinc-400 hover:text-zinc-100 p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+          className="text-zinc-400 hover:text-zinc-100 p-2 rounded-lg hover:bg-zinc-800 transition-colors min-h-touch min-w-touch flex items-center justify-center"
           aria-label={t('layout.open_menu')}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -331,11 +332,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </div>
       </div>
 
-      {/* Mobile sidebar overlay */}
+      {/* Mobile sidebar overlay — pl-safe handles landscape notch */}
       {mobileOpen && (
         <>
           <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="md:hidden fixed inset-y-0 left-0 z-50 w-72 flex flex-col bg-zinc-900 shadow-2xl">
+          <aside className="md:hidden fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-900 shadow-2xl"
+                 style={{ width: 'calc(18rem + env(safe-area-inset-left))', paddingLeft: 'env(safe-area-inset-left)' }}>
             <SidebarContent mobile />
           </aside>
         </>
@@ -347,8 +349,8 @@ export function AppLayout({ user, onLogout, children }: Props) {
           <SidebarContent />
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-24 md:pb-6">
+        {/* Main content — pb-nav clears bottom nav + device home indicator */}
+        <main className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6">
           {children}
         </main>
       </div>

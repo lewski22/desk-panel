@@ -23,6 +23,20 @@ export default defineConfig({
           { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
         ],
         categories: ['productivity', 'business'],
+        shortcuts: [
+          {
+            name: 'Mapa biurek',
+            short_name: 'Mapa',
+            url: '/map',
+            icons: [{ src: '/icon-192.svg', sizes: '192x192' }],
+          },
+          {
+            name: 'Moje rezerwacje',
+            short_name: 'Rezerwacje',
+            url: '/my-reservations',
+            icons: [{ src: '/icon-192.svg', sizes: '192x192' }],
+          },
+        ],
       },
       workbox: {
         skipWaiting: true,
