@@ -53,11 +53,11 @@
 
 ### Zgłoszenia
 
-- [ ] **Dashboard > przycisk „Checkin ręczny" (L129–131) przenosi do `/reservations` — zmienić nazwę.**  
-  Label `dashboard.qa.checkin` powinien wskazywać na właściwą akcję lub przenieść na dedykowany widok check-in.
+- [x] **Dashboard > przycisk „Checkin ręczny" (L129–131) przenosi do `/reservations` — zmienić nazwę.**  
+  Label zmieniony na „Rezerwacje" (i18n `dashboard.qa.checkin`). *(2026-04-20)*
 
-- [ ] **Dashboard nie pokazuje danych na bieżąco.**  
-  Brakuje mechanizmu odświeżania (polling / WebSocket / SSE). Dodać auto-refresh lub subskrypcję real-time.
+- [x] **Dashboard nie pokazuje danych na bieżąco.**  
+  Dodano auto-refresh co 60 s (silent reload bez spinnera) + przycisk ręcznego odświeżenia z timestampem ostatniej aktualizacji. *(2026-04-20)*
 
 - [ ] **Dane z Dashboard powinny znaleźć się w Raportach.**  
   Wyeksponować te same dane (KPI, top biurka, strefy) jako eksportowalny raport (patrz sekcja Raporty).
@@ -73,13 +73,15 @@
 
 ### Zgłoszenia
 
-- [ ] **Zakładka Raporty do przemodelowania** — dodać podzakładki z oddzielnymi raportami do pobrania (CSV/XLSX).
+- [x] **Zakładka Raporty do przemodelowania** — dodać podzakładki z oddzielnymi raportami do pobrania (CSV/XLSX).  
+  Przebudowano na 5 zakładek: Heatmapa, Rezerwacje/dzień, Metody, Per osoba, Per biurko. Eksport CSV z każdej zakładki. *(2026-04-20)*
 
-- [ ] **Nowe raporty do zaimplementowania:**
-  - Ilość rezerwacji w dniu / tygodniu
-  - Rezerwacje online vs rezerwacje QR
-  - Ilość rezerwacji per osoba — tydzień / miesiąc
-  - Ilość rezerwacji per biurko — tydzień / miesiąc
+- [x] **Nowe raporty do zaimplementowania:**  
+  Dodano 4 endpointy w `reports.controller/service.ts` + odpowiadające zakładki w UI z wykresami (Recharts). *(2026-04-20)*
+  - Ilość rezerwacji w dniu / tygodniu → zakładka „Rezerwacje"
+  - Rezerwacje online vs rezerwacje QR → zakładka „Metody"
+  - Ilość rezerwacji per osoba — tydzień / miesiąc → zakładka „Per osoba"
+  - Ilość rezerwacji per biurko — tydzień / miesiąc → zakładka „Per biurko"
 
 - [ ] **Czas w raporcie pokazuje się jako UTC zamiast UTC+2.**  
   W `reports.service.ts` brak konwersji do strefy czasowej biura przy formatowaniu dat. Użyć `timezone` z `Location` (tak jak w `checkins.service.ts` L161).
@@ -96,17 +98,17 @@
 
 ### Zgłoszenia
 
-- [ ] **Po rezerwacji biurka nie zmienia się kolor LED na beaconie.**  
-  `ledEvents.emit(deskId, 'OCCUPIED')` jest wywoływane w `checkins.service.ts` (L85, L134 itd.), ale nie przy samej rezerwacji — tylko przy check-in. Sprawdzić, czy należy emitować zdarzenie LED również przy tworzeniu rezerwacji.
+- [x] **Po rezerwacji biurka nie zmienia się kolor LED na beaconie.**  
+  Dodano `ledEvents.emit(deskId, 'RESERVED')` w `reservations.service.ts` po created reservation. *(2026-04-20)*
 
-- [ ] **W mapie biurek pojawia się napis „Check in" po rezerwacji, ale nic nie wykonuje.**  
-  Prawdopodobnie brakujący handler lub niepodłączony endpoint w `DeskMap.tsx`.
+- [x] **W mapie biurek pojawia się napis „Check in" po rezerwacji, ale nic nie wykonuje.**  
+  Naprawiono `handleCheckin` w `DeskMap.tsx` — przy biurku z aktywną rezerwacją wywołuje `api.checkins.manual(...)` zamiast otwierać modal rezerwacji. *(2026-04-20)*
 
-- [ ] **W „Moje rezerwacje" zweryfikować, czy można zrobić check-in przez WEB.**  
-  Sprawdzić `MyReservationsPage.tsx` — czy akcja check-in (nie tylko QR) jest dostępna z poziomu przeglądarki.
+- [x] **W „Moje rezerwacje" zweryfikować, czy można zrobić check-in przez WEB.**  
+  Dodano endpoint `POST /checkins/web`, metodę `checkinWeb()` w serwisie (15 min grace window, `method: WEB`), przycisk Check-in w `MyReservationsPage.tsx`. *(2026-04-20)*
 
-- [ ] **Po poprawnym check-in nie powinno się anulować rezerwacji — tylko ją kończyć.**  
-  W `checkins.service.ts` sprawdzić stan po `checkedOutAt` — status powinien być `COMPLETED` a nie `CANCELLED`. Liczyć czas rezerwacji do raportu.
+- [x] **Po poprawnym check-in nie powinno się anulować rezerwacji — tylko ją kończyć.**  
+  `checkout()` i `autoCheckout()` ustawiają teraz `reservation.status = COMPLETED` w transakcji. Dodano migrację `CheckinMethod.WEB` do Prisma. *(2026-04-20)*
 
 ---
 
@@ -226,6 +228,52 @@
 - [ ] **Testy działania panelu User (END_USER)** — scenariusze: moje rezerwacje, check-in web, brak wrażliwych zakładek.
 - [ ] **Testy funkcji Super Admin** — zarządzanie organizacjami, włączanie/wyłączanie modułów, widok provisioning.
 - [ ] **Testy funkcji Admin (OFFICE_ADMIN)** — zarządzanie użytkownikami, rezerwacje, raporty, bez możliwości edycji Super Admina.
+
+---
+
+---
+
+## 13. PWA / Mobile
+
+**Pliki:**
+- [`apps/unified/src/main.tsx`](apps/unified/src/main.tsx)
+- [`apps/unified/src/App.tsx`](apps/unified/src/App.tsx)
+- [`apps/unified/src/components/PwaBanners.tsx`](apps/unified/src/components/PwaBanners.tsx)
+- [`apps/unified/vite.config.ts`](apps/unified/vite.config.ts)
+- [`apps/unified/index.html`](apps/unified/index.html)
+- [`apps/unified/src/index.css`](apps/unified/src/index.css)
+- [`apps/unified/src/components/layout/AppLayout.tsx`](apps/unified/src/components/layout/AppLayout.tsx)
+- [`apps/unified/src/components/layout/BottomNav.tsx`](apps/unified/src/components/layout/BottomNav.tsx)
+- [`apps/unified/src/components/ui.tsx`](apps/unified/src/components/ui.tsx)
+
+### Zgłoszenia
+
+- [x] **Brak powiadomienia o dostępnej aktualizacji aplikacji.**  
+  `registerSW` teraz emituje `CustomEvent('pwa:update-ready')` z `updateSW` w detail. `PwaBanners` wyświetla toast z przyciskiem „Odśwież". *(2026-04-20)*
+
+- [x] **Brak powiadomienia o gotowości offline.**  
+  `onOfflineReady` emituje `CustomEvent('pwa:offline-ready')`. `PwaBanners` wyświetla zielony toast (auto-dismiss po 4 s). *(2026-04-20)*
+
+- [x] **Brak wskaźnika braku połączenia w UI.**  
+  `PwaBanners` nasłuchuje `online`/`offline` — wyświetla amber pasek na górze ekranu. *(2026-04-20)*
+
+- [x] **Brak przycisku „Zainstaluj aplikację" (BeforeInstallPromptEvent).**  
+  `PwaBanners` przechwytuje `beforeinstallprompt`, wyświetla kartę instalacji. Odrzucenie zapisywane w `localStorage`. *(2026-04-20)*
+
+- [x] **Brak skrótów w manifeście PWA.**  
+  Dodano `shortcuts` do `vite.config.ts`: `/map` i `/my-reservations`. *(2026-04-20)*
+
+- [x] **Spójność UI mobile/PWA z desktopem.**  
+  Dodano `env(safe-area-inset-*)`, klasy `pb-nav`, `pt-safe`, `scroll-x-fade` w `index.css`. Modały jako bottom sheet na mobile. Minimum touch target 44 px (`min-h-touch`). *(2026-04-20)*
+
+- [ ] **Brak PNG fallbacków dla ikon (starszy Android).**  
+  Manifest zawiera tylko SVG. Wygenerować `icon-192.png` i `icon-512.png` i dodać do `includeAssets`.
+
+- [ ] **Brak splash screens dla iOS.**  
+  Dodać `<link rel="apple-touch-startup-image">` w `index.html` dla popularnych rozdzielczości iPhone/iPad.
+
+- [ ] **`workbox-window` w `package.json` — nieużywane, usunąć.**  
+  Paczka jest zainstalowana ale nigdy importowana — dead dependency.
 
 ---
 
