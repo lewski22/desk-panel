@@ -87,7 +87,7 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole }: {
       {/* Zone/Floor */}
       {(desk.zone || desk.floor) && (
         <p className="text-xs text-zinc-400 mb-3">
-          {[desk.zone, desk.floor && `Piętro ${desk.floor}`].filter(Boolean).join(' · ')}
+          {[desk.zone, desk.floor && `${t('deskcard.floor')} ${desk.floor}`].filter(Boolean).join(' · ')}
         </p>
       )}
 
@@ -122,32 +122,74 @@ function Legend() {
   );
 }
 
+// ── Floor Tabs ────────────────────────────────────────────────
+function FloorTabs({ floors, active, onChange }: { floors: string[]; active: string; onChange: (f: string) => void }) {
+  if (floors.length <= 1) return null;
+  return (
+    <div className="flex gap-1 mb-3 overflow-x-auto">
+      {floors.map(f => (
+        <button key={f} onClick={() => onChange(f)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+            f === active
+              ? 'bg-[#B53578] text-white border-[#B53578]'
+              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+          }`}>
+          {f}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ── Main FloorPlanView ────────────────────────────────────────
 export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props) {
-  const { t }              = useTranslation();
-  const [floorPlan, setFP] = useState<any>(null);
-  const [loading,   setL]  = useState(true);
-  const [selected,  setSel]= useState<DeskMapItem | null>(null);
-  const [freeOnly,  setFO] = useState(false);
+  const { t }                  = useTranslation();
+  const [floorPlan, setFP]     = useState<any>(null);
+  const [loading,   setL]      = useState(true);
+  const [selected,  setSel]    = useState<DeskMapItem | null>(null);
+  const [freeOnly,  setFO]     = useState(false);
+  const [floors,    setFloors] = useState<string[]>([]);
+  const [activeFloor, setActiveFloor] = useState<string>('');
 
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
+  // Pobierz listę pięter z biurek (te z planem) i z API floors
   useEffect(() => {
-    appApi.locations.floorPlan.get(locationId)
-      .then(fp => { if (fp?.floorPlanUrl) setFP(fp); })
-      .catch(() => {})
-      .finally(() => setL(false));
+    appApi.locations.floors(locationId)
+      .then(list => {
+        setFloors(list);
+        if (list.length > 0 && !activeFloor) setActiveFloor(list[0]);
+      })
+      .catch(() => {});
   }, [locationId]);
+
+  useEffect(() => {
+    if (!activeFloor && floors.length === 0) {
+      // Brak pięter — załaduj legacy single floor plan
+      appApi.locations.floorPlan.get(locationId)
+        .then(fp => { if (fp?.floorPlanUrl) setFP(fp); })
+        .catch(() => {})
+        .finally(() => setL(false));
+      return;
+    }
+    if (!activeFloor) return;
+    setL(true);
+    appApi.locations.floorPlan.get(locationId, activeFloor)
+      .then(fp => setFP(fp?.floorPlanUrl ? fp : null))
+      .catch(() => setFP(null))
+      .finally(() => setL(false));
+  }, [locationId, activeFloor, floors.length]);
 
   const canvasW = floorPlan?.floorPlanW ?? 1200;
   const canvasH = floorPlan?.floorPlanH ?? 800;
 
-  // Tylko biurka z pozycją
+  // Biurka z pozycją, przefiltrowane po aktywnym piętrze
   const placedDesks = useMemo(() =>
     desks.filter(d =>
       d.posX != null && d.posY != null &&
+      (floors.length === 0 || !activeFloor || d.floor === activeFloor) &&
       (!freeOnly || (!d.isOccupied && !d.currentReservation && d.isOnline))
-    ), [desks, freeOnly]);
+    ), [desks, freeOnly, activeFloor, floors.length]);
 
   if (loading) return (
     <div className="flex justify-center py-8">
@@ -167,6 +209,8 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
 
   return (
     <div>
+      <FloorTabs floors={floors} active={activeFloor} onChange={f => { setActiveFloor(f); setSel(null); }} />
+
       {/* Filter */}
       <div className="flex items-center gap-3 mb-3">
         <button onClick={() => setFO(v => !v)}

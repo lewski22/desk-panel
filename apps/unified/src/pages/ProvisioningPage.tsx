@@ -62,15 +62,13 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Usunąć gateway "${name}"?`)) return;
+    if (!confirm(t('provisioning.gateway.confirm_delete', { name }))) return;
     try { await appApi.gateways.remove(id); await load(); }
     catch (e: any) { setGwErr(e.message); }
   };
 
   const handleUpdate = async (id: string, name: string) => {
-    if (!confirm(`Zaktualizować gateway "${name}" do najnowszej wersji?
-
-Gateway uruchomi się ponownie (~15s).`)) return;
+    if (!confirm(t('provisioning.gateway.confirm_update', { name }))) return;
     try {
       const r = await appApi.gateways.triggerUpdate(id);
       setGwErr(`✓ ${r.oldVersion} → ${r.newVersion}`);
@@ -87,17 +85,13 @@ Gateway uruchomi się ponownie (~15s).`)) return;
   };
 
   const handleRotateSecret = async (id: string) => {
-    if (!confirm(
-      'Rotacja klucza gateway\n\n' +
-      'Nowy klucz zostanie wygenerowany i wysłany do gateway automatycznie.\n' +
-      'Stary klucz pozostaje ważny przez 15 minut — okno na ewentualną ręczną aktualizację.'
-    )) return;
+    if (!confirm(t('provisioning.gateway.confirm_rotate'))) return;
     setBusy(true);
     try {
       const r = await appApi.gateways.rotateSecret(id);
       setSecretResult(r);
       setModal('secret');
-    } catch (e: any) { setGwErr(e.message ?? 'Błąd rotacji'); }
+    } catch (e: any) { setGwErr(e.message ?? t('provisioning.gateway.rotate_secret')); }
     setBusy(false);
   };
 
@@ -133,7 +127,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
               let diagMsg   = '';
               let diagColor = '';
               if (neverSeen) {
-                diagMsg   = 'Nigdy nie połączony — uruchom komendę instalacyjną z panelu Biura → + Gateway';
+                diagMsg   = t('provisioning.gateway.never_connected');
                 diagColor = 'text-amber-600 bg-amber-50 border-amber-200';
               } else if (!gw.isOnline && stale) {
                 diagMsg   = `Offline od ${minutesSince} min — sprawdź: journalctl -u reserti-gateway -n 20`;
@@ -164,11 +158,11 @@ Gateway uruchomi się ponownie (~15s).`)) return;
                   <td className="py-3 px-4 text-zinc-600">{gw._count?.devices ?? 0}</td>
                   <td className="py-3 px-4">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${healthy ? 'bg-emerald-100 text-emerald-700' : stale ? 'bg-amber-100 text-amber-700' : 'bg-zinc-100 text-zinc-500'}`}>
-                      {healthy ? 'Online' : stale ? 'Problem' : 'Offline'}
+                      {healthy ? t('devices.status.online') : stale ? t('provisioning.gateway.status_problem') : t('devices.status.offline')}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-400">
-                    {lastSeenMs ? (minutesSince === 0 ? 'przed chwilą' : `${minutesSince} min temu`) : '—'}
+                    {lastSeenMs ? (minutesSince === 0 ? t('notifications.just_now') : t('notifications.min_ago', { count: minutesSince })) : '—'}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -204,7 +198,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
             })}
             {gateways.length === 0 && (
               <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">
-                Brak gateway'ów — kliknij "+ Nowy gateway" aby wygenerować komendę instalacyjną
+                {t('provisioning.device.no_gateways')}
               </td></tr>
             )}
           </tbody>
@@ -252,7 +246,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
             </div>
             <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
               <span className="text-amber-500 shrink-0">⚠</span>
-              <p className="text-xs text-amber-700">Token jest jednorazowy. Po użyciu wygasa — wróć tu po nowy jeśli instalacja się nie powiedzie.</p>
+              <p className="text-xs text-amber-700">{t('provisioning.gateway.token_single_use')}</p>
             </div>
             <div className="flex justify-end"><Btn onClick={() => setModal(null)}>Zamknij</Btn></div>
           </div>
@@ -265,7 +259,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
           <div className="space-y-3">
             {secretResult.gatewayReached ? (
               <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
-                ✓ Gateway zaktualizowany automatycznie — uruchomi się ponownie za ~2s
+                ✓ {t('provisioning.gateway.secret_updated')}
               </div>
             ) : (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
@@ -278,7 +272,7 @@ Gateway uruchomi się ponownie (~15s).`)) return;
             </div>
             <div className="flex gap-4 text-xs">
               <div className="flex-1 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700">
-                ✓ Nowy klucz aktywny od teraz
+                ✓ {t('provisioning.gateway.key_active')}
               </div>
               <div className="flex-1 p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-600">
                 ⏱ Stary klucz wygasa: {secretResult.expiresAt ? new Date(secretResult.expiresAt).toLocaleTimeString('pl-PL') : '—'}
@@ -818,19 +812,19 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                   onChange={e => setForm(f => ({ ...f, gatewayId: e.target.value }))}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
                 >
-                  <option value="">— wybierz gateway —</option>
+                  <option value="">{t('provisioning.gateway.select_placeholder')}</option>
                   {availableGateways.map(g => (
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
               </FormField>
-              <FormField label="Biurko (opcjonalne)">
+              <FormField label={t('provisioning.device.desk_optional_label')}>
                 <select
                   value={form.deskId}
                   onChange={e => setForm(f => ({ ...f, deskId: e.target.value }))}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
                 >
-                  <option value="">— wybierz biurko —</option>
+                  <option value="">{t('provisioning.device.select_desk_placeholder')}</option>
                   {desks
                     .filter(d => !d.device)
                     .map((d: any) => (

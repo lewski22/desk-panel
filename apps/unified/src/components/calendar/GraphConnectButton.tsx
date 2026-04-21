@@ -16,8 +16,7 @@ interface GraphStatus {
 }
 
 export function GraphConnectButton() {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
+  const { t } = useTranslation();
 
   const [status,       setStatus]       = useState<GraphStatus | null>(null);
   const [loading,      setLoading]      = useState(true);
@@ -25,15 +24,13 @@ export function GraphConnectButton() {
   const [message,      setMessage]      = useState('');
 
   useEffect(() => {
-    // Sprawdź query params po powrocie z OAuth
     const params = new URLSearchParams(window.location.search);
     if (params.get('graph_connected') === '1') {
-      setMessage(lang === 'pl' ? '✅ Outlook Calendar połączony pomyślnie' : '✅ Outlook Calendar connected');
+      setMessage(t('calendar.connect_ok'));
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (params.get('graph_error')) {
-      setMessage((lang === 'pl' ? '❌ Błąd połączenia: ' : '❌ Connection error: ') +
-        decodeURIComponent(params.get('graph_error') ?? ''));
+      setMessage(t('calendar.connect_err_prefix') + decodeURIComponent(params.get('graph_error') ?? ''));
       window.history.replaceState({}, '', window.location.pathname);
     }
 
@@ -49,20 +46,20 @@ export function GraphConnectButton() {
   };
 
   const disconnect = async () => {
-    if (!window.confirm(lang === 'pl' ? 'Odłączyć Outlook Calendar?' : 'Disconnect Outlook Calendar?')) return;
+    if (!window.confirm(t('calendar.disconnect_confirm_simple'))) return;
     setDisconnecting(true);
     try {
       await appApi.graph.disconnect();
       setStatus({ connected: false });
-      setMessage(lang === 'pl' ? 'Odłączono Outlook Calendar' : 'Outlook Calendar disconnected');
+      setMessage(t('calendar.disconnect_ok'));
     } catch {
-      setMessage(lang === 'pl' ? 'Błąd rozłączania' : 'Disconnect failed');
+      setMessage(t('calendar.disconnect_error'));
     } finally { setDisconnecting(false); }
   };
 
   if (loading) {
     return <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)' }}>
-      {lang === 'pl' ? 'Sprawdzanie...' : 'Checking...'}
+      {t('calendar.checking')}
     </div>;
   }
 
@@ -85,9 +82,7 @@ export function GraphConnectButton() {
             Outlook Calendar
           </div>
           <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-            {status?.connected
-              ? (lang === 'pl' ? 'Połączono — rezerwacje synchronizowane z kalendarzem' : 'Connected — reservations synced with calendar')
-              : (lang === 'pl' ? 'Nie połączono — kliknij aby zsynchronizować z Outlook' : 'Not connected — click to sync with Outlook')}
+            {status?.connected ? t('calendar.connected_sync') : t('calendar.not_connected_hint')}
           </div>
         </div>
 
@@ -107,7 +102,7 @@ export function GraphConnectButton() {
               <button
                 onClick={connect}
                 style={btnStyle}
-                title={lang === 'pl' ? 'Odnów autoryzację' : 'Re-authorize'}
+                title={t('calendar.reconnect_title')}
               >
                 ↻
               </button>
@@ -116,12 +111,12 @@ export function GraphConnectButton() {
                 disabled={disconnecting}
                 style={{ ...btnStyle, color: 'var(--color-text-danger)' }}
               >
-                {disconnecting ? '…' : (lang === 'pl' ? 'Odłącz' : 'Disconnect')}
+                {disconnecting ? '…' : t('calendar.disconnect')}
               </button>
             </>
           ) : (
             <button onClick={connect} style={{ ...btnStyle, background: '#0078d4', color: '#fff', border: 'none', padding: '6px 14px' }}>
-              {lang === 'pl' ? 'Połącz' : 'Connect'}
+              {t('calendar.connect')}
             </button>
           )}
         </div>

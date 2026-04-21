@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request, ForbiddenException, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                        from '@nestjs/swagger';
 import { UserRole }                                                    from '@prisma/client';
 import { LocationsService, CreateLocationDto }                         from './locations.service';
@@ -16,8 +16,9 @@ export class LocationsController {
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   findAll(@Query('organizationId') orgId?: string, @Request() req?: any) {
-    // OFFICE_ADMIN: always scoped to their org; SUPER_ADMIN: can filter or see all
-    const effectiveOrgId = req?.user?.role === UserRole.OFFICE_ADMIN
+    // Non-SUPER_ADMIN/OWNER are always scoped to their own org
+    const role = req?.user?.role;
+    const effectiveOrgId = (role !== UserRole.SUPER_ADMIN && role !== 'OWNER')
       ? req.user.organizationId
       : orgId;
     return this.svc.findAll(effectiveOrgId);
@@ -97,15 +98,40 @@ export class LocationsController {
     @Query('week')       week: string,
     @Request()           req:  any,
   ) {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
     return this.svc.getAttendance(id, week ?? '');
   }
 
-  // ── Sprint D: Floor Plan endpoints ──────────────────────────
+  // ── Sprint D / Multi-floor: Floor Plan endpoints ─────────────
+  @Get(':id/floors')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
+  @ApiOperation({ summary: 'List floors that have a floor plan uploaded' })
+  async getFloors(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
+    return this.svc.getFloors(id);
+  }
+
   @Get(':id/floor-plan')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
-  @ApiOperation({ summary: 'Get floor plan metadata for location' })
-  async getFloorPlan(@Param('id') id: string) {
-    return this.svc.getFloorPlan(id);
+  @ApiOperation({ summary: 'Get floor plan metadata — optionally per floor' })
+  async getFloorPlan(@Param('id') id: string, @Query('floor') floor: string | undefined, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
+    return this.svc.getFloorPlan(id, floor);
   }
 
   @Post(':id/floor-plan')
@@ -113,28 +139,29 @@ export class LocationsController {
   @ApiOperation({ summary: 'Upload floor plan image (base64 PNG/SVG, max 2MB)' })
   async uploadFloorPlan(
     @Param('id') id: string,
+    @Query('floor') floor: string | undefined,
     @Body() body: { floorPlanUrl: string; floorPlanW?: number; floorPlanH?: number; gridSize?: number },
     @Request() req: any,
   ) {
-    // Org guard
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
       const loc = await this.svc.findOne(id);
       if (loc.organizationId !== req.user.organizationId) {
         throw new ForbiddenException('Brak dostępu do tej lokalizacji');
       }
     }
-    return this.svc.uploadFloorPlan(id, body);
+    return this.svc.uploadFloorPlan(id, body, floor);
   }
 
   @Post(':id/floor-plan/delete')
+  @HttpCode(HttpStatus.OK)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Remove floor plan image' })
-  async deleteFloorPlan(@Param('id') id: string, @Request() req: any) {
+  @ApiOperation({ summary: 'Remove floor plan image — optionally per floor' })
+  async deleteFloorPlan(@Param('id') id: string, @Query('floor') floor: string | undefined, @Request() req: any) {
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
       const loc = await this.svc.findOne(id);
       if (loc.organizationId !== req.user.organizationId) throw new ForbiddenException('Brak dostępu');
     }
-    return this.svc.deleteFloorPlan(id);
+    return this.svc.deleteFloorPlan(id, floor);
   }
 
   @Patch(':id')

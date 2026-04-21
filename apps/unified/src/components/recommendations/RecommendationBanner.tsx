@@ -37,8 +37,7 @@ function getDismissKey(userId: string, date: string) {
 }
 
 export function RecommendationBanner({ locationId, userId, date, start, end, onReserve }: Props) {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
+  const { t } = useTranslation();
 
   const [rec,      setRec]      = useState<Recommendation | null>(null);
   const [loading,  setLoading]  = useState(true);
@@ -79,9 +78,9 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
   if (loading || !visible || !rec) return null;
 
   const reasonLabel: Record<string, string> = {
-    FAVORITE:      lang === 'pl' ? 'Twoje ulubione biurko' : 'Your favorite desk',
-    FAVORITE_ZONE: lang === 'pl' ? 'Ulubiona strefa'       : 'Your preferred zone',
-    ANY_FREE:      lang === 'pl' ? 'Wolne biurko'           : 'Available desk',
+    FAVORITE:      t('recommendations.reason.favorite'),
+    FAVORITE_ZONE: t('recommendations.reason.favorite_zone'),
+    ANY_FREE:      t('recommendations.reason.any_free'),
   };
 
   return (
@@ -106,12 +105,12 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
       {/* Tekst */}
       <div style={{ flex: 1, minWidth: 160 }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-info)' }}>
-          {lang === 'pl' ? 'Sugerowane' : 'Suggested'}:{' '}
+          {t('recommendations.suggested')}:{' '}
           <strong>{rec.deskCode || rec.deskName}</strong>
         </span>
         {rec.zone && (
           <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
-            {rec.zone}{rec.floor ? ` · Piętro ${rec.floor}` : ''}
+            {rec.zone}{rec.floor ? ` · ${t('deskcard.floor')} ${rec.floor}` : ''}
           </span>
         )}
         <span
@@ -130,7 +129,7 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
         </span>
         {rec.timesBooked > 0 && (
           <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 6 }}>
-            ({lang === 'pl' ? `${rec.timesBooked}× zarezerwowane` : `booked ${rec.timesBooked}×`})
+            ({t('recommendations.times_booked', { count: rec.timesBooked })})
           </span>
         )}
       </div>
@@ -150,11 +149,11 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
             cursor:       'pointer',
           }}
         >
-          {lang === 'pl' ? '+ Zarezerwuj' : '+ Reserve'}
+          + {t('deskcard.book')}
         </button>
         <button
           onClick={dismiss}
-          aria-label={lang === 'pl' ? 'Odrzuć sugestię' : 'Dismiss suggestion'}
+          aria-label={t('recommendations.dismiss_aria')}
           style={{
             fontSize:     12,
             padding:      '5px 10px',
@@ -165,7 +164,7 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
             cursor:       'pointer',
           }}
         >
-          {lang === 'pl' ? 'Nie teraz' : 'Not now'}
+          {t('recommendations.not_now')}
         </button>
       </div>
     </div>

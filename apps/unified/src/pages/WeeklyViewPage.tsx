@@ -30,21 +30,21 @@ function nextWeek(w: string): string {
   return `${year}-W${String(wn + 1).padStart(2, '0')}`;
 }
 
-// ── Status cell ───────────────────────────────────────────────
 const STATUS_CONFIG = {
-  office:   { icon: '🏢', bg: 'bg-emerald-100', text: 'text-emerald-700', title: 'W biurze' },
-  reserved: { icon: '📋', bg: 'bg-sky-100',     text: 'text-sky-700',     title: 'Rezerwacja' },
-  unknown:  { icon: '',   bg: 'bg-zinc-50',     text: 'text-zinc-300',    title: 'Brak danych' },
+  office:   { icon: '🏢', bg: 'bg-emerald-100', text: 'text-emerald-700', titleKey: 'weekly.status.office' },
+  reserved: { icon: '📋', bg: 'bg-sky-100',     text: 'text-sky-700',     titleKey: 'weekly.status.reserved' },
+  unknown:  { icon: '',   bg: 'bg-zinc-50',     text: 'text-zinc-300',    titleKey: 'weekly.status.unknown' },
 };
 
 function StatusCell({ status, isToday, isSelected }: { status: string; isToday: boolean; isSelected?: boolean }) {
+  const { t } = useTranslation();
   const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unknown;
   return (
     <td className={`px-2 py-3 text-center border-l border-zinc-100 transition-colors ${
       isSelected ? 'bg-[#B53578]/10' : isToday ? 'bg-[#B53578]/5' : ''
     }`}>
       <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm ${cfg.bg} ${cfg.text}`}
-        title={cfg.title}>
+        title={t(cfg.titleKey)}>
         {cfg.icon || <span className="w-2 h-2 rounded-full bg-zinc-200" />}
       </span>
     </td>

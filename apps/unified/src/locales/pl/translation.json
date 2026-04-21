@@ -609,7 +609,8 @@
     "label_office": "Biuro",
     "valid_until": "Ważny do",
     "no_address": "Brak adresu",
-    "id_label": "ID:"
+    "id_label": "ID:",
+    "gateway_token_single_use": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
   },
   "organizations_extra": {
     "m365_button": "M365",
@@ -718,7 +719,16 @@
       "last_seen": "Ostatnio widziany",
       "never": "Nigdy",
       "ip": "Adres IP",
-      "location": "Lokalizacja"
+      "location": "Lokalizacja",
+      "select_placeholder": "— wybierz gateway —",
+      "status_problem": "Problem",
+      "confirm_delete": "Usunąć gateway \"{{name}}\"?",
+      "confirm_update": "Zaktualizować gateway \"{{name}}\" do najnowszej wersji?\n\nGateway uruchomi się ponownie (~15s).",
+      "confirm_rotate": "Rotacja klucza gateway\n\nNowy klucz zostanie wygenerowany i wysłany do gateway automatycznie.\nStary klucz pozostaje ważny przez 15 minut — okno na ewentualną ręczną aktualizację.",
+      "never_connected": "Nigdy nie połączony — uruchom komendę instalacyjną z panelu Biura → + Gateway",
+      "token_single_use": "Token jest jednorazowy. Po użyciu wygasa — wróć tu po nowy jeśli instalacja się nie powiedzie.",
+      "secret_updated": "Gateway zaktualizowany automatycznie — uruchomi się ponownie za ~2s",
+      "key_active": "Nowy klucz aktywny od teraz"
     },
     "device": {
       "identify": "Zidentyfikuj",
@@ -731,7 +741,10 @@
       "unassign_confirm": "Odparować beacon \"{{hwId}}\" od biurka \"{{deskName}}\"?",
       "delete": "Usuń beacon",
       "delete_confirm": "Usunąć beacon \"{{hwId}}\"? Operacja jest nieodwracalna.",
-      "no_desk": "Brak biurka"
+      "no_desk": "Brak biurka",
+      "select_desk_placeholder": "— wybierz biurko —",
+      "desk_optional_label": "Biurko (opcjonalne)",
+      "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną"
     }
   },
   "notifications": {
@@ -777,7 +790,19 @@
     "book_full_day": "Zarezerwuj na cały dzień",
     "book_choose_time": "Wybierz godziny...",
     "checkin_since": "od",
-    "floor": "Piętro"
+    "floor": "Piętro",
+    "desk_fallback": "Biurko"
+  },
+  "recommendations": {
+    "suggested": "Sugerowane",
+    "not_now": "Nie teraz",
+    "dismiss_aria": "Odrzuć sugestię",
+    "times_booked": "{{count}}× zarezerwowane",
+    "reason": {
+      "favorite": "Twoje ulubione biurko",
+      "favorite_zone": "Ulubiona strefa",
+      "any_free": "Wolne biurko"
+    }
   },
   "common": {
     "na": "—"
@@ -1118,5 +1143,61 @@
         "gateway.online": "Gateway — online"
       }
     }
+  },
+  "smtp": {
+    "mailbox_title": "Skrzynka pocztowa",
+    "global_available": "Emaile są wysyłane przez globalną skrzynkę systemu Reserti. Możesz skonfigurować własną skrzynkę organizacji — emaile będą wyglądać jakby przychodziły od Twojej firmy.",
+    "no_config": "Brak konfiguracji SMTP — powiadomienia email są nieaktywne. Skonfiguruj własną skrzynkę lub poproś administratora systemu o konfigurację globalnego SMTP.",
+    "preset_other": "Inny…",
+    "quick_preset": "Szybki wybór dostawcy",
+    "server_label": "Serwer SMTP *",
+    "port_label": "Port",
+    "user_label": "Użytkownik (login) *",
+    "password_label": "Hasło",
+    "password_leave_empty": "(zostaw puste = bez zmian)",
+    "password_placeholder_existing": "••••••• (bez zmian)",
+    "password_placeholder_new": "Hasło lub API key",
+    "from_name_label": "Nazwa nadawcy",
+    "from_email_label": "Email nadawcy *",
+    "encrypted_hint": "Hasło jest szyfrowane algorytmem AES-256-GCM przed zapisem w bazie danych.",
+    "smtp_server_label": "Serwer SMTP",
+    "user_short": "Użytkownik",
+    "sender": "Nadawca",
+    "last_test": "Ostatni test"
+  },
+  "insights": {
+    "load_error": "Błąd ładowania insightów",
+    "refresh_error": "Nie udało się odświeżyć",
+    "no_data": "Za mało danych aby wygenerować insighty (min. 10 check-inów w ostatnich 30 dniach).",
+    "title": "Insights AI (ostatnie 30 dni)",
+    "more": "+{{count}} więcej insightów w zakładce Raporty",
+    "loading": "Ładowanie...",
+    "no_insights": "Brak insightów — za mało danych.",
+    "count": "insightów"
+  },
+  "calendar": {
+    "title": "Synchronizacja kalendarza",
+    "subtitle": "Połącz Outlook Calendar aby rezerwacje automatycznie pojawiały się w Twoim kalendarzu.",
+    "checking": "Sprawdzanie...",
+    "connected": "✓ Połączono — synchronizacja aktywna",
+    "token_expired": "⚠ Połączono — token wygasł, kliknij Odnów",
+    "not_connected": "Nie połączono",
+    "connect_success": "Outlook Calendar został połączony. Rezerwacje będą teraz synchronizowane.",
+    "connect_error_prefix": "Nie udało się połączyć: ",
+    "disconnect_confirm": "Odłączyć Outlook Calendar? Rezerwacje przestaną być synchronizowane.",
+    "disconnect_success": "Outlook Calendar odłączony.",
+    "disconnect_error": "Błąd rozłączania.",
+    "reconnect_title": "Odnów autoryzację",
+    "reconnect": "Odnów",
+    "disconnect": "Odłącz",
+    "connect": "Połącz",
+    "sync_info": "• Nowe rezerwacje automatycznie pojawiają się w kalendarzu Outlook\n• Anulowanie rezerwacji usuwa event z kalendarza\n• Zmiany godzin w Outlook są synchronizowane do Reserti",
+    "no_azure_info": "Wymaga: konto Microsoft 365 w domenie firmowej + integracja Azure skonfigurowana przez administratora.",
+    "connected_sync": "Połączono — rezerwacje synchronizowane z kalendarzem",
+    "not_connected_hint": "Nie połączono — kliknij aby zsynchronizować z Outlook",
+    "connect_ok": "✅ Outlook Calendar połączony pomyślnie",
+    "connect_err_prefix": "❌ Błąd połączenia: ",
+    "disconnect_confirm_simple": "Odłączyć Outlook Calendar?",
+    "disconnect_ok": "Odłączono Outlook Calendar"
   }
 }

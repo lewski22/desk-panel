@@ -24,12 +24,12 @@ interface SmtpPublic {
   lastTestedAt: string | null;
 }
 
-const PRESETS = [
-  { label: 'Gmail',      host: 'smtp.gmail.com',       port: 587, secure: false },
-  { label: 'Outlook/M365', host: 'smtp.office365.com', port: 587, secure: false },
-  { label: 'SendGrid',   host: 'smtp.sendgrid.net',    port: 587, secure: false },
-  { label: 'Brevo',      host: 'smtp-relay.brevo.com', port: 587, secure: false },
-  { label: 'Inny…',      host: '',                     port: 587, secure: false },
+const PRESET_PROVIDERS = [
+  { labelKey: null,       label: 'Gmail',        host: 'smtp.gmail.com',       port: 587, secure: false },
+  { labelKey: null,       label: 'Outlook/M365', host: 'smtp.office365.com',   port: 587, secure: false },
+  { labelKey: null,       label: 'SendGrid',     host: 'smtp.sendgrid.net',    port: 587, secure: false },
+  { labelKey: null,       label: 'Brevo',        host: 'smtp-relay.brevo.com', port: 587, secure: false },
+  { labelKey: 'smtp.preset_other', label: 'Other…', host: '',                 port: 587, secure: false },
 ];
 
 export function SmtpConfigSection() {
@@ -73,7 +73,7 @@ export function SmtpConfigSection() {
 
   useEffect(() => { loadStatus(); }, []);
 
-  const applyPreset = (preset: typeof PRESETS[0]) => {
+  const applyPreset = (preset: typeof PRESET_PROVIDERS[0]) => {
     if (preset.host) {
       setForm(p => ({ ...p, host: preset.host, port: preset.port, secure: preset.secure }));
     }
@@ -131,7 +131,7 @@ export function SmtpConfigSection() {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 bg-zinc-50 border-b border-zinc-200">
         <div>
-          <h3 className="font-semibold text-zinc-800 text-sm">Skrzynka pocztowa</h3>
+          <h3 className="font-semibold text-zinc-800 text-sm">{t('smtp.mailbox_title')}</h3>
           <p className="text-xs text-zinc-400 mt-0.5">
             {cfg
               ? t('notifications.settings.smtp_title')
@@ -159,10 +159,10 @@ export function SmtpConfigSection() {
         <div className="px-5 py-4 space-y-2">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
             {[
-              ['Serwer SMTP', `${cfg.host}:${cfg.port}${cfg.secure ? ' (SSL)' : ' (TLS)'}`],
-              ['Użytkownik', cfg.user],
-              ['Nadawca', `${cfg.fromName} <${cfg.fromEmail}>`],
-              ['Ostatni test', cfg.lastTestedAt
+              [t('smtp.smtp_server_label'), `${cfg.host}:${cfg.port}${cfg.secure ? ' (SSL)' : ' (TLS)'}`],
+              [t('smtp.user_short'), cfg.user],
+              [t('smtp.sender'), `${cfg.fromName} <${cfg.fromEmail}>`],
+              [t('smtp.last_test'), cfg.lastTestedAt
                 ? new Date(cfg.lastTestedAt).toLocaleString(i18n.language === 'en' ? 'en-GB' : 'pl-PL')
                 : t('provisioning.gateway.never')],
             ].map(([label, val]) => (
@@ -193,8 +193,8 @@ export function SmtpConfigSection() {
         <div className="px-5 py-4">
           <div className={`rounded-lg p-3 text-xs ${status?.globalAvailable ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
             {status?.globalAvailable
-              ? '✓ Emaile są wysyłane przez globalną skrzynkę systemu Reserti. Możesz skonfigurować własną skrzynkę organizacji — emaile będą wyglądać jakby przychodziły od Twojej firmy.'
-              : '⚠ Brak konfiguracji SMTP — powiadomienia email są nieaktywne. Skonfiguruj własną skrzynkę lub poproś administratora systemu o konfigurację globalnego SMTP.'}
+              ? `✓ ${t('smtp.global_available')}`
+              : `⚠ ${t('smtp.no_config')}`}
           </div>
         </div>
       )}
@@ -204,16 +204,16 @@ export function SmtpConfigSection() {
         <div className="px-5 py-4 space-y-4">
           {/* Presets */}
           <div>
-            <label className="text-xs font-medium text-zinc-600 block mb-2">Szybki wybór dostawcy</label>
+            <label className="text-xs font-medium text-zinc-600 block mb-2">{t('smtp.quick_preset')}</label>
             <div className="flex flex-wrap gap-1.5">
-              {PRESETS.map(p => (
+              {PRESET_PROVIDERS.map(p => (
                 <button key={p.label} onClick={() => applyPreset(p)}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                     form.host === p.host && p.host
                       ? 'bg-[#B03472] text-white border-[#B03472]'
                       : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
                   }`}>
-                  {p.label}
+                  {p.labelKey ? t(p.labelKey) : p.label}
                 </button>
               ))}
             </div>
@@ -222,12 +222,12 @@ export function SmtpConfigSection() {
           {/* Fields */}
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="text-xs font-medium text-zinc-600 block mb-1">Serwer SMTP *</label>
+              <label className="text-xs font-medium text-zinc-600 block mb-1">{t('smtp.server_label')}</label>
               <input value={form.host} onChange={f('host')} placeholder="np. smtp.gmail.com"
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-600 block mb-1">Port</label>
+              <label className="text-xs font-medium text-zinc-600 block mb-1">{t('smtp.port_label')}</label>
               <input type="number" value={form.port} onChange={f('port')}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
@@ -238,25 +238,25 @@ export function SmtpConfigSection() {
               </label>
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-600 block mb-1">Użytkownik (login) *</label>
+              <label className="text-xs font-medium text-zinc-600 block mb-1">{t('smtp.user_label')}</label>
               <input value={form.user} onChange={f('user')} placeholder="np. twoj@firma.pl lub apikey"
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
             <div>
               <label className="text-xs font-medium text-zinc-600 block mb-1">
-                Hasło {cfg ? '(zostaw puste = bez zmian)' : '*'}
+                {t('smtp.password_label')} {cfg ? t('smtp.password_leave_empty') : '*'}
               </label>
               <input type="password" value={form.password} onChange={f('password')}
-                placeholder={cfg ? '••••••• (bez zmian)' : 'Hasło lub API key'}
+                placeholder={cfg ? t('smtp.password_placeholder_existing') : t('smtp.password_placeholder_new')}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-600 block mb-1">Nazwa nadawcy</label>
+              <label className="text-xs font-medium text-zinc-600 block mb-1">{t('smtp.from_name_label')}</label>
               <input value={form.fromName} onChange={f('fromName')} placeholder="np. Biuro ABC"
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-600 block mb-1">Email nadawcy *</label>
+              <label className="text-xs font-medium text-zinc-600 block mb-1">{t('smtp.from_email_label')}</label>
               <input type="email" value={form.fromEmail} onChange={f('fromEmail')} placeholder="noreply@firma.pl"
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
             </div>
@@ -270,7 +270,7 @@ export function SmtpConfigSection() {
           </div>
 
           <p className="text-[11px] text-zinc-400">
-            🔒 Hasło jest szyfrowane algorytmem AES-256-GCM przed zapisem w bazie danych.
+            🔒 {t('smtp.encrypted_hint')}
           </p>
         </div>
       )}

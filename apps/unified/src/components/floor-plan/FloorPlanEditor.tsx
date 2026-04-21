@@ -17,10 +17,11 @@ import { appApi }             from '../../api/client';
 interface Props {
   locationId: string;
   desks:      DeskMapItem[];
+  floor?:     string;
   onSaved?:   () => void;
 }
 
-export function FloorPlanEditor({ locationId, desks, onSaved }: Props) {
+export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
   const { t }         = useTranslation();
   const [saving,      setSaving]      = useState(false);
   const [saveErr,     setSaveErr]     = useState<string | null>(null);
@@ -28,13 +29,13 @@ export function FloorPlanEditor({ locationId, desks, onSaved }: Props) {
   const [floorPlan,   setFloorPlan]   = useState<any>(null);
   const [fpLoading,   setFpLoading]   = useState(true);
 
-  // Załaduj floor plan metadata
   useEffect(() => {
-    appApi.locations.floorPlan.get(locationId)
+    setFpLoading(true);
+    appApi.locations.floorPlan.get(locationId, floor)
       .then(setFloorPlan)
       .catch(() => {})
       .finally(() => setFpLoading(false));
-  }, [locationId]);
+  }, [locationId, floor]);
 
   const {
     state, canUndo, canRedo,
@@ -89,9 +90,9 @@ export function FloorPlanEditor({ locationId, desks, onSaved }: Props) {
           floorPlanW:   state.backgroundW,
           floorPlanH:   state.backgroundH,
           gridSize:     state.gridSize,
-        });
+        }, floor);
       } else if (!state.background && floorPlan?.floorPlanUrl) {
-        await appApi.locations.floorPlan.delete(locationId);
+        await appApi.locations.floorPlan.delete(locationId, floor);
       }
 
       markSaved();

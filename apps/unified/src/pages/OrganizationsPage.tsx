@@ -197,10 +197,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
             <span className="text-amber-500 shrink-0">⚠</span>
-            <p className="text-xs text-amber-700">
-              Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie,
-              wróć tutaj i wygeneruj nowy.
-            </p>
+            <p className="text-xs text-amber-700">{t('organizations.gateway_token_single_use')}</p>
           </div>
 
           <div className="flex justify-end">

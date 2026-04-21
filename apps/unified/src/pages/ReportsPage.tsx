@@ -590,7 +590,7 @@ function ByDeskTab({ filters }: { filters: Filters }) {
 // ── Main Page ──────────────────────────────────────────────────────
 function ReportsPage() {
   const { t } = useTranslation();
-  const [activeTab,  setActiveTab]  = useState<Tab>('heatmap');
+  const [activeTab,  setActiveTab]  = useState<Tab>('snapshot');
   const [from,       setFrom]       = useState(monthAgoStr());
   const [to,         setTo]         = useState(todayStr());
   const [locationId, setLocationId] = useState('');

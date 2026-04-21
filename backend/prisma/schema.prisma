@@ -163,6 +163,27 @@ model Location {
   users        User[]            @relation("LocationUsers")
   setupTokens  GatewaySetupToken[]
   insights     UtilizationInsight[]  // Sprint K2
+  floorPlans   LocationFloorPlan[]
+}
+
+// ─── LocationFloorPlan (per-floor plan images) ────────────────
+
+model LocationFloorPlan {
+  id           String   @id @default(cuid())
+  locationId   String
+  floor        String
+  floorPlanUrl String?
+  floorPlanKey String?
+  floorPlanW   Int?
+  floorPlanH   Int?
+  gridSize     Int?     @default(40)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, floor])
+  @@index([locationId])
 }
 
 // ─── Desk ────────────────────────────────────────────────────

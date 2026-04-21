@@ -53,8 +53,7 @@ const TYPE_ICON: Record<InsightType, string> = {
 
 // ── Component ─────────────────────────────────────────────────
 export function InsightsWidget({ locationId, compact = false, showRefresh = false }: Props) {
-  const { i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
+  const { t } = useTranslation();
 
   const [insights,   setInsights]   = useState<InsightItem[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -68,11 +67,11 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
       const r = await appApi.insights.getForLocation(locationId);
       setInsights(r?.insights ?? []);
     } catch {
-      setError(lang === 'pl' ? 'Błąd ładowania insightów' : 'Failed to load insights');
+      setError(t('insights.load_error'));
     } finally {
       setLoading(false);
     }
-  }, [locationId, lang]);
+  }, [locationId, t]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -80,11 +79,11 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
       const r = await appApi.insights.refresh(locationId);
       setInsights(r?.insights ?? []);
     } catch {
-      setError(lang === 'pl' ? 'Nie udało się odświeżyć' : 'Refresh failed');
+      setError(t('insights.refresh_error'));
     } finally {
       setRefreshing(false);
     }
-  }, [locationId, lang]);
+  }, [locationId, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -116,9 +115,7 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
   if (insights.length === 0) {
     return (
       <div style={{ fontSize: 13, color: 'var(--color-text-tertiary)', padding: '12px 0', textAlign: 'center' }}>
-        {lang === 'pl'
-          ? 'Za mało danych aby wygenerować insighty (min. 10 check-inów w ostatnich 30 dniach).'
-          : 'Not enough data to generate insights (min. 10 check-ins in the last 30 days).'}
+        {t('insights.no_data')}
       </div>
     );
   }
@@ -129,7 +126,7 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
       {showRefresh && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-            {lang === 'pl' ? 'Insights AI (ostatnie 30 dni)' : 'AI Insights (last 30 days)'}
+            {t('insights.title')}
           </p>
           <button
             onClick={refresh}
@@ -141,7 +138,7 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
               cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1,
             }}
           >
-            {refreshing ? '…' : (lang === 'pl' ? '↻ Odśwież' : '↻ Refresh')}
+            {refreshing ? '…' : `↻ ${t('btn.refresh')}`}
           </button>
         </div>
       )}
@@ -198,9 +195,7 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
       {/* "Pokaż więcej" w compact mode */}
       {compact && insights.length > 3 && (
         <p style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginTop: 8, textAlign: 'center' }}>
-          {lang === 'pl'
-            ? `+${insights.length - 3} więcej insightów w zakładce Raporty`
-            : `+${insights.length - 3} more insights in the Reports tab`}
+          {t('insights.more', { count: insights.length - 3 })}
         </p>
       )}
     </div>
@@ -219,8 +214,7 @@ interface LocationInsights {
 }
 
 export function OrgInsightsWidget({ orgId }: OrgInsightsProps) {
-  const { i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
+  const { t } = useTranslation();
 
   const [data,    setData]    = useState<LocationInsights[]>([]);
   const [loading, setLoading] = useState(true);
@@ -234,11 +228,11 @@ export function OrgInsightsWidget({ orgId }: OrgInsightsProps) {
   }, [orgId]);
 
   if (loading) return <div style={{ padding: 16, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-    {lang === 'pl' ? 'Ładowanie...' : 'Loading...'}
+    {t('insights.loading')}
   </div>;
 
   if (data.length === 0) return <div style={{ padding: 16, color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-    {lang === 'pl' ? 'Brak insightów — za mało danych.' : 'No insights — insufficient data.'}
+    {t('insights.no_insights')}
   </div>;
 
   return (
@@ -255,7 +249,7 @@ export function OrgInsightsWidget({ orgId }: OrgInsightsProps) {
           >
             <span>{loc.locationName}</span>
             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-              {loc.insights.length} {lang === 'pl' ? 'insightów' : 'insights'}
+              {loc.insights.length} {t('insights.count')}
               {' '}{open === loc.locationId ? '▲' : '▼'}
             </span>
           </button>

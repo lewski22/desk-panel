@@ -116,12 +116,12 @@ export const appApi = {
     attendance:   (id: string, week?: string) => req<any>(`/locations/${id}/attendance${week ? `?week=${week}` : ''}`),
     verifyKioskPin: (id: string, pin: string) =>
       req<any>(`/locations/${id}/kiosk/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }),
-    // Floor plan aliases used by GH pages
+    floors: (id: string) => req<string[]>(`/locations/${id}/floors`),
     floorPlan: {
-      get:    (id: string)         => req<any>(`/locations/${id}/floor-plan`),
-      update: (id: string, d: any) => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
-      upload: (id: string, d: any) => req<any>(`/locations/${id}/floor-plan`, { method: 'POST', body: JSON.stringify(d) }),
-      delete: (id: string)         => req<any>(`/locations/${id}/floor-plan/delete`, { method: 'POST' }),
+      get:    (id: string, floor?: string)          => req<any>(`/locations/${id}/floor-plan${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`),
+      update: (id: string, d: any, floor?: string)  => req<any>(`/locations/${id}/floor-plan${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`, { method: 'POST', body: JSON.stringify(d) }),
+      upload: (id: string, d: any, floor?: string)  => req<any>(`/locations/${id}/floor-plan${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`, { method: 'POST', body: JSON.stringify(d) }),
+      delete: (id: string, floor?: string)          => req<any>(`/locations/${id}/floor-plan/delete${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`, { method: 'POST' }),
     },
     // Dashboard extended / issues
     extended: (id: string)      => req<any>(`/locations/${id}/extended`),

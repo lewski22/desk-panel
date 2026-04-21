@@ -84,7 +84,7 @@ function ReservationCard({
           {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-zinc-800 truncate">{r.desk?.name ?? 'Biurko'}</p>
+          <p className="font-medium text-zinc-800 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
           <p className="text-xs text-zinc-400 mt-0.5">
             {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { weekday:'short', day:'2-digit', month:'2-digit' })}
             {' · '}
@@ -218,7 +218,7 @@ export function MyReservationsPage() {
                       {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? 'Biurko'}</p>
+                      <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
                       <p className="text-xs text-zinc-400">
                         {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' })}
                       </p>

@@ -14,20 +14,29 @@ export function FloorPlanEditorPage() {
   const navigate        = useNavigate();
   const { t }           = useTranslation();
 
-  const [desks,    setDesks]    = useState<any[]>([]);
-  const [location, setLocation] = useState<any>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const [desks,       setDesks]       = useState<any[]>([]);
+  const [location,    setLocation]    = useState<any>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState<string | null>(null);
+  const [floors,      setFloors]      = useState<string[]>([]);
+  const [activeFloor, setActiveFloor] = useState<string>('');
 
   useEffect(() => {
     if (!locationId) return;
     Promise.all([
       appApi.desks.status(locationId),
       appApi.locations.listAll(),
+      appApi.locations.floors(locationId),
     ])
-      .then(([deskRes, locs]) => {
-        setDesks(deskRes?.desks ?? deskRes ?? []);
+      .then(([deskRes, locs, floorList]) => {
+        const allDesks = deskRes?.desks ?? deskRes ?? [];
+        setDesks(allDesks);
         setLocation(locs.find((l: any) => l.id === locationId) ?? null);
+        // Derive unique floors from desks (creates floors entry if not yet uploaded)
+        const deskFloors = [...new Set(allDesks.map((d: any) => d.floor).filter(Boolean))].sort() as string[];
+        const merged = [...new Set([...floorList, ...deskFloors])].sort() as string[];
+        setFloors(merged);
+        if (merged.length > 0) setActiveFloor(merged[0]);
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
@@ -66,6 +75,22 @@ export function FloorPlanEditorPage() {
         </div>
       </div>
 
+      {/* Selektor pięter */}
+      {floors.length > 1 && (
+        <div className="flex gap-1 mb-4 overflow-x-auto">
+          {floors.map(f => (
+            <button key={f} onClick={() => setActiveFloor(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
+                f === activeFloor
+                  ? 'bg-[#B53578] text-white border-[#B53578]'
+                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+              }`}>
+              {f}
+            </button>
+          ))}
+        </div>
+      )}
+
       {desks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <span className="text-5xl mb-4">🪑</span>
@@ -77,9 +102,9 @@ export function FloorPlanEditorPage() {
       ) : (
         <FloorPlanEditor
           locationId={locationId!}
-          desks={desks}
+          floor={activeFloor || undefined}
+          desks={activeFloor ? desks.filter((d: any) => d.floor === activeFloor) : desks}
           onSaved={() => {
-            // Po zapisie odśwież dane
             appApi.desks.status(locationId!)
               .then(res => setDesks(res?.desks ?? res ?? []))
               .catch(() => {});

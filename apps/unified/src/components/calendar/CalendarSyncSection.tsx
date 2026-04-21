@@ -17,8 +17,7 @@ interface GraphStatus {
 }
 
 export function CalendarSyncSection() {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language === 'pl' ? 'pl' : 'en';
+  const { t } = useTranslation();
 
   const [status,        setStatus]        = useState<GraphStatus | null>(null);
   const [loading,       setLoading]       = useState(true);
@@ -33,13 +32,13 @@ export function CalendarSyncSection() {
     const params = new URLSearchParams(window.location.search);
 
     if (params.get('graph_connected') === '1') {
-      setFlashMsg(lang === 'pl' ? 'Outlook Calendar został połączony. Rezerwacje będą teraz synchronizowane.' : 'Outlook Calendar connected. Reservations will now be synced.');
+      setFlashMsg(t('calendar.connect_success'));
       setFlashType('success');
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (params.get('graph_error')) {
       const errMsg = decodeURIComponent(params.get('graph_error') ?? '');
-      setFlashMsg((lang === 'pl' ? 'Nie udało się połączyć: ' : 'Failed to connect: ') + errMsg);
+      setFlashMsg(t('calendar.connect_error_prefix') + errMsg);
       setFlashType('error');
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -61,18 +60,16 @@ export function CalendarSyncSection() {
   };
 
   const disconnect = async () => {
-    if (!window.confirm(lang === 'pl'
-      ? 'Odłączyć Outlook Calendar? Rezerwacje przestaną być synchronizowane.'
-      : 'Disconnect Outlook Calendar? Reservations will stop syncing.')) return;
+    if (!window.confirm(t('calendar.disconnect_confirm'))) return;
 
     setDisconnecting(true);
     try {
       await appApi.graph.disconnect();
       setStatus({ connected: false });
-      setFlashMsg(lang === 'pl' ? 'Outlook Calendar odłączony.' : 'Outlook Calendar disconnected.');
+      setFlashMsg(t('calendar.disconnect_success'));
       setFlashType('success');
     } catch {
-      setFlashMsg(lang === 'pl' ? 'Błąd rozłączania.' : 'Disconnect failed.');
+      setFlashMsg(t('calendar.disconnect_error'));
       setFlashType('error');
     } finally {
       setDisconnecting(false);
@@ -84,14 +81,8 @@ export function CalendarSyncSection() {
       {/* Nagłówek sekcji */}
       <div style={sectionHeader}>
         <div>
-          <h3 style={sectionTitle}>
-            {lang === 'pl' ? '📅 Synchronizacja kalendarza' : '📅 Calendar sync'}
-          </h3>
-          <p style={sectionDesc}>
-            {lang === 'pl'
-              ? 'Połącz Outlook Calendar aby rezerwacje automatycznie pojawiały się w Twoim kalendarzu.'
-              : 'Connect Outlook Calendar so reservations automatically appear in your calendar.'}
-          </p>
+          <h3 style={sectionTitle}>📅 {t('calendar.title')}</h3>
+          <p style={sectionDesc}>{t('calendar.subtitle')}</p>
         </div>
       </div>
 
@@ -124,12 +115,12 @@ export function CalendarSyncSection() {
               Outlook Calendar
             </p>
             <p style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-              {loading ? (lang === 'pl' ? 'Sprawdzanie...' : 'Checking...') :
+              {loading ? t('calendar.checking') :
                status?.connected && status.tokenValid !== false
-                ? (lang === 'pl' ? '✓ Połączono — synchronizacja aktywna' : '✓ Connected — sync active')
+                ? t('calendar.connected')
                 : status?.connected
-                ? (lang === 'pl' ? '⚠ Połączono — token wygasł, kliknij Odnów' : '⚠ Connected — token expired, click Renew')
-                : (lang === 'pl' ? 'Nie połączono' : 'Not connected')}
+                ? t('calendar.token_expired')
+                : t('calendar.not_connected')}
             </p>
           </div>
         </div>
@@ -147,17 +138,16 @@ export function CalendarSyncSection() {
           {!loading && (
             status?.connected ? (
               <>
-                <button onClick={reconnect} style={btnSecondary}
-                  title={lang === 'pl' ? 'Odnów autoryzację' : 'Re-authorize'}>
-                  ↻ {lang === 'pl' ? 'Odnów' : 'Renew'}
+                <button onClick={reconnect} style={btnSecondary} title={t('calendar.reconnect_title')}>
+                  ↻ {t('calendar.reconnect')}
                 </button>
                 <button onClick={disconnect} disabled={disconnecting} style={{ ...btnSecondary, color: 'var(--color-text-danger)' }}>
-                  {disconnecting ? '…' : (lang === 'pl' ? 'Odłącz' : 'Disconnect')}
+                  {disconnecting ? '…' : t('calendar.disconnect')}
                 </button>
               </>
             ) : (
               <button onClick={connect} style={btnPrimary}>
-                {lang === 'pl' ? 'Połącz' : 'Connect'}
+                {t('calendar.connect')}
               </button>
             )
           )}
@@ -168,9 +158,7 @@ export function CalendarSyncSection() {
       {status?.connected && (
         <div style={infoBox}>
           <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-            {lang === 'pl'
-              ? '• Nowe rezerwacje automatycznie pojawiają się w kalendarzu Outlook\n• Anulowanie rezerwacji usuwa event z kalendarza\n• Zmiany godzin w Outlook są synchronizowane do Reserti'
-              : '• New reservations automatically appear in Outlook Calendar\n• Cancelled reservations remove the calendar event\n• Time changes in Outlook are synced back to Reserti'}
+            {t('calendar.sync_info')}
           </p>
         </div>
       )}
@@ -179,9 +167,7 @@ export function CalendarSyncSection() {
       {!loading && !status?.connected && (
         <div style={infoBox}>
           <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-            {lang === 'pl'
-              ? 'Wymaga: konto Microsoft 365 w domenie firmowej + integracja Azure skonfigurowana przez administratora.'
-              : 'Requires: Microsoft 365 account in company domain + Azure integration configured by admin.'}
+            {t('calendar.no_azure_info')}
           </p>
         </div>
       )}

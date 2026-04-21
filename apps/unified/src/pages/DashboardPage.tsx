@@ -86,13 +86,13 @@ function KpiCard({
 }) {
   const { t } = useTranslation();
   return (
-    <div className={`rounded-xl border p-4 flex flex-col gap-1 ${
+    <div className={`rounded-xl border p-3 sm:p-4 flex flex-col gap-1 ${
       accent ? 'bg-[#B53578] border-[#B53578] text-white' : 'bg-white border-zinc-100'
     }`}>
       <p className={`text-xs font-medium uppercase tracking-wide ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
         {label}
       </p>
-      <p className={`text-2xl font-bold font-mono ${accent ? 'text-white' : 'text-zinc-800'}`}>
+      <p className={`text-xl sm:text-2xl font-bold font-mono ${accent ? 'text-white' : 'text-zinc-800'}`}>
         {value}
       </p>
       <div className="flex items-center gap-2">
@@ -423,7 +423,7 @@ export function DashboardPage() {
       <QuickActions locationId={locationId} onRefresh={load} />
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5">
         <KpiCard
           label={t('dashboard.kpi.occupancy_now')}
           value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
@@ -449,7 +449,7 @@ export function DashboardPage() {
       </div>
 
       {/* 7-day trend chart — tylko dla Admin+ */}
-      {isAdmin && <Card className="p-5 mb-4">
+      {isAdmin && <Card className="p-4 sm:p-5 mb-4 overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold text-zinc-700">{t('dashboard.checkins_title')}</p>
           {ext && (
@@ -473,7 +473,7 @@ export function DashboardPage() {
       </Card>}
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className={`grid grid-cols-1 gap-4 mb-4 ${isAdmin ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAdmin ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'}`}>
         {isAdmin && <HourlyChart hourly={ext?.hourly} />}
 
         {/* Zone occupancy */}
@@ -502,7 +502,7 @@ export function DashboardPage() {
       </div>
 
       {/* Bottom row: Top desks + Methods — tylko dla Admin+ */}
-      {isAdmin && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {isAdmin && <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <Card className="p-5">
           <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.top.title')}</p>
           <div className="space-y-2">

@@ -39,7 +39,7 @@ const OWNER_ONLY   = ['OWNER'];
 
 // Redirect po zalogowaniu per rola
 function homeFor(role: string): string {
-  if (role === 'END_USER') return '/my-reservations';
+  if (role === 'END_USER') return '/map';
   if (role === 'OWNER')    return '/owner';
   return '/dashboard';
 }

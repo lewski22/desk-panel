@@ -39,10 +39,11 @@ function RssiBar({ rssi }: { rssi: number | null }) {
 }
 
 function StatusDot({ online }: { online: boolean }) {
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${online ? 'text-emerald-600' : 'text-zinc-400'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
-      {online ? 'Online' : 'Offline'}
+      {online ? t('devices.status.online') : t('devices.status.offline')}
     </span>
   );
 }

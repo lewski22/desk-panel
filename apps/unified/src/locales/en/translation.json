@@ -609,7 +609,8 @@
     "label_office": "Office",
     "valid_until": "Valid until",
     "no_address": "No address",
-    "id_label": "ID:"
+    "id_label": "ID:",
+    "gateway_token_single_use": "This is a one-time token — it expires after use. If installation fails, come back here and generate a new one."
   },
   "organizations_extra": {
     "m365_button": "M365",
@@ -718,7 +719,16 @@
       "last_seen": "Last seen",
       "never": "Never",
       "ip": "IP address",
-      "location": "Location"
+      "location": "Location",
+      "select_placeholder": "— select gateway —",
+      "status_problem": "Problem",
+      "confirm_delete": "Delete gateway \"{{name}}\"?",
+      "confirm_update": "Update gateway \"{{name}}\" to the latest version?\n\nThe gateway will restart (~15s).",
+      "confirm_rotate": "Gateway key rotation\n\nA new key will be generated and sent to the gateway automatically.\nThe old key remains valid for 15 minutes — a window for manual update if needed.",
+      "never_connected": "Never connected — run the install command from the Office panel → + Gateway",
+      "token_single_use": "This token is one-time only. It expires after use — come back for a new one if installation fails.",
+      "secret_updated": "Gateway updated automatically — will restart in ~2s",
+      "key_active": "New key active from now"
     },
     "device": {
       "identify": "Identify",
@@ -731,7 +741,10 @@
       "unassign_confirm": "Unpair beacon \"{{hwId}}\" from desk \"{{deskName}}\"?",
       "delete": "Delete beacon",
       "delete_confirm": "Delete beacon \"{{hwId}}\"? This cannot be undone.",
-      "no_desk": "No desk"
+      "no_desk": "No desk",
+      "select_desk_placeholder": "— select desk —",
+      "desk_optional_label": "Desk (optional)",
+      "no_gateways": "No gateways — click \"+ New gateway\" to generate an installation command"
     }
   },
   "notifications": {
@@ -777,7 +790,19 @@
     "book_full_day": "Book full day",
     "book_choose_time": "Choose hours...",
     "checkin_since": "since",
-    "floor": "Floor"
+    "floor": "Floor",
+    "desk_fallback": "Desk"
+  },
+  "recommendations": {
+    "suggested": "Suggested",
+    "not_now": "Not now",
+    "dismiss_aria": "Dismiss suggestion",
+    "times_booked": "booked {{count}}×",
+    "reason": {
+      "favorite": "Your favourite desk",
+      "favorite_zone": "Your preferred zone",
+      "any_free": "Available desk"
+    }
   },
   "common": {
     "na": "—"
@@ -1118,5 +1143,61 @@
         "gateway.online": "Gateway — online"
       }
     }
+  },
+  "smtp": {
+    "mailbox_title": "Mailbox",
+    "global_available": "Emails are sent through Reserti's global mailbox. You can configure your own organisation mailbox — emails will appear to come from your company.",
+    "no_config": "No SMTP configured — email notifications are inactive. Configure your own mailbox or ask the system administrator to set up global SMTP.",
+    "preset_other": "Other…",
+    "quick_preset": "Quick provider selection",
+    "server_label": "SMTP Server *",
+    "port_label": "Port",
+    "user_label": "Username (login) *",
+    "password_label": "Password",
+    "password_leave_empty": "(leave empty = no change)",
+    "password_placeholder_existing": "••••••• (no change)",
+    "password_placeholder_new": "Password or API key",
+    "from_name_label": "Sender name",
+    "from_email_label": "Sender email *",
+    "encrypted_hint": "Password is encrypted with AES-256-GCM before being stored in the database.",
+    "smtp_server_label": "SMTP Server",
+    "user_short": "Username",
+    "sender": "Sender",
+    "last_test": "Last test"
+  },
+  "insights": {
+    "load_error": "Failed to load insights",
+    "refresh_error": "Refresh failed",
+    "no_data": "Not enough data to generate insights (min. 10 check-ins in the last 30 days).",
+    "title": "AI Insights (last 30 days)",
+    "more": "+{{count}} more insights in the Reports tab",
+    "loading": "Loading...",
+    "no_insights": "No insights — insufficient data.",
+    "count": "insights"
+  },
+  "calendar": {
+    "title": "Calendar sync",
+    "subtitle": "Connect Outlook Calendar so reservations automatically appear in your calendar.",
+    "checking": "Checking...",
+    "connected": "✓ Connected — sync active",
+    "token_expired": "⚠ Connected — token expired, click Renew",
+    "not_connected": "Not connected",
+    "connect_success": "Outlook Calendar connected. Reservations will now be synced.",
+    "connect_error_prefix": "Failed to connect: ",
+    "disconnect_confirm": "Disconnect Outlook Calendar? Reservations will stop syncing.",
+    "disconnect_success": "Outlook Calendar disconnected.",
+    "disconnect_error": "Disconnect failed.",
+    "reconnect_title": "Re-authorize",
+    "reconnect": "Renew",
+    "disconnect": "Disconnect",
+    "connect": "Connect",
+    "sync_info": "• New reservations automatically appear in Outlook Calendar\n• Cancelled reservations remove the calendar event\n• Time changes in Outlook are synced back to Reserti",
+    "no_azure_info": "Requires: Microsoft 365 account in company domain + Azure integration configured by admin.",
+    "connected_sync": "Connected — reservations synced with calendar",
+    "not_connected_hint": "Not connected — click to sync with Outlook",
+    "connect_ok": "✅ Outlook Calendar connected",
+    "connect_err_prefix": "❌ Connection error: ",
+    "disconnect_confirm_simple": "Disconnect Outlook Calendar?",
+    "disconnect_ok": "Outlook Calendar disconnected"
   }
 }

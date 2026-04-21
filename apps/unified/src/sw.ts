@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event: FetchEvent) => {
   // Only intercept same-origin or relative requests
   if (url.origin !== self.location.origin && !url.pathname.startsWith('/api/')) return;
 
+  if (request.method !== 'GET') {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   if (url.pathname.includes('/api/')) {
     // Network-first with 5s timeout
     event.respondWith(

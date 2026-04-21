@@ -4,6 +4,7 @@
  * Mały element SVG z kolorem statusu, reaguje na kliknięcie
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { DeskMapItem } from '../../types';
 import { DeskPosition } from './useFloorPlanEditor';
 
@@ -31,6 +32,7 @@ interface Props {
 }
 
 export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, onClick }: Props) {
+  const { t }     = useTranslation();
   const [hover, setHover] = useState(false);
   const status = deskStatus(desk);
   const fill   = PIN_FILL[status] ?? PIN_FILL.offline;
@@ -76,7 +78,7 @@ export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, onClick }: P
             style={{ pointerEvents: 'none' }}>{desk.name}</text>
           <text x={8} y={23} fontSize={8} fill="#a1a1aa"
             style={{ pointerEvents: 'none' }}>
-            {status === 'free' ? 'Wolne' : status === 'occupied' ? 'Zajęte' : status === 'reserved' ? 'Rezerwacja' : 'Offline'}
+            {status === 'free' ? t('desks.stats.free') : status === 'occupied' ? t('desks.stats.occupied') : status === 'reserved' ? t('desks.stats.reserved') : t('devices.status.offline')}
           </text>
         </g>
       )}

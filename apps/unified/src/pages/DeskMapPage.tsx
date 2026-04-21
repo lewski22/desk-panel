@@ -204,7 +204,7 @@ export function DeskMapPage() {
 
       {/* Toolbar row: View toggle + Edit floor plan link */}
       <div className="flex items-center justify-between mb-1">
-        <ViewToggle mode={viewMode} onChange={handleViewMode} hasPlan={hasPlan} />
+        {mapTab === 'desks' && <ViewToggle mode={viewMode} onChange={handleViewMode} hasPlan={hasPlan} />}
         {isAdmin && locationId && (
           <button
             onClick={() => navigate(`/floor-plan/${locationId}`)}
@@ -222,7 +222,7 @@ export function DeskMapPage() {
         <EmptyState icon="🪑" title={t('deskmap.no_desks_title')} sub={t('deskmap.no_desks_sub')} />
       )}
 
-      {desks.length > 0 && viewMode === 'plan' && (
+      {desks.length > 0 && viewMode === 'plan' && mapTab === 'desks' && (
         <FloorPlanView
           locationId={locationId}
           desks={desks}

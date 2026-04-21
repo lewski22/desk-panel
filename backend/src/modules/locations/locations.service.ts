@@ -253,9 +253,26 @@ export class LocationsService {
   }
 
 
-  // ── Sprint D: Floor Plan ──────────────────────────────────────
+  // ── Sprint D / Multi-floor: Floor Plan ───────────────────────
 
-  async getFloorPlan(locationId: string) {
+  async getFloors(locationId: string): Promise<string[]> {
+    const plans = await this.prisma.locationFloorPlan.findMany({
+      where:   { locationId },
+      select:  { floor: true },
+      orderBy: { floor: 'asc' },
+    });
+    return plans.map(p => p.floor);
+  }
+
+  async getFloorPlan(locationId: string, floor?: string) {
+    if (floor) {
+      const fp = await this.prisma.locationFloorPlan.findUnique({
+        where:  { locationId_floor: { locationId, floor } },
+        select: { floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
+      });
+      return fp ?? { floorPlanUrl: null, floorPlanW: null, floorPlanH: null, gridSize: 40 };
+    }
+    // Backward compat — single floor plan on Location
     const loc = await this.prisma.location.findUnique({
       where:  { id: locationId },
       select: { floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
@@ -267,24 +284,38 @@ export class LocationsService {
   async uploadFloorPlan(
     locationId: string,
     data: { floorPlanUrl: string; floorPlanW?: number; floorPlanH?: number; gridSize?: number },
+    floor?: string,
   ) {
-    // Walidacja rozmiaru — base64 PNG/SVG max ~2MB (po enkodowaniu ~2.7MB string)
     if (data.floorPlanUrl && data.floorPlanUrl.length > 3_000_000) {
       throw new Error('Plik jest za duży (max 2MB)');
+    }
+    if (floor) {
+      return this.prisma.locationFloorPlan.upsert({
+        where:  { locationId_floor: { locationId, floor } },
+        create: { locationId, floor, floorPlanUrl: data.floorPlanUrl, floorPlanW: data.floorPlanW, floorPlanH: data.floorPlanH, gridSize: data.gridSize },
+        update: { floorPlanUrl: data.floorPlanUrl, ...(data.floorPlanW && { floorPlanW: data.floorPlanW }), ...(data.floorPlanH && { floorPlanH: data.floorPlanH }), ...(data.gridSize && { gridSize: data.gridSize }) },
+        select: { id: true, floor: true, floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
+      });
     }
     return this.prisma.location.update({
       where: { id: locationId },
       data: {
         floorPlanUrl: data.floorPlanUrl,
-        ...(data.floorPlanW  && { floorPlanW:  data.floorPlanW }),
-        ...(data.floorPlanH  && { floorPlanH:  data.floorPlanH }),
-        ...(data.gridSize    && { gridSize:     data.gridSize }),
+        ...(data.floorPlanW && { floorPlanW: data.floorPlanW }),
+        ...(data.floorPlanH && { floorPlanH: data.floorPlanH }),
+        ...(data.gridSize   && { gridSize:   data.gridSize }),
       },
       select: { id: true, floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
     });
   }
 
-  async deleteFloorPlan(locationId: string) {
+  async deleteFloorPlan(locationId: string, floor?: string) {
+    if (floor) {
+      await this.prisma.locationFloorPlan.deleteMany({
+        where: { locationId, floor },
+      });
+      return { id: locationId, floor };
+    }
     return this.prisma.location.update({
       where: { id: locationId },
       data:  { floorPlanUrl: null, floorPlanW: null, floorPlanH: null },
