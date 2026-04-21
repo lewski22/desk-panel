@@ -34,12 +34,40 @@ export interface ReservationsByDeskRow {
   deskId: string; name: string; locationName: string; count: number;
 }
 
+// Weekday order: 0=Mon … 6=Sun (ISO)
+const WEEKDAY_IDX: Record<string, number> = {
+  Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3,
+  Friday: 4, Saturday: 5, Sunday: 6,
+};
+
+function toLocalDayHour(d: Date, tz: string): { day: number; hour: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'long',
+    hour:    'numeric',
+    hour12:  false,
+    hourCycle: 'h23',
+  }).formatToParts(d);
+
+  const weekday = parts.find(p => p.type === 'weekday')?.value ?? 'Monday';
+  const hourStr = parts.find(p => p.type === 'hour')?.value ?? '0';
+  const hour    = parseInt(hourStr, 10);
+
+  return { day: WEEKDAY_IDX[weekday] ?? 0, hour: isNaN(hour) ? 0 : hour % 24 };
+}
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
   // ── Heatmap: check-ins pogrupowane po dniu tygodnia × godzinie ──
   async getHeatmap(orgId: string, from: Date, to: Date, locationId?: string): Promise<HeatmapCell[]> {
+    // Pobierz timezone biura — godziny muszą być w lokalnej strefie, nie UTC
+    const tzRow = locationId
+      ? await this.prisma.location.findUnique({ where: { id: locationId }, select: { timezone: true } })
+      : await this.prisma.location.findFirst({ where: { organizationId: orgId }, select: { timezone: true } });
+    const tz = tzRow?.timezone ?? 'Europe/Warsaw';
+
     const checkins = await this.prisma.checkin.findMany({
       where: {
         reservation: {
@@ -55,15 +83,12 @@ export class ReportsService {
       select: { checkedInAt: true },
     });
 
-    // Buduj mapę [day][hour] → count
+    // Buduj mapę [day][hour] → count (w lokalnej strefie czasowej)
     const map = new Map<string, number>();
     for (const ci of checkins) {
       if (!ci.checkedInAt) continue;
-      const d = ci.checkedInAt;
-      // getDay() → 0=Sun…6=Sat, normalizuj do 0=Mon…6=Sun
-      const day  = (d.getDay() + 6) % 7;
-      const hour = d.getHours();
-      const key  = `${day}:${hour}`;
+      const { day, hour } = toLocalDayHour(ci.checkedInAt, tz);
+      const key = `${day}:${hour}`;
       map.set(key, (map.get(key) ?? 0) + 1);
     }
 
@@ -303,6 +328,63 @@ export class ReportsService {
       map.get(r.deskId)!.count++;
     }
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }
+
+  // ── Dashboard Snapshot: KPI bieżącego dnia per lokalizacja ─────
+  async getDashboardSnapshot(orgId: string, locationId?: string) {
+    const locations = await this.prisma.location.findMany({
+      where: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) },
+      select: { id: true, name: true, timezone: true },
+      orderBy: { name: 'asc' },
+    });
+
+    return Promise.all(locations.map(async loc => {
+      const tz    = loc.timezone ?? 'Europe/Warsaw';
+      const todayLocal = new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date());
+      const today = new Date(todayLocal);  // midnight in UTC, adjusted for tz
+
+      const [totalDesks, occupiedNow, checkinsToday, reservationsToday, zoneRows] =
+        await Promise.all([
+          this.prisma.desk.count({ where: { locationId: loc.id, status: 'ACTIVE' } }),
+          this.prisma.checkin.count({ where: { desk: { locationId: loc.id }, checkedOutAt: null } }),
+          this.prisma.checkin.count({
+            where: { desk: { locationId: loc.id }, checkedInAt: { gte: today } },
+          }),
+          this.prisma.reservation.count({
+            where: {
+              desk:   { locationId: loc.id },
+              date:   today,
+              status: { in: ['CONFIRMED', 'PENDING'] },
+            },
+          }),
+          this.prisma.desk.groupBy({
+            by:     ['zone'],
+            where:  { locationId: loc.id, status: 'ACTIVE' },
+            _count: { id: true },
+          }),
+        ]);
+
+      // Per-zone occupied count
+      const occupiedByZone = await Promise.all(
+        zoneRows.map(async z => {
+          const occ = await this.prisma.checkin.count({
+            where: { desk: { locationId: loc.id, zone: z.zone }, checkedOutAt: null },
+          });
+          return { zone: z.zone ?? 'Inne', total: z._count.id, occupied: occ };
+        }),
+      );
+
+      return {
+        locationId:        loc.id,
+        locationName:      loc.name,
+        totalDesks,
+        occupiedNow,
+        occupancyPct:      totalDesks > 0 ? Math.round((occupiedNow / totalDesks) * 100) : 0,
+        checkinsToday,
+        reservationsToday,
+        zones:             occupiedByZone,
+      };
+    }));
   }
 
   // ── Utils ────────────────────────────────────────────────────────

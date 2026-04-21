@@ -1,20 +1,16 @@
 /**
- * apps/unified/playwright.config.ts
+ * backend/playwright.config.ts
  *
  * Konfiguracja Playwright E2E dla Reserti Unified Panel.
- *
- * Instalacja:
- *   cd apps/unified
- *   npm install -D @playwright/test
- *   npx playwright install chromium
+ * Osobne projekty per rola — każdy używa własnego pliku sesji.
  *
  * Uruchomienie:
- *   npx playwright test                  # wszystkie testy
- *   npx playwright test auth             # tylko auth.spec.ts
- *   npx playwright test --ui             # tryb interaktywny
- *   npx playwright test --headed         # z widoczną przeglądarką
+ *   npx playwright test                         # wszystkie testy, wszystkie role
+ *   npx playwright test --project=staff         # tylko testy roli STAFF
+ *   npx playwright test staff-rbac              # konkretny plik
+ *   npx playwright test --ui                    # tryb interaktywny
  *
- * CI (GitHub Actions):
+ * CI:
  *   npx playwright test --reporter=github
  */
 import { defineConfig, devices } from '@playwright/test';
@@ -29,33 +25,82 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'html',
 
   use: {
-    baseURL:            BASE_URL,
-    screenshot:         'only-on-failure',
-    video:              'retain-on-failure',
-    trace:              'retain-on-failure',
-    // Zachowaj sesję między testami w tym samym projekcie
-    storageState:       'tests/e2e/.auth/staff.json',
+    baseURL:   BASE_URL,
+    screenshot: 'only-on-failure',
+    video:      'retain-on-failure',
+    trace:      'retain-on-failure',
   },
 
   projects: [
-    // ── Setup: login i zapisz sesję ──────────────────────────────
+    // ── Setup: zapisz sesje dla wszystkich ról ───────────────────
     {
-      name: 'setup',
+      name:      'setup',
       testMatch: /auth\.setup\.ts/,
-      use: { storageState: undefined }, // setup nie używa zapisanej sesji
+      use:       { storageState: undefined },
     },
 
-    // ── Testy wymagające zalogowania ──────────────────────────────
+    // ── STAFF ────────────────────────────────────────────────────
     {
-      name: 'chromium',
-      use:  { ...devices['Desktop Chrome'] },
+      name: 'staff',
+      testMatch: /\/(auth|reservation|checkin|staff-rbac)\.spec\.ts/,
+      use:  {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/staff.json',
+      },
       dependencies: ['setup'],
     },
 
-    // ── Mobile ───────────────────────────────────────────────────
+    // ── OFFICE_ADMIN ─────────────────────────────────────────────
+    {
+      name: 'office-admin',
+      testMatch: /\/office-admin\.spec\.ts/,
+      use:  {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/office_admin.json',
+      },
+      dependencies: ['setup'],
+    },
+
+    // ── SUPER_ADMIN ──────────────────────────────────────────────
+    {
+      name: 'super-admin',
+      testMatch: /\/super-admin\.spec\.ts/,
+      use:  {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/super_admin.json',
+      },
+      dependencies: ['setup'],
+    },
+
+    // ── END_USER ─────────────────────────────────────────────────
+    {
+      name: 'end-user',
+      testMatch: /\/end-user\.spec\.ts/,
+      use:  {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/end_user.json',
+      },
+      dependencies: ['setup'],
+    },
+
+    // ── Public / no-auth ─────────────────────────────────────────
+    {
+      name: 'public',
+      testMatch: /\/auth\.spec\.ts/,
+      use:  {
+        ...devices['Desktop Chrome'],
+        storageState: { cookies: [], origins: [] },
+      },
+    },
+
+    // ── Mobile (STAFF sesja) ─────────────────────────────────────
     {
       name: 'mobile-chrome',
-      use:  { ...devices['Pixel 5'] },
+      testMatch: /\/(auth|reservation|checkin)\.spec\.ts/,
+      use:  {
+        ...devices['Pixel 5'],
+        storageState: 'tests/e2e/.auth/staff.json',
+      },
       dependencies: ['setup'],
     },
   ],
@@ -63,9 +108,9 @@ export default defineConfig({
   webServer: process.env.CI
     ? undefined
     : {
-        command:            'npm run dev',
-        url:                BASE_URL,
+        command:             'npm run dev',
+        url:                 BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout:            30_000,
+        timeout:             30_000,
       },
 });

@@ -106,10 +106,10 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `relative flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+        `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
           isActive
-            ? 'bg-[#B53578]/12 text-white'
-            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'
+            ? 'bg-zinc-800 text-zinc-100'
+            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
         }`
       }
       title={collapsed ? label : undefined}
@@ -118,13 +118,13 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
         <>
           {/* Left-edge active indicator */}
           {isActive && (
-            <span className="absolute left-0 top-1 bottom-1 w-[3px] bg-[#B53578] rounded-r-full" />
+            <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-[#B53578] rounded-r-full" />
           )}
           <Icon
             size={16}
-            className={`shrink-0 ${isActive ? 'text-[#B53578]' : ''}`}
+            className={`shrink-0 transition-colors ${isActive ? 'text-[#B53578]' : ''}`}
           />
-          {!collapsed && <span className="truncate">{label}</span>}
+          {!collapsed && <span className="truncate leading-none">{label}</span>}
         </>
       )}
     </NavLink>
@@ -201,8 +201,11 @@ export function AppLayout({ user, onLogout, children }: Props) {
         )}
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
-            className="ml-auto text-zinc-500 hover:text-white p-1 rounded-lg">
-            ✕
+            className="ml-auto text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+            aria-label="Zamknij menu">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path d="M3.29 3.29a1 1 0 0 1 1.42 0L8 6.59l3.29-3.3a1 1 0 1 1 1.42 1.42L9.41 8l3.3 3.29a1 1 0 0 1-1.42 1.42L8 9.41l-3.29 3.3a1 1 0 0 1-1.42-1.42L6.59 8 3.3 4.71a1 1 0 0 1 0-1.42z"/>
+            </svg>
           </button>
         )}
       </div>
@@ -219,13 +222,16 @@ export function AppLayout({ user, onLogout, children }: Props) {
           if (!visibleItems.length) return null;
 
           return (
-            <div key={group.key} className={gi > 0 ? 'mt-1 pt-1 border-t border-zinc-800/70' : 'mt-0'}>
+            <div key={group.key} className={gi > 0 ? 'mt-3 pt-3 border-t border-zinc-800/50' : 'mt-1'}>
               {(!collapsed || mobile) && (
-                <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 select-none">
                   {t(group.key)}
                 </div>
               )}
-              <div className="space-y-0.5">
+              {(collapsed && !mobile) && gi > 0 && (
+                <div className="mx-2 mb-2 h-px bg-zinc-800/50" />
+              )}
+              <div className="space-y-px">
                 {visibleItems.map(item => (
                   <NavItem
                     key={item.to}
@@ -243,36 +249,33 @@ export function AppLayout({ user, onLogout, children }: Props) {
       </nav>
 
       {/* ── BOTTOM: Change password / Language / Bell / Logout ── */}
-      <div className="border-t border-zinc-800/80 shrink-0 px-2 py-2 space-y-0.5">
-        {(!collapsed || mobile) && (
-          <button
-            onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
-            className="w-full flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60 transition-colors"
-          >
-            <IconKey size={16} className="shrink-0" />
-            <span className="truncate">{t('layout.change_password')}</span>
-          </button>
-        )}
-        <div className={`flex items-center gap-1 px-1 ${collapsed && !mobile ? 'flex-col' : ''}`}>
-          {(!collapsed || mobile) && <div className="flex-1"><LanguageSwitcher /></div>}
+      <div className="border-t border-zinc-800/50 shrink-0 px-2 py-2 space-y-px">
+        {/* Change password — ukryty gdy sidebar zwinięty (dostępny przez ikonę) */}
+        <button
+          onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors"
+          title={collapsed && !mobile ? t('layout.change_password') : undefined}
+        >
+          <IconKey size={16} className="shrink-0" />
+          {(!collapsed || mobile) && <span className="truncate leading-none">{t('layout.change_password')}</span>}
+        </button>
+
+        {/* Language + Bell + Logout row */}
+        <div className={`flex items-center gap-1 px-1 pt-0.5 ${collapsed && !mobile ? 'flex-col' : ''}`}>
+          {(!collapsed || mobile) && <div className="flex-1 min-w-0"><LanguageSwitcher /></div>}
           <NotificationBell role={user.role} />
-          {collapsed && !mobile ? (
-            <button
-              onClick={doLogout}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
-              title={t('layout.logout')}
-            >
-              <IconLogout size={16} />
-            </button>
-          ) : (
-            <button
-              onClick={doLogout}
-              className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors text-xs"
-            >
-              <IconLogout size={14} />
-              <span>{t('layout.logout')}</span>
-            </button>
-          )}
+          <button
+            onClick={doLogout}
+            className={`flex items-center gap-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ${
+              collapsed && !mobile
+                ? 'w-8 h-8 justify-center'
+                : 'px-2 py-1.5 text-xs'
+            }`}
+            title={t('layout.logout')}
+          >
+            <IconLogout size={collapsed && !mobile ? 16 : 14} />
+            {(!collapsed || mobile) && <span>{t('layout.logout')}</span>}
+          </button>
         </div>
       </div>
     </>

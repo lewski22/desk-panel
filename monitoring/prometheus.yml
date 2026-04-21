@@ -1,4 +1,10 @@
 # monitoring/prometheus.yml
+#
+# Prometheus scrape'uje TYLKO backend NestJS.
+# Metryki urządzeń (beacony, gateways) płyną przez backend:
+#   - MetricsService.refreshDeviceMetrics() (co 60s) wypełnia gaugi
+#     clientBeaconLastSeen, clientBeaconRssi, clientGatewayLastSeen, itp.
+# Nie jest wymagane bezpośrednie połączenie Prometheus → Gateway IP.
 
 global:
   scrape_interval:     15s
@@ -16,26 +22,6 @@ scrape_configs:
       - targets: ['api.prohalw2026.ovh']
         labels:
           service: backend
-    # Jeśli Cloudflare blokuje Prometheus — dodaj Bearer token
+    # Jeśli Cloudflare blokuje Prometheus — dodaj Bearer token:
     # authorization:
     #   credentials_file: /etc/prometheus/backend_token
-
-  # ── Gateway Python ─────────────────────────────────────────────
-  # Dodaj po jednym wpisie per gateway (IP z sieci lokalnej lub VPN)
-  - job_name: 'reserti-gateway'
-    static_configs:
-      - targets:
-          - '192.168.1.100:9100'   # <- zmień na IP RPi
-        labels:
-          service: gateway
-          location: office-main
-      # - targets:
-      #     - '192.168.1.101:9100'
-      #   labels:
-      #     service: gateway
-      #     location: office-branch
-    relabel_configs:
-      - source_labels: [__address__]
-        regex: '([^:]+):\d+'
-        target_label: gateway_ip
-        replacement: '$1'

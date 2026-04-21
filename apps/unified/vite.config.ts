@@ -10,7 +10,7 @@ export default defineConfig({
       strategies:   'injectManifest',
       srcDir:       'src',
       filename:     'sw.ts',
-      includeAssets: ['favicon.svg', 'icon-192.svg', 'icon-512.svg'],
+      includeAssets: ['favicon.svg', 'icon-192.svg', 'icon-512.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: {
         name:             'Reserti',
         short_name:       'Reserti',
@@ -22,6 +22,10 @@ export default defineConfig({
         scope:            '/',
         lang:             'pl',
         icons: [
+          // PNG first — wymagane przez starszy Android i Chrome for Android
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png',     purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png',     purpose: 'any maskable' },
+          // SVG jako fallback dla nowoczesnych przeglądarek (obsługuje skalowanie)
           { src: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
           { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
         ],

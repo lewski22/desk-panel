@@ -18,7 +18,7 @@ const METHOD_COLORS: Record<string, string> = {
   MANUAL:  '#f59e0b',
   UNKNOWN: '#a1a1aa',
 };
-const TABS = ['heatmap', 'reservations', 'methods', 'by_user', 'by_desk'] as const;
+const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk'] as const;
 type Tab = typeof TABS[number];
 
 // ── Utils ──────────────────────────────────────────────────────────
@@ -43,6 +43,125 @@ function downloadCsv(rows: string[][], filename: string) {
 
 // ── Shared filter bar props ────────────────────────────────────────
 interface Filters { from: string; to: string; locationId: string }
+
+// ── Snapshot Tab — KPI bieżącego dnia (dane na żywo z dashboardu) ─
+interface SnapshotRow {
+  locationId: string; locationName: string;
+  totalDesks: number; occupiedNow: number; occupancyPct: number;
+  checkinsToday: number; reservationsToday: number;
+  zones: { zone: string; total: number; occupied: number }[];
+}
+
+function SnapshotTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<SnapshotRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = {};
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/snapshot', params);
+      setData(rows ?? []);
+    } catch {}
+    setLoading(false);
+  }, [filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const exportCsv = () => {
+    const header = [
+      t('reports.snapshot.location'), t('reports.snapshot.total_desks'),
+      t('reports.snapshot.occupied_now'), t('reports.snapshot.occupancy_pct'),
+      t('reports.snapshot.checkins_today'), t('reports.snapshot.reservations_today'),
+    ];
+    const rows = data.map(r => [
+      r.locationName, String(r.totalDesks), String(r.occupiedNow),
+      `${r.occupancyPct}%`, String(r.checkinsToday), String(r.reservationsToday),
+    ]);
+    downloadCsv([header, ...rows], `snapshot-${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-zinc-400">{t('reports.snapshot.hint')}</p>
+        {data.length > 0 && (
+          <button onClick={exportCsv}
+            className="px-3 py-1.5 text-xs font-medium border border-zinc-200 rounded-lg hover:bg-zinc-50">
+            {t('reports.export.csv')}
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="py-12 flex justify-center">
+          <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+        </div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="📊" title={t('reports.no_data')} />
+      ) : (
+        <div className="space-y-4">
+          {data.map(loc => (
+            <Card key={loc.locationId} className="p-5">
+              <p className="text-sm font-semibold text-zinc-700 mb-4">{loc.locationName}</p>
+
+              {/* KPI grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+                {[
+                  { label: t('reports.snapshot.total_desks'),        value: loc.totalDesks,        color: 'text-zinc-700' },
+                  { label: t('reports.snapshot.occupied_now'),       value: loc.occupiedNow,       color: 'text-indigo-600' },
+                  { label: t('reports.snapshot.occupancy_pct'),      value: `${loc.occupancyPct}%`, color: loc.occupancyPct > 80 ? 'text-red-600' : 'text-emerald-600' },
+                  { label: t('reports.snapshot.checkins_today'),     value: loc.checkinsToday,     color: 'text-zinc-700' },
+                  { label: t('reports.snapshot.reservations_today'), value: loc.reservationsToday, color: 'text-zinc-700' },
+                ].map(kpi => (
+                  <div key={kpi.label} className="bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-3">
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-wide mb-1">{kpi.label}</p>
+                    <p className={`text-2xl font-bold font-mono ${kpi.color}`}>{kpi.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Occupancy bar */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-zinc-400">{t('reports.snapshot.occupancy_bar')}</span>
+                  <span className="text-xs font-semibold text-zinc-600">{loc.occupiedNow}/{loc.totalDesks}</span>
+                </div>
+                <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                    style={{ width: `${loc.occupancyPct}%`, background: loc.occupancyPct > 80 ? '#ef4444' : ACCENT }} />
+                </div>
+              </div>
+
+              {/* Zones */}
+              {loc.zones.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {loc.zones.map(z => (
+                    <div key={z.zone} className="border border-zinc-100 rounded-lg px-3 py-2">
+                      <p className="text-xs font-medium text-zinc-600 truncate mb-1">{z.zone}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-zinc-400">{z.occupied}/{z.total}</span>
+                        <span className="text-xs font-semibold text-zinc-600">
+                          {z.total > 0 ? `${Math.round((z.occupied / z.total) * 100)}%` : '—'}
+                        </span>
+                      </div>
+                      <div className="h-1 bg-zinc-100 rounded-full mt-1 overflow-hidden">
+                        <div className="h-full rounded-full"
+                          style={{ width: z.total > 0 ? `${Math.round((z.occupied / z.total) * 100)}%` : '0%', background: ACCENT }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Heatmap Tab ────────────────────────────────────────────────────
 function HeatmapTab({ filters, onExport, exporting }: {
@@ -548,6 +667,7 @@ function ReportsPage() {
       </div>
 
       {/* Tab content */}
+      {activeTab === 'snapshot'     && <SnapshotTab filters={filters} />}
       {activeTab === 'heatmap'      && <HeatmapTab filters={filters} onExport={handleExport} exporting={exporting} />}
       {activeTab === 'reservations' && <ReservationsTab filters={filters} />}
       {activeTab === 'methods'      && <MethodsTab filters={filters} />}

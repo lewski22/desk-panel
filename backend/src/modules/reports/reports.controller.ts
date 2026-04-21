@@ -128,6 +128,18 @@ export class ReportsController {
     return this.reports.getReservationsByDesk(resolvedOrgId, fromDate, toDate, locationId);
   }
 
+  // ── Dashboard snapshot — KPI bieżącego dnia ────────────────────
+  @Get('snapshot')
+  @Roles(...REPORT_ROLES)
+  async snapshot(
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    return this.reports.getDashboardSnapshot(resolvedOrgId, locationId);
+  }
+
   // ── Helper ─────────────────────────────────────────────────────
   private resolveOrgId(req: any, queryOrgId?: string): string {
     const user = req.user;

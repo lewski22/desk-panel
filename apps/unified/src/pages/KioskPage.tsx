@@ -1,10 +1,10 @@
 /**
  * KioskPage — Sprint H3
- * Route: /kiosk?location=<id>&pin=<4cyfry>
- * Fullscreen widok zajętości biurek — dla tabletu przy wejściu do biura
- * Auto-refresh co 30s, wyjście przez PIN
+ * Route: /kiosk?location=<id>
+ * Fullscreen widok zajętości biurek — dla tabletu przy wejściu do biura.
+ * Auto-refresh co 30s, wyjście przez PIN weryfikowany na backendzie.
  */
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation }  from 'react-i18next';
 import { appApi }           from '../api/client';
@@ -17,28 +17,40 @@ const S_OFFLINE  = '#a1a1aa';
 
 function deskColor(d: any) {
   if (!d.isOnline || d.status !== 'ACTIVE') return S_OFFLINE;
-  if (d.isOccupied)            return S_OCCUPIED;
-  if (d.currentReservation)   return S_RESERVED;
+  if (d.isOccupied)          return S_OCCUPIED;
+  if (d.currentReservation)  return S_RESERVED;
   return S_FREE;
 }
 
 // ── PIN exit modal ────────────────────────────────────────────
-function PinModal({ correctPin, onClose, onSuccess }: {
-  correctPin: string; onClose: () => void; onSuccess: () => void;
+function PinModal({ onClose, onSuccess, onVerify }: {
+  onClose:   () => void;
+  onSuccess: () => void;
+  onVerify:  (pin: string) => Promise<boolean>;
 }) {
-  const { t }      = useTranslation();
+  const { t }         = useTranslation();
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const handleDigit = (d: string) => {
+  const handleDigit = async (d: string) => {
+    if (busy) return;
     const next = (pin + d).slice(0, 4);
-    setPin(next); setErr(false);
+    setPin(next);
+    setErr(false);
     if (next.length === 4) {
-      if (next === correctPin) { onSuccess(); }
-      else { setErr(true); setTimeout(() => setPin(''), 600); }
+      setBusy(true);
+      const ok = await onVerify(next);
+      setBusy(false);
+      if (ok) {
+        onSuccess();
+      } else {
+        setErr(true);
+        setTimeout(() => { setPin(''); setErr(false); }, 700);
+      }
     }
   };
-  const del = () => setPin(p => p.slice(0, -1));
+  const del = () => { if (!busy) setPin(p => p.slice(0, -1)); };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
@@ -50,7 +62,7 @@ function PinModal({ correctPin, onClose, onSuccess }: {
 
         {/* PIN dots */}
         <div className="flex justify-center gap-3 mb-6">
-          {[0,1,2,3].map(i => (
+          {[0, 1, 2, 3].map(i => (
             <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${
               i < pin.length
                 ? (err ? 'bg-red-500 border-red-500' : 'bg-[#B53578] border-[#B53578]')
@@ -64,7 +76,8 @@ function PinModal({ correctPin, onClose, onSuccess }: {
           {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((d, i) => (
             d === '' ? <div key={i} /> :
             <button key={d} onClick={() => d === '⌫' ? del() : handleDigit(d)}
-              className={`h-14 rounded-2xl text-xl font-bold transition-colors ${
+              disabled={busy}
+              className={`h-14 rounded-2xl text-xl font-bold transition-colors disabled:opacity-40 ${
                 d === '⌫'
                   ? 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
                   : 'bg-zinc-800 text-white hover:bg-zinc-700 active:bg-zinc-600'
@@ -80,32 +93,41 @@ function PinModal({ correctPin, onClose, onSuccess }: {
 
 // ── Desk tile — duże, touch-friendly ─────────────────────────
 function DeskTile({ desk }: { desk: any }) {
-  const color = deskColor(desk);
-  const label = desk.isOccupied ? 'Zajęte' : desk.currentReservation ? 'Zarezerwowane' : 'Wolne';
+  const { t }   = useTranslation();
+  const color   = deskColor(desk);
+  const labelKey = desk.isOccupied
+    ? 'kiosk.status.occupied'
+    : desk.currentReservation
+      ? 'kiosk.status.reserved'
+      : desk.isOnline && desk.status === 'ACTIVE'
+        ? 'kiosk.status.free'
+        : 'kiosk.status.offline';
+
   return (
     <div className="rounded-2xl flex flex-col items-center justify-center gap-2 p-4 min-h-[100px]"
       style={{ background: color + '22', border: `2px solid ${color}40` }}>
       <div className="w-4 h-4 rounded-full" style={{ background: color }} />
       <p className="font-bold text-white text-sm text-center leading-tight">{desk.name}</p>
-      <p className="text-xs text-white/60">{label}</p>
+      <p className="text-xs text-white/60">{t(labelKey)}</p>
     </div>
   );
 }
 
 // ── Legend ────────────────────────────────────────────────────
 function Legend() {
+  const { t } = useTranslation();
   const items = [
-    { color: S_FREE,     label: 'Wolne' },
-    { color: S_RESERVED, label: 'Zarezerwowane' },
-    { color: S_OCCUPIED, label: 'Zajęte' },
-    { color: S_OFFLINE,  label: 'Offline' },
+    { color: S_FREE,     key: 'kiosk.status.free'     },
+    { color: S_RESERVED, key: 'kiosk.status.reserved'  },
+    { color: S_OCCUPIED, key: 'kiosk.status.occupied'  },
+    { color: S_OFFLINE,  key: 'kiosk.status.offline'   },
   ];
   return (
     <div className="flex gap-6 justify-center mt-6">
-      {items.map(({ color, label }) => (
-        <span key={label} className="flex items-center gap-2 text-sm text-white/50">
+      {items.map(({ color, key }) => (
+        <span key={key} className="flex items-center gap-2 text-sm text-white/50">
           <span className="w-3 h-3 rounded-full" style={{ background: color }} />
-          {label}
+          {t(key)}
         </span>
       ))}
     </div>
@@ -117,14 +139,13 @@ export function KioskPage() {
   const { t }              = useTranslation();
   const [params]           = useSearchParams();
   const locationId          = params.get('location') ?? '';
-  const pinParam            = params.get('pin') ?? '0000';
 
-  const [desks,     setDesks]     = useState<any[]>([]);
-  const [location,  setLocation]  = useState<any>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [lastUpdate,setLastUpdate]= useState(new Date());
-  const [pinOpen,   setPinOpen]   = useState(false);
-  const [exiting,   setExiting]   = useState(false);
+  const [desks,      setDesks]      = useState<any[]>([]);
+  const [location,   setLocation]   = useState<any>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [pinOpen,    setPinOpen]    = useState(false);
+  const [exiting,    setExiting]    = useState(false);
 
   const load = useCallback(async () => {
     if (!locationId) return;
@@ -137,14 +158,14 @@ export function KioskPage() {
   }, [locationId]);
 
   useEffect(() => {
-    // Załaduj dane lokalizacji
+    if (!locationId) { setLoading(false); return; }
     appApi.locations.listAll()
       .then(locs => setLocation(locs.find((l: any) => l.id === locationId) ?? null))
       .catch(() => {});
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
-  }, [load]);
+  }, [load, locationId]);
 
   // Fullscreen request
   useEffect(() => {
@@ -155,12 +176,12 @@ export function KioskPage() {
   const grouped = useMemo(() => {
     const zones = new Map<string, any[]>();
     for (const d of desks) {
-      const z = d.zone ?? 'Biurka';
+      const z = d.zone ?? t('kiosk.default_zone');
       if (!zones.has(z)) zones.set(z, []);
       zones.get(z)!.push(d);
     }
     return zones;
-  }, [desks]);
+  }, [desks, t]);
 
   const stats = useMemo(() => ({
     free:     desks.filter(d => d.isOnline && !d.isOccupied && !d.currentReservation).length,
@@ -168,11 +189,34 @@ export function KioskPage() {
     total:    desks.filter(d => d.status === 'ACTIVE').length,
   }), [desks]);
 
+  const verifyPin = useCallback(async (pin: string) => {
+    try {
+      const res = await appApi.locations.verifyKioskPin(locationId, pin);
+      return res?.ok === true;
+    } catch {
+      return false;
+    }
+  }, [locationId]);
+
   const handlePinSuccess = () => {
     setExiting(true);
     document.exitFullscreen?.().catch(() => {});
     window.history.back();
   };
+
+  // Error state — brak locationId w URL
+  if (!locationId) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 text-center px-8">
+        <span className="text-5xl">🖥️</span>
+        <p className="text-white text-xl font-bold">{t('kiosk.no_location_title')}</p>
+        <p className="text-zinc-400 text-sm max-w-xs">{t('kiosk.no_location_hint')}</p>
+        <code className="text-xs text-zinc-600 bg-zinc-900 px-3 py-1.5 rounded-lg mt-2">
+          /kiosk?location=&lt;id&gt;
+        </code>
+      </div>
+    );
+  }
 
   if (loading) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
@@ -188,7 +232,7 @@ export function KioskPage() {
         <div className="flex items-center gap-3">
           <span className="text-[#B53578] font-black text-2xl">R</span>
           <div>
-            <p className="font-bold text-lg leading-none">{location?.name ?? 'Biuro'}</p>
+            <p className="font-bold text-lg leading-none">{location?.name ?? t('kiosk.default_office')}</p>
             <p className="text-xs text-zinc-500 mt-0.5">
               {t('kiosk.last_update')}: {lastUpdate.toLocaleTimeString()}
             </p>
@@ -199,15 +243,15 @@ export function KioskPage() {
         <div className="flex gap-4 text-center">
           <div>
             <p className="text-2xl font-bold text-emerald-400">{stats.free}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Wolne</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.free')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-indigo-400">{stats.occupied}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Zajęte</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.occupied')}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-zinc-400">{stats.total}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Łącznie</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.total')}</p>
           </div>
         </div>
 
@@ -236,9 +280,9 @@ export function KioskPage() {
       {/* PIN exit modal */}
       {pinOpen && !exiting && (
         <PinModal
-          correctPin={pinParam}
           onClose={() => setPinOpen(false)}
           onSuccess={handlePinSuccess}
+          onVerify={verifyPin}
         />
       )}
     </div>

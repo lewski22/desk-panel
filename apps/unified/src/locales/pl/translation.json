@@ -540,11 +540,22 @@
     },
     "methods_title": "Metody check-in",
     "tabs": {
+      "snapshot":     "Snapshot",
       "heatmap":      "Heatmapa",
       "reservations": "Rezerwacje",
       "methods":      "Metody",
       "by_user":      "Per osoba",
       "by_desk":      "Per biurko"
+    },
+    "snapshot": {
+      "hint":                "Dane bieżące (stan na teraz) — niezależne od wybranego zakresu dat",
+      "location":            "Lokalizacja",
+      "total_desks":         "Biurek aktywnych",
+      "occupied_now":        "Zajęte teraz",
+      "occupancy_pct":       "Zajętość",
+      "checkins_today":      "Check-iny dziś",
+      "reservations_today":  "Rezerwacje dziś",
+      "occupancy_bar":       "Zajętość biurek"
     },
     "filter": {
       "from":     "Od",
@@ -883,7 +894,18 @@
     "exit_btn": "Wyjdź z trybu kiosk",
     "exit_title": "Wyjdź z trybu kiosk",
     "exit_hint": "Wprowadź PIN administratora",
-    "last_update": "Ostatnia aktualizacja"
+    "last_update": "Ostatnia aktualizacja",
+    "total": "Łącznie",
+    "default_office": "Biuro",
+    "default_zone": "Biurka",
+    "no_location_title": "Brak identyfikatora lokalizacji",
+    "no_location_hint": "Uruchom kiosk z parametrem ?location=<id> lokalizacji",
+    "status": {
+      "free": "Wolne",
+      "reserved": "Zarezerwowane",
+      "occupied": "Zajęte",
+      "offline": "Offline"
+    }
   },
   "push": {
     "banner_title": "Włącz powiadomienia push",

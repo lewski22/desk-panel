@@ -35,8 +35,8 @@
 
 ### Zgłoszenia
 
-- [ ] **Poprawka UI sidebar — lepsze formatowanie i wygląd.**  
-  Przeprojektować wizualnie sidebar (grupy, aktywne elementy, ikony, spacje, mobilne zwijanie).
+- [x] **Poprawka UI sidebar — lepsze formatowanie i wygląd.**  
+  `AppLayout.tsx` — przeprojektowano NavItem: aktywny element używa `bg-zinc-800` (widoczny kontrast na ciemnym tle) zamiast `bg-[#B53578]/12`; `py-[7px]` → `py-2`; grupy mają `mt-3 pt-3` separator (więcej oddechu); nagłówki grup grubszą czcionką (`font-bold`); `space-y-0.5` → `space-y-px` (mniej ściśnięte); bottom sekcja — change password pokazuje ikonę nawet zwinięty; przycisk zamknięcia mobile drawer jako SVG zamiast `✕`. *(2026-04-21)*
 
 - [x] **STAFF — po co widzi ilość wolnych/zajętych biurek?**  
   `DashboardPage.tsx` — dla ról innych niż ADMIN: usunięto `trend` prop z KPI kart (brak badge tygodniowego), ukryto sekcję "7-day trend chart", "Top biurka" i "Metody check-in". STAFF widzi: KPI bieżące (zajętość, check-iny), strefowy wykres zajętości, widget "Problemy dnia". *(2026-04-21)*
@@ -59,8 +59,8 @@
 - [x] **Dashboard nie pokazuje danych na bieżąco.**  
   Dodano auto-refresh co 60 s (silent reload bez spinnera) + przycisk ręcznego odświeżenia z timestampem ostatniej aktualizacji. *(2026-04-20)*
 
-- [ ] **Dane z Dashboard powinny znaleźć się w Raportach.**  
-  Wyeksponować te same dane (KPI, top biurka, strefy) jako eksportowalny raport (patrz sekcja Raporty).
+- [x] **Dane z Dashboard powinny znaleźć się w Raportach.**  
+  Dodano zakładkę „Snapshot" (pierwsza zakładka) w `ReportsPage.tsx` — pokazuje bieżący stan na żywo (niezależny od zakresu dat): KPI per lokalizacja (biurka aktywne, zajęte teraz, zajętość %, check-iny dziś, rezerwacje dziś) + podział strefowy z progress barami + eksport CSV. Backend: `GET /reports/snapshot` w `reports.controller.ts`, `getDashboardSnapshot()` w `reports.service.ts`. i18n: `reports.tabs.snapshot` + `reports.snapshot.*`. *(2026-04-21)*
 
 ---
 
@@ -83,8 +83,8 @@
   - Ilość rezerwacji per osoba — tydzień / miesiąc → zakładka „Per osoba"
   - Ilość rezerwacji per biurko — tydzień / miesiąc → zakładka „Per biurko"
 
-- [ ] **Czas w raporcie pokazuje się jako UTC zamiast UTC+2.**  
-  W `reports.service.ts` brak konwersji do strefy czasowej biura przy formatowaniu dat. Użyć `timezone` z `Location` (tak jak w `checkins.service.ts` L161).
+- [x] **Czas w raporcie pokazuje się jako UTC zamiast UTC+2.**  
+  `reports.service.ts` — dodano helper `toLocalDayHour(d, tz)` używający `Intl.DateTimeFormat.formatToParts()`. `getHeatmap()` pobiera teraz timezone z Location (per wybraną lokalizację lub pierwszą w org) i przelicza godziny/dni check-inów na czas lokalny przed agregacją. *(2026-04-21)*
 
 ---
 
@@ -206,8 +206,13 @@
 
 ### Zgłoszenia
 
-- [ ] **Co z wersją KIOSK?**  
-  Określić status i roadmapę: czy kiosk ma być osobną aplikacją, trybem pełnoekranowym, czy PWA. Zweryfikować aktualny stan `KioskPage.tsx`.
+- [x] **Co z wersją KIOSK?**  
+  Status: kiosk to dedykowany route `/kiosk?location=<id>` w głównej aplikacji PWA (fullscreen mode, nie osobna apka). *(2026-04-21)*  
+  Naprawione w `KioskPage.tsx`:
+  - PIN przeniesiony z URL (`?pin=`) → weryfikowany na backendzie przez `POST /locations/:id/kiosk/verify-pin` (publiczny endpoint bez JWT)
+  - Dodano `kiosk.controller.ts` + `verifyKioskPin()` w `locations.service.ts`
+  - Wszystkie hardcoded polskie stringi przeniesione do i18n (`kiosk.status.*`, `kiosk.total`, `kiosk.default_*`)
+  - Dodano ekran błędu gdy `?location=` jest pusty (zamiast nieskończonego spinnera)
 
 ---
 
@@ -219,11 +224,11 @@
 
 ### Zgłoszenia
 
-- [ ] **W Grafanie podgląd urządzeń bez potrzeby podawania lokalnego adresu Gateway/Beacon.**  
-  Dane o urządzeniach powinny płynąć przez backend → metrics endpoint, nie przez bezpośrednie połączenie lokalne.
+- [x] **W Grafanie podgląd urządzeń bez potrzeby podawania lokalnego adresu Gateway/Beacon.**  
+  `metrics.service.ts` — dodano `refreshDeviceMetrics()` (cron co 60s): wypełnia gaugi `clientBeaconLastSeen`, `clientBeaconRssi`, `clientGatewayLastSeen`, `clientGatewayVersionInfo` danymi z bazy. `refreshOwnerMetrics()` (cron co 30s) — globalne liczniki org/gateway/beacons. Prometheus scrape'uje tylko backend. Usunięto bezpośredni scrape gateway z `prometheus.yml`. *(2026-04-21)*
 
-- [ ] **Grafana jako podgląd diagnostyczny, nie monitoring stały.**  
-  Skonfigurować alerty tylko dla krytycznych zdarzeń (np. odłączenie wszystkich beaconów przy działającym Gateway). Nie alarmować przy chwilowych przerwach.
+- [x] **Grafana jako podgląd diagnostyczny, nie monitoring stały.**  
+  Dodano `monitoring/grafana/provisioning/alerting/alerts.yml` — 3 reguły krytyczne z `for: 5m`/`10m`: (1) wszystkie beacony offline przy żywym gateway, (2) gateway offline > 10 min, (3) backend API niedostępny > 3 min. Brak alertów dla pojedynczych, chwilowych przerw. *(2026-04-21)*
 
 ---
 
@@ -235,10 +240,17 @@
 
 ### Zgłoszenia
 
-- [ ] **Testy działania panelu STAFF** — scenariusze: widok mapy, rezerwacja, check-in, brak dostępu do paneli admina.
-- [ ] **Testy działania panelu User (END_USER)** — scenariusze: moje rezerwacje, check-in web, brak wrażliwych zakładek.
-- [ ] **Testy funkcji Super Admin** — zarządzanie organizacjami, włączanie/wyłączanie modułów, widok provisioning.
-- [ ] **Testy funkcji Admin (OFFICE_ADMIN)** — zarządzanie użytkownikami, rezerwacje, raporty, bez możliwości edycji Super Admina.
+- [x] **Testy działania panelu STAFF** — scenariusze: widok mapy, rezerwacja, check-in, brak dostępu do paneli admina.  
+  `staff-rbac.spec.ts` — STAFF nie ma dostępu do `/organizations`, `/provisioning`, `/users`; nie widzi sekcji Top biurka / Metody w dashboardzie; ma dostęp do mapy, moje-rezerwacje, dashboard. *(2026-04-21)*
+
+- [x] **Testy działania panelu User (END_USER)** — scenariusze: moje rezerwacje, check-in web, brak wrażliwych zakładek.  
+  `end-user.spec.ts` — END_USER ma dostęp do dashboard + moje-rezerwacje; nie ma dostępu do `/users`, `/organizations`, `/provisioning`, `/reports`; check-in web endpoint weryfikowany; nav bez linków admina. *(2026-04-21)*
+
+- [x] **Testy funkcji Super Admin** — zarządzanie organizacjami, włączanie/wyłączanie modułów, widok provisioning.  
+  `super-admin.spec.ts` — SA ma dostęp do `/organizations`, `/provisioning`, `/reports`; lista org widoczna; modal edycji org zawiera sekcję modułów; provisioning shows devices. *(2026-04-21)*
+
+- [x] **Testy funkcji Admin (OFFICE_ADMIN)** — zarządzanie użytkownikami, rezerwacje, raporty, bez możliwości edycji Super Admina.  
+  `office-admin.spec.ts` — OA ma dostęp do `/users`, `/reports`, `/reservations`; nie ma przycisku Deactivate przy SA; brak dostępu do `/organizations`, `/provisioning`. Auth setup dla 4 ról w `auth.setup.ts`. Playwright config z projektami per rola. *(2026-04-21)*
 
 ---
 
@@ -277,14 +289,14 @@
 - [x] **Spójność UI mobile/PWA z desktopem.**  
   Dodano `env(safe-area-inset-*)`, klasy `pb-nav`, `pt-safe`, `scroll-x-fade` w `index.css`. Modały jako bottom sheet na mobile. Minimum touch target 44 px (`min-h-touch`). *(2026-04-20)*
 
-- [ ] **Brak PNG fallbacków dla ikon (starszy Android).**  
-  Manifest zawiera tylko SVG. Wygenerować `icon-192.png` i `icon-512.png` i dodać do `includeAssets`.
+- [x] **Brak PNG fallbacków dla ikon (starszy Android).**  
+  `vite.config.ts` — manifest dodaje `icon-192.png` i `icon-512.png` przed SVG jako primary ikony (Android Chrome wymaga PNG). `includeAssets` rozszerzony o PNG i `apple-touch-icon.png`. Skrypt `scripts/generate-icons.mjs` generuje PNG z SVG używając `sharp` (`npm run generate-icons`). *(2026-04-21)*
 
-- [ ] **Brak splash screens dla iOS.**  
-  Dodać `<link rel="apple-touch-startup-image">` w `index.html` dla popularnych rozdzielczości iPhone/iPad.
+- [x] **Brak splash screens dla iOS.**  
+  `index.html` — dodano 7 tagów `<link rel="apple-touch-startup-image">` dla najpopularniejszych rozmiarów iPhone/iPad (od SE po 15 Pro Max + iPad Pro). Splash screeny generowane skryptem `generate-icons.mjs` → `public/splash/`. `apple-touch-icon` zmieniony na PNG (iOS ignoruje SVG). *(2026-04-21)*
 
-- [ ] **`workbox-window` w `package.json` — nieużywane, usunąć.**  
-  Paczka jest zainstalowana ale nigdy importowana — dead dependency.
+- [x] **`workbox-window` w `package.json` — nieużywane, usunąć.**  
+  Usunięto `workbox-window` z `devDependencies`. Dodano `sharp` (do generowania PNG ikon). *(2026-04-21)*
 
 ---
 

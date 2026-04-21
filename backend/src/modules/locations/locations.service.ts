@@ -45,9 +45,20 @@ export class LocationsService {
     return this.prisma.location.create({ data: dto });
   }
 
-  async update(id: string, dto: Partial<CreateLocationDto> & { isActive?: boolean }) {
+  async update(id: string, dto: Partial<CreateLocationDto> & { isActive?: boolean; kioskPin?: string | null }) {
     // Single query — throws P2025 if not found, no pre-fetch needed
     return this.prisma.location.update({ where: { id }, data: dto });
+  }
+
+  async verifyKioskPin(locationId: string, pin: string): Promise<{ ok: boolean }> {
+    const loc = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { kioskPin: true },
+    });
+    if (!loc) return { ok: false };
+    // kioskPin null/empty → PIN not configured, reject
+    if (!loc.kioskPin) return { ok: false };
+    return { ok: loc.kioskPin === pin };
   }
 
   async getOccupancyAnalytics(locationId: string) {

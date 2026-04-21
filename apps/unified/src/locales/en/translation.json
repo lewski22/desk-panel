@@ -540,11 +540,22 @@
     },
     "methods_title": "Check-in methods",
     "tabs": {
+      "snapshot":     "Snapshot",
       "heatmap":      "Heatmap",
       "reservations": "Reservations",
       "methods":      "Methods",
       "by_user":      "By person",
       "by_desk":      "By desk"
+    },
+    "snapshot": {
+      "hint":                "Live data (current state) — independent of the selected date range",
+      "location":            "Location",
+      "total_desks":         "Active desks",
+      "occupied_now":        "Occupied now",
+      "occupancy_pct":       "Occupancy",
+      "checkins_today":      "Check-ins today",
+      "reservations_today":  "Reservations today",
+      "occupancy_bar":       "Desk occupancy"
     },
     "filter": {
       "from":     "From",
@@ -883,7 +894,18 @@
     "exit_btn": "Exit kiosk mode",
     "exit_title": "Exit kiosk mode",
     "exit_hint": "Enter admin PIN",
-    "last_update": "Last update"
+    "last_update": "Last update",
+    "total": "Total",
+    "default_office": "Office",
+    "default_zone": "Desks",
+    "no_location_title": "No location specified",
+    "no_location_hint": "Launch kiosk with ?location=<id> parameter",
+    "status": {
+      "free": "Free",
+      "reserved": "Reserved",
+      "occupied": "Occupied",
+      "offline": "Offline"
+    }
   },
   "push": {
     "banner_title": "Enable push notifications",

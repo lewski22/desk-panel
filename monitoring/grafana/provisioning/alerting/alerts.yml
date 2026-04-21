@@ -1,0 +1,118 @@
+# monitoring/grafana/provisioning/alerting/alerts.yml
+#
+# Alerty TYLKO krytyczne — bez spamu przy chwilowych przerwach.
+# Reguła: Grafana Managed Alerts (nie Prometheus Alertmanager).
+# "for: 5m" powoduje że alert odpala dopiero po 5 minutach stanu krytycznego.
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: reserti-critical
+    folder: Reserti
+    interval: 1m
+    rules:
+
+      # ── Wszystkie beacony offline przy działającym gateway ──────
+      # Scenariusz: gateway żyje (heartbeat < 120s), ale żaden beacon
+      # nie odpowiedział w ciągu 5 minut — fizyczna awaria lub restart.
+      - uid: all-beacons-offline
+        title: "Wszystkie beacony offline (gateway OK)"
+        condition: C
+        data:
+          # A: beacony offline
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: reserti_beacons_total{status="offline"}
+              legendFormat: offline
+
+          # B: beacony łącznie
+          - refId: B
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: reserti_beacons_total{status="offline"} + reserti_beacons_total{status="online"}
+              legendFormat: total
+
+          # C: offline == total AND total > 0 (są beacony, ale wszystkie off)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: math
+              expression: "$A >= $B && $B > 0"
+
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: "Wszystkie {{ $labels.location_id }} beacony offline"
+          description: >
+            Wszystkie beacony w lokalizacji są offline, mimo że gateway
+            odpowiada normalnie. Sprawdź zasilanie beaconów.
+        labels:
+          severity: critical
+          team: ops
+
+      # ── Gateway offline ─────────────────────────────────────────
+      # Gateway nie wysłał heartbeatu przez > 10 minut.
+      - uid: gateway-offline
+        title: "Gateway offline > 10 min"
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: reserti_gateway_last_seen_seconds
+              legendFormat: "{{ gateway_id }}"
+
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { params: [600], type: gt }
+                  operator:  { type: and }
+                  query:     { params: [A] }
+                  reducer:   { type: last }
+                  type: query
+
+        noDataState: NoData
+        execErrState: Error
+        for: 10m
+        annotations:
+          summary: "Gateway {{ $labels.gateway_id }} offline"
+          description: >
+            Gateway nie odpowiada od ponad 10 minut.
+            Sprawdź połączenie sieciowe RPi.
+        labels:
+          severity: critical
+          team: ops
+
+      # ── Backend API niedostępny ─────────────────────────────────
+      # Brak danych z backendu przez > 3 minuty (Prometheus scrape fail).
+      - uid: backend-scrape-failed
+        title: "Backend API niedostępny"
+        condition: A
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: up{job="reserti-backend"} == 0
+              legendFormat: backend-down
+
+        noDataState: OK
+        execErrState: Error
+        for: 3m
+        annotations:
+          summary: "Backend API nie odpowiada"
+          description: >
+            Prometheus nie może pobrać metryk z backendu.
+            Sprawdź status deploymentu i logi kontenera.
+        labels:
+          severity: critical
+          team: ops
