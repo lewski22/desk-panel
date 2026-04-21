@@ -420,13 +420,13 @@ export function DashboardPage() {
           label={t('dashboard.kpi.occupied_desks')}
           value={occupiedDesks}
           sub={t('dashboard.kpi.of_active', { count: desks.length })}
-          trend={ext?.weekTrend}
-          prevValue={ext?.lastWeekCount !== undefined ? String(ext.lastWeekCount) : undefined}
+          trend={isAdmin ? ext?.weekTrend : undefined}
+          prevValue={isAdmin && ext?.lastWeekCount !== undefined ? String(ext.lastWeekCount) : undefined}
         />
         <KpiCard
           label={t('dashboard.kpi.checkins_today')}
           value={todayCheckins}
-          trend={ext?.weekTrend}
+          trend={isAdmin ? ext?.weekTrend : undefined}
         />
         <KpiCard
           label={t('dashboard.kpi.beacons_online')}
@@ -435,8 +435,8 @@ export function DashboardPage() {
         />
       </div>
 
-      {/* 7-day trend chart */}
-      <Card className="p-5 mb-4">
+      {/* 7-day trend chart — tylko dla Admin+ */}
+      {isAdmin && <Card className="p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold text-zinc-700">{t('dashboard.checkins_title')}</p>
           {ext && (
@@ -457,11 +457,11 @@ export function DashboardPage() {
             <Bar dataKey="checkins" name={t('dashboard.checkins')} fill={ACCENT} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
-      </Card>
+      </Card>}
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
-        <HourlyChart hourly={ext?.hourly} />
+      <div className={`grid grid-cols-1 gap-4 mb-4 ${isAdmin ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'}`}>
+        {isAdmin && <HourlyChart hourly={ext?.hourly} />}
 
         {/* Zone occupancy */}
         <Card className="p-5">
@@ -488,8 +488,8 @@ export function DashboardPage() {
         <IssuesWidget locationId={locationId} />
       </div>
 
-      {/* Bottom row: Top desks + Methods */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Bottom row: Top desks + Methods — tylko dla Admin+ */}
+      {isAdmin && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.top.title')}</p>
           <div className="space-y-2">
@@ -544,7 +544,7 @@ export function DashboardPage() {
             <EmptyState icon="📊" title={t('dashboard.no_data')} />
           )}
         </Card>
-      </div>
+      </div>}
     </div>
   );
 }

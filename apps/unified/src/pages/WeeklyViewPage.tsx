@@ -37,11 +37,11 @@ const STATUS_CONFIG = {
   unknown:  { icon: '',   bg: 'bg-zinc-50',     text: 'text-zinc-300',    title: 'Brak danych' },
 };
 
-function StatusCell({ status, isToday }: { status: string; isToday: boolean }) {
+function StatusCell({ status, isToday, isSelected }: { status: string; isToday: boolean; isSelected?: boolean }) {
   const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unknown;
   return (
     <td className={`px-2 py-3 text-center border-l border-zinc-100 transition-colors ${
-      isToday ? 'bg-[#B53578]/5' : ''
+      isSelected ? 'bg-[#B53578]/10' : isToday ? 'bg-[#B53578]/5' : ''
     }`}>
       <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm ${cfg.bg} ${cfg.text}`}
         title={cfg.title}>
@@ -91,6 +91,10 @@ export function WeeklyViewPage() {
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
   const [search, setSearch]         = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'office' | 'reserved'>('all');
+  const [selectedDay, setSelectedDay]   = useState<string | null>(null);
+
+  const today = new Date().toISOString().split('T')[0];
 
   // Załaduj lokalizacje
   useEffect(() => {
@@ -108,34 +112,45 @@ export function WeeklyViewPage() {
     setLoading(true);
     setError(null);
     appApi.locations.attendance(locationId, week)
-      .then(setData)
+      .then(d => { setData(d); setSelectedDay(null); })
       .catch(e => setError(e.message ?? t('common.error')))
       .finally(() => setLoading(false));
   }, [locationId, week]);
 
-  const today = new Date().toISOString().split('T')[0];
-
-  // Filtrowanie userów po nazwie
+  // Filtrowanie: po nazwie + po statusie w wybranym dniu
   const filteredRows = useMemo(() => {
     if (!data?.rows) return [];
-    if (!search.trim()) return data.rows;
-    const q = search.toLowerCase();
-    return data.rows.filter((r: any) =>
-      `${r.user.firstName} ${r.user.lastName}`.toLowerCase().includes(q)
-    );
-  }, [data?.rows, search]);
+    let rows = data.rows;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter((r: any) =>
+        `${r.user.firstName} ${r.user.lastName}`.toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter !== 'all' && selectedDay) {
+      rows = rows.filter((r: any) => {
+        const dayData = r.days.find((d: any) => d.date === selectedDay);
+        const status = dayData?.status ?? 'unknown';
+        if (statusFilter === 'office')   return status === 'office';
+        if (statusFilter === 'reserved') return status === 'reserved' || status === 'office';
+        return true;
+      });
+    }
+    return rows;
+  }, [data?.rows, search, statusFilter, selectedDay]);
 
-  // Statystyki dziś
-  const todayStats = useMemo(() => {
+  // Statystyki dla wybranego dnia (lub dziś)
+  const focusDay = selectedDay ?? today;
+  const dayStats = useMemo(() => {
     if (!data?.rows) return { office: 0, total: 0 };
-    const todayRows = data.rows.map((r: any) =>
-      r.days.find((d: any) => d.date === today)?.status ?? 'unknown'
+    const statuses = data.rows.map((r: any) =>
+      r.days.find((d: any) => d.date === focusDay)?.status ?? 'unknown'
     );
     return {
-      office: todayRows.filter((s: string) => s === 'office' || s === 'reserved').length,
+      office: statuses.filter((s: string) => s === 'office' || s === 'reserved').length,
       total:  data.rows.length,
     };
-  }, [data?.rows, today]);
+  }, [data?.rows, focusDay]);
 
   const isCurrentWeek = week === currentIsoWeek();
 
@@ -147,6 +162,7 @@ export function WeeklyViewPage() {
           <h1 className="text-xl font-semibold text-zinc-800">{t('weekly.title')}</h1>
           <p className="text-sm text-zinc-400 mt-0.5">{t('weekly.subtitle')}</p>
         </div>
+
         <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
           <LocationPicker locations={locations} value={locationId} onChange={setLocationId} />
           {/* Week navigator */}
@@ -166,28 +182,36 @@ export function WeeklyViewPage() {
         </div>
       </div>
 
-      {/* KPI dziś */}
+      {/* KPI — wybrany dzień */}
       {data && (
-        <div className="flex gap-3 mb-4">
+        <div className="flex flex-wrap gap-3 mb-4">
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
             <span className="text-xl">🏢</span>
             <div>
-              <p className="text-lg font-bold font-mono text-emerald-700">{todayStats.office}</p>
-              <p className="text-[10px] text-emerald-500 uppercase tracking-wide">{t('weekly.in_office_today')}</p>
+              <p className="text-lg font-bold font-mono text-emerald-700">{dayStats.office}</p>
+              <p className="text-[10px] text-emerald-500 uppercase tracking-wide">
+                {selectedDay && selectedDay !== today ? t('weekly.in_office_day') : t('weekly.in_office_today')}
+              </p>
             </div>
           </div>
           <div className="bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2.5 flex items-center gap-2.5">
             <span className="text-xl">👥</span>
             <div>
-              <p className="text-lg font-bold font-mono text-zinc-700">{todayStats.total}</p>
+              <p className="text-lg font-bold font-mono text-zinc-700">{dayStats.total}</p>
               <p className="text-[10px] text-zinc-400 uppercase tracking-wide">{t('weekly.team_size')}</p>
             </div>
           </div>
+          {selectedDay && (
+            <button onClick={() => { setSelectedDay(null); setStatusFilter('all'); }}
+              className="text-xs text-[#B53578] px-3 py-2 rounded-xl border border-[#B53578]/20 hover:bg-[#B53578]/5 transition-colors self-center">
+              {t('weekly.clear_filter')}
+            </button>
+          )}
         </div>
       )}
 
-      {/* Search */}
-      <div className="mb-3">
+      {/* Search + Status filter */}
+      <div className="flex flex-wrap gap-2 mb-3">
         <input
           type="search"
           value={search}
@@ -195,6 +219,20 @@ export function WeeklyViewPage() {
           placeholder={t('weekly.search_placeholder')}
           className="w-full sm:w-64 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
         />
+        {selectedDay && (
+          <div className="flex gap-1">
+            {(['all', 'office', 'reserved'] as const).map(f => (
+              <button key={f} onClick={() => setStatusFilter(f)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                  statusFilter === f
+                    ? 'bg-[#B53578] border-[#B53578] text-white'
+                    : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
+                }`}>
+                {t(`weekly.filter.${f}`)}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading && <Spinner />}
@@ -212,13 +250,21 @@ export function WeeklyViewPage() {
                     {t('weekly.person')}
                   </th>
                   {data.days.map((d: any) => {
-                    const isToday = d.date === today;
+                    const isToday    = d.date === today;
+                    const isSelected = selectedDay === d.date;
                     return (
                       <th key={d.date}
-                        className={`py-3 px-2 text-center text-xs font-semibold uppercase tracking-wider border-l border-zinc-100 ${
-                          isToday ? 'text-[#B53578] bg-[#B53578]/5' : 'text-zinc-400'
-                        }`}>
+                        onClick={() => setSelectedDay(prev => prev === d.date ? null : d.date)}
+                        className={`py-3 px-2 text-center text-xs font-semibold uppercase tracking-wider border-l border-zinc-100 cursor-pointer select-none transition-colors ${
+                          isSelected
+                            ? 'text-[#B53578] bg-[#B53578]/10'
+                            : isToday
+                              ? 'text-[#B53578] bg-[#B53578]/5 hover:bg-[#B53578]/10'
+                              : 'text-zinc-400 hover:bg-zinc-50'
+                        }`}
+                        title={t('weekly.click_to_filter')}>
                         {d.label}
+                        {isSelected && <span className="block text-[8px] font-normal normal-case">▼</span>}
                       </th>
                     );
                   })}
@@ -242,7 +288,9 @@ export function WeeklyViewPage() {
                       </div>
                     </td>
                     {row.days.map((day: any) => (
-                      <StatusCell key={day.date} status={day.status} isToday={day.date === today} />
+                      <StatusCell key={day.date} status={day.status}
+                        isToday={day.date === today}
+                        isSelected={selectedDay === day.date} />
                     ))}
                   </tr>
                 ))}
@@ -250,16 +298,16 @@ export function WeeklyViewPage() {
             </table>
           </div>
 
-          {/* Mobile — tylko dzisiaj + swipe hint */}
+          {/* Mobile — wybrany dzień lub dziś */}
           <div className="md:hidden space-y-2">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                {data.days.find((d: any) => d.date === today)?.label ?? data.days[0]?.label}
+                {data.days.find((d: any) => d.date === focusDay)?.label ?? data.days[0]?.label}
               </p>
               <p className="text-[10px] text-zinc-400">{t('weekly.mobile_hint')}</p>
             </div>
             {filteredRows.map((row: any) => {
-              const todayDay = row.days.find((d: any) => d.date === today) ?? row.days[0];
+              const todayDay = row.days.find((d: any) => d.date === focusDay) ?? row.days[0];
               const cfg = STATUS_CONFIG[todayDay?.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unknown;
               return (
                 <div key={row.user.id} className="flex items-center justify-between bg-white border border-zinc-100 rounded-xl px-4 py-3">

@@ -72,7 +72,7 @@
       "owner": "Operator Panel",
       "notification_rules": "Notification Rules",
       "change_password": "Change Password",
-      "weekly": "Calendar",
+      "weekly": "Attendance",
       "resources": "Rooms & Parking",
       "visitors": "Visitors",
       "subscription": "Subscription"
@@ -810,15 +810,23 @@
     "discard_confirm": "You have unsaved changes. Discard them?"
   },
   "weekly": {
-    "title": "Who's in the office",
-    "subtitle": "Weekly team attendance view",
+    "title": "Team Attendance",
+    "subtitle": "Who is and will be in the office — weekly view",
     "today_week": "This week",
     "in_office_today": "In office today",
+    "in_office_day": "In office this day",
     "team_size": "Total",
     "search_placeholder": "Search person...",
     "person": "Person",
-    "mobile_hint": "Today's view",
+    "mobile_hint": "Selected day view",
     "no_users": "No users found",
+    "clear_filter": "Clear filter",
+    "click_to_filter": "Click to filter by this day",
+    "filter": {
+      "all": "All",
+      "office": "In office",
+      "reserved": "With reservation"
+    },
     "status": {
       "office": "In office",
       "reserved": "Reservation",

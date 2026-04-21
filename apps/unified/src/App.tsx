@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { appApi }              from './api/client';
 import { AppLayout }           from './components/layout/AppLayout';
 import { LoginPage }           from './pages/LoginPage';
@@ -51,6 +51,17 @@ function Guard({ user, allowed, children }: { user: any; allowed: string[]; chil
   return <>{children}</>;
 }
 
+// SubscriptionExpiredGate — blokuje nawigację gdy plan wygasł
+// Dozwolone: /subscription, /change-password
+const ALLOWED_WHEN_EXPIRED = ['/subscription', '/change-password'];
+function SubscriptionExpiredGate({ status, children }: { status?: string | null; children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  if (status === 'expired' && !ALLOWED_WHEN_EXPIRED.some(p => pathname.startsWith(p))) {
+    return <Navigate to="/subscription" replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   const [user, setUser] = useState<any>(() => {
     const u = appApi.auth.user();
@@ -93,6 +104,7 @@ export default function App() {
             ? <Navigate to="/login" replace />
             : (
               <AppLayout user={user} onLogout={handleLogout}>
+                <SubscriptionExpiredGate status={user.subscriptionStatus}>
                 <Routes>
                   {/* Redirect root → home per rola */}
                   <Route path="/" element={<Navigate to={homeFor(user.role)} replace />} />
@@ -165,6 +177,7 @@ export default function App() {
                   {/* Fallback */}
                   <Route path="*" element={<Navigate to={homeFor(user.role)} replace />} />
                 </Routes>
+                </SubscriptionExpiredGate>
               </AppLayout>
             )
         } />

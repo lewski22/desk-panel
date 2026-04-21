@@ -13,17 +13,17 @@
 
 ### Zgłoszenia
 
-- [ ] **Wyłączony moduł Parking powinien zniknąć z panelu Super Admina.**  
-  W `AppLayout.tsx` filtr `hasModule()` (~L134–136) filtruje elementy nav tylko gdy `item.module` jest ustawione. Pozycje bez `module` (np. `/organizations`) zawsze są widoczne. Sprawdzić, czy Parking ma poprawnie przypisany `module: 'PARKING'` i czy Super Admin nie jest wyłączony z filtrowania modułów.
+- [x] **Wyłączony moduł Parking powinien zniknąć z panelu Super Admina.**  
+  `useOrgModules.ts` — usunięto bypass dla SUPER_ADMIN (pozostał tylko OWNER). SA respektuje teraz `enabledModules` swojej org jak inne role. Moduł Parking znika z tab-baru mapy gdy wyłączony. *(2026-04-21)*
 
-- [ ] **Możliwość wyłączenia modułu Equipment.**  
-  Typ `AppModule` (L25) nie zawiera `'EQUIPMENT'`. Dodać wartość do union type i obsłużyć w `organizations.service.ts` oraz `NAV_GROUPS`.
+- [x] **Możliwość wyłączenia modułu Equipment.**  
+  Dodano `'EQUIPMENT'` do `AppModule` w `useOrgModules.ts`. Dodano pozycję Equipment (`🔧 Wyposażenie`) do `MODULE_DEFS` w `OwnerPage.tsx` — Owner może teraz włączyć/wyłączyć moduł Equipment per organizacja. *(2026-04-21)*
 
-- [ ] **Ustawienie strefy czasowej dla każdego biura osobno.**  
-  Model `Location` posiada pole `timezone` (użyte w `checkins.service.ts` L161). Brakuje UI do ustawiania strefy per biuro oraz propagacji do raportów.
+- [x] **Ustawienie strefy czasowej dla każdego biura osobno.**  
+  UI już istniało w `OrganizationsPage.tsx` — select `timezone` w modalu edycji lokalizacji (domyślnie `Europe/Warsaw`). Pole zapisywane przez `locations.service.ts::update()`. *(weryfikacja 2026-04-21)*
 
-- [ ] **Co się stanie, gdy wygaśnie konto (subskrypcja)?**  
-  Zdefiniować i zaimplementować zachowanie systemu po wygaśnięciu — blokada panelu, komunikat, grace period. Sprawdzić `backend/src/modules/subscriptions/`.
+- [x] **Co się stanie, gdy wygaśnie konto (subskrypcja)?**  
+  `App.tsx` — dodano `SubscriptionExpiredGate`: gdy `subscriptionStatus === 'expired'`, wszystkie chronione route przekierowują do `/subscription`. Dozwolone bez subskrypcji: `/subscription`, `/change-password`. Baner w `AppLayout` nadal informuje o wygaśnięciu. *(2026-04-21)*
 
 ---
 
@@ -38,11 +38,11 @@
 - [ ] **Poprawka UI sidebar — lepsze formatowanie i wygląd.**  
   Przeprojektować wizualnie sidebar (grupy, aktywne elementy, ikony, spacje, mobilne zwijanie).
 
-- [ ] **STAFF — po co widzi ilość wolnych/zajętych biurek?**  
-  Rozważyć usunięcie wskaźnika free/occupied z widoku STAFF lub przeniesienie do Dashboard.
+- [x] **STAFF — po co widzi ilość wolnych/zajętych biurek?**  
+  `DashboardPage.tsx` — dla ról innych niż ADMIN: usunięto `trend` prop z KPI kart (brak badge tygodniowego), ukryto sekcję "7-day trend chart", "Top biurka" i "Metody check-in". STAFF widzi: KPI bieżące (zajętość, check-iny), strefowy wykres zajętości, widget "Problemy dnia". *(2026-04-21)*
 
-- [ ] **W wersji mobile zweryfikować wszystkie odnośniki do podstron** (np. `/devices` nie prowadzi nigdzie).  
-  Sprawdzić `BottomNav.tsx` oraz routing — brakujące lub niepodłączone linki na mobile.
+- [x] **W wersji mobile zweryfikować wszystkie odnośniki do podstron** (np. `/devices` nie prowadzi nigdzie).  
+  `BottomNav.tsx` — STAFF tab zmieniony: zastąpiono `/devices` zakładką `/my-reservations` (z badge'em). Tabs STAFF: Mapa / Moje rez. / Dashboard / Rezerwacje. Urządzenia dostępne przez hamburger menu. Wszystkie linki zweryfikowane. *(2026-04-21)*
 
 ---
 
@@ -186,11 +186,16 @@
 
 ### Zgłoszenia
 
-- [ ] **„Kto jest w biurze" — zmienić nazwę zakładki / widoku.**  
-  Rozważyć etykietę „Obecności", „Biuro dzisiaj" lub „Kalendarz zespołu". Zaktualizować klucze i18n.
+- [x] **„Kto jest w biurze" — zmienić nazwę zakładki / widoku.**  
+  Zakładka przemianowana na „Obecności" (pl) / „Attendance" (en). Tytuł strony: „Obecności biurowe" / „Team Attendance". *(2026-04-21)*
 
-- [ ] **Popracować nad działaniem widoku „kto jest w biurze".**  
-  Zdefiniować dokładniejsze wymagania (filtrowanie po dniu, biurze, osobie) i zaimplementować.
+- [x] **Popracować nad działaniem widoku „kto jest w biurze".**  
+  `WeeklyViewPage.tsx` — dodano: *(2026-04-21)*
+  - Kliknięcie w nagłówek dnia (tabela desktop) filtruje dane do wybranego dnia + podświetla kolumnę
+  - Filtry statusu gdy dzień wybrany: Wszyscy / W biurze / Z rezerwacją
+  - KPI pod nagłówkiem pokazuje dane wybranego dnia (nie tylko dziś)
+  - Przycisk "Wyczyść filtr" resetuje wybór dnia i statusu
+  - Mobile: widok automatycznie pokazuje wybrany dzień
 
 ---
 

@@ -88,6 +88,7 @@ const MODULE_DEFS = [
   { id: 'PARKING',     icon: '🅿️', label: 'Parking',           desc: 'Miejsca parkingowe — rezerwacja i status' },
   { id: 'FLOOR_PLAN',  icon: '🗺',  label: 'Plan piętra',       desc: 'Interaktywna mapa SVG z pozycjami biurek' },
   { id: 'WEEKLY_VIEW', icon: '📅', label: 'Widok tygodniowy',  desc: 'Kto jest w biurze — widok kalendarza tygodnia' },
+  { id: 'EQUIPMENT',   icon: '🔧', label: 'Wyposażenie',        desc: 'Ewidencja i rezerwacja sprzętu biurowego' },
 ] as const;
 
 function ModuleToggle({

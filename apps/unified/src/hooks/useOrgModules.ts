@@ -8,7 +8,7 @@
  */
 import { useMemo } from 'react';
 
-export type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW';
+export type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT';
 
 /**
  * Odczytuje enabledModules z danych zalogowanego użytkownika / org.
@@ -23,8 +23,9 @@ export function useOrgModules() {
       const user = JSON.parse(localStorage.getItem('app_user') ?? 'null');
       if (!user) return { isEnabled: () => true, enabledModules: [] as string[] };
 
-      // OWNER i SUPER_ADMIN mają dostęp do wszystkiego
-      if (user.role === 'OWNER' || user.role === 'SUPER_ADMIN') {
+      // OWNER ma dostęp do wszystkiego (platforma operatorska)
+      // SUPER_ADMIN respektuje enabledModules swojej organizacji jak inne role
+      if (user.role === 'OWNER') {
         return { isEnabled: (_: AppModule) => true, enabledModules: [] as string[] };
       }
 

@@ -72,7 +72,7 @@
       "owner": "Panel Operatora",
       "notification_rules": "Reguły powiadomień",
       "change_password": "Zmień hasło",
-      "weekly": "Kalendarz",
+      "weekly": "Obecności",
       "resources": "Sale i Parking",
       "visitors": "Goście",
       "subscription": "Subskrypcja"
@@ -810,15 +810,23 @@
     "discard_confirm": "Masz niezapisane zmiany. Na pewno odrzucić?"
   },
   "weekly": {
-    "title": "Kto jest w biurze",
-    "subtitle": "Tygodniowy widok obecności zespołu",
+    "title": "Obecności biurowe",
+    "subtitle": "Kto jest i będzie w biurze — widok tygodniowy",
     "today_week": "Ten tydzień",
     "in_office_today": "W biurze dziś",
+    "in_office_day": "W biurze tego dnia",
     "team_size": "Wszystkich",
     "search_placeholder": "Szukaj osoby...",
     "person": "Osoba",
-    "mobile_hint": "Widok na dziś",
+    "mobile_hint": "Widok na wybrany dzień",
     "no_users": "Brak użytkowników",
+    "clear_filter": "Wyczyść filtr",
+    "click_to_filter": "Kliknij, aby filtrować po tym dniu",
+    "filter": {
+      "all": "Wszyscy",
+      "office": "W biurze",
+      "reserved": "Z rezerwacją"
+    },
     "status": {
       "office": "W biurze",
       "reserved": "Rezerwacja",

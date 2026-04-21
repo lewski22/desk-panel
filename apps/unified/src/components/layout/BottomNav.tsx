@@ -30,10 +30,10 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
     { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          module: 'WEEKLY_VIEW' },
   ],
   STAFF: [
-    { to: '/map',          icon: IconFloorPlan, labelKey: 'layout.nav.map',         module: 'DESKS' },
-    { to: '/reservations', icon: IconFolder,    labelKey: 'layout.nav.reservations', module: 'DESKS' },
-    { to: '/dashboard',    icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
-    { to: '/devices',      icon: IconBeacon,    labelKey: 'layout.nav.devices' },
+    { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
+    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
+    { to: '/dashboard',       icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
+    { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',   module: 'DESKS' },
   ],
   OFFICE_ADMIN: [
     { to: '/map',          icon: IconFloorPlan, labelKey: 'layout.nav.map',         module: 'DESKS' },
