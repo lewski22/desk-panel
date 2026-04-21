@@ -249,9 +249,15 @@ export class CheckinsService {
 
     if (!reservation) throw new NotFoundException('Brak aktywnej rezerwacji');
 
-    const checkin = await this.prisma.checkin.create({
-      data: { reservationId: reservation.id, deskId, userId, method: CheckinMethod.MANUAL },
-    });
+    const [checkin] = await this.prisma.$transaction([
+      this.prisma.checkin.create({
+        data: { reservationId: reservation.id, deskId, userId, method: CheckinMethod.MANUAL },
+      }),
+      this.prisma.reservation.update({
+        where: { id: reservation.id },
+        data:  { checkedInAt: now, checkedInMethod: 'MANUAL' },
+      }),
+    ]);
 
     await this.logEvent(EventType.CHECKIN_MANUAL, { deskId, userId, checkinId: checkin.id });
 

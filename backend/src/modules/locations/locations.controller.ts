@@ -67,7 +67,10 @@ export class LocationsController {
 
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  create(@Body() dto: CreateLocationDto) {
+  create(@Body() dto: CreateLocationDto, @Request() req: any) {
+    if (req.user.role !== UserRole.SUPER_ADMIN && req.user.role !== 'OWNER') {
+      dto = { ...dto, organizationId: req.user.organizationId };
+    }
     return this.svc.create(dto);
   }
 

@@ -13,6 +13,7 @@ import { DeskMap }          from '../components/desks/DeskMap';
 import { FloorPlanView }    from '../components/floor-plan/FloorPlanView';
 import { ResourceCard }     from '../components/desks/ResourceCard';
 import { BookingModal }     from '../components/desks/BookingModal';
+import { ReservationModal } from '../components/desks/ReservationModal';
 import { appApi }           from '../api/client';
 import { EmptyState }       from '../components/ui';
 import { useOrgModules }    from '../hooks/useOrgModules';
@@ -94,6 +95,7 @@ export function DeskMapPage() {
     (localStorage.getItem('desk_view_mode') as ViewMode) ?? 'cards'
   );
   const [reservationTarget, setReservationTarget] = useState<any>(null);
+  const [reservationUsers,  setReservationUsers]  = useState<any[]>([]);
 
   // ── Sprint E2: Resources (Sale / Parking) ─────────────────
   type MapTab = 'desks' | 'rooms' | 'parking';
@@ -105,9 +107,16 @@ export function DeskMapPage() {
   const userRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
   }, []);
-  const isAdmin  = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(userRole);
-  const isStaff  = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
+  const isAdmin   = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(userRole);
+  const isStaff   = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
+  const isEndUser = userRole === 'END_USER';
   const { isEnabled } = useOrgModules();
+
+  useEffect(() => {
+    if (!isEndUser) {
+      appApi.users.list().then(setReservationUsers).catch(() => {});
+    }
+  }, [isEndUser]);
 
   useEffect(() => {
     appApi.locations.listAll()
@@ -230,6 +239,7 @@ export function DeskMapPage() {
           onRefresh={refetch}
           userRole={userRole}
           showAvatars={isStaff}
+          users={reservationUsers}
         />
       )}
 
@@ -256,12 +266,24 @@ export function DeskMapPage() {
         </div>
       )}
 
-      {/* Booking Modal */}
+      {/* Booking Modal — Sale / Parking */}
       {bookTarget && (
         <BookingModal
           resource={bookTarget}
           onClose={() => setBookTarget(null)}
           onBooked={() => { setBookTarget(null); }}
+        />
+      )}
+
+      {/* Reservation Modal — Biurka z FloorPlanView */}
+      {reservationTarget && (
+        <ReservationModal
+          desk={reservationTarget}
+          isEndUser={isEndUser}
+          users={reservationUsers}
+          limits={locationLimits}
+          onClose={() => setReservationTarget(null)}
+          onSuccess={() => { setReservationTarget(null); refetch(); }}
         />
       )}
     </div>

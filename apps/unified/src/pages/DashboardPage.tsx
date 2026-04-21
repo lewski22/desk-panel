@@ -31,9 +31,21 @@ function useRole() {
 }
 
 function useLocationId() {
-  return useMemo(() =>
-    localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? 'seed-location-01',
-  []);
+  const [locationId, setLocationId] = useState<string>(
+    localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? '',
+  );
+  useEffect(() => {
+    if (locationId) return;
+    appApi.locations.listAll()
+      .then(locs => {
+        if (locs.length > 0) {
+          localStorage.setItem('desks_loc', locs[0].id);
+          setLocationId(locs[0].id);
+        }
+      })
+      .catch(() => {});
+  }, [locationId]);
+  return locationId;
 }
 
 // ── Trend Badge ───────────────────────────────────────────────
@@ -324,6 +336,7 @@ export function DashboardPage() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const load = useCallback(async (silent = false) => {
+    if (!locationId) return;
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {

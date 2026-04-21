@@ -24,7 +24,7 @@ export class ReservationsController {
   @Post() @HttpCode(HttpStatus.CREATED) @ApiOperation({summary:'Create reservation'})
   create(@Body() dto: any, @Request() req: any) {
     const actorOrgId=req.user.role==='OWNER'?undefined:req.user.organizationId;
-    return this.svc.create(req.user.id,dto,actorOrgId);
+    return this.svc.create(req.user.id,dto,actorOrgId,req.user.role);
   }
   @Post('recurring') @HttpCode(HttpStatus.CREATED) @ApiOperation({summary:'Create recurring series'})
   createRecurring(@Body() body: any, @Request() req: any) {

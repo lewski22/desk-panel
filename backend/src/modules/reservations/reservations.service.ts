@@ -106,7 +106,11 @@ export class ReservationsService {
     });
   }
 
-  async create(actorId: string, dto: CreateReservationDto, actorOrgId?: string) {
+  async create(actorId: string, dto: CreateReservationDto, actorOrgId?: string, actorRole?: string) {
+    const staffRoles = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'];
+    if ((dto as any).targetUserId && !staffRoles.includes(actorRole ?? '')) {
+      throw new ForbiddenException('Nie masz uprawnień do rezerwacji dla innego użytkownika');
+    }
     const userId = (dto as any).targetUserId ?? actorId;
 
     const desk = await this.prisma.desk.findUnique({

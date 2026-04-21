@@ -37,9 +37,15 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole }: {
   const canBook = desk.isOnline && !desk.isOccupied && desk.status === 'ACTIVE';
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
+  const px = desk.posX ?? 50;
+  const py = desk.posY ?? 50;
+  const popupStyle: React.CSSProperties = px > 55
+    ? { top: `${py}%`, right: `${100 - px + 2}%`, transform: 'translateY(-50%)' }
+    : { top: `${py}%`, left: `${px + 2}%`, transform: 'translateY(-50%)' };
+
   return (
     <div className="absolute z-30 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 w-60"
-      style={{ top: 20, right: 20 }}
+      style={popupStyle}
       onClick={e => e.stopPropagation()}>
 
       <div className="flex items-start justify-between mb-3">
@@ -207,7 +213,7 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
           <DeskInfoCard
             desk={selected}
             onClose={() => setSel(null)}
-            onReserve={onReserve ? () => { setSel(null); onReserve(selected); } : undefined}
+            onReserve={onReserve ? () => { const d = selected; setSel(null); onReserve(d); } : undefined}
             userRole={userRole}
           />
         )}

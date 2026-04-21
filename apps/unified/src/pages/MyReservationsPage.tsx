@@ -122,11 +122,12 @@ function ReservationCard({
 
 function canCheckin(r: any): boolean {
   if (r.status !== 'CONFIRMED') return false;
-  if (r.checkedInAt) return false; // already checked in
-  const now     = Date.now();
-  const start   = new Date(r.startTime).getTime();
-  const end     = new Date(r.endTime).getTime();
-  const grace   = 15 * 60 * 1000; // 15 min before start
+  if (r.checkedInAt) return false;
+  if (r.checkin && !r.checkin.checkedOutAt) return false;
+  const now   = Date.now();
+  const start = new Date(r.startTime).getTime();
+  const end   = new Date(r.endTime).getTime();
+  const grace = 15 * 60 * 1000;
   return now >= start - grace && now <= end;
 }
 

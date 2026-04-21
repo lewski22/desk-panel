@@ -246,7 +246,7 @@ export function OrganizationsPage() {
 
   const openCreate = () => {
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
-      organizationId: isSuperAdmin ? '' : (user?.organizationId ?? '') });
+      organizationId: user?.organizationId ?? '' });
     setErr('');
     setModal('create');
   };
@@ -375,20 +375,6 @@ export function OrganizationsPage() {
       >
         {err && <p className="mb-3 text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
         <div className="flex flex-col gap-3">
-          {/* Super Admin wybiera firmę */}
-          {isSuperAdmin && modal === 'create' && (
-            <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Firma</label>
-              <select
-                value={form.organizationId}
-                onChange={e => setForm(f => ({ ...f, organizationId: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
-              >
-                <option value="">— wybierz firmę —</option>
-                {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-              </select>
-            </div>
-          )}
           <Input label="Nazwa biura" value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="Warszawa HQ" />
