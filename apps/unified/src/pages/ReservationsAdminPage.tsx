@@ -96,12 +96,12 @@ export function ReservationsAdminPage() {
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.date')}</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.status')}</label>
           <select value={status} onChange={e => setStatus(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
+            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
             <option value="">{t('reservations.filter.all')}</option>
             {statuses.map(s => (
               <option key={s} value={s}>{t(`reservations.status.${s.toLowerCase()}`)}</option>
@@ -119,7 +119,7 @@ export function ReservationsAdminPage() {
           const count = res.filter(r => r.status === s).length;
           return (
             <button key={s} onClick={() => setStatus(status === s ? '' : s)}
-              className={`border rounded-xl p-3 text-center transition-all ${status === s ? 'border-[#B53578] bg-[#B53578]/5' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
+              className={`border rounded-xl p-3 text-center transition-all ${status === s ? 'border-brand bg-brand/5' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
               <p className="text-lg font-bold font-mono text-zinc-700">{count}</p>
               <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{t(`reservations.status.${s.toLowerCase()}`)}</p>
             </button>
@@ -129,8 +129,8 @@ export function ReservationsAdminPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-[#B53578]/5 border border-[#B53578]/20 rounded-xl">
-          <span className="text-sm font-medium text-[#B53578]">
+        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-brand/5 border border-brand/20 rounded-xl">
+          <span className="text-sm font-medium text-brand">
             {t('reservations.selected', { count: selected.size })}
           </span>
           <Btn variant="danger" loading={bulkLoading} onClick={bulkCancel}>
@@ -145,7 +145,7 @@ export function ReservationsAdminPage() {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : sorted.length === 0 ? (
         <EmptyState
@@ -154,7 +154,7 @@ export function ReservationsAdminPage() {
           sub={t('reservations.none_filters_sub')}
           action={
             <button onClick={() => setStatus('')}
-              className="text-sm text-[#B53578] underline mt-2">{t('reservations.show_all')}</button>
+              className="text-sm text-brand underline mt-2">{t('reservations.show_all')}</button>
           }
         />
       ) : (
@@ -165,7 +165,7 @@ export function ReservationsAdminPage() {
                 {/* Bulk checkbox */}
                 <th className="py-2.5 px-3 w-8">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                    className="rounded border-zinc-300 text-[#B53578] focus:ring-[#B53578]/20 cursor-pointer" />
+                    className="rounded border-zinc-300 text-brand focus:ring-brand/20 cursor-pointer" />
                 </th>
                 <SortHeader field="startTime" sort={sort} onToggle={toggle}
                   className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">
@@ -194,11 +194,11 @@ export function ReservationsAdminPage() {
                 const isSelected    = selected.has(r.id);
                 return (
                   <tr key={r.id}
-                    className={`border-b border-zinc-50 group transition-colors ${isSelected ? 'bg-[#B53578]/5' : 'hover:bg-zinc-50/60'}`}>
+                    className={`border-b border-zinc-50 group transition-colors ${isSelected ? 'bg-brand/5' : 'hover:bg-zinc-50/60'}`}>
                     <td className="py-3 px-3">
                       {isCancellable && (
                         <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)}
-                          className="rounded border-zinc-300 text-[#B53578] focus:ring-[#B53578]/20 cursor-pointer" />
+                          className="rounded border-zinc-300 text-brand focus:ring-brand/20 cursor-pointer" />
                       )}
                     </td>
                     <td className="py-3 px-4 font-mono text-xs text-zinc-600 whitespace-nowrap">

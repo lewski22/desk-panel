@@ -650,6 +650,25 @@ JIT provisioning: `passwordHash = 'GOOGLE_SSO_ONLY'`, rola `END_USER`, organizat
 
 ## 6. FRONTEND (apps/unified) — STAN
 
+### Design system (2026-04-21)
+
+**Kolor brand** — jeden token w dwóch miejscach:
+- `tailwind.config.js`: `colors.brand.DEFAULT = '#B53578'`, `colors.brand.hover = '#9d2d66'`
+- `src/index.css`: `:root { --brand: #B53578; --brand-hover: #9d2d66; }`
+- Użycie: klasy Tailwind `bg-brand`, `text-brand`, `hover:bg-brand-hover` itp.; inline style `'var(--brand)'`
+- Zmiana koloru brand = jedna linijka w `index.css` lub `tailwind.config.js`
+
+**Paleta statusów biurek / urządzeń** — spójna we wszystkich komponentach:
+
+| Status | Kolor | Hex | Pliki |
+|--------|-------|-----|-------|
+| free / wolne | emerald | `#10b981` | DeskPin, DeskToken, DeskCard, KioskPage, DashboardPage |
+| reserved / zarezerwowane | amber | `#f59e0b` | j.w. |
+| occupied / zajęte | red | `#ef4444` | j.w. |
+| offline | zinc | `#a1a1aa` | j.w. |
+
+**i18n** — 100% pokrycie: zero hardkodowanych stringów PL/EN w kodzie. Wszystkie klucze w `locales/pl/translation.json` i `locales/en/translation.json`.
+
 ### Strony
 
 ```
@@ -907,5 +926,6 @@ user@demo-corp.pl     User1234!     END_USER
 | v0.12.2 | ✅ | Tech Debt (VAPID, Floor Plan CDN, Playwright, NTP) |
 | v0.15.1 | ✅ | Sprint K (AI Recommendations + Insights) |
 | **v0.17.0** | ✅ **2026-04-18** | **Sprint F (Integrations) + Teams App + Graph Sync + Google SSO** |
+| **v0.17.1** | ✅ **2026-04-21** | **Faza 4: i18n 100% + status colors (amber/red) + brand token centralizacja** |
 | v0.18.0 | Q4 2026 | Sprint L (Public Booking + Stripe) |
 | v1.0.0 | Q1 2027 | Self-hosted + ISO 27001 |

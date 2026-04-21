@@ -168,7 +168,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
       onClick={() => onChange(!value)}
       style={{
         width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
-        background: value ? '#B53578' : 'var(--color-border-secondary)',
+        background: value ? 'var(--brand)' : 'var(--color-border-secondary)',
         position: 'relative', flexShrink: 0, transition: 'background 0.2s',
       }}
     >
@@ -209,7 +209,7 @@ const styles: Record<string, React.CSSProperties> = {
   toggleRow:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '10px 0', borderTop: '0.5px solid var(--color-border-tertiary)', marginBottom: 14 },
   toggleLabel:  { fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' },
   toggleHint:   { fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 },
-  btnPrimary:   { fontSize: 13, padding: '7px 18px', borderRadius: 8, border: 'none', background: '#B53578', color: '#fff', cursor: 'pointer', fontWeight: 500 },
+  btnPrimary:   { fontSize: 13, padding: '7px 18px', borderRadius: 8, border: 'none', background: 'var(--brand)', color: '#fff', cursor: 'pointer', fontWeight: 500 },
   btnSecondary: { fontSize: 13, padding: '7px 16px', borderRadius: 8, border: '0.5px solid var(--color-border-secondary)', background: 'transparent', color: 'var(--color-text-primary)', cursor: 'pointer' },
 };
 

@@ -149,7 +149,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
-                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-[#B53578] transition-colors" title="Kopiuj ID">⎘</button>
+                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-brand transition-colors" title="Kopiuj ID">⎘</button>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
@@ -209,7 +209,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       <Modal open={modal === 'install'} title="Dodaj gateway" onClose={() => setModal(null)}>
         {busy && !tokenResult && (
           <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
           </div>
         )}
         {tokenResult && (
@@ -655,7 +655,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                     </code>
                     <button
                       onClick={() => navigator.clipboard.writeText(d.id)}
-                      className="text-zinc-400 hover:text-[#B53578] transition-colors"
+                      className="text-zinc-400 hover:text-brand transition-colors"
                       title={t('common.copy')}
                     >⎘</button>
                   </div>
@@ -910,7 +910,7 @@ export function ProvisioningPage() {
               <select
                 value={activeLocId}
                 onChange={e => setLoc(e.target.value)}
-                className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 font-medium"
+                className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 font-medium"
               >
                 {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>

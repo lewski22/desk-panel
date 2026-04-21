@@ -68,10 +68,10 @@ function EntraIDModal({ onLogin, onClose }: { onLogin: (u: any) => void; onClose
                 onChange={e => { setEmail(e.target.value); setErr(''); }}
                 onKeyDown={e => e.key === 'Enter' && checkAndProceed()}
                 placeholder={t('entra.placeholder_email')}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-all" />
             </div>
             <button onClick={checkAndProceed} disabled={busy || !email}
-              className="w-full py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+              className="w-full py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-50">
               {busy ? <span className="inline-flex items-center gap-2 justify-center">{SPIN}{t('entra.checking')}</span> : t('entra.check')}
             </button>
           </div>
@@ -130,7 +130,7 @@ export function LoginPage({ onLogin }: Props) {
           style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '48px 48px' }} />
         <div className="relative w-full max-w-sm">
           <div className="text-center mb-10">
-            <p className="text-[#B53578] font-black text-5xl leading-none tracking-tight">R</p>
+            <p className="text-brand font-black text-5xl leading-none tracking-tight">R</p>
             <p className="text-white font-bold text-xl tracking-widest mt-1">RESERTI</p>
             <p className="text-zinc-600 text-[10px] tracking-widest uppercase mt-1">Desk Management</p>
           </div>
@@ -141,15 +141,15 @@ export function LoginPage({ onLogin }: Props) {
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5 font-medium">{t('login.email')}</label>
                 <input type="email" value={email} required autoFocus onChange={e => setEmail(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-all" />
               </div>
               <div>
                 <label className="block text-xs text-zinc-400 mb-1.5 font-medium">{t('login.password')}</label>
                 <input type="password" value={password} required onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-[#B53578]/40 transition-all" />
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-3.5 py-3 sm:py-2.5 text-base sm:text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-all" />
               </div>
               <button type="submit" disabled={busy}
-                className="mt-2 w-full py-3 sm:py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] active:bg-[#8a2659] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+                className="mt-2 w-full py-3 sm:py-2.5 rounded-xl bg-brand hover:bg-brand-hover active:bg-[#8a2659] text-white font-semibold text-sm transition-colors disabled:opacity-50">
                 {busy ? <span className="inline-flex items-center gap-2 justify-center">{SPIN}{t('login.submitting')}</span> : t('login.submit')}
               </button>
             </form>

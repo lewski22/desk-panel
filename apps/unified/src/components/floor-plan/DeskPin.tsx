@@ -10,8 +10,8 @@ import { DeskPosition } from './useFloorPlanEditor';
 
 const PIN_FILL: Record<string, string> = {
   free:     '#10b981',  // emerald
-  reserved: '#0ea5e9',  // sky
-  occupied: '#6366f1',  // indigo
+  reserved: '#f59e0b',  // amber
+  occupied: '#ef4444',  // red
   offline:  '#a1a1aa',  // zinc
 };
 

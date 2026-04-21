@@ -80,7 +80,7 @@ function ReservationCard({
         onTouchEnd={handleTouchEnd}
         onClick={() => revealed && close()}
       >
-        <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-sm shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-sm shrink-0">
           {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
@@ -93,7 +93,7 @@ function ReservationCard({
             {new Date(r.endTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
           </p>
           {r.recurrenceGroupId && (
-            <p className="text-[10px] text-[#B53578] mt-0.5">↻ {t('reservations.recurring_badge')}</p>
+            <p className="text-[10px] text-brand mt-0.5">↻ {t('reservations.recurring_badge')}</p>
           )}
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
@@ -103,7 +103,7 @@ function ReservationCard({
               <button
                 onClick={() => onCheckin(r.id)}
                 disabled={checkingIn === r.id}
-                className="text-xs px-3 py-1.5 rounded-xl bg-[#B53578] text-white hover:bg-[#9d2d67] transition-colors font-medium disabled:opacity-40">
+                className="text-xs px-3 py-1.5 rounded-xl bg-brand text-white hover:bg-brand-hover transition-colors font-medium disabled:opacity-40">
                 {checkingIn === r.id ? '…' : t('desks.actions.checkin', 'Check-in')}
               </button>
             )}
@@ -169,7 +169,7 @@ export function MyReservationsPage() {
 
   if (loading) return (
     <div className="flex justify-center py-16">
-      <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
     </div>
   );
 

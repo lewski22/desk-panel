@@ -95,7 +95,7 @@ export function InsightsWidget({ locationId, compact = false, showRefresh = fals
         <div style={{
           width: 18, height: 18, borderRadius: '50%',
           border: '2px solid var(--color-border-secondary)',
-          borderTopColor: '#B53578',
+          borderTopColor: 'var(--brand)',
           animation: 'spin 0.8s linear infinite',
           margin: '0 auto',
         }} />

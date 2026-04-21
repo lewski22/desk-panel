@@ -88,7 +88,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
                 {t('desks.reserve.staff_label')} <span className="text-zinc-300 font-normal">{t('desks.reserve.staff_helper')}</span>
               </label>
               <select value={userId} onChange={e => setUserId(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
                 <option value="">{t('desks.reserve.for_self')}</option>
                 {users.filter((u: any) => u.isActive).map((u: any) => (
                   <option key={u.id} value={u.id}>{u.firstName} {u.lastName} · {u.email}</option>
@@ -100,19 +100,19 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
           <div>
             <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.date')}</label>
             <input type="date" value={date} min={today} max={maxDate} onChange={e => setDate(e.target.value)}
-              className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+              className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.from')}</label>
               <input type="time" value={start} onChange={e => setStart(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.to')}</label>
               <input type="time" value={end} onChange={e => setEnd(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
 
@@ -147,7 +147,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
               {t('btn.cancel')}
             </button>
             <button onClick={submit} disabled={busy}
-              className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+              className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-50">
               {busy
                 ? <span className="inline-flex items-center gap-2 justify-center">
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

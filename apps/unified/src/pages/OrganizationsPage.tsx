@@ -72,7 +72,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
               value={tenantId}
               onChange={e => { setTenantId(e.target.value); setTestResult(null); }}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+              className="flex-1 border border-zinc-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
             <button
               onClick={test}
@@ -98,7 +98,7 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
           </div>
           <button
             onClick={() => setEnabled(e => !e)}
-            className={`relative w-10 h-6 rounded-full transition-colors ${enabled ? 'bg-[#B53578]' : 'bg-zinc-300'}`}
+            className={`relative w-10 h-6 rounded-full transition-colors ${enabled ? 'bg-brand' : 'bg-zinc-300'}`}
           >
             <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${enabled ? 'left-5' : 'left-1'}`} />
           </button>
@@ -144,7 +144,7 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
     <Modal title={`Dodaj gateway — ${location.name}`} onClose={onClose}>
       {loading && (
         <div className="flex justify-center py-8">
-          <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       )}
       {error && (
@@ -297,13 +297,13 @@ export function OrganizationsPage() {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : (
         <div className="grid gap-3">
           {locations.map(loc => (
             <Card key={loc.id} className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-[#B53578]/10 flex items-center justify-center text-[#B53578] font-bold text-lg shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-lg shrink-0">
                 {loc.name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
@@ -327,7 +327,7 @@ export function OrganizationsPage() {
                   <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{loc.id}</code>
                   <button
                     onClick={() => { navigator.clipboard.writeText(loc.id); }}
-                    className="text-[10px] text-zinc-400 hover:text-[#B53578] transition-colors"
+                    className="text-[10px] text-zinc-400 hover:text-brand transition-colors"
                     title="Kopiuj ID"
                   >⎘</button>
                 </div>
@@ -386,13 +386,13 @@ export function OrganizationsPage() {
               <label className="block text-xs text-zinc-400 mb-1 font-medium">Otwarcie</label>
               <input type="time" value={form.openTime}
                 onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">Zamknięcie</label>
               <input type="time" value={form.closeTime}
                 onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
           {/* Strefa czasowa */}
@@ -401,7 +401,7 @@ export function OrganizationsPage() {
             <select
               value={form.timezone}
               onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
-              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="Europe/Warsaw">Europe/Warsaw (UTC+1/+2)</option>
               <option value="Europe/London">Europe/London (UTC+0/+1)</option>
@@ -431,13 +431,13 @@ export function OrganizationsPage() {
               <label className="block text-xs text-zinc-400 mb-1 font-medium">Max dni do przodu</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
                 onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">Max godzin / rezerwacja</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
                 onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
           <p className="text-xs text-zinc-400">

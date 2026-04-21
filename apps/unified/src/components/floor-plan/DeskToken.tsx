@@ -12,14 +12,14 @@ import { DeskPosition } from './useFloorPlanEditor';
 // ── Kolory statusu ─────────────────────────────────────────────
 const STATUS_FILL: Record<string, string> = {
   free:      '#d1fae5',  // emerald-100
-  reserved:  '#e0f2fe',  // sky-100
-  occupied:  '#e0e7ff',  // indigo-100
+  reserved:  '#fef3c7',  // amber-100
+  occupied:  '#fee2e2',  // red-100
   offline:   '#f4f4f5',  // zinc-100
 };
 const STATUS_STROKE: Record<string, string> = {
   free:      '#10b981',
-  reserved:  '#0ea5e9',
-  occupied:  '#6366f1',
+  reserved:  '#f59e0b',
+  occupied:  '#ef4444',
   offline:   '#a1a1aa',
 };
 
@@ -127,7 +127,7 @@ export function DeskToken({
         width={tokenW} height={tokenH}
         rx={4} ry={4}
         fill={fill}
-        stroke={selected ? '#B53578' : stroke}
+        stroke={selected ? 'var(--brand)' : stroke}
         strokeWidth={selected ? 2 : 1}
       />
 
@@ -143,7 +143,7 @@ export function DeskToken({
         <circle
           cx={0} cy={-tokenH / 2 - 8}
           r={5}
-          fill="#B53578"
+          fill="var(--brand)"
           opacity={0.7}
           style={{ cursor: 'pointer' }}
           onClick={e => { e.stopPropagation(); onRotate(desk.id); }}
@@ -183,7 +183,7 @@ export function DeskToken({
           width={tokenW + 6} height={tokenH + 6}
           rx={6} ry={6}
           fill="none"
-          stroke="#B53578"
+          stroke="var(--brand)"
           strokeWidth={1.5}
           strokeDasharray="4 2"
         />

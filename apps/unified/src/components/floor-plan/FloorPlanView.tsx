@@ -93,7 +93,7 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole }: {
 
       {canBook && onReserve && (
         <button onClick={onReserve}
-          className="w-full py-2 rounded-xl bg-[#B53578] text-white text-xs font-semibold hover:bg-[#9d2d67] transition-colors">
+          className="w-full py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors">
           + {t('deskcard.book')}
         </button>
       )}
@@ -131,7 +131,7 @@ function FloorTabs({ floors, active, onChange }: { floors: string[]; active: str
         <button key={f} onClick={() => onChange(f)}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             f === active
-              ? 'bg-[#B53578] text-white border-[#B53578]'
+              ? 'bg-brand text-white border-brand'
               : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
           }`}>
           {f}
@@ -193,7 +193,7 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
 
   if (loading) return (
     <div className="flex justify-center py-8">
-      <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
     </div>
   );
 

@@ -144,7 +144,7 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
             padding:      '5px 12px',
             borderRadius: 8,
             border:       'none',
-            background:   '#B53578',
+            background:   'var(--brand)',
             color:        '#fff',
             cursor:       'pointer',
           }}

@@ -78,7 +78,7 @@ export function ProviderCard({
   return (
     <div
       style={{
-        border: `0.5px solid ${isConfiguring ? '#B53578' : borderColor}`,
+        border: `0.5px solid ${isConfiguring ? 'var(--brand)' : borderColor}`,
         borderRadius: 12,
         overflow: 'hidden',
         background: 'var(--color-background-primary)',
@@ -130,8 +130,8 @@ export function ProviderCard({
           onClick={onConfigure}
           style={{
             fontSize: 12, padding: '5px 12px', borderRadius: 8,
-            border: isConfiguring ? '0.5px solid #B53578' : '0.5px solid var(--color-border-secondary)',
-            background: isConfiguring ? '#B53578' : 'transparent',
+            border: isConfiguring ? '0.5px solid var(--brand)' : '0.5px solid var(--color-border-secondary)',
+            background: isConfiguring ? 'var(--brand)' : 'transparent',
             color: isConfiguring ? '#fff' : 'var(--color-text-primary)',
             cursor: 'pointer', fontWeight: 500,
           }}

@@ -32,7 +32,7 @@ function nextWeek(w: string): string {
 
 const STATUS_CONFIG = {
   office:   { icon: '🏢', bg: 'bg-emerald-100', text: 'text-emerald-700', titleKey: 'weekly.status.office' },
-  reserved: { icon: '📋', bg: 'bg-sky-100',     text: 'text-sky-700',     titleKey: 'weekly.status.reserved' },
+  reserved: { icon: '📋', bg: 'bg-amber-100',   text: 'text-amber-700',   titleKey: 'weekly.status.reserved' },
   unknown:  { icon: '',   bg: 'bg-zinc-50',     text: 'text-zinc-300',    titleKey: 'weekly.status.unknown' },
 };
 
@@ -41,7 +41,7 @@ function StatusCell({ status, isToday, isSelected }: { status: string; isToday: 
   const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.unknown;
   return (
     <td className={`px-2 py-3 text-center border-l border-zinc-100 transition-colors ${
-      isSelected ? 'bg-[#B53578]/10' : isToday ? 'bg-[#B53578]/5' : ''
+      isSelected ? 'bg-brand/10' : isToday ? 'bg-brand/5' : ''
     }`}>
       <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-sm ${cfg.bg} ${cfg.text}`}
         title={t(cfg.titleKey)}>
@@ -73,7 +73,7 @@ function LocationPicker({ locations, value, onChange }: {
   if (locations.length <= 1) return null;
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#B53578]/30">
+      className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand/30">
       {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
     </select>
   );
@@ -175,7 +175,7 @@ export function WeeklyViewPage() {
           </div>
           {!isCurrentWeek && (
             <button onClick={() => setWeek(currentIsoWeek())}
-              className="text-xs text-[#B53578] px-2 py-1 rounded-lg hover:bg-[#B53578]/5 transition-colors">
+              className="text-xs text-brand px-2 py-1 rounded-lg hover:bg-brand/5 transition-colors">
               {t('weekly.today_week')}
             </button>
           )}
@@ -203,7 +203,7 @@ export function WeeklyViewPage() {
           </div>
           {selectedDay && (
             <button onClick={() => { setSelectedDay(null); setStatusFilter('all'); }}
-              className="text-xs text-[#B53578] px-3 py-2 rounded-xl border border-[#B53578]/20 hover:bg-[#B53578]/5 transition-colors self-center">
+              className="text-xs text-brand px-3 py-2 rounded-xl border border-brand/20 hover:bg-brand/5 transition-colors self-center">
               {t('weekly.clear_filter')}
             </button>
           )}
@@ -217,7 +217,7 @@ export function WeeklyViewPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder={t('weekly.search_placeholder')}
-          className="w-full sm:w-64 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+          className="w-full sm:w-64 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
         />
         {selectedDay && (
           <div className="flex gap-1">
@@ -225,7 +225,7 @@ export function WeeklyViewPage() {
               <button key={f} onClick={() => setStatusFilter(f)}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                   statusFilter === f
-                    ? 'bg-[#B53578] border-[#B53578] text-white'
+                    ? 'bg-brand border-brand text-white'
                     : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
                 }`}>
                 {t(`weekly.filter.${f}`)}
@@ -257,9 +257,9 @@ export function WeeklyViewPage() {
                         onClick={() => setSelectedDay(prev => prev === d.date ? null : d.date)}
                         className={`py-3 px-2 text-center text-xs font-semibold uppercase tracking-wider border-l border-zinc-100 cursor-pointer select-none transition-colors ${
                           isSelected
-                            ? 'text-[#B53578] bg-[#B53578]/10'
+                            ? 'text-brand bg-brand/10'
                             : isToday
-                              ? 'text-[#B53578] bg-[#B53578]/5 hover:bg-[#B53578]/10'
+                              ? 'text-brand bg-brand/5 hover:bg-brand/10'
                               : 'text-zinc-400 hover:bg-zinc-50'
                         }`}
                         title={t('weekly.click_to_filter')}>

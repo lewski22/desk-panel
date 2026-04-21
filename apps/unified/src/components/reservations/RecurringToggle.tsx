@@ -105,7 +105,7 @@ export function RecurringToggle({ startDate, onChange }: Props) {
               onClick={() => setPreset(p.id)}
               className={`py-2 px-2 rounded-xl text-xs font-medium border transition-all text-center ${
                 preset === p.id
-                  ? 'bg-[#B53578] text-white border-[#B53578]'
+                  ? 'bg-brand text-white border-brand'
                   : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300'
               }`}>
               {t(p.label)}
@@ -126,7 +126,7 @@ export function RecurringToggle({ startDate, onChange }: Props) {
                   onClick={() => toggleDay(d)}
                   className={`w-9 h-9 rounded-xl text-xs font-semibold transition-all border ${
                     byday.includes(d)
-                      ? 'bg-[#B53578] text-white border-[#B53578]'
+                      ? 'bg-brand text-white border-brand'
                       : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300'
                   }`}>
                   {WEEKDAY_LABELS[d]}
@@ -158,7 +158,7 @@ export function RecurringToggle({ startDate, onChange }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {preview.slice(0, 8).map(d => (
-              <span key={d} className="text-[10px] bg-[#B53578]/10 text-[#B53578] border border-[#B53578]/20 px-2 py-1 rounded-lg font-medium">
+              <span key={d} className="text-[10px] bg-brand/10 text-brand border border-brand/20 px-2 py-1 rounded-lg font-medium">
                 {format(new Date(d + 'T00:00'), 'dd MMM', { locale: dfns })}
               </span>
             ))}

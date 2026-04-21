@@ -119,7 +119,7 @@ export function QrCheckinPage() {
       style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-[#B53578] font-black text-4xl">R</p>
+          <p className="text-brand font-black text-4xl">R</p>
           <p className="text-white font-bold tracking-widest text-sm mt-0.5">RESERTI</p>
         </div>
         {children}
@@ -131,7 +131,7 @@ export function QrCheckinPage() {
   if (step === 'loading') return (
     <Wrapper>
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-zinc-700 border-t-brand rounded-full animate-spin" />
       </div>
     </Wrapper>
   );
@@ -139,7 +139,7 @@ export function QrCheckinPage() {
   if (step === 'confirming') return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-zinc-700 border-t-brand rounded-full animate-spin" />
         <p className="text-zinc-300 text-sm">{t('qr.processing')}</p>
       </div>
     </Wrapper>
@@ -159,7 +159,7 @@ export function QrCheckinPage() {
           {t('qr.occupied_other_desc')}
         </p>
         <button onClick={() => navigate('/')}
-          className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
+          className="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-hover transition-colors">
           {t('qr.back_to_map')}
         </button>
       </div>
@@ -197,7 +197,7 @@ export function QrCheckinPage() {
           {t('qr.login_prompt')}
         </p>
         <button onClick={() => navigate('/login', { state: { returnTo: `/checkin/${token}` } })}
-          className="w-full py-3 rounded-xl bg-[#B53578] text-white font-semibold text-sm hover:bg-[#9d2d66] transition-colors">
+          className="w-full py-3 rounded-xl bg-brand text-white font-semibold text-sm hover:bg-brand-hover transition-colors">
           {t('qr.login')}
         </button>
       </div>
@@ -323,7 +323,7 @@ export function QrCheckinPage() {
           {/* Free desk — walk-in reservation + check-in */}
           {deskStatus === 'free' && (
             <button onClick={handleWalkin}
-              className="w-full py-3.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors">
+              className="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors">
               {t('qr.reserve_and_checkin')}
             </button>
           )}
@@ -331,7 +331,7 @@ export function QrCheckinPage() {
           {/* Reserved — my reservation → check-in */}
           {deskStatus === 'reserved' && isMyReservation && (
             <button onClick={handleCheckin}
-              className="w-full py-3.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors">
+              className="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors">
               {t('qr.confirm_checkin')}
             </button>
           )}

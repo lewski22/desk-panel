@@ -115,7 +115,7 @@ export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
 
   if (fpLoading) return (
     <div className="flex justify-center py-16">
-      <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+      <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
     </div>
   );
 

@@ -80,7 +80,7 @@ function BeaconsTab({ devices, loading, onRefresh }: {
 
       {loading && devices.length === 0 ? (
         <div className="text-center py-12">
-          <div className="inline-block w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="inline-block w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-100">
@@ -142,7 +142,7 @@ function GatewaysTab({ gateways, loading }: { gateways: Gateway[]; loading: bool
 
       {loading && gateways.length === 0 ? (
         <div className="text-center py-12">
-          <div className="inline-block w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="inline-block w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-zinc-100">

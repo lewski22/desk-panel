@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand: #B53578;
+  --brand-hover: #9d2d66;
+}
+
 @layer base {
   /* Remove tap flash on iOS for all interactive elements */
   button, [role="button"], a, input, select, textarea {

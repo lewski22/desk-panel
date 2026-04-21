@@ -8,7 +8,7 @@ import { appApi }            from '../api/client';
 import { Card, EmptyState, Spinner } from '../components/ui';
 
 // ── Constants ─────────────────────────────────────────────────────
-const ACCENT   = '#B53578';
+const ACCENT   = 'var(--brand)';
 const DAYS_PL  = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Nd'];
 const DAYS_EN  = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const METHOD_COLORS: Record<string, string> = {
@@ -97,7 +97,7 @@ function SnapshotTab({ filters }: { filters: Filters }) {
 
       {loading ? (
         <div className="py-12 flex justify-center">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : data.length === 0 ? (
         <EmptyState icon="📊" title={t('reports.no_data')} />
@@ -223,7 +223,7 @@ function HeatmapTab({ filters, onExport, exporting }: {
       <Card className="p-5">
         <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.heatmap.title')}</p>
         {loading ? (
-          <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+          <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
         ) : (
           <>
             {/* Desktop/tablet: full day×hour matrix */}
@@ -351,7 +351,7 @@ function ReservationsTab({ filters }: { filters: Filters }) {
         )}
       </div>
       {loading ? (
-        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
         <EmptyState icon="📅" title={t('reports.no_data')} />
       ) : (
@@ -396,7 +396,7 @@ function MethodsTab({ filters }: { filters: Filters }) {
     <Card className="p-5">
       <p className="text-sm font-semibold text-zinc-700 mb-4">{t('reports.methods.title')}</p>
       {loading ? (
-        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
         <EmptyState icon="📊" title={t('reports.no_data')} />
       ) : (
@@ -487,7 +487,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
         )}
       </div>
       {loading ? (
-        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
         <EmptyState icon="👤" title={t('reports.no_data')} />
       ) : (
@@ -558,7 +558,7 @@ function ByDeskTab({ filters }: { filters: Filters }) {
         )}
       </div>
       {loading ? (
-        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
         <EmptyState icon="🪑" title={t('reports.no_data')} />
       ) : (
@@ -630,19 +630,19 @@ function ReportsPage() {
           <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.from')}</label>
           <input type="date" value={from} max={to}
             onChange={e => setFrom(e.target.value)}
-            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
+            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-brand" />
         </div>
         <div>
           <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.to')}</label>
           <input type="date" value={to} min={from} max={todayStr()}
             onChange={e => setTo(e.target.value)}
-            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578]" />
+            className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-brand" />
         </div>
         {locations.length > 0 && (
           <div className="col-span-2 sm:col-auto">
             <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.location')}</label>
             <select value={locationId} onChange={e => setLocationId(e.target.value)}
-              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-[#B53578] bg-white">
+              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-brand bg-white">
               <option value="">{t('reports.filter.all')}</option>
               {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
@@ -657,7 +657,7 @@ function ReportsPage() {
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px min-h-touch ${
                 activeTab === tab
-                  ? 'border-[#B53578] text-[#B53578]'
+                  ? 'border-brand text-brand'
                   : 'border-transparent text-zinc-500 active:text-zinc-700'
               }`}>
               {t(`reports.tabs.${tab}`)}

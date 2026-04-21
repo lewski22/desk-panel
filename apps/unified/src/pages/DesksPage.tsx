@@ -145,7 +145,7 @@ export function DesksPage() {
           <span className="text-xs text-zinc-400">{t('desks.location_label')}</span>
           {locations.map(l => (
             <button key={l.id} onClick={() => switchLoc(l.id)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${locId === l.id ? 'bg-[#B53578] text-white' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}>
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${locId === l.id ? 'bg-brand text-white' : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}`}>
               {l.name}
             </button>
           ))}
@@ -167,7 +167,7 @@ export function DesksPage() {
             <TD>
               <div className="flex items-center gap-1">
                 <code className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{d.id}</code>
-                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-[#B53578] transition-colors text-xs" title="Copy">⎘</button>
+                <button onClick={() => navigator.clipboard.writeText(d.id)} className="text-zinc-300 hover:text-brand transition-colors text-xs" title="Copy">⎘</button>
               </div>
             </TD>
             <TD>{d.floor ?? '—'}</TD>
@@ -229,7 +229,7 @@ export function DesksPage() {
                 <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('desks.form.label.location')}</label>
                 {locations.length > 1 ? (
                   <select value={form.locId} onChange={e => setForm(f => ({ ...f, locId: e.target.value }))}
-                    className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" required>
+                    className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" required>
                     <option value="">{t('desks.form.select_placeholder')}</option>
                     {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>

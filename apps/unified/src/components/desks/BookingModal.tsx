@@ -99,7 +99,7 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
           <label className="block text-xs text-zinc-500 font-medium mb-1">{t('reservations.filter.date')}</label>
           <input type="date" value={date} min={localDateStr()}
             onChange={e => setDate(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
 
         {/* Slots grid */}
@@ -107,7 +107,7 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs text-zinc-500 font-medium">{t('resource.select_time')}</label>
             {startTime && !endTime && (
-              <p className="text-xs text-[#B53578]">{t('resource.select_end')}</p>
+              <p className="text-xs text-brand">{t('resource.select_end')}</p>
             )}
             {startTime && endTime && (
               <p className="text-xs text-emerald-600 font-semibold">
@@ -118,7 +118,7 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
 
           {loading ? (
             <div className="flex justify-center py-6">
-              <div className="w-4 h-4 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
             </div>
           ) : (
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-64 overflow-y-auto pr-1">
@@ -135,9 +135,9 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
                       !slot.available
                         ? 'bg-red-50 text-red-300 border border-red-100 cursor-not-allowed'
                         : isStart || isEnd
-                        ? 'bg-[#B53578] text-white border-[#B53578] shadow-sm'
+                        ? 'bg-brand text-white border-brand shadow-sm'
                         : isSel
-                        ? 'bg-[#B53578]/20 text-[#B53578] border-[#B53578]/30'
+                        ? 'bg-brand/20 text-brand border-brand/30'
                         : 'bg-zinc-50 text-zinc-600 border border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
                     }`}
                   >
@@ -158,7 +158,7 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
           <label className="block text-xs text-zinc-500 font-medium mb-1">{t('resource.notes')}</label>
           <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
             placeholder={t('resource.notes_placeholder')}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
 
         {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}

@@ -35,15 +35,15 @@ function statusMeta(desk: DeskMapItem, t: (key: string) => string) {
     return { label: t('desks.stats.occupied'), dot: 'bg-white', ring: 'ring-white/40', badge: 'bg-white/20 text-white' };
   }
   if (desk.currentReservation) {
-    return { label: t('desks.stats.reserved'), dot: 'bg-sky-300', ring: 'ring-sky-200', badge: 'bg-sky-100 text-sky-700' };
+    return { label: t('desks.stats.reserved'), dot: 'bg-amber-300', ring: 'ring-amber-200', badge: 'bg-amber-100 text-amber-700' };
   }
   return { label: t('desks.stats.free'), dot: 'bg-emerald-400', ring: 'ring-emerald-200', badge: 'bg-emerald-50 text-emerald-700' };
 }
 
 function cardBg(desk: DeskMapItem) {
   if (!desk.isOnline || desk.status === 'MAINTENANCE') return 'bg-zinc-50 border-zinc-200';
-  if (desk.isOccupied)              return 'bg-indigo-600 border-indigo-500 text-white';
-  if (desk.currentReservation)      return 'bg-sky-50 border-sky-200';
+  if (desk.isOccupied)              return 'bg-red-500 border-red-400 text-white';
+  if (desk.currentReservation)      return 'bg-amber-50 border-amber-200';
   return 'bg-white border-emerald-200';
 }
 
@@ -69,7 +69,7 @@ function QuickBookPopover({ desk, onFullDay, onChoose, onClose }: {
       onClick={e => e.stopPropagation()}>
       <p className="text-xs font-semibold text-zinc-700 mb-2">{desk.name}</p>
       <button onClick={onFullDay}
-        className="w-full text-left text-xs px-3 py-2 rounded-lg bg-[#B53578] text-white font-medium hover:bg-[#9d2d67] transition-colors mb-1">
+        className="w-full text-left text-xs px-3 py-2 rounded-lg bg-brand text-white font-medium hover:bg-brand-hover transition-colors mb-1">
         ⚡ {t('deskcard.book_full_day')}
       </button>
       <button onClick={onChoose}

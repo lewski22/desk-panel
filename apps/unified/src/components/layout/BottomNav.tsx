@@ -98,12 +98,12 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
             }`}
           >
             {active && (
-              <span className="absolute top-0 inset-x-3 h-0.5 bg-[#B53578] rounded-b-full" />
+              <span className="absolute top-0 inset-x-3 h-0.5 bg-brand rounded-b-full" />
             )}
             <span className="relative">
               <Icon size={22} />
               {showBadge && (
-                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-[#B53578] text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+                <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-brand text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
                   {badge > 9 ? '9+' : badge}
                 </span>
               )}

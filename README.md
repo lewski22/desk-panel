@@ -96,8 +96,9 @@ Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 - Email: 8 typów, per-org SMTP (AES-256-GCM), fallback globalny
 - In-app: dzwoneczek, polling 15s, ogłoszenia systemowe (OWNER)
 
-**Jakość**
-- i18n: 427 kluczy PL + EN, 100% pokrycie UI
+**Jakość i design**
+- i18n: 100% pokrycie UI — zero hardkodowanych stringów PL/EN w kodzie
+- Design system: kolor brand `#B53578` jako token `brand` w `tailwind.config.js` + `--brand` CSS var; status biurek: emerald (wolne) / amber (zarezerwowane) / red (zajęte) / zinc (offline)
 - PWA: instalacja na telefon, offline cache, skróty
 - Testy: 178 testów (backend NestJS + gateway Python)
 - Monitoring: Prometheus metrics (backend + gateway)

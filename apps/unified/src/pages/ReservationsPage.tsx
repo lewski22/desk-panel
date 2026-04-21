@@ -28,7 +28,7 @@ export function ReservationsPage() {
         <div className="flex items-center gap-2 mb-4">
           <span className="text-xs text-zinc-400">{t('reservations.location')}</span>
           <select value={locationId} onChange={e => setLocationId(e.target.value)}
-            className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 font-medium">
+            className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 font-medium">
             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>

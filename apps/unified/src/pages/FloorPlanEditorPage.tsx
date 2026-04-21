@@ -50,7 +50,7 @@ export function FloorPlanEditorPage() {
       <p className="text-zinc-700 font-semibold">{t('common.error')}</p>
       <p className="text-zinc-400 text-sm mt-1 mb-4">{error}</p>
       <button onClick={() => navigate(-1)}
-        className="text-sm text-[#B53578] underline">{t('btn.back')}</button>
+        className="text-sm text-brand underline">{t('btn.back')}</button>
     </div>
   );
 
@@ -82,7 +82,7 @@ export function FloorPlanEditorPage() {
             <button key={f} onClick={() => setActiveFloor(f)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
                 f === activeFloor
-                  ? 'bg-[#B53578] text-white border-[#B53578]'
+                  ? 'bg-brand text-white border-brand'
                   : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
               }`}>
               {f}
@@ -97,7 +97,7 @@ export function FloorPlanEditorPage() {
           <p className="text-zinc-600 font-semibold mb-1">{t('floorplan.editor.no_desks')}</p>
           <p className="text-zinc-400 text-sm mb-4">{t('floorplan.editor.no_desks_sub')}</p>
           <button onClick={() => navigate('/desks')}
-            className="text-sm text-[#B53578] underline">{t('floorplan.editor.go_add_desks')}</button>
+            className="text-sm text-brand underline">{t('floorplan.editor.go_add_desks')}</button>
         </div>
       ) : (
         <FloorPlanEditor

@@ -87,7 +87,7 @@ export function PwaBanners() {
           <p className="flex-1 text-xs font-medium">{t('pwa.update_ready')}</p>
           <button
             onClick={() => { setShowUpdate(false); updateFn?.(); }}
-            className="text-xs font-semibold bg-[#B53578] hover:bg-[#9d2d67] text-white px-3 py-1.5 rounded-lg transition-colors shrink-0">
+            className="text-xs font-semibold bg-brand hover:bg-brand-hover text-white px-3 py-1.5 rounded-lg transition-colors shrink-0">
             {t('pwa.reload')}
           </button>
           <button onClick={() => setShowUpdate(false)}
@@ -118,7 +118,7 @@ export function PwaBanners() {
           </div>
           <div className="flex gap-2 mt-3">
             <button onClick={doInstall}
-              className="flex-1 text-xs font-semibold bg-[#B53578] hover:bg-[#9d2d67] text-white px-3 py-2 rounded-lg transition-colors">
+              className="flex-1 text-xs font-semibold bg-brand hover:bg-brand-hover text-white px-3 py-2 rounded-lg transition-colors">
               {t('pwa.install_cta')}
             </button>
             <button onClick={dismissInstall}

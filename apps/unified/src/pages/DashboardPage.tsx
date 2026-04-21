@@ -18,9 +18,9 @@ import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 
 // ── Stałe kolorów ────────────────────────────────────────────
-const ACCENT     = '#B53578';
-const C_OCCUPIED = '#6366f1';
-const C_RESERVED = '#38bdf8';
+const ACCENT     = 'var(--brand)';
+const C_OCCUPIED = '#ef4444';
+const C_RESERVED = '#f59e0b';
 const C_FREE     = '#34d399';
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -87,7 +87,7 @@ function KpiCard({
   const { t } = useTranslation();
   return (
     <div className={`rounded-xl border p-3 sm:p-4 flex flex-col gap-1 ${
-      accent ? 'bg-[#B53578] border-[#B53578] text-white' : 'bg-white border-zinc-100'
+      accent ? 'bg-brand border-brand text-white' : 'bg-white border-zinc-100'
     }`}>
       <p className={`text-xs font-medium uppercase tracking-wide ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
         {label}
@@ -135,7 +135,7 @@ function QuickActions({ locationId, onRefresh }: { locationId: string; onRefresh
     <>
       <div className="flex flex-wrap gap-2 mb-5">
         <button onClick={() => navigate('/map')}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#B53578] text-white rounded-xl text-xs font-semibold hover:bg-[#9d2d67] transition-colors shadow-sm">
+          className="flex items-center gap-1.5 px-3 py-2 bg-brand text-white rounded-xl text-xs font-semibold hover:bg-brand-hover transition-colors shadow-sm">
           + {t('dashboard.qa.book')}
         </button>
         <button onClick={() => navigate('/reservations')}
@@ -225,7 +225,7 @@ function IssuesWidget({ locationId }: { locationId: string }) {
         )}
       </div>
 
-      {loading && <div className="py-8 flex justify-center"><div className="w-4 h-4 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" /></div>}
+      {loading && <div className="py-8 flex justify-center"><div className="w-4 h-4 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>}
 
       {!loading && allIssues.length === 0 && (
         <EmptyState

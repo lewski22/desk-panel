@@ -118,11 +118,11 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
         <>
           {/* Left-edge active indicator */}
           {isActive && (
-            <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-[#B53578] rounded-r-full" />
+            <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-brand rounded-r-full" />
           )}
           <Icon
             size={16}
-            className={`shrink-0 transition-colors ${isActive ? 'text-[#B53578]' : ''}`}
+            className={`shrink-0 transition-colors ${isActive ? 'text-brand' : ''}`}
           />
           {!collapsed && <span className="truncate leading-none">{label}</span>}
         </>
@@ -166,12 +166,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800/80 shrink-0">
         {/* Avatar / Logo */}
         {collapsed && !mobile ? (
-          <div className="w-8 h-8 rounded-full bg-[#B53578]/20 border border-[#B53578]/40 flex items-center justify-center shrink-0">
-            <span className="text-[#B53578] font-black text-sm">R</span>
+          <div className="w-8 h-8 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center shrink-0">
+            <span className="text-brand font-black text-sm">R</span>
           </div>
         ) : (
           <>
-            <div className="w-8 h-8 rounded-full bg-[#B53578] flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">
+            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">
               {user.firstName
                 ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
                 : user.email[0].toUpperCase()}
@@ -180,7 +180,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
               <div className="text-white text-xs font-semibold truncate">
                 {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
               </div>
-              <div className="text-[#B53578] text-[10px] font-semibold uppercase tracking-wider mt-0.5">
+              <div className="text-brand text-[10px] font-semibold uppercase tracking-wider mt-0.5">
                 {ROLE_LABEL[user.role] ?? user.role}
               </div>
             </div>
@@ -328,7 +328,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
             <rect x="2" y="14" width="16" height="2" rx="1"/>
           </svg>
         </button>
-        <span className="text-[#B53578] font-black text-lg tracking-tight">R</span>
+        <span className="text-brand font-black text-lg tracking-tight">R</span>
         <span className="text-white font-bold text-sm tracking-widest">RESERTI</span>
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell role={user.role} />

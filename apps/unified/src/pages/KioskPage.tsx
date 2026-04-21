@@ -11,8 +11,8 @@ import { appApi }           from '../api/client';
 
 // ── Kolory statusu ────────────────────────────────────────────
 const S_FREE     = '#10b981';
-const S_RESERVED = '#0ea5e9';
-const S_OCCUPIED = '#6366f1';
+const S_RESERVED = '#f59e0b';
+const S_OCCUPIED = '#ef4444';
 const S_OFFLINE  = '#a1a1aa';
 
 function deskColor(d: any) {
@@ -65,7 +65,7 @@ function PinModal({ onClose, onSuccess, onVerify }: {
           {[0, 1, 2, 3].map(i => (
             <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${
               i < pin.length
-                ? (err ? 'bg-red-500 border-red-500' : 'bg-[#B53578] border-[#B53578]')
+                ? (err ? 'bg-red-500 border-red-500' : 'bg-brand border-brand')
                 : 'border-zinc-600'
             }`} />
           ))}
@@ -220,7 +220,7 @@ export function KioskPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-zinc-700 border-t-brand rounded-full animate-spin" />
     </div>
   );
 
@@ -230,7 +230,7 @@ export function KioskPage() {
       <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur px-6 py-4 border-b border-zinc-800
         flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-[#B53578] font-black text-2xl">R</span>
+          <span className="text-brand font-black text-2xl">R</span>
           <div>
             <p className="font-bold text-lg leading-none">{location?.name ?? t('kiosk.default_office')}</p>
             <p className="text-xs text-zinc-500 mt-0.5">

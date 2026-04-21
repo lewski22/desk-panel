@@ -126,7 +126,7 @@ export default function IntegrationsPage() {
   if (loading) {
     return (
       <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--color-border-secondary)', borderTopColor: '#B53578', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--color-border-secondary)', borderTopColor: 'var(--brand)', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );

@@ -103,18 +103,18 @@ function ModuleToggle({
       onClick={() => onChange(moduleId, !enabled)}
       className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
         enabled
-          ? 'bg-[#B53578]/5 border-[#B53578]/30 ring-1 ring-[#B53578]/20'
+          ? 'bg-brand/5 border-brand/30 ring-1 ring-brand/20'
           : 'bg-zinc-50 border-zinc-200 hover:border-zinc-300'
       }`}
     >
       <span className="text-xl shrink-0 mt-0.5">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold ${enabled ? 'text-[#B53578]' : 'text-zinc-700'}`}>{label}</p>
+        <p className={`text-sm font-semibold ${enabled ? 'text-brand' : 'text-zinc-700'}`}>{label}</p>
         <p className="text-xs text-zinc-400 mt-0.5">{desc}</p>
       </div>
       {/* Toggle pill */}
       <span className={`shrink-0 mt-1 w-9 h-5 rounded-full flex items-center transition-colors ${
-        enabled ? 'bg-[#B53578]' : 'bg-zinc-300'
+        enabled ? 'bg-brand' : 'bg-zinc-300'
       }`}>
         <span className={`w-4 h-4 bg-white rounded-full shadow mx-0.5 transition-transform ${
           enabled ? 'translate-x-4' : 'translate-x-0'
@@ -195,7 +195,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
               Aktywne moduły
             </label>
             <button type="button" onClick={toggleAll}
-              className="text-xs text-[#B53578] hover:underline">
+              className="text-xs text-brand hover:underline">
               {allEnabled ? 'Odznacz wszystkie' : 'Zaznacz wszystkie'}
             </button>
           </div>
@@ -275,7 +275,7 @@ function LegacySubPlanModal({ org, onClose }: { org: any; onClose: () => void })
             {PLANS.map(p => (
               <button key={p} type="button" onClick={() => setPlan(p)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all capitalize ${
-                  plan === p ? 'border-[#B53578] bg-[#B53578]/10 text-[#B53578]' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                  plan === p ? 'border-brand bg-brand/10 text-brand' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
                 }`}>
                 {p}
               </button>
@@ -420,7 +420,7 @@ function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
             {['trial','starter','pro','enterprise'].map(p => (
               <button key={p} type="button" onClick={() => applyPlanDefaults(p)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all capitalize ${
-                  form.plan === p ? 'border-[#B53578] bg-[#B53578]/10 text-[#B53578]' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
+                  form.plan === p ? 'border-brand bg-brand/10 text-brand' : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
                 }`}>
                 {p}
               </button>

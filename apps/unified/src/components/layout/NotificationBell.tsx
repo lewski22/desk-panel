@@ -9,7 +9,7 @@ const BellIcon = ({ hasUnread }: { hasUnread: boolean }) => (
     width="20" height="20" viewBox="0 0 24 24"
     fill={hasUnread ? 'currentColor' : 'none'}
     stroke="currentColor" strokeWidth="2"
-    className={hasUnread ? 'text-[#B53578]' : 'text-zinc-400'}
+    className={hasUnread ? 'text-brand' : 'text-zinc-400'}
   >
     <path strokeLinecap="round" strokeLinejoin="round"
       d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
@@ -145,7 +145,7 @@ export function NotificationBell({ role }: { role: string }) {
         <BellIcon hasUnread={unread > 0} />
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5
-            bg-[#B53578] text-white text-[9px] font-bold rounded-full
+            bg-brand text-white text-[9px] font-bold rounded-full
             flex items-center justify-center leading-none ring-2 ring-zinc-900">
             {unread > 99 ? '99+' : unread}
           </span>
@@ -164,7 +164,7 @@ export function NotificationBell({ role }: { role: string }) {
             <div className="flex items-center gap-2">
               {/* @i18n */}<span className="text-white font-semibold text-sm">{t('notifications.bell_label')}</span>
               {unread > 0 && (
-                <span className="bg-[#B53578] text-white text-[10px] font-bold
+                <span className="bg-brand text-white text-[10px] font-bold
                   px-1.5 py-0.5 rounded-full">
                   {unread}
                 </span>
@@ -203,7 +203,7 @@ export function NotificationBell({ role }: { role: string }) {
                 {/* Unread dot */}
                 <div className="flex-shrink-0 pt-1">
                   {!item.read
-                    ? <div className="w-2 h-2 rounded-full bg-[#B53578]" />
+                    ? <div className="w-2 h-2 rounded-full bg-brand" />
                     : <div className="w-2 h-2" />
                   }
                 </div>
@@ -236,7 +236,7 @@ export function NotificationBell({ role }: { role: string }) {
                     {getLocalized(item, 'body', i18n.language)}
                   </p>
                   {item.actionLabel && !item.read && (
-                    <span className="text-[11px] text-[#B53578] font-medium mt-1 block">
+                    <span className="text-[11px] text-brand font-medium mt-1 block">
                       {getLocalized(item, 'actionLabel', i18n.language)} →
                     </span>
                   )}

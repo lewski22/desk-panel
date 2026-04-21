@@ -65,7 +65,7 @@ export function FloorPlanToolbar({
       onClick={onClick}
       disabled={disabled}
       className={`px-2.5 py-1.5 text-sm rounded-lg transition-all border
-        ${active   ? 'bg-[#B53578]/10 border-[#B53578]/30 text-[#B53578]'
+        ${active   ? 'bg-brand/10 border-brand/30 text-brand'
         : disabled ? 'opacity-30 cursor-not-allowed border-transparent text-zinc-400'
         :            'border-zinc-200 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800'}`}
     >

@@ -43,7 +43,7 @@ function LocationTabs({ locations, activeId, desksPerLocation, onChange }: {
         return (
           <button key={loc.id} onClick={() => onChange(loc.id)}
             className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
-              active ? 'bg-[#B53578] text-white border-[#B53578] shadow-sm' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+              active ? 'bg-brand text-white border-brand shadow-sm' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
             }`}>
             <span>{loc.name}</span>
             {occ.total > 0 && (
@@ -170,7 +170,7 @@ export function DeskMapPage() {
   if (locLoading || (loading && desks.length === 0 && locationId)) return (
     <div className="flex items-center justify-center h-64">
       <div className="flex flex-col items-center gap-3 text-zinc-300">
-        <div className="w-6 h-6 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         <p className="text-sm">{t('deskmap.loading')}</p>
       </div>
     </div>
@@ -208,7 +208,7 @@ export function DeskMapPage() {
         {isAdmin && locationId && (
           <button
             onClick={() => navigate(`/floor-plan/${locationId}`)}
-            className="text-xs text-[#B53578] hover:underline flex items-center gap-1">
+            className="text-xs text-brand hover:underline flex items-center gap-1">
             ✏ {t('floorplan.view.edit_plan')}
           </button>
         )}
@@ -216,7 +216,7 @@ export function DeskMapPage() {
 
       {error && desks.length === 0 && (
         <EmptyState icon="⚠️" title={t('deskmap.error_title')} sub={error}
-          action={<button onClick={refetch} className="text-sm text-[#B53578] underline mt-2">{t('btn.retry')}</button>} />
+          action={<button onClick={refetch} className="text-sm text-brand underline mt-2">{t('btn.retry')}</button>} />
       )}
       {!loading && desks.length === 0 && !error && (
         <EmptyState icon="🪑" title={t('deskmap.no_desks_title')} sub={t('deskmap.no_desks_sub')} />
@@ -248,7 +248,7 @@ export function DeskMapPage() {
         <div>
           {resLoading ? (
             <div className="flex justify-center py-12">
-              <div className="w-5 h-5 border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
             </div>
           ) : resources.length === 0 ? (
             <EmptyState

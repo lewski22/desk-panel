@@ -72,7 +72,7 @@ export function NfcCardModal({ user, onClose }: Props) {
         {mode === 'choose' && (
           <>
             <button onClick={startScan}
-              className="w-full py-3.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+              className="w-full py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
               <span className="text-lg">📡</span>
               {t('users.nfcModal.scan_auto', { seconds: 60 })}
             </button>
@@ -91,8 +91,8 @@ export function NfcCardModal({ user, onClose }: Props) {
         {mode === 'scanning' && (
           <div className="flex flex-col items-center gap-4 py-4">
             <div className="relative w-20 h-20 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-[#B53578]/20 animate-ping" />
-              <div className="absolute inset-2 rounded-full border-4 border-[#B53578]/40 animate-ping [animation-delay:0.3s]" />
+              <div className="absolute inset-0 rounded-full border-4 border-brand/20 animate-ping" />
+              <div className="absolute inset-2 rounded-full border-4 border-brand/40 animate-ping [animation-delay:0.3s]" />
               <span className="text-3xl relative z-10">📡</span>
             </div>
             <div className="text-center">
@@ -103,7 +103,7 @@ export function NfcCardModal({ user, onClose }: Props) {
             </div>
             <div className="flex items-center gap-2">
               <div className="w-32 h-1.5 rounded-full bg-zinc-100 overflow-hidden">
-                <div className="h-full bg-[#B53578] rounded-full transition-all duration-1000"
+                <div className="h-full bg-brand rounded-full transition-all duration-1000"
                   style={{ width: `${(secondsLeft / 60) * 100}%` }} />
               </div>
               <span className="text-xs text-zinc-400 w-8 text-right">{t('users.nfcModal.seconds', { seconds: secondsLeft })}</span>
@@ -133,7 +133,7 @@ export function NfcCardModal({ user, onClose }: Props) {
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('users.nfcModal.label_uid')}</label>
               <input type="text" placeholder={t('users.nfcModal.placeholder_uid')} value={cardUid}
                 onChange={e => setCardUid(e.target.value.toUpperCase())}
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#B53578]/30"
+                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
                 autoFocus />
             </div>
             <div className="flex gap-2">
@@ -142,7 +142,7 @@ export function NfcCardModal({ user, onClose }: Props) {
                 {t('users.nfcModal.back')}
               </button>
               <button onClick={saveManual} disabled={busy || !cardUid.trim()}
-                className="flex-1 py-2.5 rounded-xl bg-[#B53578] hover:bg-[#9d2d66] text-white font-semibold text-sm transition-colors disabled:opacity-50">
+                className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-50">
                 {busy ? t('users.nfcModal.saving') : t('users.nfcModal.save')}
               </button>
             </div>

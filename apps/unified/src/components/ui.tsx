@@ -9,7 +9,7 @@ interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
 }
 const VARIANT_CLS: Record<BtnVariant, string> = {
-  primary:   'bg-[#B53578] hover:bg-[#9d2d66] text-white',
+  primary:   'bg-brand hover:bg-brand-hover text-white',
   secondary: 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700',
   danger:    'bg-red-100 hover:bg-red-200 text-red-700',
   ghost:     'hover:bg-zinc-100 text-zinc-600',
@@ -40,7 +40,7 @@ export function Stat({ label, value, sub, color, accent }: {
   return (
     <Card>
       <p className="text-xs text-zinc-400 font-medium uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-3xl font-bold font-mono ${accent ? 'text-[#B53578]' : color ?? 'text-zinc-800'}`}>{value}</p>
+      <p className={`text-3xl font-bold font-mono ${accent ? 'text-brand' : color ?? 'text-zinc-800'}`}>{value}</p>
       {sub && <p className="text-xs text-zinc-400 mt-1">{sub}</p>}
     </Card>
   );
@@ -51,7 +51,7 @@ export function Spinner({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   const sz = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-8 h-8' : 'w-5 h-5';
   return (
     <div className="flex items-center justify-center py-12">
-      <div className={`${sz} border-2 border-zinc-200 border-t-[#B53578] rounded-full animate-spin`} />
+      <div className={`${sz} border-2 border-zinc-200 border-t-brand rounded-full animate-spin`} />
     </div>
   );
 }
@@ -96,7 +96,7 @@ export function Input({ label, className = '', ...props }: InputProps) {
   const input = (
     <input
       {...props}
-      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 transition-all ${className}`}
+      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition-all ${className}`}
     />
   );
   if (!label) return input;
@@ -117,7 +117,7 @@ export function Select({ label, children, className = '', ...props }: SelectProp
   const select = (
     <select
       {...props}
-      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#B53578]/30 ${className}`}
+      className={`w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 ${className}`}
     >
       {children}
     </select>
@@ -304,7 +304,7 @@ export function SortHeader({
     <th className={`cursor-pointer select-none group ${className}`} onClick={() => onToggle(field)}>
       <span className="flex items-center gap-1">
         {children}
-        <span className={`text-[10px] transition-colors ${active ? 'text-[#B53578]' : 'text-zinc-300 group-hover:text-zinc-400'}`}>
+        <span className={`text-[10px] transition-colors ${active ? 'text-brand' : 'text-zinc-300 group-hover:text-zinc-400'}`}>
           {active ? (sort.dir === 'asc' ? '↑' : '↓') : '↕'}
         </span>
       </span>

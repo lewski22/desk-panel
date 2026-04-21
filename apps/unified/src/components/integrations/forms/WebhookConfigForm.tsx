@@ -111,7 +111,7 @@ export function WebhookConfigForm({ integration, onSaved, onCancel }: Props) {
         {ALL_EVENTS.map(ev => (
           <label key={ev} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '4px 0' }}>
             <input type="checkbox" checked={events.has(ev)} onChange={() => toggleEvent(ev)}
-              style={{ width: 14, height: 14, accentColor: '#B53578' }} />
+              style={{ width: 14, height: 14, accentColor: 'var(--brand)' }} />
             <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
               {t(`integrations.webhook.events_options.${ev}`, ev)}
             </span>

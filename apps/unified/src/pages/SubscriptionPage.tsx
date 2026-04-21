@@ -129,7 +129,7 @@ export function SubscriptionPage() {
       {/* CTA */}
       <p className="text-sm text-zinc-400 text-center mt-2">
         {t('subscription.contact_cta')}{' '}
-        <a href="mailto:hello@reserti.pl" className="text-[#B53578] hover:underline">→</a>
+        <a href="mailto:hello@reserti.pl" className="text-brand hover:underline">→</a>
       </p>
     </div>
   );

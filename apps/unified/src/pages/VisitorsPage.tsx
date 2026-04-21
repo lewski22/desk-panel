@@ -60,7 +60,7 @@ function InviteModal({ locationId, onClose, onSaved }: {
           <label className="block text-xs text-zinc-500 font-medium mb-1">{t('visitors.form.purpose')}</label>
           <textarea value={form.purpose} onChange={e => set('purpose', e.target.value)} rows={2}
             placeholder={t('visitors.form.purpose_ph')}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#B53578]/30" />
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
         {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="flex gap-2 justify-end pt-1">

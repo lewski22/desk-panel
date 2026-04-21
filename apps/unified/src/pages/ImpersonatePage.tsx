@@ -48,7 +48,7 @@ export function ImpersonatePage({ onLogin }: Props) {
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
       <div className="text-center">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-[#B53578] rounded-full animate-spin mx-auto mb-3" />
+        <div className="w-8 h-8 border-2 border-zinc-700 border-t-brand rounded-full animate-spin mx-auto mb-3" />
         <p className="text-zinc-400 text-sm">{t('impersonate.authenticating')}</p>
       </div>
     </div>
