@@ -5,7 +5,6 @@ import {
   ownerOrgsTotal,
   ownerGatewaysTotal,
   ownerBeaconsTotal,
-  ownerBeaconsFwOutdated,
   clientDesksTotal,
   clientDesksOccupied,
   clientReservationsToday,
@@ -38,25 +37,13 @@ export class MetricsService {
     ownerGatewaysTotal.set({ status: 'offline' }, offlineGws);
     ownerBeaconsTotal.set({ status: 'online' },  onlineBeacons);
     ownerBeaconsTotal.set({ status: 'offline' }, offlineBeacons);
-
-    // Per-org firmware outdated count
-    const orgs = await this.prisma.organization.findMany({ select: { id: true } });
-    await Promise.all(orgs.map(async org => {
-      const outdated = await this.prisma.device.count({
-        where: {
-          location: { organizationId: org.id },
-          firmwareCurrent: false,
-        },
-      });
-      ownerBeaconsFwOutdated.set({ org_id: org.id }, outdated);
-    }));
   }
 
   // ── Client-level per-org/location aggregates (every 60s) ─────
   @Cron(CronExpression.EVERY_MINUTE)
   async refreshDeviceMetrics() {
-    const now    = new Date();
-    const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const now   = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const locations = await this.prisma.location.findMany({
       select: { id: true, organizationId: true },
@@ -88,12 +75,12 @@ export class MetricsService {
 
       // ── Beacon last seen + RSSI ────────────────────────────────
       const beacons = await this.prisma.device.findMany({
-        where:  { locationId: locId },
-        select: { id: true, lastSeenAt: true, rssi: true },
+        where:  { desk: { locationId: locId } },
+        select: { id: true, lastSeen: true, rssi: true },
       });
       for (const b of beacons) {
-        const secAgo = b.lastSeenAt
-          ? Math.floor((now.getTime() - b.lastSeenAt.getTime()) / 1000)
+        const secAgo = b.lastSeen
+          ? Math.floor((now.getTime() - b.lastSeen.getTime()) / 1000)
           : 99999;
         clientBeaconLastSeen.set({ org_id: orgId, location_id: locId, device_id: b.id }, secAgo);
         if (b.rssi != null) {
@@ -104,16 +91,16 @@ export class MetricsService {
       // ── Gateway last seen + version ────────────────────────────
       const gateways = await this.prisma.gateway.findMany({
         where:  { locationId: locId },
-        select: { id: true, lastSeenAt: true, softwareVersion: true },
+        select: { id: true, lastSeen: true, version: true },
       });
       for (const gw of gateways) {
-        const secAgo = gw.lastSeenAt
-          ? Math.floor((now.getTime() - gw.lastSeenAt.getTime()) / 1000)
+        const secAgo = gw.lastSeen
+          ? Math.floor((now.getTime() - gw.lastSeen.getTime()) / 1000)
           : 99999;
         clientGatewayLastSeen.set({ org_id: orgId, gateway_id: gw.id }, secAgo);
-        if (gw.softwareVersion) {
+        if (gw.version) {
           clientGatewayVersionInfo.set(
-            { org_id: orgId, gateway_id: gw.id, version: gw.softwareVersion },
+            { org_id: orgId, gateway_id: gw.id, version: gw.version },
             1,
           );
         }
