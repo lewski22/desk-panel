@@ -163,15 +163,15 @@ export class InAppNotificationsService {
     return { count: users.length };
   }
 
-  // ── Cron: co 15 min — skanuj offline gateway/beacon ──────────
-  @Cron('0 */15 * * * *')
+  // ── Cron: co 5 min — skanuj offline gateway/beacon ───────────
+  @Cron('0 */5 * * * *')
   async scanInfrastructure() {
-    const now      = new Date();
-    const cutoff10 = new Date(now.getTime() - 10 * 60 * 1000);
+    const now     = new Date();
+    const cutoff5 = new Date(now.getTime() - 5 * 60 * 1000);
 
     // ── Gatewaye offline ─────────────────────────────────────────
     const offlineGws = await this.prisma.gateway.findMany({
-      where:   { isOnline: true, lastSeen: { lt: cutoff10 } },
+      where:   { isOnline: true, lastSeen: { lt: cutoff5 } },
       include: { location: { include: { organization: true } } },
     });
 
@@ -210,7 +210,7 @@ export class InAppNotificationsService {
 
     // ── Beacony offline ──────────────────────────────────────────
     const offlineDevices = await this.prisma.device.findMany({
-      where:   { isOnline: true, lastSeen: { lt: cutoff10 } },
+      where:   { isOnline: true, lastSeen: { lt: cutoff5 } },
       include: { desk: { include: { location: { include: { organization: true } } } } },
     });
 

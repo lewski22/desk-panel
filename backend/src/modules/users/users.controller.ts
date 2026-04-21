@@ -84,8 +84,9 @@ export class UsersController {
     @Body('retentionDays') retentionDays?: number,
     @Request() req?: any,
   ) {
-    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
-    return this.svc.softDelete(id, retentionDays ?? 30, actorOrgId);
+    const actorOrgId  = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    const actorRole   = req.user.role as UserRole;
+    return this.svc.softDelete(id, retentionDays ?? 30, actorOrgId, actorRole);
   }
 
   @Post(':id/nfc-scan-start')

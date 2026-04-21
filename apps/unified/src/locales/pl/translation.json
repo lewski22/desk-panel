@@ -278,6 +278,16 @@
       "all": "Wszystkich",
       "online": "Online",
       "offline": "Offline"
+    },
+    "tab": {
+      "beacons":  "Beacony",
+      "gateways": "Gateways"
+    },
+    "gateway": {
+      "name":     "Nazwa",
+      "location": "Lokalizacja",
+      "version":  "Wersja",
+      "beacons":  "Beacony"
     }
   },
   "desks": {

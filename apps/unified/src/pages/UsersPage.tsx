@@ -31,13 +31,14 @@ export function UsersPage() {
 
   const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     const [active, deleted] = await Promise.all([
       appApi.users.list(ORG_ID || undefined).catch(() => [] as any[]),
       appApi.users.listDeactivated(ORG_ID || undefined).catch(() => [] as any[]),
     ]);
-    setUsers(active); setDeactivated(deleted); setLoading(false);
+    setUsers(active); setDeactivated(deleted);
+    if (!silent) setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
@@ -45,7 +46,8 @@ export function UsersPage() {
     e.preventDefault(); setBusy(true); setErr('');
     try {
       await appApi.users.create({ ...form, organizationId: ORG_ID || undefined });
-      setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' }); await load();
+      setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
+      load(true);
     } catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
@@ -56,26 +58,26 @@ export function UsersPage() {
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { await appApi.users.update(target.id, editForm); setModal(null); await load(); }
+    try { await appApi.users.update(target.id, editForm); setModal(null); load(true); }
     catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
 
   const handleDeactivate = async () => {
     setBusy(true);
-    try { await appApi.users.deactivate(target.id, retDays); setModal(null); await load(); }
+    try { await appApi.users.deactivate(target.id, retDays); setModal(null); load(true); }
     catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
 
   const handleRestore = async (id: string) => {
-    try { await appApi.users.restore(id); await load(); }
+    try { await appApi.users.restore(id); load(true); }
     catch(e:any) { setErr(e.message); }
   };
 
   const handleHardDelete = async (id: string, name: string) => {
     if (!confirm(t('users.modals.confirm_hard_delete', { name }))) return;
-    try { await appApi.users.hardDelete(id); await load(); }
+    try { await appApi.users.hardDelete(id); load(true); }
     catch(e:any) { setErr(e.message); }
   };
 
@@ -133,11 +135,14 @@ export function UsersPage() {
               </TD>
               <TD>
                 <div className="flex gap-1">
-                  <Btn variant="ghost" size="sm" onClick={() => openEdit(u)}>{t('users.actions.edit')}</Btn>
+                  {/* Admin nie może edytować ani dezaktywować kont SA */}
+                  {!(u.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN') && (
+                    <Btn variant="ghost" size="sm" onClick={() => openEdit(u)}>{t('users.actions.edit')}</Btn>
+                  )}
                   {u.cardUid && (
                     <Btn variant="ghost" size="sm" onClick={() => { setTarget(u); setModal('card'); }}>{t('users.actions.card')}</Btn>
                   )}
-                  {u.isActive && (
+                  {u.isActive && !(u.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN') && (
                     <Btn variant="danger" size="sm" onClick={() => { setTarget(u); setRetDays(30); setErr(''); setModal('deactivate'); }}>
                       {t('users.actions.deactivate')}
                     </Btn>
@@ -220,7 +225,9 @@ export function UsersPage() {
               <Input label={t('users.form.lastName')} value={editForm.lastName} onChange={e => setEditForm(f => ({...f,lastName:e.target.value}))} />
             </div>
             <Input label={t('users.form.email')} type="email" required value={editForm.email} onChange={e => setEditForm(f => ({...f,email:e.target.value}))} />
-            <Select label={t('users.form.role')} value={editForm.role} onChange={e => setEditForm(f => ({...f,role:e.target.value}))}>
+            <Select label={t('users.form.role')} value={editForm.role}
+              disabled={target.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN'}
+              onChange={e => setEditForm(f => ({...f,role:e.target.value}))}>
               <option value="END_USER">{t('users.roles.END_USER')}</option>
               <option value="STAFF">{t('users.roles.STAFF')}</option>
               <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>

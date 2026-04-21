@@ -5,6 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import { ConfigService }  from '@nestjs/config';
 import { PrismaService }  from '../../database/prisma.service';
 import { GatewaysService } from '../gateways/gateways.service';
+import { InAppNotificationsService, InAppNotifType } from '../inapp-notifications/inapp-notifications.service';
 import * as bcrypt from 'bcrypt';
 
 export interface ProvisionDeviceDto {
@@ -21,6 +22,7 @@ export class DevicesService {
     private prisma:    PrismaService,
     private gateways:  GatewaysService,
     private config:    ConfigService,
+    private inapp:     InAppNotificationsService,
   ) {}
 
   // ── Provisioning ──────────────────────────────────────────────
@@ -255,11 +257,25 @@ export class DevicesService {
         sent++;
       } catch (e: any) {
         this.logger.warn(`OTA-all: failed to send to ${dev.hardwareId}: ${e.message}`);
-        // Oznacz jako failed jeśli komenda nie dotarła do gateway
         await this.prisma.device.update({
           where: { id: dev.id },
           data:  { otaStatus: 'failed', otaFinishedAt: new Date() },
         });
+        // Powiadomienie in-app o błędzie OTA
+        const device = devices.find(d => d.id === dev.id) as any;
+        const orgId  = device?.gateway?.location?.organizationId ?? actorOrgId;
+        if (orgId) {
+          this.inapp.create({
+            type:           InAppNotifType.FIRMWARE_UPDATE,
+            title:          `OTA nieudane — ${dev.hardwareId}`,
+            body:           `Nie można wysłać komendy OTA do beacona ${dev.hardwareId}. Gateway może być niedostępny.`,
+            organizationId: orgId,
+            targetRoles:    ['SUPER_ADMIN', 'OFFICE_ADMIN'],
+            actionUrl:      '/provisioning',
+            actionLabel:    'Provisioning',
+            meta:           { deviceId: dev.id, hardwareId: dev.hardwareId, error: e.message },
+          }, `inapp:ota:fail:${dev.id}`, 60).catch(() => {});
+        }
       }
 
       if (sent < devices.length) {
@@ -275,19 +291,36 @@ export class DevicesService {
   async timeoutStaleOta() {
     const cutoff = new Date(Date.now() - 10 * 60 * 1000);
 
-    const result = await this.prisma.device.updateMany({
-      where: {
-        otaStatus:   'in_progress',
-        otaStartedAt: { lt: cutoff },
-      },
-      data: {
-        otaStatus:    'failed',
-        otaFinishedAt: new Date(),
+    const stale = await this.prisma.device.findMany({
+      where: { otaStatus: 'in_progress', otaStartedAt: { lt: cutoff } },
+      include: {
+        desk:    { include: { location: { select: { organizationId: true } } } },
+        gateway: { include: { location: { select: { organizationId: true } } } },
       },
     });
 
-    if (result.count > 0) {
-      this.logger.warn(`OTA timeout: marked ${result.count} device(s) as failed`);
+    if (!stale.length) return;
+
+    await this.prisma.device.updateMany({
+      where: { id: { in: stale.map(d => d.id) } },
+      data:  { otaStatus: 'failed', otaFinishedAt: new Date() },
+    });
+
+    this.logger.warn(`OTA timeout: marked ${stale.length} device(s) as failed`);
+
+    for (const dev of stale) {
+      const orgId = dev.gateway?.location?.organizationId ?? dev.desk?.location?.organizationId;
+      if (!orgId) continue;
+      await this.inapp.create({
+        type:           InAppNotifType.FIRMWARE_UPDATE,
+        title:          `OTA timeout — ${dev.desk?.name ?? dev.hardwareId}`,
+        body:           `Aktualizacja firmware beacona "${dev.desk?.name ?? dev.hardwareId}" przekroczyła limit czasu i została anulowana. Sprawdź połączenie urządzenia.`,
+        organizationId: orgId,
+        targetRoles:    ['SUPER_ADMIN', 'OFFICE_ADMIN'],
+        actionUrl:      '/provisioning',
+        actionLabel:    'Provisioning',
+        meta:           { deviceId: dev.id, hardwareId: dev.hardwareId },
+      }, `inapp:ota:timeout:${dev.id}`, 60);
     }
   }
 

@@ -62,7 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/desks',        icon: IconDesk,         labelKey: 'layout.nav.desks',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/users',        icon: IconUsers,        labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['STAFF'] },
       { to: '/provisioning', icon: IconProvisioning, labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/resources',    icon: IconRoom,         labelKey: 'layout.nav.resources',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' },
       { to: '/visitors',     icon: IconVisitor,      labelKey: 'layout.nav.visitors',     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },

@@ -122,20 +122,20 @@
 
 ### Zgłoszenia
 
-- [ ] **Po chwilowym problemie z łącznością LED świeci na czerwono i nie wraca.**  
-  Ustawić sensowny timeout / debounce dla zdarzeń offline — np. urządzenie musi być niedostępne przez X sekund zanim LED przejdzie na czerwony.
+- [x] **Po chwilowym problemie z łącznością LED świeci na czerwono i nie wraca.**  
+  `gateways.service.ts::deviceHeartbeat()` — przy offline→online transition metoda `_restoreDeskLed()` sprawdza aktualny stan biurka i emituje `OCCUPIED`/`RESERVED`/`FREE` via `LedEventsService`. *(2026-04-21)*
 
-- [ ] **Po utracie połączenia urządzenie długo pozostaje „online" w systemie.**  
-  W `devices.service.ts` (L121–122) `isOnline: true` jest ustawiane przy heartbeat, ale brak crona lub TTL który resetuje status po braku heartbeatu. Sprawdzić i uzupełnić logikę podobną do `timeoutStaleOta` (L273).
+- [x] **Po utracie połączenia urządzenie długo pozostaje „online" w systemie.**  
+  `scanInfrastructure()` w `inapp-notifications.service.ts` zmieniony z `*/15 min, cutoff 10 min` na `*/5 min, cutoff 5 min`. Worst case 10 min (było 25 min). *(2026-04-21)*
 
-- [ ] **Do zakładki Urządzenia dodać Gateway.**  
-  `DevicesPage.tsx` pokazuje tylko beacony. Zintegrować dane z `gateways.service.ts`.
+- [x] **Do zakładki Urządzenia dodać Gateway.**  
+  `DevicesPage.tsx` przebudowana — dwie zakładki „Beacony" i „Gateways". Gateway tab pokazuje: status, nazwa, lokalizacja, IP, wersja, liczba beaconów, ostatni kontakt. *(2026-04-21)*
 
-- [ ] **Zakładkę Urządzenia usunąć dla Super Admina i Admina — mają Provisioning.**  
-  Dostosować `roles` dla pozycji `/devices` w `NAV_GROUPS` (`AppLayout.tsx` L54).
+- [x] **Zakładkę Urządzenia usunąć dla Super Admina i Admina — mają Provisioning.**  
+  `AppLayout.tsx` — pozycja `/devices` zmieniona z `['SUPER_ADMIN','OFFICE_ADMIN','STAFF']` na `['STAFF']`. *(2026-04-21)*
 
-- [ ] **Błąd w beaconie był, ale nie przyszło powiadomienie do panelu.**  
-  Sprawdzić `backend/src/modules/inapp-notifications/` — czy błędy urządzeń generują powiadomienia in-app.
+- [x] **Błąd w beaconie był, ale nie przyszło powiadomienie do panelu.**  
+  `devices.service.ts::timeoutStaleOta()` — po timeout OTA tworzy `InAppNotifType.FIRMWARE_UPDATE` per urządzenie z deduplication 60 min. `triggerOtaAll()` — tworzy notification gdy komenda OTA nie dotarła do gateway. `DevicesModule` importuje `InAppNotificationsModule`. *(2026-04-21)*
 
 ---
 
@@ -148,14 +148,14 @@
 
 ### Zgłoszenia
 
-- [ ] **Admin (OFFICE_ADMIN) nie powinien móc wyłączyć Super Admina.**  
-  W `users.service.ts` L73 jest już guard dla zmiany roli na `SUPER_ADMIN`, ale brakuje blokady dla `deactivate`/`disable` jeśli target to `SUPER_ADMIN`.
+- [x] **Admin (OFFICE_ADMIN) nie powinien móc wyłączyć Super Admina.**  
+  `users.service.ts::softDelete()` — dodano parametr `actorRole`; jeśli target to SA i actor nie jest SA → `ForbiddenException`. Controller przekazuje `req.user.role`. UI ukrywa przycisk Deactivate dla SA gdy actor to OFFICE_ADMIN. *(2026-04-21)*
 
-- [ ] **Admin nie może zmienić roli dla Super Admina.**  
-  Uzupełnić guard w `users.service.ts` — sprawdzać rolę `target`, nie tylko `dto.role`.
+- [x] **Admin nie może zmienić roli dla Super Admina.**  
+  `users.service.ts::update()` — sprawdza rolę targetu: jeśli target jest SA i actor nie jest SA → `ForbiddenException`. Dodatkowo select roli w modalu edycji jest `disabled` dla SA gdy actor to OFFICE_ADMIN. *(2026-04-21)*
 
-- [ ] **Po dodaniu nowego użytkownika nie widać go na liście.**  
-  Prawdopodobnie brak refetch / cache invalidation po `POST /users` w `UsersPage.tsx`.
+- [x] **Po dodaniu nowego użytkownika nie widać go na liście.**  
+  `UsersPage.tsx` — `load(silent = false)`: gdy `silent=true` nie ustawia stanu loading (brak pełnoekranowego spinnera). Po create/edit/deactivate/restore/hardDelete wywołuje `load(true)` — lista odświeża się w tle bez migania. *(2026-04-21)*
 
 ---
 
@@ -167,8 +167,14 @@
 
 ### Zgłoszenia
 
-- [ ] **Włączenie PUSH — zweryfikować i uruchomić produkcyjnie.**  
-  Komponent `PushOptIn` jest zaimplementowany, backend posiada moduł `push`. Sprawdzić klucze VAPID w konfiguracji środowiskowej i przetestować end-to-end (opt-in → dostarczona wiadomość push).
+- [x] **Włączenie PUSH — zweryfikować i uruchomić produkcyjnie.**  
+  Audyt: SW nie miał push handlera; `notifyUser()` nigdy nie było wywoływane. Naprawiono: *(2026-04-21)*
+  - `src/sw.ts` — nowy custom Service Worker z `push` + `notificationclick` handlerami (pure Cache API, bez workbox)
+  - `vite.config.ts` — przełączono na `strategies: 'injectManifest'`
+  - `push.controller.ts` — dodano `POST /push/test-send` do weryfikacji end-to-end
+  - `reservations.service.ts` — `notifyUser()` wywoływane po create (booker) i cancel przez admina (booker)
+  - `reservations.module.ts` — importuje `PushModule`
+  - `backend/.env.example` — instrukcja generowania kluczy VAPID (`npx web-push generate-vapid-keys`)
 
 ---
 

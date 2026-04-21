@@ -3,6 +3,7 @@ import { ScheduleModule }       from '@nestjs/schedule';
 import { GatewaysModule }       from '../gateways/gateways.module';
 import { NotificationsModule }  from '../notifications/notifications.module';
 import { GraphSyncModule }      from '../graph-sync/graph-sync.module';
+import { PushModule }           from '../push/push.module';
 import { ReservationsController } from './reservations.controller';
 import { ReservationsService }  from './reservations.service';
 // IntegrationsModule jest @Global() — IntegrationEventService dostępny automatycznie
@@ -12,7 +13,8 @@ import { ReservationsService }  from './reservations.service';
     ScheduleModule.forRoot(),
     GatewaysModule,
     NotificationsModule,
-    GraphSyncModule,  // eksportuje GraphService potrzebny w ReservationsService
+    GraphSyncModule,
+    PushModule,
   ],
   controllers: [ReservationsController],
   providers:   [ReservationsService],

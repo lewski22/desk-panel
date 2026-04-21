@@ -278,6 +278,16 @@
       "all": "All",
       "online": "Online",
       "offline": "Offline"
+    },
+    "tab": {
+      "beacons":  "Beacons",
+      "gateways": "Gateways"
+    },
+    "gateway": {
+      "name":     "Name",
+      "location": "Location",
+      "version":  "Version",
+      "beacons":  "Beacons"
     }
   },
   "desks": {

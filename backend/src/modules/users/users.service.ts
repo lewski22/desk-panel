@@ -68,8 +68,13 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto, actorRole: UserRole, actorOrgId?: string) {
-    // Weryfikacja org przed jakąkolwiek zmianą
-    await this.findOne(id, actorOrgId);
+    const target = await this.findOne(id, actorOrgId);
+
+    // Admin nie może modyfikować konta Super Admina
+    if (target.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only Super Admin can modify Super Admin accounts');
+    }
+    // Admin nie może nadać roli Super Admina
     if (dto.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only Super Admin can grant Super Admin role');
     }
@@ -87,8 +92,14 @@ export class UsersService {
     return this.prisma.user.update({ where: { id }, data: { cardUid }, select: { id: true, cardUid: true } });
   }
 
-  async softDelete(id: string, retentionDays = 30, actorOrgId?: string) {
-    await this.findOne(id, actorOrgId);  // org check
+  async softDelete(id: string, retentionDays = 30, actorOrgId?: string, actorRole?: UserRole) {
+    const target = await this.findOne(id, actorOrgId);
+
+    // Admin nie może dezaktywować konta Super Admina
+    if (target.role === UserRole.SUPER_ADMIN && actorRole !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only Super Admin can deactivate Super Admin accounts');
+    }
+
     if (retentionDays < 30) retentionDays = 30;
     const deletedAt = new Date();
     const scheduledDeleteAt = new Date(deletedAt);
@@ -132,7 +143,7 @@ export class UsersService {
     });
   }
 
-  async deactivate(id: string) {
-    return this.softDelete(id, 30);
+  async deactivate(id: string, actorRole?: UserRole) {
+    return this.softDelete(id, 30, undefined, actorRole);
   }
 }

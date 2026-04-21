@@ -14,6 +14,7 @@ import { NotificationsService }    from '../notifications/notifications.service'
 import { IntegrationEventService } from '../integrations/integration-event.service';
 import { GraphService }            from '../graph-sync/graph.service';
 import { CreateReservationDto }    from './dto/create-reservation.dto';
+import { PushService }             from '../push/push.service';
 
 @Injectable()
 export class ReservationsService {
@@ -26,6 +27,7 @@ export class ReservationsService {
     private notify:            NotificationsService,
     private integrationEvents: IntegrationEventService,
     private graphService:      GraphService,
+    private push:              PushService,
   ) {}
 
   async findAll(filters: {
@@ -168,6 +170,17 @@ export class ReservationsService {
     // ── Email notification ───────────────────────────────────────
     this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});
 
+    // ── Push notification — informuj bookera ─────────────────────
+    const deskLabel  = reservation.desk?.name ?? dto.deskId;
+    const dateLabel  = new Date(dto.date).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const startLabel = new Date(dto.startTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    const endLabel   = new Date(dto.endTime).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    this.push.notifyUser(userId, {
+      title: `Rezerwacja potwierdzona — ${deskLabel}`,
+      body:  `${dateLabel}, ${startLabel}–${endLabel}`,
+      url:   '/my-reservations',
+    }).catch(() => {});
+
     // ── Sprint F — Integration dispatcher (Slack/Teams/Webhook) ─
     this.integrationEvents.onReservationCreated(actorOrgId ?? desk.location?.organizationId ?? '', {
       id:        reservation.id,
@@ -229,6 +242,15 @@ export class ReservationsService {
       this.ledEvents.emit(reservation.deskId, 'FREE');
       this._notifyBeaconReservation(reservation.deskId, null, null).catch(() => {});
       this.notify.notifyReservationCancelled(reservation.id).catch(() => {});
+
+      // Push — powiadom bookera jeśli anulował ktoś inny (admin)
+      if (actorId !== reservation.userId) {
+        this.push.notifyUser(reservation.userId, {
+          title: 'Rezerwacja anulowana',
+          body:  `Twoja rezerwacja biurka ${(reservation as any).desk?.name ?? reservation.deskId} została anulowana przez administratora.`,
+          url:   '/my-reservations',
+        }).catch(() => {});
+      }
 
       // Sprint F — Integration dispatcher
       this.integrationEvents.onReservationCancelled(actorOrgId ?? '', {

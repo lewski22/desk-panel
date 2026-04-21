@@ -5,15 +5,17 @@ import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService }             from '../../database/prisma.service';
 import { InAppNotificationsService } from '../inapp-notifications/inapp-notifications.service';
+import { LedEventsService }          from '../../shared/led-events.service';
 import { EventType } from '@prisma/client';
 
 @Injectable()
 export class GatewaysService {
   private readonly logger = new Logger(GatewaysService.name);
   constructor(
-    private prisma:  PrismaService,
-    private config:  ConfigService,
-    private inapp:   InAppNotificationsService,
+    private prisma:     PrismaService,
+    private config:     ConfigService,
+    private inapp:      InAppNotificationsService,
+    private ledEvents:  LedEventsService,
   ) {}
 
   async register(locationId: string, name: string) {
@@ -141,6 +143,12 @@ export class GatewaysService {
   async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
     const online = isOnline === false ? false : true;
 
+    // Snapshot przed updatem — potrzebny do wykrycia powrotu online
+    const prev = await this.prisma.device.findUnique({
+      where:  { hardwareId },
+      select: { isOnline: true, deskId: true, id: true },
+    });
+
     const device = await this.prisma.device.update({
       where: { hardwareId },
       data: {
@@ -164,7 +172,37 @@ export class GatewaysService {
       this.logger.log(`OTA success confirmed by heartbeat: ${hardwareId} v${firmwareVersion}`);
     }
 
+    // LED recovery: beacon wrócił online po przerwie
+    if (online && prev && !prev.isOnline && prev.deskId) {
+      this._restoreDeskLed(prev.deskId).catch(() => {});
+    }
+
     return device;
+  }
+
+  private async _restoreDeskLed(deskId: string): Promise<void> {
+    const activeCheckin = await this.prisma.checkin.findFirst({
+      where:  { deskId, checkedOutAt: null },
+      select: { id: true },
+    });
+    if (activeCheckin) {
+      this.ledEvents.emit(deskId, 'OCCUPIED');
+      return;
+    }
+
+    const now = new Date();
+    const activeReservation = await this.prisma.reservation.findFirst({
+      where: {
+        deskId,
+        status:    { in: ['CONFIRMED', 'PENDING'] },
+        startTime: { lte: new Date(now.getTime() + 60 * 60 * 1000) },
+        endTime:   { gte: now },
+      },
+      select: { id: true },
+    });
+
+    this.ledEvents.emit(deskId, activeReservation ? 'RESERVED' : 'FREE');
+    this.logger.log(`LED restored: desk ${deskId} → ${activeReservation ? 'RESERVED' : 'FREE'}`);
   }
 
 
