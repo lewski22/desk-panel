@@ -40,10 +40,22 @@ export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
   const {
     state, canUndo, canRedo,
     moveDeskTo, rotateDesk,
-    setBackground, removeBackground,
+    setBackground, loadBackground, removeBackground,
     setZoom, toggleSnap,
     undo, redo, reset, markSaved,
   } = useFloorPlanEditor(desks, floorPlan ?? undefined);
+
+  // Ładuje tło z serwera do reduktora gdy fetch się zakończy.
+  // useReducer nie reaguje na zmianę argumentów po inicjalizacji, więc robimy to ręcznie.
+  useEffect(() => {
+    if (!floorPlan) return;
+    loadBackground(
+      floorPlan.floorPlanUrl ?? null,
+      floorPlan.floorPlanW,
+      floorPlan.floorPlanH,
+      floorPlan.gridSize,
+    );
+  }, [floorPlan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync positions when desks reload from API (e.g. after save or floor switch), but only if editor is clean
   useEffect(() => {
@@ -93,7 +105,8 @@ export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
         await appApi.desks.batchPositions(updates);
       }
 
-      // 2. Zapisz tło jeśli zostało zmienione
+      // 2. Zapisz tło jeśli zostało zmienione lub usunięte przez użytkownika.
+      // Nie ruszamy tła jeśli isDirty pochodzi tylko ze zmian pozycji (background nie był zmieniany).
       if (state.background && state.isDirty) {
         await appApi.locations.floorPlan.upload(locationId, {
           floorPlanUrl: state.background,
@@ -101,7 +114,8 @@ export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
           floorPlanH:   state.backgroundH,
           gridSize:     state.gridSize,
         }, floor);
-      } else if (!state.background && floorPlan?.floorPlanUrl) {
+      } else if (state.backgroundCleared) {
+        // Użytkownik jawnie usunął tło przyciskiem "Usuń tło"
         await appApi.locations.floorPlan.delete(locationId, floor);
       }
 

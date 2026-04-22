@@ -16,16 +16,17 @@ export interface DeskPosition {
 }
 
 export interface FloorPlanState {
-  positions:      Record<string, DeskPosition>; // id → pozycja
-  background:     string | null;                // base64 lub URL
-  backgroundW:    number;
-  backgroundH:    number;
-  gridSize:       number;
-  snapToGrid:     boolean;
-  zoom:           number;       // 0.5 – 2.0
-  past:           Record<string, DeskPosition>[];  // undo stack
-  future:         Record<string, DeskPosition>[];  // redo stack
-  isDirty:        boolean;
+  positions:        Record<string, DeskPosition>; // id → pozycja
+  background:       string | null;                // base64 lub URL
+  backgroundW:      number;
+  backgroundH:      number;
+  gridSize:         number;
+  snapToGrid:       boolean;
+  zoom:             number;       // 0.5 – 2.0
+  past:             Record<string, DeskPosition>[];  // undo stack
+  future:           Record<string, DeskPosition>[];  // redo stack
+  isDirty:          boolean;
+  backgroundCleared: boolean; // true tylko gdy użytkownik jawnie usunął tło (REMOVE_BACKGROUND)
 }
 
 // ── Akcje ─────────────────────────────────────────────────────
@@ -34,6 +35,7 @@ type Action =
   | { type: 'ROTATE_DESK';      id: string }
   | { type: 'RESIZE_DESK';      id: string; width: number; height: number }
   | { type: 'SET_BACKGROUND';   url: string; w: number; h: number }
+  | { type: 'LOAD_BACKGROUND';  url: string | null; w?: number; h?: number; gridSize?: number } // ładuje z serwera bez isDirty
   | { type: 'REMOVE_BACKGROUND' }
   | { type: 'SET_GRID';         gridSize: number }
   | { type: 'TOGGLE_SNAP' }
@@ -102,10 +104,21 @@ function reducer(state: FloorPlanState, action: Action): FloorPlanState {
     }
 
     case 'SET_BACKGROUND':
-      return { ...state, background: action.url, backgroundW: action.w, backgroundH: action.h, isDirty: true };
+      return { ...state, background: action.url, backgroundW: action.w, backgroundH: action.h, isDirty: true, backgroundCleared: false };
+
+    // Ładuje tło z serwera — nie zmienia isDirty ani nie trafia do undo history
+    case 'LOAD_BACKGROUND':
+      return {
+        ...state,
+        background:       action.url,
+        backgroundW:      action.w       ?? state.backgroundW,
+        backgroundH:      action.h       ?? state.backgroundH,
+        gridSize:         action.gridSize ?? state.gridSize,
+        backgroundCleared: false,
+      };
 
     case 'REMOVE_BACKGROUND':
-      return { ...state, background: null, isDirty: true };
+      return { ...state, background: null, isDirty: true, backgroundCleared: true };
 
     case 'SET_GRID':
       return { ...state, gridSize: action.gridSize };
@@ -143,10 +156,10 @@ function reducer(state: FloorPlanState, action: Action): FloorPlanState {
     }
 
     case 'RESET':
-      return { ...state, positions: action.positions, past: [], future: [], isDirty: false };
+      return { ...state, positions: action.positions, past: [], future: [], isDirty: false, backgroundCleared: false };
 
     case 'MARK_SAVED':
-      return { ...state, isDirty: false };
+      return { ...state, isDirty: false, backgroundCleared: false };
 
     default:
       return state;
@@ -171,16 +184,17 @@ export function useFloorPlanEditor(
   }
 
   const initial: FloorPlanState = {
-    positions:   initialPositions,
-    background:  floorPlan?.floorPlanUrl ?? null,
-    backgroundW: floorPlan?.floorPlanW   ?? 1200,
-    backgroundH: floorPlan?.floorPlanH   ?? 800,
-    gridSize:    floorPlan?.gridSize     ?? 40,
-    snapToGrid:  true,
-    zoom:        1,
-    past:        [],
-    future:      [],
-    isDirty:     false,
+    positions:         initialPositions,
+    background:        floorPlan?.floorPlanUrl ?? null,
+    backgroundW:       floorPlan?.floorPlanW   ?? 1200,
+    backgroundH:       floorPlan?.floorPlanH   ?? 800,
+    gridSize:          floorPlan?.gridSize     ?? 40,
+    snapToGrid:        true,
+    zoom:              1,
+    past:              [],
+    future:            [],
+    isDirty:           false,
+    backgroundCleared: false,
   };
 
   const [state, dispatch] = useReducer(reducer, initial);
@@ -193,6 +207,8 @@ export function useFloorPlanEditor(
     dispatch({ type: 'RESIZE_DESK', id, width, height }), []);
   const setBackground = useCallback((url: string, w: number, h: number) =>
     dispatch({ type: 'SET_BACKGROUND', url, w, h }), []);
+  const loadBackground = useCallback((url: string | null, w?: number, h?: number, gridSize?: number) =>
+    dispatch({ type: 'LOAD_BACKGROUND', url, w, h, gridSize }), []);
   const removeBackground = useCallback(() =>
     dispatch({ type: 'REMOVE_BACKGROUND' }), []);
   const setZoom     = useCallback((zoom: number) =>
@@ -211,7 +227,7 @@ export function useFloorPlanEditor(
   return {
     state,
     moveDeskTo, rotateDesk, resizeDesk,
-    setBackground, removeBackground,
+    setBackground, loadBackground, removeBackground,
     setZoom, toggleSnap,
     undo, redo, reset, markSaved,
     canUndo: state.past.length > 0,
