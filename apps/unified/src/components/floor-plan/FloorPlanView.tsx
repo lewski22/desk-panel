@@ -6,7 +6,7 @@
  * - Filtr "Pokaż tylko wolne"
  * - Legenda kolorów
  */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation }   from 'react-i18next';
 import { DeskMapItem }       from '../../types';
 import { DeskPin }           from './DeskPin';
@@ -21,8 +21,9 @@ interface Props {
 }
 
 // ── Desk Info Popup ───────────────────────────────────────────
-function DeskInfoCard({ desk, onClose, onReserve, userRole }: {
+function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
   desk: DeskMapItem; onClose: () => void; onReserve?: () => void; userRole: string;
+  style: React.CSSProperties;
 }) {
   const { t } = useTranslation();
 
@@ -37,15 +38,9 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole }: {
   const canBook = desk.isOnline && !desk.isOccupied && desk.status === 'ACTIVE';
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
-  const px = desk.posX ?? 50;
-  const py = desk.posY ?? 50;
-  const popupStyle: React.CSSProperties = px > 55
-    ? { top: `${py}%`, right: `${100 - px + 2}%`, transform: 'translateY(-50%)' }
-    : { top: `${py}%`, left: `${px + 2}%`, transform: 'translateY(-50%)' };
-
   return (
     <div className="absolute z-30 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 w-60"
-      style={popupStyle}
+      style={style}
       onClick={e => e.stopPropagation()}>
 
       <div className="flex items-start justify-between mb-3">
@@ -141,6 +136,20 @@ function FloorTabs({ floors, active, onChange }: { floors: string[]; active: str
   );
 }
 
+// ── Popup position helper ─────────────────────────────────────
+function popupStyle(
+  posX: number, posY: number,
+  containerW: number, canvasW: number, canvasH: number,
+): React.CSSProperties {
+  const svgW = Math.min(canvasW, containerW);
+  const svgH = svgW * canvasH / canvasW;
+  const xPx  = (posX / 100) * svgW;
+  const yPx  = (posY / 100) * svgH;
+  return posX > 55
+    ? { top: yPx, right: containerW - xPx + 8, transform: 'translateY(-50%)' }
+    : { top: yPx, left: xPx + 8, transform: 'translateY(-50%)' };
+}
+
 // ── Main FloorPlanView ────────────────────────────────────────
 export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props) {
   const { t }                  = useTranslation();
@@ -150,6 +159,7 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
   const [freeOnly,  setFO]     = useState(false);
   const [floors,    setFloors] = useState<string[]>([]);
   const [activeFloor, setActiveFloor] = useState<string>('');
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
@@ -227,7 +237,8 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
       </div>
 
       {/* SVG canvas */}
-      <div className="relative bg-zinc-100 rounded-xl overflow-auto border border-zinc-200"
+      <div ref={containerRef}
+        className="relative bg-zinc-100 rounded-xl overflow-auto border border-zinc-200"
         style={{ maxHeight: '65vh' }}
         onClick={() => setSel(null)}>
         <svg
@@ -253,12 +264,16 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
         </svg>
 
         {/* Popup */}
-        {selected && (
+        {selected && containerRef.current && (
           <DeskInfoCard
             desk={selected}
             onClose={() => setSel(null)}
             onReserve={onReserve ? () => { const d = selected; setSel(null); onReserve(d); } : undefined}
             userRole={userRole}
+            style={popupStyle(
+              selected.posX ?? 50, selected.posY ?? 50,
+              containerRef.current.clientWidth, canvasW, canvasH,
+            )}
           />
         )}
       </div>

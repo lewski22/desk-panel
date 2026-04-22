@@ -158,7 +158,13 @@ export function MyReservationsPage() {
 
   const checkin = async (id: string) => {
     setCheckingIn(id);
-    try { await appApi.checkins.web(id); await load(); }
+    try {
+      await appApi.checkins.web(id);
+      setReservations(rs => rs.map(r =>
+        r.id === id ? { ...r, checkedInAt: new Date().toISOString() } : r,
+      ));
+      await load();
+    }
     catch (e: any) { setErr(e?.response?.data?.message ?? e.message); }
     setCheckingIn(null);
   };

@@ -450,6 +450,14 @@
         "timeout": "Time ran out. Try again.",
         "save_failed": "Failed to save card."
       }
+    },
+    "invite": {
+      "btn": "Invite",
+      "modal_title": "Invite user",
+      "hint": "An activation link will be sent to the provided email address. Valid for 7 days.",
+      "send": "Send invitation",
+      "sent_title": "Invitation sent!",
+      "sent_body": "An activation link has been sent to {{email}}."
     }
   },
   "dashboard": {
@@ -813,7 +821,10 @@
       "hint": "Drag desks onto the plan. R = rotate. Ctrl+Z = undo.",
       "no_desks": "No desks in this location",
       "no_desks_sub": "Add desks before setting up the floor plan.",
-      "go_add_desks": "Go to desks →"
+      "go_add_desks": "Go to desks →",
+      "floor_default": "Ground floor",
+      "floor_prompt": "Floor name (e.g. 1, 2, A, B):",
+      "add_floor": "Add floor"
     },
     "toolbar": {
       "upload_bg": "Upload plan",
@@ -1199,5 +1210,28 @@
     "connect_err_prefix": "❌ Connection error: ",
     "disconnect_confirm_simple": "Disconnect Outlook Calendar?",
     "disconnect_ok": "Outlook Calendar disconnected"
+  },
+  "register": {
+    "page_subtitle": "Create your account",
+    "invited_to": "Invited to organization",
+    "form_title": "Complete your profile",
+    "first_name": "First name",
+    "last_name": "Last name",
+    "password": "Password (min. 8 characters)",
+    "confirm_password": "Confirm password",
+    "create_account": "Create account",
+    "creating": "Creating account…",
+    "back_to_login": "Back to login",
+    "error_title": "Invalid invitation",
+    "error_no_token": "No invitation token found in the URL.",
+    "error_invalid": "This invitation does not exist or has expired.",
+    "error_expired": "This invitation has expired. Please ask your admin to send a new one.",
+    "error_used": "This invitation has already been used.",
+    "error_generic": "Error creating account. Please try again.",
+    "error_password_mismatch": "Passwords do not match.",
+    "error_password_short": "Password must be at least 8 characters.",
+    "success_title": "Account created!",
+    "success_body": "You can now log in to Reserti.",
+    "go_to_login": "Go to login"
   }
 }

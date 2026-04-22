@@ -86,7 +86,7 @@ function KpiCard({
 }) {
   const { t } = useTranslation();
   return (
-    <div className={`rounded-xl border p-3 sm:p-4 flex flex-col gap-1 ${
+    <div className={`rounded-xl border p-2.5 sm:p-4 flex flex-col gap-1 ${
       accent ? 'bg-brand border-brand text-white' : 'bg-white border-zinc-100'
     }`}>
       <p className={`text-xs font-medium uppercase tracking-wide ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
@@ -393,10 +393,13 @@ export function DashboardPage() {
     <div>
       {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold text-zinc-800">{t('pages.dashboard.title')}</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">
+          <p className="text-sm text-zinc-400 mt-0.5 hidden sm:block">
             {now.toLocaleDateString(locale, { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+          </p>
+          <p className="text-xs text-zinc-400 mt-0.5 sm:hidden">
+            {now.toLocaleDateString(locale, { weekday:'short', day:'numeric', month:'short' })}
           </p>
         </div>
         <div className="flex items-center gap-2 mt-1 shrink-0">
@@ -480,18 +483,43 @@ export function DashboardPage() {
         <Card className="p-5">
           <p className="text-sm font-semibold text-zinc-700 mb-3">{t('dashboard.zone.title')}</p>
           {zoneData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={zoneData} barCategoryGap="30%" layout="vertical">
-                <XAxis type="number" tick={{ fontSize:10, fill:'#a1a1aa' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:'#a1a1aa' }}
-                  axisLine={false} tickLine={false} width={60} />
-                <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #e4e4e7', fontSize:11 }}
-                  cursor={{ fill:'#f9f9f9' }} />
-                <Bar dataKey="occupied" name={t('dashboard.zone.occupied')} fill={C_OCCUPIED} radius={[0,3,3,0]} stackId="a" />
-                <Bar dataKey="reserved" name={t('dashboard.zone.reserved')} fill={C_RESERVED} stackId="a" />
-                <Bar dataKey="free"     name={t('dashboard.zone.free')}     fill={C_FREE}     radius={[0,3,3,0]} stackId="a" />
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              {/* Desktop chart */}
+              <div className="hidden sm:block">
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={zoneData} barCategoryGap="30%" layout="vertical">
+                    <XAxis type="number" tick={{ fontSize:10, fill:'#a1a1aa' }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize:11, fill:'#a1a1aa' }}
+                      axisLine={false} tickLine={false} width={72} />
+                    <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #e4e4e7', fontSize:11 }}
+                      cursor={{ fill:'#f9f9f9' }} />
+                    <Bar dataKey="occupied" name={t('dashboard.zone.occupied')} fill={C_OCCUPIED} radius={[0,3,3,0]} stackId="a" />
+                    <Bar dataKey="reserved" name={t('dashboard.zone.reserved')} fill={C_RESERVED} stackId="a" />
+                    <Bar dataKey="free"     name={t('dashboard.zone.free')}     fill={C_FREE}     radius={[0,3,3,0]} stackId="a" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Mobile list */}
+              <div className="sm:hidden space-y-2">
+                {zoneData.map(z => {
+                  const total = z.free + z.reserved + z.occupied;
+                  const pctOcc = total > 0 ? Math.round((z.occupied / total) * 100) : 0;
+                  return (
+                    <div key={z.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-zinc-700 truncate max-w-[55%]">{z.name}</span>
+                        <span className="text-xs text-zinc-400">{z.occupied}/{total} · {pctOcc}%</span>
+                      </div>
+                      <div className="h-2 bg-zinc-100 rounded-full overflow-hidden flex">
+                        {z.occupied > 0 && <div style={{ width:`${(z.occupied/total)*100}%`, background: C_OCCUPIED }} />}
+                        {z.reserved > 0 && <div style={{ width:`${(z.reserved/total)*100}%`, background: C_RESERVED }} />}
+                        {z.free > 0    && <div style={{ width:`${(z.free/total)*100}%`,     background: C_FREE     }} />}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           ) : (
             <EmptyState icon="📊" title={t('dashboard.no_data')} />
           )}

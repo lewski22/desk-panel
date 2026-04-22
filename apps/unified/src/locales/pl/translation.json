@@ -450,6 +450,14 @@
         "timeout": "Czas minął. Spróbuj ponownie.",
         "save_failed": "Błąd zapisu."
       }
+    },
+    "invite": {
+      "btn": "Zaproś",
+      "modal_title": "Zaproś użytkownika",
+      "hint": "Link aktywacyjny zostanie wysłany na podany adres email. Ważny 7 dni.",
+      "send": "Wyślij zaproszenie",
+      "sent_title": "Zaproszenie wysłane!",
+      "sent_body": "Link aktywacyjny został wysłany na adres {{email}}."
     }
   },
   "dashboard": {
@@ -813,7 +821,10 @@
       "hint": "Przeciągnij biurka na plan. R = obrót. Ctrl+Z = cofnij.",
       "no_desks": "Brak biurek w tej lokalizacji",
       "no_desks_sub": "Dodaj biurka przed ustawieniem planu.",
-      "go_add_desks": "Przejdź do biurek →"
+      "go_add_desks": "Przejdź do biurek →",
+      "floor_default": "Parter",
+      "floor_prompt": "Nazwa piętra (np. 1, 2, A, B):",
+      "add_floor": "Dodaj piętro"
     },
     "toolbar": {
       "upload_bg": "Wgraj plan",
@@ -1199,5 +1210,28 @@
     "connect_err_prefix": "❌ Błąd połączenia: ",
     "disconnect_confirm_simple": "Odłączyć Outlook Calendar?",
     "disconnect_ok": "Odłączono Outlook Calendar"
+  },
+  "register": {
+    "page_subtitle": "Utwórz konto",
+    "invited_to": "Zaproszenie do organizacji",
+    "form_title": "Uzupełnij dane konta",
+    "first_name": "Imię",
+    "last_name": "Nazwisko",
+    "password": "Hasło (min. 8 znaków)",
+    "confirm_password": "Powtórz hasło",
+    "create_account": "Utwórz konto",
+    "creating": "Tworzenie konta…",
+    "back_to_login": "Wróć do logowania",
+    "error_title": "Nieprawidłowe zaproszenie",
+    "error_no_token": "Brak tokenu zaproszenia w adresie URL.",
+    "error_invalid": "Zaproszenie nie istnieje lub wygasło.",
+    "error_expired": "Czas ważności zaproszenia minął. Poproś administratora o nowe.",
+    "error_used": "To zaproszenie zostało już wykorzystane.",
+    "error_generic": "Błąd tworzenia konta. Spróbuj ponownie.",
+    "error_password_mismatch": "Hasła nie są identyczne.",
+    "error_password_short": "Hasło musi mieć co najmniej 8 znaków.",
+    "success_title": "Konto zostało utworzone!",
+    "success_body": "Możesz teraz zalogować się do Reserti.",
+    "go_to_login": "Przejdź do logowania"
   }
 }

@@ -91,9 +91,13 @@ export function DeskMapPage() {
   const [locLoading,    setLocLoading]    = useState(true);
   const [occupancyCache, setOccupancyCache] = useState<Record<string, { occupied: number; total: number }>>({});
   const [hasPlan,       setHasPlan]       = useState(false);
-  const [viewMode,      setViewMode]      = useState<ViewMode>(
-    (localStorage.getItem('desk_view_mode') as ViewMode) ?? 'cards'
-  );
+  const [viewMode,      setViewMode]      = useState<ViewMode>(() => {
+    try {
+      const role = JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? '';
+      if (role === 'END_USER') return 'plan';
+    } catch {}
+    return (localStorage.getItem('desk_view_mode') as ViewMode) ?? 'cards';
+  });
   const [reservationTarget, setReservationTarget] = useState<any>(null);
   const [reservationUsers,  setReservationUsers]  = useState<any[]>([]);
 
@@ -136,10 +140,10 @@ export function DeskMapPage() {
       .then(fp => {
         const has = !!fp?.floorPlanUrl;
         setHasPlan(has);
-        if (!saved) setViewMode(has ? 'plan' : 'cards');
+        if (!saved || isEndUser) setViewMode(has ? 'plan' : 'cards');
       })
       .catch(() => setHasPlan(false));
-  }, [locationId]);
+  }, [locationId, isEndUser]);
 
   const handleViewMode = (m: ViewMode) => {
     setViewMode(m);

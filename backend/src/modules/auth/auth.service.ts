@@ -1,12 +1,18 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
+import { MailerService } from '../notifications/mailer.service';
 import { User, UserRole } from '@prisma/client';
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) {}
+  constructor(
+    private prisma:  PrismaService,
+    private jwt:     JwtService,
+    private config:  ConfigService,
+    private mailer:  MailerService,
+  ) {}
   async validateUser(email: string, password: string): Promise<User|null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return null;
@@ -108,6 +114,110 @@ export class AuthService {
         ...(opts.extraData ?? {}),
       },
     });
+  }
+
+  // ── Invitation flow ──────────────────────────────────────────
+
+  async createInvitation(opts: {
+    email:         string;
+    organizationId: string;
+    role:          UserRole;
+    invitedById:   string;
+    expiresInDays?: number;
+  }) {
+    const emailLower = opts.email.toLowerCase();
+
+    const existing = await this.prisma.user.findUnique({ where: { email: emailLower } });
+    if (existing) throw new ConflictException('Użytkownik z tym adresem email już istnieje');
+
+    const org = await this.prisma.organization.findUniqueOrThrow({
+      where: { id: opts.organizationId },
+      select: { name: true },
+    });
+
+    const days = opts.expiresInDays ?? 7;
+    const expiresAt = new Date(Date.now() + days * 86_400_000);
+
+    const invitation = await this.prisma.invitationToken.create({
+      data: {
+        email:          emailLower,
+        organizationId: opts.organizationId,
+        role:           opts.role,
+        invitedById:    opts.invitedById,
+        expiresAt,
+      },
+    });
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'https://staff.prohalw2026.ovh');
+    const link = `${frontendUrl}/register/${invitation.token}`;
+
+    await this.mailer.send({
+      to:      emailLower,
+      subject: `Zaproszenie do ${org.name} — Reserti`,
+      html:    this.mailer.buildHtml({
+        title:    `Zaproszenie do ${org.name}`,
+        body:     `<p>Zostałeś zaproszony do dołączenia do organizacji <strong>${org.name}</strong> w systemie Reserti.</p>
+                   <p>Kliknij przycisk poniżej, aby założyć konto. Link ważny przez ${days} dni.</p>`,
+        ctaLabel: 'Utwórz konto',
+        ctaUrl:   link,
+        footer:   `Jeśli nie spodziewałeś się tego zaproszenia, zignoruj tę wiadomość.`,
+      }),
+    }, opts.organizationId);
+
+    return { ok: true, email: emailLower, expiresAt };
+  }
+
+  async getInvitationInfo(token: string) {
+    const inv = await this.prisma.invitationToken.findUnique({
+      where: { token },
+      include: { organization: { select: { name: true } } },
+    });
+    if (!inv) throw new NotFoundException('Zaproszenie nie istnieje lub wygasło');
+
+    return {
+      email:   inv.email,
+      orgName: inv.organization.name,
+      role:    inv.role,
+      expired: inv.expiresAt < new Date(),
+      used:    !!inv.usedAt,
+    };
+  }
+
+  async completeRegistration(opts: {
+    token:     string;
+    firstName: string;
+    lastName:  string;
+    password:  string;
+  }) {
+    const inv = await this.prisma.invitationToken.findUnique({ where: { token: opts.token } });
+    if (!inv)           throw new NotFoundException('Nieprawidłowy token zaproszenia');
+    if (inv.usedAt)     throw new BadRequestException('To zaproszenie zostało już wykorzystane');
+    if (inv.expiresAt < new Date()) throw new BadRequestException('Zaproszenie wygasło');
+
+    const emailLower = inv.email.toLowerCase();
+    const existing = await this.prisma.user.findUnique({ where: { email: emailLower } });
+    if (existing) throw new ConflictException('Konto dla tego adresu email już istnieje');
+
+    const hash = await bcrypt.hash(opts.password, 12);
+
+    const user = await this.prisma.user.create({
+      data: {
+        email:          emailLower,
+        passwordHash:   hash,
+        firstName:      opts.firstName,
+        lastName:       opts.lastName,
+        role:           inv.role,
+        organizationId: inv.organizationId,
+        isActive:       true,
+      },
+    });
+
+    await this.prisma.invitationToken.update({
+      where: { token: opts.token },
+      data:  { usedAt: new Date() },
+    });
+
+    return this.login(user);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {

@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Patch, Get, Body, Query,
+  Controller, Post, Patch, Get, Body, Query, Param,
   UseGuards, Request, HttpCode, HttpStatus, Res,
 } from '@nestjs/common';
 import { Response }             from 'express';
@@ -12,7 +12,12 @@ import { GoogleAuthService }    from './google-auth.service';
 import { RefreshTokenDto }      from './dto/refresh-token.dto';
 import { AzureLoginDto }        from './dto/azure-login.dto';
 import { ChangePasswordDto }    from './dto/change-password.dto';
+import { InviteUserDto }        from './dto/invite-user.dto';
+import { RegisterDto }          from './dto/register.dto';
 import { JwtAuthGuard }         from './guards/jwt-auth.guard';
+import { RolesGuard }           from './guards/roles.guard';
+import { Roles }                from './decorators/roles.decorator';
+import { UserRole }             from '@prisma/client';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -156,6 +161,39 @@ export class AuthController {
       const msg = encodeURIComponent(err.message ?? 'Błąd logowania');
       res!.redirect(`${frontendUrl}/login?error=google_auth&msg=${msg}`);
     }
+  }
+
+  // ── Invitation & self-registration ───────────────────────────
+
+  @Post('invite')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiBearerAuth()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiOperation({ summary: 'Send invitation email to new user (ADMIN only)' })
+  inviteUser(@Body() dto: InviteUserDto, @Request() req: any) {
+    return this.auth.createInvitation({
+      email:          dto.email,
+      organizationId: req.user.organizationId,
+      role:           dto.role ?? UserRole.END_USER,
+      invitedById:    req.user.id,
+      expiresInDays:  dto.expiresInDays,
+    });
+  }
+
+  @Get('invite/:token')
+  @SkipThrottle()
+  @ApiOperation({ summary: 'Verify invitation token — returns email + org name (public)' })
+  getInviteInfo(@Param('token') token: string) {
+    return this.auth.getInvitationInfo(token);
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({ summary: 'Complete self-registration using invitation token (public)' })
+  register(@Body() dto: RegisterDto) {
+    return this.auth.completeRegistration(dto);
   }
 
   /**

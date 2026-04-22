@@ -102,6 +102,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
           desk={reservationTarget}
           isEndUser={isEndUser}
           users={users}
+          limits={locationLimits}
           onClose={() => setReservationTarget(null)}
           onSuccess={handleReservationSuccess}
         />
@@ -165,6 +166,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
                   desk={desk}
                   onCheckin={handleCheckin}
                   onCheckout={handleCheckout}
+                  onQuickBook={handleQuickBook}
                 />
               )
             ))}

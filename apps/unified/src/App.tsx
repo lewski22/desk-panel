@@ -23,11 +23,16 @@ import { ChangePasswordPage }  from './pages/ChangePasswordPage';
 import { FloorPlanEditorPage } from './pages/FloorPlanEditorPage';
 import { WeeklyViewPage }      from './pages/WeeklyViewPage';
 import { KioskPage }           from './pages/KioskPage';
+import { RegisterPage }        from './pages/RegisterPage';
 import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
 import IntegrationsPage         from './pages/IntegrationsPage';
 import { PwaBanners }           from './components/PwaBanners';
+import { DemoModeBanner }       from './components/DemoModeBanner';
+import { DEMO_USER }            from './mocks/demoData';
+
+const DEMO_MODE = (import.meta as any).env?.VITE_DEMO_MODE === 'true';
 
 // Role sets
 const ADMIN_ROLES  = ['SUPER_ADMIN', 'OFFICE_ADMIN'];
@@ -64,8 +69,8 @@ function SubscriptionExpiredGate({ status, children }: { status?: string | null;
 
 export default function App() {
   const [user, setUser] = useState<any>(() => {
-    const u = appApi.auth.user();
-    return u;
+    if (DEMO_MODE) return DEMO_USER;
+    return appApi.auth.user();
   });
 
   useEffect(() => {
@@ -88,6 +93,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      {DEMO_MODE && <DemoModeBanner />}
       <PwaBanners />
       <Routes>
         {/* Publiczne */}
@@ -96,6 +102,7 @@ export default function App() {
         } />
         <Route path="/auth/impersonate" element={<ImpersonatePage onLogin={setUser} />} />
         <Route path="/checkin/:token"   element={<QrCheckinPage />} />
+        <Route path="/register/:token"  element={<RegisterPage />} />
         <Route path="/kiosk"            element={<KioskPage />} />
 
         {/* Chronione — z AppLayout */}

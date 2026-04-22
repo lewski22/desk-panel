@@ -127,6 +127,7 @@ model Organization {
   notificationSettings NotificationSetting[]
   smtpConfig           OrganizationSmtpConfig?
   integrations         OrgIntegration[]         // Sprint F
+  invitations          InvitationToken[]        // #15 Registration
 }
 
 // ─── Location ─────────────────────────────────────────────────
@@ -639,6 +640,25 @@ model GraphToken {
 
   @@index([organizationId])
   @@index([expiresAt])
+}
+
+// ─── InvitationToken (#15 Registration flow) ─────────────────
+
+model InvitationToken {
+  id             String    @id @default(cuid())
+  token          String    @unique @default(cuid())
+  email          String
+  organizationId String
+  role           UserRole  @default(END_USER)
+  invitedById    String
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([organizationId])
 }
 
 model GraphSubscription {

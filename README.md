@@ -115,6 +115,16 @@ Beacon przy biurku obsługuje check-in kartą NFC lub kodem QR z telefonu.
 - Owner: System Health, Fleet Overview
 - Client: Desk Analytics, IoT Health
 
+**#16 — Integracja Microsoft 365 / Outlook Calendar** _(złożona — odłożona)_
+- Dwukierunkowa synchronizacja rezerwacji biurek z Outlook Calendar użytkownika
+- Automatyczne tworzenie wydarzeń w kalendarzu przy rezerwacji (Graph API `POST /me/events`)
+- Anulowanie rezerwacji usuwa wydarzenie z kalendarza
+- Wymagane: Azure App Registration z delegowanymi uprawnieniami `Calendars.ReadWrite`
+- Token flow: PKCE w przeglądarce lub On-Behalf-Of (OBO) na backendzie
+- Zapis `graphEventId` na rezerwacji już istnieje w schemacie Prisma
+- Techniczne wyzwania: odświeżanie tokenów per-użytkownik, obsługa stref czasowych, edge-casy (usunięte/zmodyfikowane wydarzenie po stronie Outlooka)
+- Kontekst: `docs/AI_M365_CONTEXT.md`
+
 ---
 
 ## Struktura repo

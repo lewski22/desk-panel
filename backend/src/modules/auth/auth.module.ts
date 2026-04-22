@@ -5,17 +5,19 @@ import { ConfigService }      from '@nestjs/config';
 import { AuthController }     from './auth.controller';
 import { AuthService }        from './auth.service';
 import { AzureAuthService }   from './azure-auth.service';
-import { GoogleAuthService }  from './google-auth.service';  // v0.17.0
+import { GoogleAuthService }  from './google-auth.service';
 import { JwtStrategy }        from './strategies/jwt.strategy';
 import { LocalStrategy }      from './strategies/local.strategy';
 import { UsersModule }        from '../users/users.module';
 import { DatabaseModule }     from '../../database/db.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
     DatabaseModule,
+    NotificationsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

@@ -4,7 +4,8 @@
  * Sprint K (recommendations, insights) + M4 (graph) + Google SSO
  */
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+const BASE      = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 const KEYS = {
   access:  'app_access',
@@ -32,6 +33,15 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Promise<T> {
+  if (DEMO_MODE) {
+    const { getDemoResponse } = await import('../mocks/demoHandlers');
+    const mock = getDemoResponse(path, opts.method ?? 'GET');
+    if (mock !== undefined) {
+      await new Promise(r => setTimeout(r, 80));
+      return mock as T;
+    }
+  }
+
   const tok = getToken();
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
@@ -88,6 +98,12 @@ export const appApi = {
     },
     changePassword: (currentPassword: string, newPassword: string) =>
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
+    inviteUser: (body: { email: string; role?: string; expiresInDays?: number }) =>
+      req<{ ok: boolean; email: string; expiresAt: string }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
+    getInviteInfo: (token: string) =>
+      req<{ email: string; orgName: string; role: string; expired: boolean; used: boolean }>(`/auth/invite/${token}`),
+    register: (body: { token: string; firstName: string; lastName: string; password: string }) =>
+      req<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
     async getMe() {
       const u = await req<any>('/auth/me');
       const existing = JSON.parse(localStorage.getItem(KEYS.user) ?? '{}');
@@ -124,7 +140,7 @@ export const appApi = {
       delete: (id: string, floor?: string)          => req<any>(`/locations/${id}/floor-plan/delete${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`, { method: 'POST' }),
     },
     // Dashboard extended / issues
-    extended: (id: string)      => req<any>(`/locations/${id}/extended`),
+    extended: (id: string)      => req<any>(`/locations/${id}/analytics/extended`),
     issues:   (id: string)      => req<any>(`/locations/${id}/issues`),
   },
 

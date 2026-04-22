@@ -75,21 +75,37 @@ export function FloorPlanEditorPage() {
         </div>
       </div>
 
-      {/* Selektor pięter */}
-      {floors.length > 1 && (
-        <div className="flex gap-1 mb-4 overflow-x-auto">
-          {floors.map(f => (
-            <button key={f} onClick={() => setActiveFloor(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
-                f === activeFloor
-                  ? 'bg-brand text-white border-brand'
-                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-              }`}>
-              {f}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Selektor pięter + dodawanie */}
+      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-1">
+        {floors.length === 0 && (
+          <span className="px-3 py-1.5 rounded-lg text-xs font-semibold border bg-brand text-white border-brand whitespace-nowrap">
+            {t('floorplan.editor.floor_default', 'Parter')}
+          </span>
+        )}
+        {floors.map(f => (
+          <button key={f} onClick={() => setActiveFloor(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-all ${
+              f === activeFloor
+                ? 'bg-brand text-white border-brand'
+                : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+            }`}>
+            {f}
+          </button>
+        ))}
+        <button
+          onClick={() => {
+            const name = window.prompt(t('floorplan.editor.floor_prompt', 'Nazwa piętra (np. 1, 2, A, B):') ?? '');
+            if (!name?.trim()) return;
+            const trimmed = name.trim();
+            if (floors.includes(trimmed)) { setActiveFloor(trimmed); return; }
+            setFloors(prev => [...prev, trimmed].sort());
+            setActiveFloor(trimmed);
+          }}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border border-dashed border-zinc-300 text-zinc-500 hover:border-brand hover:text-brand transition-all shrink-0"
+        >
+          + {t('floorplan.editor.add_floor', 'Dodaj piętro')}
+        </button>
+      </div>
 
       {desks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">

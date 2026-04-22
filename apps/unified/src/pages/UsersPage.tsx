@@ -17,9 +17,11 @@ export function UsersPage() {
   const [deactivated, setDeactivated] = useState<any[]>([]);
   const [tab,         setTab]        = useState<TabType>('active');
   const [loading,     setLoading]    = useState(true);
-  const [modal,       setModal]      = useState<'create'|'edit'|'card'|'deactivate'|null>(null);
+  const [modal,       setModal]      = useState<'create'|'edit'|'card'|'deactivate'|'invite'|null>(null);
   const [target,      setTarget]     = useState<any>(null);
   const [form,     setForm]     = useState({ email:'', password:'', firstName:'', lastName:'', role:'END_USER' });
+  const [inviteForm, setInviteForm] = useState({ email:'', role:'END_USER' });
+  const [inviteSent, setInviteSent] = useState(false);
   const [editForm, setEditForm] = useState({ firstName:'', lastName:'', email:'', role:'END_USER' });
   const [retDays,  setRetDays]  = useState(30);
   const [busy,     setBusy]     = useState(false);
@@ -41,6 +43,15 @@ export function UsersPage() {
     if (!silent) setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); setErr('');
+    try {
+      await appApi.auth.inviteUser({ email: inviteForm.email, role: inviteForm.role });
+      setInviteSent(true);
+    } catch(e:any) { setErr(e.message); }
+    setBusy(false);
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
@@ -96,7 +107,14 @@ export function UsersPage() {
       <PageHeader
         title={t('pages.users.title')}
         sub={t('users.sub', { active: users.length, deactivated: deactivated.length })}
-        action={<Btn onClick={() => setModal('create')}>{t('pages.users.new')}</Btn>}
+        action={
+          <div className="flex gap-2">
+            <Btn variant="secondary" onClick={() => { setInviteForm({ email:'', role:'END_USER' }); setInviteSent(false); setErr(''); setModal('invite'); }}>
+              {t('users.invite.btn')}
+            </Btn>
+            <Btn onClick={() => setModal('create')}>{t('pages.users.new')}</Btn>
+          </div>
+        }
       />
 
       <div className="flex gap-1 mb-4 p-1 bg-zinc-100 rounded-xl w-fit">
@@ -191,6 +209,37 @@ export function UsersPage() {
             );
           })}
         </Table>
+      )}
+
+      {modal === 'invite' && (
+        <Modal title={t('users.invite.modal_title')} onClose={() => setModal(null)}>
+          {inviteSent ? (
+            <div className="text-center py-4">
+              <p className="text-3xl mb-2">✉️</p>
+              <p className="font-semibold text-zinc-800 text-sm mb-1">{t('users.invite.sent_title')}</p>
+              <p className="text-xs text-zinc-500 mb-5">{t('users.invite.sent_body', { email: inviteForm.email })}</p>
+              <Btn onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
+            </div>
+          ) : (
+            <form onSubmit={handleInvite} className="flex flex-col gap-3">
+              <Input label={t('users.form.email')} type="email" required value={inviteForm.email}
+                onChange={e => setInviteForm(f => ({...f, email:e.target.value}))} />
+              <Select label={t('users.form.role')} value={inviteForm.role}
+                onChange={e => setInviteForm(f => ({...f, role:e.target.value}))}>
+                <option value="END_USER">{t('users.roles.END_USER')}</option>
+                <option value="STAFF">{t('users.roles.STAFF')}</option>
+                <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
+                {currentUserRole === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">{t('users.roles.SUPER_ADMIN')}</option>}
+              </Select>
+              <p className="text-xs text-zinc-400">{t('users.invite.hint')}</p>
+              {err && <p className="text-xs text-red-500">{err}</p>}
+              <div className="flex gap-2 pt-1">
+                <Btn type="submit" loading={busy} className="flex-1">{t('users.invite.send')}</Btn>
+                <Btn variant="secondary" onClick={() => setModal(null)} type="button">{t('btn.cancel')}</Btn>
+              </div>
+            </form>
+          )}
+        </Modal>
       )}
 
       {modal === 'create' && (

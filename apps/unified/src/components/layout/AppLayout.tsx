@@ -2,7 +2,7 @@
  * AppLayout — v0.18.0
  * Sidebar z grupami nawigacyjnymi + ikony Noun Project + zmiana hasła w dole sidebara
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -135,6 +135,7 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
 export function AppLayout({ user, onLogout, children }: Props) {
   const { t }    = useTranslation();
   const location = useLocation();
+  const mainRef  = useRef<HTMLElement>(null);
   const [collapsed,   setCollapsed]   = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) return saved === 'true';
@@ -148,6 +149,10 @@ export function AppLayout({ user, onLogout, children }: Props) {
     localStorage.setItem('sidebar_collapsed', String(next));
     return next;
   });
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+  }, [location.pathname]);
 
   const isImpersonated = localStorage.getItem('app_impersonated') === 'true';
 
@@ -353,7 +358,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </aside>
 
         {/* Main content — pb-nav clears bottom nav + device home indicator */}
-        <main className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6">
+        <main ref={mainRef} className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6">
           {children}
         </main>
       </div>

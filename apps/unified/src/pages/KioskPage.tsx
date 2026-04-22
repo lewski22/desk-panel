@@ -4,7 +4,7 @@
  * Fullscreen widok zajętości biurek — dla tabletu przy wejściu do biura.
  * Auto-refresh co 30s, wyjście przez PIN weryfikowany na backendzie.
  */
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation }  from 'react-i18next';
 import { appApi }           from '../api/client';
@@ -145,7 +145,9 @@ export function KioskPage() {
   const [loading,    setLoading]    = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [pinOpen,    setPinOpen]    = useState(false);
-  const [exiting,    setExiting]    = useState(false);
+  const [_exiting,   setExiting]    = useState(false);
+  const [clock,      setClock]      = useState(() => new Date().toLocaleTimeString());
+  const clockRef = useRef<ReturnType<typeof setInterval>>();
 
   const load = useCallback(async () => {
     if (!locationId) return;
@@ -166,6 +168,11 @@ export function KioskPage() {
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
   }, [load, locationId]);
+
+  useEffect(() => {
+    clockRef.current = setInterval(() => setClock(new Date().toLocaleTimeString()), 1_000);
+    return () => clearInterval(clockRef.current);
+  }, []);
 
   // Fullscreen request
   useEffect(() => {
@@ -239,6 +246,14 @@ export function KioskPage() {
           </div>
         </div>
 
+        {/* Clock */}
+        <div className="hidden sm:block text-center">
+          <p className="text-xl font-mono font-bold text-white tabular-nums">{clock}</p>
+          <p className="text-[10px] text-zinc-500">
+            {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+          </p>
+        </div>
+
         {/* KPI row */}
         <div className="flex gap-4 text-center">
           <div>
@@ -246,7 +261,7 @@ export function KioskPage() {
             <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.free')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-indigo-400">{stats.occupied}</p>
+            <p className="text-2xl font-bold text-red-400">{stats.occupied}</p>
             <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.occupied')}</p>
           </div>
           <div>
@@ -268,7 +283,7 @@ export function KioskPage() {
         {Array.from(grouped.entries()).map(([zone, zDesks]) => (
           <div key={zone} className="mb-8">
             <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3">
               {zDesks.map(d => <DeskTile key={d.id} desk={d} />)}
             </div>
           </div>
