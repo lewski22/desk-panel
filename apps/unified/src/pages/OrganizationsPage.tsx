@@ -374,45 +374,44 @@ export function OrganizationsPage() {
         <div className="flex flex-col gap-3">
           {isSuperAdmin && modal === 'create' && (
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Organizacja</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.org_label')}</label>
               <select
                 value={form.organizationId}
                 onChange={e => setForm(f => ({ ...f, organizationId: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               >
-                <option value="">— wybierz organizację —</option>
+                <option value="">{t('organizations.form.select_org')}</option>
                 {orgs.map((o: any) => (
                   <option key={o.id} value={o.id}>{o.name}</option>
                 ))}
               </select>
             </div>
           )}
-          <Input label="Nazwa biura" value={form.name}
+          <Input label={t('organizations.form.name_label')} value={form.name}
             onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-            placeholder="Warszawa HQ" />
-          <Input label="Adres" value={form.address}
+            placeholder={t('organizations.form.name_ph')} />
+          <Input label={t('organizations.form.address_label')} value={form.address}
             onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
-            placeholder="ul. Marszałkowska 1" />
-          <Input label="Miasto" value={form.city}
+            placeholder={t('organizations.form.address_ph')} />
+          <Input label={t('organizations.form.city_label')} value={form.city}
             onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
-            placeholder="Warszawa" />
+            placeholder={t('organizations.form.city_ph')} />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Otwarcie</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.open_time')}</label>
               <input type="time" value={form.openTime}
                 onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Zamknięcie</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.close_time')}</label>
               <input type="time" value={form.closeTime}
                 onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
-          {/* Strefa czasowa */}
           <div>
-            <label className="block text-xs text-zinc-400 mb-1 font-medium">Strefa czasowa</label>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.timezone')}</label>
             <select
               value={form.timezone}
               onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
@@ -440,25 +439,21 @@ export function OrganizationsPage() {
             </select>
           </div>
 
-          {/* Limity rezerwacji */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max dni do przodu</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_days')}</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
                 onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
-              <label className="block text-xs text-zinc-400 mb-1 font-medium">Max godzin / rezerwacja</label>
+              <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_hours')}</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
                 onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
-          <p className="text-xs text-zinc-400">
-            Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka.
-            Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.
-          </p>
+          <p className="text-xs text-zinc-400">{t('organizations.form.limits_hint')}</p>
           <div className="flex gap-2 mt-1 justify-end">
             <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}

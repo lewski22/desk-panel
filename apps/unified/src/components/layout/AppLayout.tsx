@@ -32,10 +32,6 @@ interface Props { user: User; onLogout: () => void; children: React.ReactNode; }
 
 type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT';
 
-const ROLE_LABEL: Record<string, string> = {
-  SUPER_ADMIN: 'Super Admin', OFFICE_ADMIN: 'Office Admin',
-  STAFF: 'Staff', END_USER: 'Użytkownik', OWNER: 'Operator',
-};
 
 type NavIcon = React.FC<{ className?: string; size?: number }>;
 
@@ -186,7 +182,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
                 {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
               </div>
               <div className="text-brand text-[10px] font-semibold uppercase tracking-wider mt-0.5">
-                {ROLE_LABEL[user.role] ?? user.role}
+                {t(`roles.${user.role}`, user.role)}
               </div>
             </div>
           </>
@@ -295,14 +291,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
       {/* Subscription expiry banner */}
       {user.subscriptionStatus === 'expired' && (
         <div className="bg-red-600 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
-          <span className="truncate">⚠ Plan wygasł — funkcje są zablokowane. Odnów subskrypcję.</span>
-          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">Odnów</a>
+          <span className="truncate">⚠ {t('layout.subscription_expired_msg')}</span>
+          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">{t('layout.subscription_renew')}</a>
         </div>
       )}
       {user.subscriptionStatus === 'expiring_soon' && (
         <div className="bg-amber-500 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
-          <span className="truncate">⏰ Plan wygasa wkrótce — sprawdź szczegóły subskrypcji.</span>
-          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">Szczegóły</a>
+          <span className="truncate">⏰ {t('layout.subscription_expiring_msg')}</span>
+          <a href="/subscription" className="ml-2 shrink-0 underline hover:no-underline whitespace-nowrap">{t('layout.subscription_details')}</a>
         </div>
       )}
 

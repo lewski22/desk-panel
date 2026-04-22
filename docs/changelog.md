@@ -1,5 +1,56 @@
 # Changelog — Reserti Desk Management
 
+## [0.17.2] — 2026-04-22 — Lucide Icons + i18n Audit + Floor Plan Multi-floor + PWA Kiosk
+
+### Added
+
+**Multi-floor plan support (backend)**
+- Nowy model `LocationFloorPlan` — każde piętro ma osobny plan (url, wymiary, gridSize)
+- Migracja `20260421000001_location_floor_plans` (CREATE TABLE IF NOT EXISTS + unikalne `locationId+floor`)
+- `GET /locations/:id/floors` → lista nazw pięter z wgranymy planami
+- `GET/POST /locations/:id/floor-plan?floor=` — obsługa per-piętro; bez `?floor` backward-compat z `Location`
+- `POST /locations/:id/floor-plan/delete?floor=` — usuwanie planu per-piętro
+- Backward compatibility: stary `Location.floorPlanUrl` działa bez zmian gdy `?floor` nie jest podany
+
+**PWA KioskPage — install button (Option A)**
+- Przechwytywanie `beforeinstallprompt` (zachowane `preventDefault()`) → `installEvt` state
+- Przycisk „Install PWA" / „Zainstaluj PWA" w nagłówku kiosku — widoczny tylko gdy przeglądarka udostępnia event
+- Klucze i18n: `kiosk.install_btn` (pl + en)
+
+**Ikony — Lucide React**
+- `SidebarIcons.tsx` przepisany: re-eksportuje z `lucide-react` pod identycznymi nazwami (`IconFloorPlan`, `IconCalendar`, `IconDesk` itd.) — zero zmian w konsumentach
+- `lucide-react ^0.468.0` dodany do `package.json`
+
+### Fixed / Improved
+
+**FloorPlanEditor — position sync**
+- Biurka przestały wracać do poprzedniego układu po zapisie planu (`to_fix_2.md #16`)
+- Dodany `useEffect` w `FloorPlanEditor`: gdy `!state.isDirty` wywołuje `reset(freshPositions)` przy zmianie props `desks` / `floor`
+- Rozwiązanie: `useReducer` initial state nie reagował na zmianę props — `useEffect` + `reset()` to naprawia
+
+**i18n audit — 100% pokrycie**
+- `ChangePasswordModal.tsx` — przepisany z 0% na 100% (używał hardkodowanych stringów PL)
+- `AppLayout.tsx` — `ROLE_LABEL` constant usunięty → `t(\`roles.${user.role}\`, user.role)` (dynamic key + raw fallback); banery subskrypcji przetłumaczone (`layout.subscription_*`)
+- `OrganizationsPage.tsx` — wszystkie etykiety formularza biura przetłumaczone (`organizations.form.*`)
+- `DevicesPage.tsx` — nagłówki tabel beaconów i gatewayów: `t('devices.table.*')`
+- Nowe klucze dodane do obu plików (pl + en): `devices.table.{status, hardware_id, firmware, rssi, ip}`, `layout.{subscription_expired_msg, subscription_renew, subscription_expiring_msg, subscription_details}`, `changePassword.errors.generic`, `organizations.form.*` (14 kluczy), `kiosk.install_btn`
+
+---
+
+## [0.17.1] — 2026-04-21 — Security Fixes + Status Colors + Brand Token
+
+### Security (NAPRAWIONE)
+
+- **Privilege escalation** (`to_fix_2.md #13a`) — każdy użytkownik mógł wysłać `targetUserId` w POST `/reservations` i rezerwować biurko dla dowolnej osoby. Naprawka: `reservations.service.ts` sprawdza rolę aktora przed użyciem `targetUserId`
+- **IDOR** (`to_fix_2.md #13b`) — OFFICE_ADMIN mógł tworzyć lokalizacje w obcej organizacji. Naprawka: `locations.controller.ts` nadpisuje `organizationId` z JWT dla ról < SUPER_ADMIN/OWNER
+
+### Changed
+
+- **Status colors** — spójne we wszystkich komponentach (DeskPin, DeskToken, DeskCard, KioskPage, DashboardPage): `#10b981` wolne / `#f59e0b` zarezerwowane / `#ef4444` zajęte / `#a1a1aa` offline
+- **Brand token** — jeden token (`--brand: #B53578`) w `index.css` i `tailwind.config.js`; klasy `bg-brand` / `text-brand` / `hover:bg-brand-hover` używane wszędzie
+
+---
+
 ## [0.17.0] — 2026-04-19 — Teams Bot + Graph Sync + Integracje + AI Insights
 
 ### Added

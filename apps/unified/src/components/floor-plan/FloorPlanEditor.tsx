@@ -45,6 +45,16 @@ export function FloorPlanEditor({ locationId, desks, floor, onSaved }: Props) {
     undo, redo, reset, markSaved,
   } = useFloorPlanEditor(desks, floorPlan ?? undefined);
 
+  // Sync positions when desks reload from API (e.g. after save or floor switch), but only if editor is clean
+  useEffect(() => {
+    if (state.isDirty) return;
+    const fresh: Record<string, any> = {};
+    for (const d of desks) {
+      fresh[d.id] = { id: d.id, posX: d.posX ?? null, posY: d.posY ?? null, rotation: d.rotation ?? 0, width: d.width ?? 2, height: d.height ?? 1 };
+    }
+    reset(fresh);
+  }, [desks, floor]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

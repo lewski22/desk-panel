@@ -20,17 +20,17 @@
 
 7. **[DASHBOARD] Czytelność na telefonie (Super Admin)** — Dashboard Super Admina wymaga poprawy czytelności na urządzeniach mobilnych.
 
-8. **[RAPORTY] Kolejność — pierwszy ma być Snapshot** — W sekcji raportów pierwszym widokiem powinien być Snapshot.
+8. **[RAPORTY] Kolejność — pierwszy ma być Snapshot** ✅ NAPRAWIONE — W sekcji raportów pierwszym widokiem powinien być Snapshot.
 
 ---
 
 ## Wygląd / Spójność
 
-9. **[UI] Kolor statusu urządzeń — nieczytelny** — Aktualny niebieski kolor statusu urządzeń jest mało czytelny. Należy wybrać bardziej kontrastowe/czytelne kolory statusów.
+9. **[UI] Kolor statusu urządzeń — nieczytelny** ✅ NAPRAWIONE (2026-04-21) — Spójna paleta: `#10b981` wolne / `#f59e0b` zarezerwowane / `#ef4444` zajęte / `#a1a1aa` offline — we wszystkich komponentach (DeskPin, DeskToken, DeskCard, KioskPage, DashboardPage).
 
-10. **[UI] Mieszanie języków PL/EN** — W całej aplikacji nie należy mieszać polskich i angielskich wstawek — wybrać jeden język i stosować go konsekwentnie.
+10. **[UI] Mieszanie języków PL/EN** ✅ NAPRAWIONE (2026-04-22) — 100% pokrycie i18n; zero hardkodowanych stringów PL/EN w kodzie produkcyjnym. Wszystkie klucze w `locales/pl/translation.json` i `locales/en/translation.json`.
 
-11. **[UI] Poprawa wyglądu ogólnego** — Nowe spójne ikony, lepiej dobrane kolory nawiązujące do logo.
+11. **[UI] Poprawa wyglądu ogólnego** ✅ NAPRAWIONE (2026-04-22) — Ikony ujednolicone na Lucide React (`lucide-react ^0.468.0`); brand token `#B53578` w jednym miejscu.
 
 ---
 
@@ -70,9 +70,9 @@
 
 ## PWA / Dedykowana aplikacja
 
-16. **[PWA] Biurka wracają do poprzedniego układu** — Na PWA po dodaniu planu, ustawieniu biurek i wyjściu biurka wracają do wcześniejszego ułożenia (brak zapisu stanu).
+16. **[PWA] Biurka wracają do poprzedniego układu** ✅ NAPRAWIONE (2026-04-22) — `FloorPlanEditor` synchronizuje pozycje z propsów `desks`/`floor` gdy `!state.isDirty` (`useEffect` + `reset(freshPositions)`). Pierwotna przyczyna: `useReducer` initial state nie reagował na zmianę propsów.
 
-17. **[PWA] Dedykowany link / panel dla tabletów** — Dodać specjalny link / panel pod PWA, aby można było uruchomić go np. na tablecie lub zainstalować dedykowaną aplikację. Wymagana analiza najlepszego podejścia.
+17. **[PWA] Dedykowany link / panel dla tabletów** ✅ NAPRAWIONE (2026-04-22) — `KioskPage` (`/kiosk?location=<id>`) + przycisk „Install PWA" (`beforeinstallprompt`) w nagłówku kiosku. Opcja A (install button in-app).
 
 ---
 

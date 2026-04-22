@@ -134,6 +134,11 @@ function Legend() {
   );
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 export function KioskPage() {
   const { t }              = useTranslation();
@@ -148,6 +153,20 @@ export function KioskPage() {
   const [_exiting,   setExiting]    = useState(false);
   const [clock,      setClock]      = useState(() => new Date().toLocaleTimeString());
   const clockRef = useRef<ReturnType<typeof setInterval>>();
+  const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setInstallEvt(e as BeforeInstallPromptEvent); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const doInstall = async () => {
+    if (!installEvt) return;
+    await installEvt.prompt();
+    await installEvt.userChoice;
+    setInstallEvt(null);
+  };
 
   const load = useCallback(async () => {
     if (!locationId) return;
@@ -270,12 +289,21 @@ export function KioskPage() {
           </div>
         </div>
 
-        {/* Exit button */}
-        <button onClick={() => setPinOpen(true)}
-          className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-2
-            border border-zinc-800 rounded-xl hover:border-zinc-600">
-          {t('kiosk.exit_btn')}
-        </button>
+        {/* Install / Exit buttons */}
+        <div className="flex items-center gap-2">
+          {installEvt && (
+            <button onClick={doInstall}
+              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2
+                border border-zinc-700 rounded-xl hover:border-zinc-500">
+              {t('kiosk.install_btn')}
+            </button>
+          )}
+          <button onClick={() => setPinOpen(true)}
+            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-2
+              border border-zinc-800 rounded-xl hover:border-zinc-600">
+            {t('kiosk.exit_btn')}
+          </button>
+        </div>
       </div>
 
       {/* Desk grid */}

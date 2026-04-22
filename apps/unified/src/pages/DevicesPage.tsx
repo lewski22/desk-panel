@@ -87,7 +87,7 @@ function BeaconsTab({ devices, loading, onRefresh }: {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                {['Status', 'Hardware ID', t('devices.table.desk'), 'Firmware', 'RSSI', t('devices.table.last_seen')].map(h => (
+                {[t('devices.table.status'), t('devices.table.hardware_id'), t('devices.table.desk'), t('devices.table.firmware'), t('devices.table.rssi'), t('devices.table.last_seen')].map(h => (
                   <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -149,7 +149,7 @@ function GatewaysTab({ gateways, loading }: { gateways: Gateway[]; loading: bool
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50/70">
-                {['Status', t('devices.gateway.name'), t('devices.gateway.location'), 'IP', t('devices.gateway.version'), t('devices.gateway.beacons'), t('devices.table.last_seen')].map(h => (
+                {[t('devices.table.status'), t('devices.gateway.name'), t('devices.gateway.location'), t('devices.table.ip'), t('devices.gateway.version'), t('devices.gateway.beacons'), t('devices.table.last_seen')].map(h => (
                   <th key={h} className="py-2.5 px-4 text-xs font-semibold text-zinc-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>

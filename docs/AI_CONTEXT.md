@@ -1,5 +1,5 @@
-# Reserti — AI_CONTEXT (Zbiorczy v0.17.0)
-> **Data:** 2026-04-18 | **Repo:** `github.com/lewski22/desk-panel`
+# Reserti — AI_CONTEXT (Zbiorczy v0.17.2)
+> **Data:** 2026-04-22 | **Repo:** `github.com/lewski22/desk-panel`
 > Zastępuje wszystkie docs/AI_*.md. Jedyne źródło prawdy dla sesji AI.
 
 ---
@@ -151,7 +151,8 @@ model Location {
   floorPlanW     Int?
   floorPlanH     Int?
   gridSize       Int?     @default(40)
-  insights       UtilizationInsight[]  // NOWE 2026-04-18
+  insights       UtilizationInsight[]  // Sprint K2
+  floorPlans     LocationFloorPlan[]   // per-floor plan images (2026-04-22)
 }
 
 model Desk {
@@ -354,6 +355,21 @@ model OrgIntegration {
   @@index([organizationId])
 }
 
+model LocationFloorPlan {
+  id           String   @id @default(cuid())
+  locationId   String
+  floor        String   // np. "0", "1", "A", "Parter"
+  floorPlanUrl String?
+  floorPlanKey String?  // R2/S3 CDN key (future)
+  floorPlanW   Int?
+  floorPlanH   Int?
+  gridSize     Int?     @default(40)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([locationId, floor])
+  @@index([locationId])
+}
+
 model UtilizationInsight {
   id          String   @id @default(cuid())
   locationId  String
@@ -409,6 +425,7 @@ model GraphSubscription {
 20260418000002_add_utilization_insight      ← Sprint K
 20260418000003_add_org_integration          ← Sprint F + data migration
 20260418000004_add_graph_sync               ← M4
+20260421000001_location_floor_plans         ← Multi-floor per-location plan images
 ```
 
 ---
@@ -518,7 +535,10 @@ GET    /api/v1/locations
 POST   /api/v1/locations
 PATCH  /api/v1/locations/:id
 DELETE /api/v1/locations/:id
-POST   /api/v1/locations/:id/floor-plan
+GET    /api/v1/locations/:id/floors              → string[] (lista pięter z planami)
+GET    /api/v1/locations/:id/floor-plan?floor=  zwraca meta (url, w, h, gridSize); bez ?floor → backward compat z Location
+POST   /api/v1/locations/:id/floor-plan?floor=  upload base64 PNG/SVG; bez ?floor → Location (backward compat)
+POST   /api/v1/locations/:id/floor-plan/delete?floor=
 GET    /api/v1/locations/:id/attendance?week=
 POST   /api/v1/locations/:id/kiosk/verify-pin
 ```
@@ -650,7 +670,7 @@ JIT provisioning: `passwordHash = 'GOOGLE_SSO_ONLY'`, rola `END_USER`, organizat
 
 ## 6. FRONTEND (apps/unified) — STAN
 
-### Design system (2026-04-21)
+### Design system (2026-04-22)
 
 **Kolor brand** — jeden token w dwóch miejscach:
 - `tailwind.config.js`: `colors.brand.DEFAULT = '#B53578'`, `colors.brand.hover = '#9d2d66'`
@@ -667,7 +687,9 @@ JIT provisioning: `passwordHash = 'GOOGLE_SSO_ONLY'`, rola `END_USER`, organizat
 | occupied / zajęte | red | `#ef4444` | j.w. |
 | offline | zinc | `#a1a1aa` | j.w. |
 
-**i18n** — 100% pokrycie: zero hardkodowanych stringów PL/EN w kodzie. Wszystkie klucze w `locales/pl/translation.json` i `locales/en/translation.json`.
+**Ikony** — `components/icons/SidebarIcons.tsx` re-eksportuje ikony z `lucide-react` pod identycznymi nazwami (`IconFloorPlan`, `IconCalendar`, `IconDesk` itd.) — wszystkie konsumenci mogą importować bez zmian.
+
+**i18n** — 100% pokrycie: zero hardkodowanych stringów PL/EN w kodzie produkcyjnym. Oba pliki: `locales/pl/translation.json` i `locales/en/translation.json`. Każda nowa strona / komponent musi używać `useTranslation()` — nie wolno wstawiać literałów.
 
 ### Strony
 
@@ -926,6 +948,7 @@ user@demo-corp.pl     User1234!     END_USER
 | v0.12.2 | ✅ | Tech Debt (VAPID, Floor Plan CDN, Playwright, NTP) |
 | v0.15.1 | ✅ | Sprint K (AI Recommendations + Insights) |
 | **v0.17.0** | ✅ **2026-04-18** | **Sprint F (Integrations) + Teams App + Graph Sync + Google SSO** |
-| **v0.17.1** | ✅ **2026-04-21** | **Faza 4: i18n 100% + status colors (amber/red) + brand token centralizacja** |
-| v0.18.0 | Q4 2026 | Sprint L (Public Booking + Stripe) |
+| **v0.17.1** | ✅ **2026-04-21** | **i18n 100% + status colors (amber/red) + brand token centralizacja + security fixes (privilege escalation, IDOR)** |
+| **v0.17.2** | ✅ **2026-04-22** | **Lucide icons + i18n audit (ChangePasswordModal, AppLayout, OrganizationsPage) + FloorPlanEditor position sync + KioskPage PWA install + LocationFloorPlan multi-floor backend** |
+| v0.18.0 | Q2 2026 | Multi-floor frontend editor + Stripe public booking |
 | v1.0.0 | Q1 2027 | Self-hosted + ISO 27001 |

@@ -79,7 +79,11 @@
     },
     "session_warning_title": "Sesja wygaśnie za 1 minutę",
     "session_warning_body": "Kliknij \"Przedłuż\" aby pozostać zalogowanym.",
-    "session_extend": "Przedłuż"
+    "session_extend": "Przedłuż",
+    "subscription_expired_msg": "Plan wygasł — funkcje są zablokowane. Odnów subskrypcję.",
+    "subscription_renew": "Odnów",
+    "subscription_expiring_msg": "Plan wygasa wkrótce — sprawdź szczegóły subskrypcji.",
+    "subscription_details": "Szczegóły"
   },
   "session": {
     "will_expire_in_minute": "Sesja wygaśnie za minutę",
@@ -140,7 +144,8 @@
       "min_length": "Nowe hasło musi mieć co najmniej 8 znaków.",
       "different": "Nowe hasło musi być inne niż aktualne.",
       "mismatch": "Nowe hasło i potwierdzenie nie są identyczne.",
-      "not_identical": "Hasła nie są identyczne."
+      "not_identical": "Hasła nie są identyczne.",
+      "generic": "Błąd zmiany hasła."
     },
     "strength": {
       "weak": "Słabe",
@@ -266,8 +271,13 @@
   },
   "devices": {
     "table": {
-      "desk": "Biurko",
-      "last_seen": "Ostatni kontakt"
+      "status":      "Status",
+      "hardware_id": "Hardware ID",
+      "desk":        "Biurko",
+      "firmware":    "Firmware",
+      "rssi":        "RSSI",
+      "ip":          "IP",
+      "last_seen":   "Ostatni kontakt"
     },
     "status": {
       "online": "Online",
@@ -618,7 +628,23 @@
     "valid_until": "Ważny do",
     "no_address": "Brak adresu",
     "id_label": "ID:",
-    "gateway_token_single_use": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy."
+    "gateway_token_single_use": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy.",
+    "form": {
+      "org_label":    "Organizacja",
+      "select_org":   "— wybierz organizację —",
+      "name_label":   "Nazwa biura",
+      "name_ph":      "Warszawa HQ",
+      "address_label":"Adres",
+      "address_ph":   "ul. Marszałkowska 1",
+      "city_label":   "Miasto",
+      "city_ph":      "Warszawa",
+      "open_time":    "Otwarcie",
+      "close_time":   "Zamknięcie",
+      "timezone":     "Strefa czasowa",
+      "max_days":     "Max dni do przodu",
+      "max_hours":    "Max godzin / rezerwacja",
+      "limits_hint":  "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia."
+    }
   },
   "organizations_extra": {
     "m365_button": "M365",
@@ -936,6 +962,7 @@
     "default_zone": "Biurka",
     "no_location_title": "Brak identyfikatora lokalizacji",
     "no_location_hint": "Uruchom kiosk z parametrem ?location=<id> lokalizacji",
+    "install_btn": "Zainstaluj PWA",
     "status": {
       "free": "Wolne",
       "reserved": "Zarezerwowane",

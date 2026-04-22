@@ -79,7 +79,11 @@
     },
     "session_warning_title": "Session expires in 1 minute",
     "session_warning_body": "Click \"Extend\" to stay logged in.",
-    "session_extend": "Extend"
+    "session_extend": "Extend",
+    "subscription_expired_msg": "Plan expired — features are blocked. Renew your subscription.",
+    "subscription_renew": "Renew",
+    "subscription_expiring_msg": "Plan is expiring soon — check subscription details.",
+    "subscription_details": "Details"
   },
   "session": {
     "will_expire_in_minute": "Session will expire in one minute",
@@ -140,7 +144,8 @@
       "min_length": "New password must be at least 8 characters.",
       "different": "New password must be different from the current one.",
       "mismatch": "New password and confirmation do not match.",
-      "not_identical": "Passwords do not match."
+      "not_identical": "Passwords do not match.",
+      "generic": "Failed to change password."
     },
     "strength": {
       "weak": "Weak",
@@ -266,8 +271,13 @@
   },
   "devices": {
     "table": {
-      "desk": "Desk",
-      "last_seen": "Last seen"
+      "status":      "Status",
+      "hardware_id": "Hardware ID",
+      "desk":        "Desk",
+      "firmware":    "Firmware",
+      "rssi":        "RSSI",
+      "ip":          "IP",
+      "last_seen":   "Last seen"
     },
     "status": {
       "online": "Online",
@@ -618,7 +628,23 @@
     "valid_until": "Valid until",
     "no_address": "No address",
     "id_label": "ID:",
-    "gateway_token_single_use": "This is a one-time token — it expires after use. If installation fails, come back here and generate a new one."
+    "gateway_token_single_use": "This is a one-time token — it expires after use. If installation fails, come back here and generate a new one.",
+    "form": {
+      "org_label":    "Organisation",
+      "select_org":   "— select organisation —",
+      "name_label":   "Office name",
+      "name_ph":      "Warsaw HQ",
+      "address_label":"Address",
+      "address_ph":   "1 Example Street",
+      "city_label":   "City",
+      "city_ph":      "Warsaw",
+      "open_time":    "Opening time",
+      "close_time":   "Closing time",
+      "timezone":     "Time zone",
+      "max_days":     "Max days ahead",
+      "max_hours":    "Max hours / booking",
+      "limits_hint":  "Opening hours and limits define when and how long users can reserve desks. Walk-in via QR ends automatically at closing time."
+    }
   },
   "organizations_extra": {
     "m365_button": "M365",
@@ -936,6 +962,7 @@
     "default_zone": "Desks",
     "no_location_title": "No location specified",
     "no_location_hint": "Launch kiosk with ?location=<id> parameter",
+    "install_btn": "Install PWA",
     "status": {
       "free": "Free",
       "reserved": "Reserved",

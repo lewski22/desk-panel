@@ -1,10 +1,10 @@
 # Roadmap — Reserti Desk Management System
 
-> Ostatnia aktualizacja: 2026-04-17 — v0.12.0
+> Ostatnia aktualizacja: 2026-04-22 — v0.17.2
 
 ---
 
-## Stan aktualny (v0.12.0 — 2026-04-17)
+## Stan aktualny (v0.17.2 — 2026-04-22)
 
 ### ✅ Zrealizowane (produkcja)
 
@@ -46,6 +46,22 @@
 - **Swipe gestures — iOS Mail pattern na MyReservationsPage**
 - **RecurringToggle — RRULE picker + preview dat**
 - **OwnerPage — zakładki Firmy/Subskrypcje, module toggles**
+- **Sprint F** — IntegrationsModule (@Global): Slack, Teams, Azure, Google, Webhook
+- **Teams App** — React personal tab w MS Teams, SSO przez Teams SDK
+- **Microsoft Graph Calendar Sync** — dwukierunkowa sync Outlook ↔ Reserti
+- **Google SSO** — OIDC JIT provisioning
+- **AI Rekomendacje (K1)** — `RecommendationBanner`, scoring rule-based
+- **Utilization Insights (K2)** — cron codziennie, wzorce zajętości, `InsightsWidget`
+- **Web Push (VAPID)** — `PushService` + `PushOptIn`
+- **i18n 100%** — zero hardkodowanych stringów PL/EN w kodzie produkcyjnym
+- **Lucide React ikony** — ujednolicona biblioteka (`SidebarIcons.tsx`)
+- **Brand token** — `#B53578` w jednym miejscu (`index.css` + `tailwind.config.js`)
+- **Status colors** — spójne emerald/amber/red/zinc we wszystkich komponentach
+- **FloorPlanEditor** — pozycje biurek synchronizują się po zapisie (`useEffect + reset()`)
+- **KioskPage PWA install** — przycisk instalacji aplikacji na tablecie (`beforeinstallprompt`)
+- **Multi-floor backend** — `LocationFloorPlan` model, endpointy z `?floor=`, backward-compat
+- **Security hardening** — privilege escalation w rezerwacjach + IDOR w lokalizacjach naprawione
+- **Monitoring** — Grafana + Prometheus, 4 dashboardy
 
 **Gateway Python + Firmware ESP32**
 - Cache offline, SyncService, DeviceMonitor, Prometheus exporter
@@ -53,49 +69,35 @@
 
 ---
 
-## Co zostało do zrobienia
+## Co zostało do zrobienia (priorytet malejący)
 
-### Sprint C — Grafana + CSV Export (5 dni) 🔴 Priorytet
+### Multi-floor frontend editor
 
-- `prometheus.yml` + docker-compose stack (Grafana + Prometheus w Coolify)
-- Dashboard 1–4: System Health, Fleet Overview, Desk Analytics, IoT Health
-- `GET /reports/export?from=&to=&format=csv|xlsx`
-- ReportsPage: date range picker, heatmapa dzień×godzina
+- `FloorPlanEditorPage` — zakładki pięter + wybór aktywnego piętra w edytorze
+- `FloorPlanView` — selektor piętra; biurka filtrowane per `desk.floor`
+- `OrganizationsPage` — zarządzanie piętrami (dodaj/usuń/zmień nazwę)
+- Frontend zna API: `GET /locations/:id/floors`, `POST /floor-plan?floor=`
 
-### Sprint K — AI Rekomendacje (8 dni)
+### to_fix_2.md — otwarte błędy UX
 
-**K1 — Smart desk recommendations:**
-- Algorytm rule-based: ostatnie 20 rezerwacji → ulubione biurko → strefa → beacon uptime
-- `GET /desks/recommended?date=&start=&end=`
-- Banner nad mapą: `💡 Sugerowane biurko: A-01 (Twoje ulubione)` + `[Zarezerwuj]`
+- `#1` [USER] Mapa przed rezerwacjami na widoku użytkownika
+- `#2` [MOBILE] 3 oddzielne mapy dla biurek/sal/parkingu
+- `#3` [MAP] Popup biurka tuż obok klikniętego pina (nie z boku strony)
+- `#4` [MAP] Przycisk „Rezerwuj" na mapie nie działa
+- `#5` [REZERWACJE] Check-in nadal widoczny po wykonanym check-inie
+- `#6` [DASHBOARD] Brak danych mimo check-inów
+- `#7` [DASHBOARD] Czytelność na mobile (Super Admin)
+- `#12` [BIURO] Multi-floor — frontend editor (backend gotowy)
+- `#13` [SUPER ADMIN] Błąd wyboru firmy przy dodawaniu biura (SA powinien dodawać tylko do swojej org)
 
-**K2 — Utilization AI insights:**
-- Generowane raz dziennie przez cron, cachowane w DB
-- Template engine (nie LLM) — wzorce zajętości per biurko/strefa
+### Dalszy rozwój
 
-### Sprint L — Publiczny booking + Stripe (10 dni)
-
-- `Location.isPublic/publicSlug` — publiczna strona `/book/{slug}`
-- Rate limiting per email (3 rez/tydzień)
-- Stripe Checkout Session → `paymentStatus` na Reservation
-- `GET /webhooks/stripe` — obsługa payment.succeeded
-
-### Sprint F — Integracje zewnętrzne (wymaga credentials)
-
-- Teams App (Azure Bot Framework + Teams Manifest)
-- Slack Bot (OAuth2 workspace install, slash commands)
-- Microsoft Graph Sync (webhook calendarView, dwukierunkowa sync)
-
-### Inne TODO
-
-| # | Temat | Priorytet | Opis |
-|---|-------|-----------|------|
-| 1 | web-push VAPID keys | Wysoki | `npm install web-push` + `VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT` w .env |
-| 2 | Visitor email invite | Średni | TODO w visitors.service.ts — NotificationsService/SMTP |
-| 3 | Floor Plan CDN | Średni | Upload base64 do DB (limit ~2MB) → S3/Cloudflare R2 |
-| 4 | Kiosk link w UI | Niski | Brak przycisku `/kiosk?location=...` w OrganizationsPage |
-| 5 | Playwright E2E | Niski | Brak konfiguracji i testów |
-| 6 | Beacon timestamp RTC | Niski | `millis()/1000` reset przy restarcie |
+- `#14` [M365] Dwustronna sync kalendarza sal konferencyjnych (rozszerzenie GraphSyncModule)
+- `#15` [REJESTRACJA] Pełne flow onboardingu (formularz + email invite flow)
+- `#18` [DEMO] Instancja z hardkodowanymi danymi (bez backendu)
+- Sprint L — Publiczny booking + Stripe Checkout
+- Visitor email invite (TODO w `visitors.service.ts`)
+- Playwright E2E testy
 
 ---
 
@@ -139,7 +141,9 @@ ON CONFLICT ("type") DO NOTHING;
 |--------|------|-----------|
 | 0.11.0 | ✅ 2026-04-15 | i18n + PWA + testy + OTA + notyfikacje |
 | **0.12.0** | ✅ **2026-04-17** | **Sprinty A, D, E, G, H, I, J, B + naprawa Prisma** |
-| **0.12.1** | Q2 2026 | Sprint C (Grafana + CSV Export) |
-| **0.15.1** | Q3 2026 | Sprint K (AI Rekomendacje) |
-| **0.16.0** | Q4 2026 | Sprint L (Public Booking + Stripe) |
+| **0.17.0** | ✅ **2026-04-19** | **Sprint F (Integracje) + Teams App + Graph Sync + Google SSO + AI Insights** |
+| **0.17.1** | ✅ **2026-04-21** | **Security fixes + status colors + brand token** |
+| **0.17.2** | ✅ **2026-04-22** | **Lucide icons + i18n audit + FloorPlan sync fix + KioskPage PWA + multi-floor backend** |
+| **0.18.0** | Q2 2026 | Multi-floor frontend editor + UX fixes (to_fix_2: #1-7) |
+| **0.19.0** | Q3 2026 | Sprint L (Public Booking + Stripe) |
 | **1.0.0** | Q1 2027 | Self-hosted + ISO 27001 |
