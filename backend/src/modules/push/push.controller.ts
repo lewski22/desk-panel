@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Delete, Body, Request, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PushService } from './push.service';
+import { PushService }        from './push.service';
+import { PushSubscribeDto } from './dto/push-subscribe.dto';
 
 @ApiTags('push')
 @Controller('push')
@@ -13,7 +14,7 @@ export class PushController {
   getKey() { return { publicKey: this.svc.vapidPublicKey }; }
 
   @Post('subscribe')
-  subscribe(@Body() dto: any, @Request() req: any) {
+  subscribe(@Body() dto: PushSubscribeDto, @Request() req: any) {
     return this.svc.subscribe(req.user.id, dto);
   }
 

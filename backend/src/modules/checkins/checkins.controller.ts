@@ -3,11 +3,14 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger'; import { JwtAuthGuard }
 import { RolesGuard } from '../auth/guards/roles.guard'; import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@prisma/client'; import { CheckinsService } from './checkins.service';
 import { GatewaysService } from '../gateways/gateways.service'; import { PrismaService } from '../../database/prisma.service';
+import { NfcCheckinDto }    from './dto/nfc-checkin.dto';
+import { QrCheckinDto }     from './dto/qr-checkin.dto';
+import { ManualCheckinDto } from './dto/manual-checkin.dto';
 @ApiTags('checkins') @Controller('checkins')
 export class CheckinsController {
   constructor(private svc: CheckinsService, private gateways: GatewaysService, private prisma: PrismaService) {}
   @Post('nfc') @HttpCode(HttpStatus.OK) @ApiOperation({summary:'NFC check-in from gateway'})
-  async nfc(@Body() dto: any, @Headers('x-gateway-id') gwId?: string, @Headers('x-gateway-secret') secret?: string) {
+  async nfc(@Body() dto: NfcCheckinDto, @Headers('x-gateway-id') gwId?: string, @Headers('x-gateway-secret') secret?: string) {
     if(!gwId||!secret) throw new UnauthorizedException('Missing gateway credentials');
     await this.gateways.authenticate(gwId,secret);
     const gw=await this.prisma.gateway.findUnique({where:{id:gwId},include:{location:{select:{id:true}}}});
@@ -17,11 +20,11 @@ export class CheckinsController {
     return this.svc.checkinNfc(dto.deskId,dto.cardUid,gwId);
   }
   @Post('qr') @UseGuards(JwtAuthGuard) @HttpCode(HttpStatus.OK) @ApiOperation({summary:'QR check-in'})
-  qr(@Body() dto: any, @Request() req: any) { return this.svc.checkinQr(req.user.id,dto.deskId,dto.qrToken); }
+  qr(@Body() dto: QrCheckinDto, @Request() req: any) { return this.svc.checkinQr(req.user.id,dto.deskId,dto.qrToken); }
   @Post('qr/walkin') @UseGuards(JwtAuthGuard) @HttpCode(HttpStatus.OK) @ApiOperation({summary:'QR walk-in'})
   walkin(@Body('deskId') deskId: string, @Request() req: any) { return this.svc.walkinQr(req.user.id,deskId); }
   @Post('manual') @UseGuards(JwtAuthGuard,RolesGuard) @Roles(UserRole.SUPER_ADMIN,UserRole.OFFICE_ADMIN,UserRole.STAFF) @ApiOperation({summary:'Manual check-in'})
-  manual(@Body() dto: any, @Request() req: any) { return this.svc.manual(dto.deskId,dto.userId,dto.reservationId,req.user.organizationId); }
+  manual(@Body() dto: ManualCheckinDto, @Request() req: any) { return this.svc.manual(dto.deskId,dto.userId,dto.reservationId,req.user.organizationId); }
   @Post('web') @UseGuards(JwtAuthGuard) @HttpCode(HttpStatus.OK) @ApiOperation({summary:'Web check-in (self-service)'})
   web(@Body('reservationId') reservationId: string, @Request() req: any) { return this.svc.checkinWeb(req.user.id, reservationId); }
   @Patch(':id/checkout') @UseGuards(JwtAuthGuard) @ApiOperation({summary:'Check out'})

@@ -1,6 +1,6 @@
-import { IsString, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsDateString, IsOptional } from 'class-validator';
 
-export class CreateReservationDto {
+export class CreateRecurringDto {
   @IsString()
   deskId: string;
 
@@ -19,11 +19,6 @@ export class CreateReservationDto {
   @IsString()
   notes?: string;
 
-  @IsOptional()
   @IsString()
-  targetUserId?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  walkIn?: boolean;
+  rule: string;
 }

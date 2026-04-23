@@ -19,7 +19,6 @@ export class ResourcesService {
         status: 'ACTIVE',
         ...(type && { type: type as any }),
       },
-      include: { _count: { select: { bookings: true } } },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
     });
   }

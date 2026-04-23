@@ -7,7 +7,8 @@ import { JwtAuthGuard }   from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }     from '../auth/guards/roles.guard';
 import { Roles }          from '../auth/decorators/roles.decorator';
 import { UserRole }       from '@prisma/client';
-import { VisitorsService } from './visitors.service';
+import { VisitorsService }    from './visitors.service';
+import { InviteVisitorDto } from './dto/invite-visitor.dto';
 
 @ApiTags('visitors')
 @ApiBearerAuth()
@@ -33,7 +34,7 @@ export class VisitorsController {
   @ApiOperation({ summary: 'Invite a visitor' })
   invite(
     @Param('locationId') locationId: string,
-    @Body()              body: any,
+    @Body()              body: InviteVisitorDto,
     @Request()           req: any,
   ) {
     return this.svc.invite(locationId, req.user.id, body);

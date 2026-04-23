@@ -10,6 +10,7 @@ import { OwnerService }      from './owner.service';
 import { OwnerHealthService }from './owner-health.service';
 import { CreateOrgDto }      from './dto/create-org.dto';
 import { UpdateOrgDto }      from './dto/update-org.dto';
+import { SetModulesDto }     from './dto/set-modules.dto';
 
 @ApiTags('owner')
 @ApiBearerAuth()
@@ -60,7 +61,7 @@ export class OwnerController {
   @ApiOperation({ summary: 'Ustaw aktywne moduły dla organizacji (Owner)' })
   setModules(
     @Param('id')  id:   string,
-    @Body()       body: { enabledModules: string[] },
+    @Body()       body: SetModulesDto,
   ) {
     const VALID = ['DESKS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW', 'EQUIPMENT'];
     const modules = (body.enabledModules ?? []).filter((m: string) => VALID.includes(m));

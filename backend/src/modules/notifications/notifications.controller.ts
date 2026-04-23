@@ -9,6 +9,9 @@ import { RolesGuard }           from '../auth/guards/roles.guard';
 import { Roles }                from '../auth/decorators/roles.decorator';
 import { NotificationsService } from './notifications.service';
 import { NOTIFICATION_META }    from './notification-types';
+import { UpsertSettingDto }        from './dto/upsert-setting.dto';
+import { BulkSettingItemDto }      from './dto/bulk-upsert-settings.dto';
+import { SaveSmtpDto }             from './dto/save-smtp.dto';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -61,7 +64,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Włącz/wyłącz powiadomienie i ustaw odbiorców' })
   async upsertSetting(
     @Param('type')  type:    string,
-    @Body()         body:    { enabled: boolean; recipients?: string[]; thresholdMin?: number },
+    @Body()         body:    UpsertSettingDto,
     @Request()      req:     any,
     @Query('organizationId') qOrgId?: string,
   ) {
@@ -79,7 +82,7 @@ export class NotificationsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Zapisz wiele ustawień powiadomień naraz' })
   async bulkUpsert(
-    @Body()    settings: Array<{ type: string; enabled: boolean; recipients?: string[]; thresholdMin?: number }>,
+    @Body()    settings: BulkSettingItemDto[],
     @Request() req:      any,
   ) {
     const orgId = req.user.organizationId;
@@ -127,11 +130,7 @@ export class NotificationsController {
   @Roles(UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Zapisz własną konfigurację SMTP (hasło szyfrowane AES-256)' })
   async saveSmtp(
-    @Body() body: {
-      host: string; port: number; secure: boolean;
-      user: string; password: string;
-      fromName: string; fromEmail: string;
-    },
+    @Body() body: SaveSmtpDto,
     @Request() req: any,
   ) {
     const orgId = req.user.organizationId;

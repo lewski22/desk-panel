@@ -10,7 +10,9 @@ import { JwtAuthGuard }          from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }            from '../auth/guards/roles.guard';
 import { Roles }                 from '../auth/decorators/roles.decorator';
 import { UserRole }              from '@prisma/client';
-import { SubscriptionsService }  from './subscriptions.service';
+import { SubscriptionsService }      from './subscriptions.service';
+import { UpdatePlanDto }             from './dto/update-plan.dto';
+import { UpdatePlanTemplateDto }     from './dto/update-plan-template.dto';
 import { OwnerGuard }            from '../owner/guards/owner.guard';
 
 @ApiTags('subscription')
@@ -42,7 +44,7 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Update plan for specific org (Owner)' })
   updatePlan(
     @Param('id')  id:   string,
-    @Body()       body: any,
+    @Body()       body: UpdatePlanDto,
     @Request()    req:  any,
   ) {
     return this.svc.updatePlan(id, body, req.user.id);
@@ -74,7 +76,7 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Update plan template globally (Owner)' })
   updatePlanTemplate(
     @Param('plan') plan: string,
-    @Body()        body: any,
+    @Body()        body: UpdatePlanTemplateDto,
   ) {
     return this.svc.updatePlanTemplate(plan, body);
   }

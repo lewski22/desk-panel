@@ -2,6 +2,7 @@ import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Request, F
 import { ApiTags, ApiBearerAuth, ApiOperation }                        from '@nestjs/swagger';
 import { UserRole }                                                    from '@prisma/client';
 import { LocationsService, CreateLocationDto }                         from './locations.service';
+import { UploadFloorPlanDto }                                          from './dto/upload-floor-plan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
@@ -140,7 +141,7 @@ export class LocationsController {
   async uploadFloorPlan(
     @Param('id') id: string,
     @Query('floor') floor: string | undefined,
-    @Body() body: { floorPlanUrl: string; floorPlanW?: number; floorPlanH?: number; gridSize?: number },
+    @Body() body: UploadFloorPlanDto,
     @Request() req: any,
   ) {
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {

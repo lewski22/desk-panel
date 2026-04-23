@@ -21,7 +21,8 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }      from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }        from '../auth/guards/roles.guard';
 import { Roles }             from '../auth/decorators/roles.decorator';
-import { IntegrationsService } from './integrations.service';
+import { IntegrationsService }      from './integrations.service';
+import { UpsertIntegrationDto }    from './dto/upsert-integration.dto';
 import { AzureProvider }     from './providers/azure.provider';
 import { SlackProvider }     from './providers/slack.provider';
 import { GoogleProvider }    from './providers/google.provider';
@@ -69,12 +70,7 @@ export class IntegrationsController {
   @ApiOperation({ summary: 'Zapisz konfigurację integracji (upsert)' })
   async upsert(
     @Param('provider') provider: string,
-    @Body() body: {
-      config:       Record<string, unknown>;
-      displayName?: string;
-      tenantHint?:  string;
-      isEnabled?:   boolean;
-    },
+    @Body() body: UpsertIntegrationDto,
     @Request() req: any,
   ) {
     this._validateProvider(provider);

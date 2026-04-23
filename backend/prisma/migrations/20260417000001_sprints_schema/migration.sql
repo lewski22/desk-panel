@@ -1,3 +1,6 @@
+﻿-- This migration requires no transaction.
+-- (potrzebne dla ALTER TYPE ADD VALUE i ALTER TYPE RENAME)
+
 -- ============================================================
 -- Skonsolidowana migracja Sprint A–B (Reserti v0.12.0)
 -- Wszystkie zmiany schematu dodane w sesjach deweloperskich:

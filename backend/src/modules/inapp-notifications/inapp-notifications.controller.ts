@@ -5,6 +5,8 @@ import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
 import { UserRole }     from '@prisma/client';
 import { InAppNotificationsService } from './inapp-notifications.service';
+import { SaveRulesDto }              from './dto/save-rules.dto';
+import { AnnounceDto }               from './dto/announce.dto';
 
 @ApiTags('notifications-inapp')
 @Controller('notifications/inapp')
@@ -40,7 +42,7 @@ export class InAppNotificationsController {
   @Post('rules')
   @UseGuards(RolesGuard)
   @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  async saveRules(@Body() body: { rules: { type: string; enabled: boolean; targetRoles: string[] }[] }) {
+  async saveRules(@Body() body: SaveRulesDto) {
     for (const r of body.rules) {
       await this.svc.upsertRule(r.type as any, r.enabled, r.targetRoles);
     }
@@ -51,7 +53,7 @@ export class InAppNotificationsController {
   @Post('announce')
   @UseGuards(RolesGuard)
   @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN)
-  announce(@Body() body: { title: string; body: string; targetRoles: string[] }) {
+  announce(@Body() body: AnnounceDto) {
     return this.svc.announce(body.title, body.body, body.targetRoles);
   }
 }

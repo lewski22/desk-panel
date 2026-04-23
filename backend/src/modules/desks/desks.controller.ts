@@ -5,8 +5,9 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { DesksService } from './desks.service';
-import { CreateDeskDto } from './dto/create-desk.dto';
-import { UpdateDeskDto } from './dto/update-desk.dto';
+import { CreateDeskDto }      from './dto/create-desk.dto';
+import { UpdateDeskDto }      from './dto/update-desk.dto';
+import { BatchPositionsDto }  from './dto/batch-positions.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
@@ -51,7 +52,7 @@ export class DesksController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Batch update desk positions on floor plan (Sprint D)' })
   async batchPositions(
-    @Body() body: { updates: { id: string; posX?: number; posY?: number; rotation?: number; width?: number; height?: number }[] },
+    @Body() body: BatchPositionsDto,
     @Request() req: any,
   ) {
     const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
