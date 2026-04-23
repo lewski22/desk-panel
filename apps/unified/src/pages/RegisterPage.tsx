@@ -8,13 +8,6 @@ import { useParams, useNavigate }     from 'react-router-dom';
 import { useTranslation }             from 'react-i18next';
 import { appApi }                     from '../api/client';
 
-const ROLE_LABEL: Record<string, string> = {
-  END_USER:     'Użytkownik',
-  STAFF:        'Staff',
-  OFFICE_ADMIN: 'Administrator biura',
-  SUPER_ADMIN:  'Super Admin',
-};
-
 type Step = 'loading' | 'error' | 'form' | 'success';
 
 export function RegisterPage() {
@@ -102,7 +95,7 @@ export function RegisterPage() {
                 <p className="font-semibold text-zinc-800 text-sm">{inviteInfo.orgName}</p>
                 <p className="text-xs text-zinc-500 mt-0.5">{inviteInfo.email}</p>
                 <span className="inline-block mt-1.5 text-[10px] font-medium bg-brand/10 text-brand px-2 py-0.5 rounded-full">
-                  {ROLE_LABEL[inviteInfo.role] ?? inviteInfo.role}
+                  {t(`roles.${inviteInfo.role}`, inviteInfo.role)}
                 </span>
               </div>
 

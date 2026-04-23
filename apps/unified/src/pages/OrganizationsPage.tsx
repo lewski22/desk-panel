@@ -243,7 +243,7 @@ export function OrganizationsPage() {
 
   const openCreate = () => {
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
-      organizationId: isSuperAdmin ? '' : (user?.organizationId ?? '') });
+      organizationId: user?.organizationId ?? '' });
     setErr('');
     setModal('create');
   };
@@ -375,16 +375,9 @@ export function OrganizationsPage() {
           {isSuperAdmin && modal === 'create' && (
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.org_label')}</label>
-              <select
-                value={form.organizationId}
-                onChange={e => setForm(f => ({ ...f, organizationId: e.target.value }))}
-                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-              >
-                <option value="">{t('organizations.form.select_org')}</option>
-                {orgs.map((o: any) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
+              <p className="px-3 py-2 text-sm bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-600">
+                {orgs.find((o: any) => o.id === form.organizationId)?.name ?? form.organizationId}
+              </p>
             </div>
           )}
           <Input label={t('organizations.form.name_label')} value={form.name}
@@ -457,7 +450,7 @@ export function OrganizationsPage() {
           <div className="flex gap-2 mt-1 justify-end">
             <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}
-              disabled={!form.name.trim() || (isSuperAdmin && modal === 'create' && !form.organizationId)}>
+              disabled={!form.name.trim()}>
               {modal === 'create' ? t('btn.create') : t('btn.save')}
             </Btn>
           </div>

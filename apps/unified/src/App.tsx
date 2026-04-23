@@ -143,7 +143,7 @@ export default function App() {
                     <Guard user={user} allowed={ADMIN_ROLES}><IntegrationsPage /></Guard>
                   } />
                   <Route path="/notifications" element={
-                    <Guard user={user} allowed={SUPER_ONLY}><NotificationsPage /></Guard>
+                    <Guard user={user} allowed={ADMIN_ROLES}><NotificationsPage /></Guard>
                   } />
                   <Route path="/notification-rules" element={
                     <Guard user={user} allowed={OWNER_ONLY}><NotificationRulesPage /></Guard>

@@ -29,8 +29,8 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
 
   const statusLabel = () => {
     if (!desk.isOnline) return { label: t('devices.status.offline'), color: 'text-zinc-500' };
-    if (desk.isOccupied) return { label: t('desks.stats.occupied'), color: 'text-indigo-600' };
-    if (desk.currentReservation) return { label: t('desks.stats.reserved'), color: 'text-sky-600' };
+    if (desk.isOccupied) return { label: t('desks.stats.occupied'), color: 'text-red-600' };
+    if (desk.currentReservation) return { label: t('desks.stats.reserved'), color: 'text-amber-600' };
     return { label: t('desks.stats.free'), color: 'text-emerald-600' };
   };
 
@@ -101,8 +101,8 @@ function Legend() {
   const { t } = useTranslation();
   const items = [
     { color: '#10b981', label: t('dashboard.legend.free') },
-    { color: '#0ea5e9', label: t('dashboard.legend.reserved') },
-    { color: '#6366f1', label: t('dashboard.legend.occupied') },
+    { color: '#f59e0b', label: t('dashboard.legend.reserved') },
+    { color: '#ef4444', label: t('dashboard.legend.occupied') },
     { color: '#a1a1aa', label: t('dashboard.legend.offline') },
   ];
   return (

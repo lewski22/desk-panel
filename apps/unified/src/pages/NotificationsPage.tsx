@@ -79,13 +79,16 @@ function RecipientsInput({ value, onChange }: {
 
 // ── Row dla pojedynczego powiadomienia ───────────────────────────
 function NotificationRow({
-  item, onChange,
+  item, onChange, isSA,
 }: {
   item: any;
   onChange: (patch: Partial<typeof item>) => void;
+  isSA: boolean;
 }) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  // OA cannot edit recipients for infra/system — those are SA-managed
+  const canEditRecipients = isSA || item.category === 'rezerwacje';
 
   return (
     <div className={`border rounded-xl transition-colors ${item.enabled ? 'border-zinc-200 bg-white' : 'border-zinc-100 bg-zinc-50/50'}`}>
@@ -108,13 +111,18 @@ function NotificationRow({
             <CategoryBadge cat={item.category} />
           </div>
           <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">{item.description}</p>
+          {item.category === 'rezerwacje' && (
+            <p className="text-[11px] text-zinc-300 mt-0.5">{t('notifications.reservation_user_note', 'Każdy użytkownik może włączyć/wyłączyć w swoim profilu')}</p>
+          )}
         </div>
 
-        {/* Expand button */}
-        <button onClick={() => setExpanded(x => !x)}
-          className="text-zinc-400 hover:text-zinc-600 text-xs flex items-center gap-1 flex-shrink-0">
-          {expanded ? '▲' : '▼'}
-        </button>
+        {/* Expand button — only if there's anything to expand */}
+        {(item.hasThreshold || canEditRecipients) && (
+          <button onClick={() => setExpanded(x => !x)}
+            className="text-zinc-400 hover:text-zinc-600 text-xs flex items-center gap-1 flex-shrink-0">
+            {expanded ? '▲' : '▼'}
+          </button>
+        )}
       </div>
 
       {/* Expanded config */}
@@ -133,21 +141,30 @@ function NotificationRow({
                   onChange={e => onChange({ thresholdMin: parseInt(e.target.value) || 10 })}
                   className="w-24 border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none"
                 />
-                <span className="text-xs text-zinc-400">{t('notifications.settings.title')}</span>
+                <span className="text-xs text-zinc-400">min</span>
               </div>
             </div>
           )}
 
-          {/* Recipients */}
-          <div>
-            <label className="text-xs font-medium text-zinc-600 block mb-1.5">
-              Odbiorcy powiadomień
-            </label>
-            <RecipientsInput
-              value={item.recipients ?? []}
-              onChange={v => onChange({ recipients: v })}
-            />
-          </div>
+          {/* Recipients — SA for all, OA only for rezerwacje */}
+          {canEditRecipients && (
+            <div>
+              <label className="text-xs font-medium text-zinc-600 block mb-1.5">
+                {t('notifications.recipients_label', 'Odbiorcy powiadomień')}
+              </label>
+              <RecipientsInput
+                value={item.recipients ?? []}
+                onChange={v => onChange({ recipients: v })}
+              />
+            </div>
+          )}
+
+          {/* SA-only: infra/system recipients scope hint */}
+          {!canEditRecipients && isSA === false && (
+            <p className="text-xs text-zinc-400 italic">
+              {t('notifications.recipients_sa_only', 'Odbiorcy dla powiadomień infrastruktury są zarządzani przez administratora systemu.')}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -261,7 +278,9 @@ function PushOptInSection() {
 
 export function NotificationsPage() {
   const { t, i18n } = useTranslation();
-  const orgId = appApi.auth.user()?.organizationId ?? '';
+  const authUser = appApi.auth.user();
+  const orgId    = authUser?.organizationId ?? '';
+  const isSA     = authUser?.role === 'SUPER_ADMIN';
   const [settings, setSettings]   = useState<any[]>([]);
   const [loading,  setLoading]    = useState(true);
   const [saving,   setSaving]     = useState(false);
@@ -340,8 +359,8 @@ export function NotificationsPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-zinc-200 mb-6">
-        {(['settings', 'smtp', 'log'] as const).map(tabKey => (
-          <button key={tabKey} onClick={() => setTab(tabKey)}
+        {(['settings', ...(isSA ? ['smtp'] : []), 'log'] as const).map(tabKey => (
+          <button key={tabKey} onClick={() => setTab(tabKey as any)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === tabKey
                 ? 'border-[#B03472] text-[#B03472]'
@@ -375,6 +394,7 @@ export function NotificationsPage() {
                       <NotificationRow
                         key={item.type}
                         item={item}
+                        isSA={isSA}
                         onChange={patch => handleChange(item.type, patch)}
                       />
                     ))}
@@ -382,34 +402,38 @@ export function NotificationsPage() {
                 </div>
               ))}
 
-              {/* Test SMTP */}
-              <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50">
-                <h3 className="font-semibold text-zinc-700 text-sm mb-1">{t('notifications.settings.test_email')}</h3>
-                <p className="text-xs text-zinc-400 mb-3">
-                  Wyślij testowy email aby sprawdzić czy serwer pocztowy jest poprawnie skonfigurowany.
-                </p>
-                <div className="flex gap-2">
-                  <Btn size="sm" onClick={handleTest} loading={testing}>{t('notifications.settings.test_email')}</Btn>
-                </div>
-                {testResult && (
-                  <p className={`mt-2 text-xs font-medium ${testResult === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
-                    {testResult === 'ok' ? t('notifications.settings.test_success') : testResult}
+              {/* Test SMTP — SA only */}
+              {isSA && (
+                <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50">
+                  <h3 className="font-semibold text-zinc-700 text-sm mb-1">{t('notifications.settings.test_email')}</h3>
+                  <p className="text-xs text-zinc-400 mb-3">
+                    Wyślij testowy email aby sprawdzić czy serwer pocztowy jest poprawnie skonfigurowany.
                   </p>
-                )}
-              </div>
+                  <div className="flex gap-2">
+                    <Btn size="sm" onClick={handleTest} loading={testing}>{t('notifications.settings.test_email')}</Btn>
+                  </div>
+                  {testResult && (
+                    <p className={`mt-2 text-xs font-medium ${testResult === 'ok' ? 'text-green-600' : 'text-red-500'}`}>
+                      {testResult === 'ok' ? t('notifications.settings.test_success') : testResult}
+                    </p>
+                  )}
+                </div>
+              )}
 
-              {/* SMTP hint */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-xs font-semibold text-blue-700 mb-1">Konfiguracja SMTP (zmienne środowiskowe)</p>
-                <pre className="text-[11px] text-blue-600 leading-relaxed">{
+              {/* SMTP hint — SA only */}
+              {isSA && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-blue-700 mb-1">Konfiguracja SMTP (zmienne środowiskowe)</p>
+                  <pre className="text-[11px] text-blue-600 leading-relaxed">{
 `SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=apikey
 SMTP_PASS=SG.xxxxx
 SMTP_FROM=Reserti <noreply@reserti.pl>`
-                }</pre>
-              </div>
+                  }</pre>
+                </div>
+              )}
             </>
           )}
         </div>

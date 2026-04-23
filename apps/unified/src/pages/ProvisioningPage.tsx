@@ -27,6 +27,7 @@ function useLocations() {
 
 // ── GatewaySection ────────────────────────────────────────────
 function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLocId: string }) {
+  const { t }          = useTranslation();
   const [gateways,     setGateways]     = useState<any[]>([]);
   const [modal,        setModal]        = useState<'install'|'secret'|null>(null);
   const [locId,        setLocId]        = useState(activeLocId);
@@ -44,8 +45,8 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
   useEffect(() => {
     load();
     // Auto-refresh co 15s — aktualizuje status Online/Offline bez przeładowania
-    const t = setInterval(load, 15_000);
-    return () => clearInterval(t);
+    const timer = setInterval(load, 15_000);
+    return () => clearInterval(timer);
   }, []);
 
   // Nowy flow: generuj token instalacyjny zamiast ręcznego rejestrowania

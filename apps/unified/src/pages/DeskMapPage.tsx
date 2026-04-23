@@ -9,9 +9,10 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation }  from 'react-i18next';
 import { useNavigate }      from 'react-router-dom';
 import { useDesks }         from '../hooks';
-import { DeskMap }          from '../components/desks/DeskMap';
-import { FloorPlanView }    from '../components/floor-plan/FloorPlanView';
-import { ResourceCard }     from '../components/desks/ResourceCard';
+import { DeskMap }                  from '../components/desks/DeskMap';
+import { FloorPlanView }            from '../components/floor-plan/FloorPlanView';
+import { ResourceFloorPlanView }    from '../components/floor-plan/ResourceFloorPlanView';
+import { ResourceCard }             from '../components/desks/ResourceCard';
 import { BookingModal }     from '../components/desks/BookingModal';
 import { ReservationModal } from '../components/desks/ReservationModal';
 import { appApi }           from '../api/client';
@@ -107,6 +108,7 @@ export function DeskMapPage() {
   const [resources,  setResources]    = useState<any[]>([]);
   const [resLoading, setResLoading]   = useState(false);
   const [bookTarget, setBookTarget]   = useState<any>(null);
+  const [resViewMode, setResViewMode] = useState<ViewMode>('plan');
 
   const userRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
@@ -261,11 +263,24 @@ export function DeskMapPage() {
               sub={t('deskmap.empty.sub')}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {resources.map(r => (
-                <ResourceCard key={r.id} resource={r} onBook={setBookTarget} />
-              ))}
-            </div>
+            <>
+              {resources.some(r => r.posX != null) && (
+                <ViewToggle mode={resViewMode} onChange={setResViewMode} hasPlan={true} />
+              )}
+              {resViewMode === 'plan' && resources.some(r => r.posX != null) ? (
+                <ResourceFloorPlanView
+                  locationId={locationId}
+                  resources={resources}
+                  onBook={setBookTarget}
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {resources.map(r => (
+                    <ResourceCard key={r.id} resource={r} onBook={setBookTarget} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

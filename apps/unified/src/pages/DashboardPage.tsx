@@ -89,14 +89,14 @@ function KpiCard({
     <div className={`rounded-xl border p-2.5 sm:p-4 flex flex-col gap-1 ${
       accent ? 'bg-brand border-brand text-white' : 'bg-white border-zinc-100'
     }`}>
-      <p className={`text-xs font-medium uppercase tracking-wide ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
+      <p className={`text-[10px] sm:text-xs font-medium uppercase tracking-wide truncate leading-tight ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
         {label}
       </p>
       <p className={`text-xl sm:text-2xl font-bold font-mono ${accent ? 'text-white' : 'text-zinc-800'}`}>
         {value}
       </p>
-      <div className="flex items-center gap-2">
-        {sub && <span className={`text-xs ${accent ? 'text-white/60' : 'text-zinc-400'}`}>{sub}</span>}
+      <div className="flex items-center gap-2 min-w-0">
+        {sub && <span className={`text-xs truncate ${accent ? 'text-white/60' : 'text-zinc-400'}`}>{sub}</span>}
         {trend !== undefined && !accent && (
           <TrendBadge pct={trend}
             prevLabel={prevValue ? `${t('dashboard.trend.prev')}: ${prevValue}` : undefined} />
@@ -463,6 +463,7 @@ export function DashboardPage() {
             />
           )}
         </div>
+        <div className="min-w-[280px]">
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={ext?.weekData ?? []} barCategoryGap="35%">
             <CartesianGrid strokeDasharray="3 3" stroke="#f4f4f5" vertical={false} />
@@ -473,10 +474,11 @@ export function DashboardPage() {
             <Bar dataKey="checkins" name={t('dashboard.checkins')} fill={ACCENT} radius={[4,4,0,0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </Card>}
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAdmin ? 'md:grid-cols-2 xl:grid-cols-3' : 'md:grid-cols-2'}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAdmin ? 'sm:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2'}`}>
         {isAdmin && <HourlyChart hourly={ext?.hourly} />}
 
         {/* Zone occupancy */}

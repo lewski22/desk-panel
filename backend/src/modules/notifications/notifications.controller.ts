@@ -57,7 +57,7 @@ export class NotificationsController {
 
   // ── Zaktualizuj jedno ustawienie ─────────────────────────────
   @Put('settings/:type')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Włącz/wyłącz powiadomienie i ustaw odbiorców' })
   async upsertSetting(
     @Param('type')  type:    string,
@@ -65,7 +65,10 @@ export class NotificationsController {
     @Request()      req:     any,
     @Query('organizationId') qOrgId?: string,
   ) {
-    const orgId = qOrgId ?? req.user.organizationId;
+    // OFFICE_ADMIN may only manage their own org
+    const orgId = req.user.role === UserRole.SUPER_ADMIN
+      ? (qOrgId ?? req.user.organizationId)
+      : req.user.organizationId;
     if (!orgId) return { error: 'No organization' };
     this.logger.log(`NotificationSetting: org=${orgId} type=${type} enabled=${body.enabled}`);
     return this.svc.upsertSetting(orgId, type, body);
@@ -73,7 +76,7 @@ export class NotificationsController {
 
   // ── Bulk update (zapisz wszystkie ustawienia naraz) ──────────
   @Put('settings')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Zapisz wiele ustawień powiadomień naraz' })
   async bulkUpsert(
     @Body()    settings: Array<{ type: string; enabled: boolean; recipients?: string[]; thresholdMin?: number }>,
