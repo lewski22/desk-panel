@@ -1,26 +1,22 @@
-- This migration requires no transaction.
--- (potrzebne dla ALTER TYPE ADD VALUE i ALTER TYPE RENAME)
-
--- ============================================================
--- Skonsolidowana migracja Sprint A–B (Reserti v0.12.0)
--- Wszystkie zmiany schematu dodane w sesjach deweloperskich:
---   Sprint D  — Floor Plan Editor
---   Sprint E  — Resources (Sale/Parking) + Bookings
---   Sprint E  — enabledModules (Owner module management)
---   Sprint G  — Recurring reservations + PushSubscription
---   Sprint H  — kioskPin
---   Sprint J  — Visitor Management
---   Sprint B  — SubscriptionEvent + billing fields
---   Sprint B  — nowe typy InAppNotifType
---
--- BEZPIECZNA: wszystkie DDL używają IF NOT EXISTS / DO blocks.
--- IDEMPOTENTNA: wielokrotne uruchomienie nie spowoduje błędów.
--- ============================================================
-
 -- This migration requires no transaction.
--- (potrzebne dla ALTER TYPE ADD VALUE i ALTER TYPE RENAME)
+-- Idempotent fallback: tworzy tabele z Sprint E/G/J/B jeśli nie istnieją.
+-- Migracja 20260417000001 mogła nie zastosować się poprawnie z powodu
+-- ALTER TYPE ADD VALUE w transakcji (PostgreSQL nie pozwala). Ta migracja
+-- naprawia brakujące tabele bez ryzyka błędu na istniejących obiektach.
 
--- ─── Sprint D: Floor Plan Editor ─────────────────────────────
+-- ─── Sprint E: ResourceType + BookingStatus ───────────────────
+
+DO $$ BEGIN
+  CREATE TYPE "ResourceType" AS ENUM ('ROOM', 'PARKING', 'EQUIPMENT');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE "BookingStatus" AS ENUM ('CONFIRMED', 'CANCELLED', 'COMPLETED');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ─── Sprint E: Floor Plan columns ────────────────────────────
 
 ALTER TABLE "Desk"
   ADD COLUMN IF NOT EXISTS "posX"     DOUBLE PRECISION,
@@ -33,24 +29,25 @@ ALTER TABLE "Location"
   ADD COLUMN IF NOT EXISTS "floorPlanUrl" TEXT,
   ADD COLUMN IF NOT EXISTS "floorPlanW"   INTEGER,
   ADD COLUMN IF NOT EXISTS "floorPlanH"   INTEGER,
-  ADD COLUMN IF NOT EXISTS "gridSize"     INTEGER DEFAULT 40;
+  ADD COLUMN IF NOT EXISTS "gridSize"     INTEGER DEFAULT 40,
+  ADD COLUMN IF NOT EXISTS "kioskPin"     TEXT;
 
--- ─── Sprint E: Resources (Sale / Parking / Equipment) ────────
-
+-- ─── Sprint E: Resource ───────────────────────────────────────
+-- Jeśli tabela istnieje z kolumną type jako enum, zmień na TEXT
 DO $$ BEGIN
-  CREATE TYPE "ResourceType" AS ENUM ('ROOM', 'PARKING', 'EQUIPMENT');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE TYPE "BookingStatus" AS ENUM ('CONFIRMED', 'CANCELLED', 'COMPLETED');
-EXCEPTION WHEN duplicate_object THEN NULL;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'Resource' AND column_name = 'type'
+      AND data_type = 'USER-DEFINED'
+  ) THEN
+    ALTER TABLE "Resource" ALTER COLUMN "type" TYPE TEXT;
+  END IF;
 END $$;
 
 CREATE TABLE IF NOT EXISTS "Resource" (
   "id"          TEXT           NOT NULL DEFAULT gen_random_uuid(),
   "locationId"  TEXT           NOT NULL,
-  "type"        "ResourceType" NOT NULL DEFAULT 'ROOM',
+  "type"        TEXT           NOT NULL DEFAULT 'ROOM',
   "name"        TEXT           NOT NULL,
   "code"        TEXT           NOT NULL,
   "description" TEXT,
@@ -71,6 +68,17 @@ CREATE TABLE IF NOT EXISTS "Resource" (
     FOREIGN KEY ("locationId") REFERENCES "Location"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+-- ─── Sprint E: Booking ────────────────────────────────────────
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'Booking' AND column_name = 'status'
+      AND data_type = 'USER-DEFINED'
+  ) THEN
+    ALTER TABLE "Booking" ALTER COLUMN "status" TYPE TEXT;
+  END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS "Booking" (
   "id"         TEXT           NOT NULL DEFAULT gen_random_uuid(),
   "resourceId" TEXT           NOT NULL,
@@ -78,7 +86,7 @@ CREATE TABLE IF NOT EXISTS "Booking" (
   "date"       DATE           NOT NULL,
   "startTime"  TIMESTAMP(3)   NOT NULL,
   "endTime"    TIMESTAMP(3)   NOT NULL,
-  "status"     "BookingStatus" NOT NULL DEFAULT 'CONFIRMED',
+  "status"     TEXT           NOT NULL DEFAULT 'CONFIRMED',
   "notes"      TEXT,
   "createdAt"  TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"  TIMESTAMP(3)   NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -91,7 +99,7 @@ CREATE TABLE IF NOT EXISTS "Booking" (
 
 CREATE INDEX IF NOT EXISTS "Resource_locationId_type_idx" ON "Resource"("locationId", "type");
 CREATE INDEX IF NOT EXISTS "Booking_resourceId_date_idx"  ON "Booking"("resourceId", "date");
-CREATE INDEX IF NOT EXISTS "Booking_userId_date_idx"       ON "Booking"("userId", "date");
+CREATE INDEX IF NOT EXISTS "Booking_userId_date_idx"      ON "Booking"("userId", "date");
 
 -- ─── Sprint E: Owner module management ───────────────────────
 
@@ -107,7 +115,7 @@ ALTER TABLE "Reservation"
 CREATE INDEX IF NOT EXISTS "Reservation_recurrenceGroupId_idx"
   ON "Reservation"("recurrenceGroupId");
 
--- ─── Sprint G: PWA Push Subscriptions ────────────────────────
+-- ─── Sprint G: PushSubscription ──────────────────────────────
 
 CREATE TABLE IF NOT EXISTS "PushSubscription" (
   "id"        TEXT         NOT NULL DEFAULT gen_random_uuid(),
@@ -124,11 +132,6 @@ CREATE TABLE IF NOT EXISTS "PushSubscription" (
 );
 
 CREATE INDEX IF NOT EXISTS "PushSubscription_userId_idx" ON "PushSubscription"("userId");
-
--- ─── Sprint H: Kiosk mode PIN ─────────────────────────────────
-
-ALTER TABLE "Location"
-  ADD COLUMN IF NOT EXISTS "kioskPin" TEXT;
 
 -- ─── Sprint J: Visitor Management ────────────────────────────
 
@@ -160,7 +163,7 @@ CREATE TABLE IF NOT EXISTS "Visitor" (
 CREATE INDEX IF NOT EXISTS "Visitor_locationId_visitDate_idx" ON "Visitor"("locationId", "visitDate");
 CREATE INDEX IF NOT EXISTS "Visitor_hostUserId_idx"           ON "Visitor"("hostUserId");
 
--- ─── Sprint B: Billing fields + SubscriptionEvent ────────────
+-- ─── Sprint B: Billing fields ─────────────────────────────────
 
 ALTER TABLE "Organization"
   ADD COLUMN IF NOT EXISTS "limitDesks"     INTEGER,
@@ -170,6 +173,8 @@ ALTER TABLE "Organization"
   ADD COLUMN IF NOT EXISTS "billingEmail"   TEXT,
   ADD COLUMN IF NOT EXISTS "mrr"            INTEGER,
   ADD COLUMN IF NOT EXISTS "nextInvoiceAt"  TIMESTAMP(3);
+
+-- ─── Sprint B: SubscriptionEvent ─────────────────────────────
 
 CREATE TABLE IF NOT EXISTS "SubscriptionEvent" (
   "id"             TEXT         NOT NULL DEFAULT gen_random_uuid(),
@@ -188,16 +193,15 @@ CREATE TABLE IF NOT EXISTS "SubscriptionEvent" (
 CREATE INDEX IF NOT EXISTS "SubscriptionEvent_organizationId_createdAt_idx"
   ON "SubscriptionEvent"("organizationId", "createdAt" DESC);
 
--- ─── Sprint B: Nowe typy InAppNotifType ──────────────────────
--- ALTER TYPE ADD VALUE wymaga braku transakcji (stąd no-transaction wyżej)
+-- ─── Sprint B: InAppNotifType values ─────────────────────────
 
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRING';
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
 ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
 
--- Naprawa schema: upewnij się że NotificationRule ma kolumnę type i unikalny constraint
--- (potrzebne gdy poprzednia wersja migracji częściowo zawiodła i stworzyła tabelę bez tej kolumny)
+-- ─── Sprint B: NotificationRule ──────────────────────────────
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -206,7 +210,7 @@ BEGIN
       AND table_name = 'NotificationRule'
       AND column_name = 'type'
   ) THEN
-    ALTER TABLE "NotificationRule" ADD COLUMN "type" "InAppNotifType";
+    ALTER TABLE "NotificationRule" ADD COLUMN "type" TEXT;
   END IF;
 
   IF NOT EXISTS (
@@ -218,7 +222,6 @@ BEGIN
   END IF;
 END $$;
 
--- Domyślne reguły powiadomień
 INSERT INTO "NotificationRule" ("type", "targetRoles", "enabled")
 VALUES
   ('SUBSCRIPTION_EXPIRING', ARRAY['SUPER_ADMIN'], true),
