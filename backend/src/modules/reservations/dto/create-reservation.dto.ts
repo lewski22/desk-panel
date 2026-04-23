@@ -7,13 +7,11 @@ export class CreateReservationDto {
   @IsDateString()
   date: string;
 
-  @IsOptional()
   @IsString()
-  startTime?: string;
+  startTime: string;
 
-  @IsOptional()
   @IsString()
-  endTime?: string;
+  endTime: string;
 
   @IsOptional()
   @IsString()
