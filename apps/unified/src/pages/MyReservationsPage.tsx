@@ -3,6 +3,7 @@
  * Dodano swipe-left → reveal "Anuluj" (iOS Mail pattern)
  */
 import { localDateStr } from '../utils/date';
+import { parseISO } from 'date-fns';
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
@@ -86,7 +87,7 @@ function ReservationCard({
         <div className="flex-1 min-w-0">
           <p className="font-medium text-zinc-800 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
           <p className="text-xs text-zinc-400 mt-0.5">
-            {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { weekday:'short', day:'2-digit', month:'2-digit' })}
+            {parseISO(r.date.slice(0,10)).toLocaleDateString(locale, { weekday:'short', day:'2-digit', month:'2-digit' })}
             {' · '}
             {new Date(r.startTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
             –
@@ -226,7 +227,7 @@ export function MyReservationsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
                       <p className="text-xs text-zinc-400">
-                        {new Date(r.date.slice(0,10)+'T12:00:00').toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' })}
+                        {parseISO(r.date.slice(0,10)).toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' })}
                       </p>
                     </div>
                     <StatusBadge status={r.status} />

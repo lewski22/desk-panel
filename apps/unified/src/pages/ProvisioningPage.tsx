@@ -40,7 +40,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
   useEffect(() => { setLocId(activeLocId); }, [activeLocId]);
 
   const load = () => {
-    appApi.gateways.list().then(setGateways).catch(() => {});
+    appApi.gateways.list().then(setGateways).catch((e) => console.error('[ProvisioningPage] gateways.list', e));
   };
   useEffect(() => {
     load();

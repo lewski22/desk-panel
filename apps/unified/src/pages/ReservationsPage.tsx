@@ -13,7 +13,7 @@ export function ReservationsPage() {
     appApi.locations.listAll().then(locs => {
       setLocations(locs);
       if (!locationId && locs.length > 0) setLocationId(locs[0].id);
-    }).catch(() => {});
+    }).catch((e) => console.error('[ReservationsPage] locations.listAll', e));
   }, []);
 
   const user = (() => {

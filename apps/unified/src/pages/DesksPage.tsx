@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import QRCode from 'qrcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
@@ -15,8 +16,12 @@ const STATUS_COLOR: Record<string, 'green'|'amber'|'red'|'zinc'> = {
 function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
   const { t } = useTranslation();
   const qrUrl = `${STAFF_URL}/checkin/${desk.qrToken}`;
-  const imgSrc = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrUrl)}&size=240x240&margin=12&format=png`;
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    QRCode.toDataURL(qrUrl, { width: 240, margin: 1 }).then(setQrDataUrl).catch(() => {});
+  }, [qrUrl]);
 
   const copy = () => {
     navigator.clipboard.writeText(qrUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
@@ -27,7 +32,7 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
     if (!w) return;
     w.document.write(`<html><head><title>QR — ${desk.name}</title>
       <style>body{font-family:sans-serif;text-align:center;padding:40px}h2{font-size:22px;margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:20px}img{display:block;margin:0 auto 16px}code{font-size:11px;color:#888;word-break:break-all}</style></head><body>
-        <h2>${desk.name}</h2><p>${desk.code}</p><img src="${imgSrc}" width="200" height="200" /><code>${qrUrl}</code>
+        <h2>${desk.name}</h2><p>${desk.code}</p><img src="${qrDataUrl}" width="200" height="200" /><code>${qrUrl}</code>
       </body></html>`);
     w.document.close(); w.focus();
     setTimeout(() => { w.print(); }, 500);
@@ -37,7 +42,10 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
     <Modal title={t('desks.qr.title', { name: desk.name })} onClose={onClose}>
       <div className="flex flex-col items-center gap-4">
         <div className="p-3 bg-white rounded-xl border border-zinc-100 shadow-sm">
-          <img src={imgSrc} width={200} height={200} alt={t('desks.qr.alt')} className="rounded" />
+          {qrDataUrl
+            ? <img src={qrDataUrl} width={200} height={200} alt={t('desks.qr.alt')} className="rounded" />
+            : <div className="w-[200px] h-[200px] flex items-center justify-center text-zinc-300">…</div>
+          }
         </div>
         <div className="w-full">
           <p className="text-xs text-zinc-400 mb-1 font-medium">{t('desks.qr.url_label')}</p>
@@ -72,7 +80,7 @@ export function DesksPage() {
     appApi.locations.listAll().then(locs => {
       setLocations(locs);
       if (!locId && locs.length > 0) { setLocId(locs[0].id); localStorage.setItem('desks_loc', locs[0].id); }
-    }).catch(() => {});
+    }).catch((e) => console.error('[DesksPage] locations.listAll', e));
   }, []);
 
   const load = async () => {

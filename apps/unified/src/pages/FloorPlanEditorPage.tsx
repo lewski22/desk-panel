@@ -123,7 +123,7 @@ export function FloorPlanEditorPage() {
           onSaved={() => {
             appApi.desks.status(locationId!)
               .then(res => setDesks(res?.desks ?? res ?? []))
-              .catch(() => {});
+              .catch((e) => console.error('[FloorPlanEditorPage] desks.status', e));
           }}
         />
       )}

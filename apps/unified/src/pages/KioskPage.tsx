@@ -182,7 +182,7 @@ export function KioskPage() {
     if (!locationId) { setLoading(false); return; }
     appApi.locations.listAll()
       .then(locs => setLocation(locs.find((l: any) => l.id === locationId) ?? null))
-      .catch(() => {});
+      .catch((e) => console.error('[KioskPage] locations.listAll', e));
     load();
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);

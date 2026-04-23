@@ -77,13 +77,16 @@ export default function App() {
     if (!user) return;
     appApi.auth.getMe().then(setUser).catch(() => {});
 
+    let timer: ReturnType<typeof setTimeout>;
     const onVisible = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState !== 'visible') return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
         appApi.auth.getMe().then(setUser).catch(() => {});
-      }
+      }, 2000);
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    return () => { document.removeEventListener('visibilitychange', onVisible); clearTimeout(timer); };
   }, []);
 
   const handleLogout = () => {

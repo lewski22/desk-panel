@@ -15,21 +15,27 @@ const KEYS = {
 
 const getToken = () => localStorage.getItem(KEYS.access);
 
+let _refreshPromise: Promise<boolean> | null = null;
+
 async function tryRefresh(): Promise<boolean> {
-  const rt = localStorage.getItem(KEYS.refresh);
-  if (!rt) return false;
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: rt }),
-    });
-    if (!res.ok) return false;
-    const d = await res.json();
-    localStorage.setItem(KEYS.access,  d.accessToken);
-    localStorage.setItem(KEYS.refresh, d.refreshToken);
-    return true;
-  } catch { return false; }
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    const rt = localStorage.getItem(KEYS.refresh);
+    if (!rt) return false;
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+      if (!res.ok) return false;
+      const d = await res.json();
+      localStorage.setItem(KEYS.access,  d.accessToken);
+      localStorage.setItem(KEYS.refresh, d.refreshToken);
+      return true;
+    } catch { return false; }
+  })().finally(() => { _refreshPromise = null; });
+  return _refreshPromise;
 }
 
 async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Promise<T> {
@@ -88,7 +94,7 @@ export const appApi = {
     },
     logout() {
       const rt = localStorage.getItem(KEYS.refresh);
-      if (rt) req('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: rt }) }).catch(() => {});
+      if (rt) req('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: rt }) }).catch((e) => console.error('[client] logout', e));
       localStorage.removeItem(KEYS.access);
       localStorage.removeItem(KEYS.refresh);
       localStorage.removeItem(KEYS.user);

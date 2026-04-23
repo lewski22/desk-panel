@@ -120,7 +120,7 @@ export function DeskMapPage() {
 
   useEffect(() => {
     if (!isEndUser) {
-      appApi.users.list().then(setReservationUsers).catch(() => {});
+      appApi.users.list().then(setReservationUsers).catch((e) => console.error('[DeskMapPage] users.list', e));
     }
   }, [isEndUser]);
 
@@ -130,7 +130,7 @@ export function DeskMapPage() {
         setLocations(locs);
         if (!locationId && locs.length > 0) setLocationId(locs[0].id);
       })
-      .catch(() => {})
+      .catch((e) => console.error('[DeskMapPage] locations.listAll', e))
       .finally(() => setLocLoading(false));
   }, []);
 
@@ -159,7 +159,7 @@ export function DeskMapPage() {
     setResLoading(true);
     appApi.resources.list(locationId, typeMap[mapTab])
       .then(setResources)
-      .catch(() => {})
+      .catch((e) => console.error('[DeskMapPage] resources.list', e))
       .finally(() => setResLoading(false));
   }, [mapTab, locationId]);
 

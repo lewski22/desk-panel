@@ -43,7 +43,7 @@ function useLocationId() {
           setLocationId(locs[0].id);
         }
       })
-      .catch(() => {});
+      .catch((e) => console.error('[DashboardPage] locations.listAll', e));
   }, [locationId]);
   return locationId;
 }
@@ -200,7 +200,7 @@ function IssuesWidget({ locationId }: { locationId: string }) {
     if (!locationId) return;
     appApi.locations.issues(locationId)
       .then(setIssues)
-      .catch(() => {})
+      .catch((e) => console.error('[DashboardPage] locations.issues', e))
       .finally(() => setLoading(false));
   }, [locationId]);
 

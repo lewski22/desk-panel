@@ -147,7 +147,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
   });
 
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    mainRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [location.pathname]);
 
   const isImpersonated = localStorage.getItem('app_impersonated') === 'true';

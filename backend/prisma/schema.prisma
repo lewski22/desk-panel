@@ -356,6 +356,8 @@ model Reservation {
   user    User        @relation(fields: [userId], references: [id])
   checkin Checkin?
   events  Event[]
+
+  @@index([deskId, date, status])
 }
 
 // ─── Checkin ─────────────────────────────────────────────────
@@ -374,6 +376,8 @@ model Checkin {
   reservation Reservation? @relation(fields: [reservationId], references: [id])
   desk        Desk         @relation(fields: [deskId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id])
+
+  @@index([deskId, checkedOutAt])
 }
 
 // ─── Resource (Room / Parking / Equipment) ────────────────────
