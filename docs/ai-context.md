@@ -216,7 +216,7 @@ GET    /metrics | /health                  POZA /api/v1
 
 ### Design system
 
-- **Kolor brand:** `#B53578` — `tailwind.config.js` + `src/index.css` → klasy `bg-brand`, `text-brand`, `hover:bg-brand-hover`
+- **Kolor brand:** `#9C2264` — `tailwind.config.js` + `src/index.css` → klasy `bg-brand`, `text-brand`, `hover:bg-brand-hover`
 - **Paleta statusów:** emerald `#10b981` wolne / amber `#f59e0b` zarezerwowane / red `#ef4444` zajęte / zinc `#a1a1aa` offline
 - **Ikony:** `lucide-react` — re-eksportowane przez `components/icons/SidebarIcons.tsx`
 - **i18n:** 100% pokrycie, `useTranslation()` wszędzie, zero literałów PL/EN w kodzie

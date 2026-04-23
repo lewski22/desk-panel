@@ -11,6 +11,9 @@ import { RolesGuard }    from '../auth/guards/roles.guard';
 import { Roles }         from '../auth/decorators/roles.decorator';
 import { UserRole }      from '@prisma/client';
 import { ResourcesService } from './resources.service';
+import { CreateResourceDto } from './dto/create-resource.dto';
+import { UpdateResourceDto } from './dto/update-resource.dto';
+import { CreateBookingDto }  from './dto/create-booking.dto';
 
 @ApiTags('resources')
 @ApiBearerAuth()
@@ -35,7 +38,7 @@ export class ResourcesController {
   @ApiOperation({ summary: 'Create a new resource (room, parking spot, equipment)' })
   create(
     @Param('locationId') locationId: string,
-    @Body()              body:       any,
+    @Body()              body:       CreateResourceDto,
   ) {
     return this.svc.create(locationId, body);
   }
@@ -43,7 +46,7 @@ export class ResourcesController {
   @Patch('resources/:id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Update resource details' })
-  update(@Param('id') id: string, @Body() body: any) {
+  update(@Param('id') id: string, @Body() body: UpdateResourceDto) {
     return this.svc.update(id, body);
   }
 
@@ -69,7 +72,7 @@ export class ResourcesController {
   @Post('resources/:id/bookings')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'Book a resource' })
-  book(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+  book(@Param('id') id: string, @Body() body: CreateBookingDto, @Request() req: any) {
     return this.svc.createBooking(id, req.user.id, body);
   }
 

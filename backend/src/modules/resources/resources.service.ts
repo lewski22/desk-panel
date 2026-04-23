@@ -3,8 +3,9 @@
  * Sale konferencyjne, parking, equipment
  * CRUD zasobów + bookings z walidacją konfliktów
  */
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ResourcesService {
@@ -37,9 +38,17 @@ export class ResourcesService {
     capacity?: number; amenities?: string[]; vehicleType?: string;
     floor?: string; zone?: string;
   }) {
-    return this.prisma.resource.create({
-      data: { ...dto, locationId, type: dto.type as any },
-    });
+    try {
+      return await this.prisma.resource.create({
+        data: { ...dto, locationId, type: dto.type as any },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2003') throw new BadRequestException('Lokalizacja nie istnieje');
+        if (e.code === 'P2002') throw new ConflictException('Zasób o tym kodzie już istnieje');
+      }
+      throw e;
+    }
   }
 
   async update(id: string, dto: Partial<{

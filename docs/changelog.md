@@ -47,7 +47,7 @@
 ### Changed
 
 - **Status colors** — spójne we wszystkich komponentach (DeskPin, DeskToken, DeskCard, KioskPage, DashboardPage): `#10b981` wolne / `#f59e0b` zarezerwowane / `#ef4444` zajęte / `#a1a1aa` offline
-- **Brand token** — jeden token (`--brand: #B53578`) w `index.css` i `tailwind.config.js`; klasy `bg-brand` / `text-brand` / `hover:bg-brand-hover` używane wszędzie
+- **Brand token** — jeden token (`--brand: #9C2264`) w `index.css` i `tailwind.config.js`; klasy `bg-brand` / `text-brand` / `hover:bg-brand-hover` używane wszędzie
 
 ---
 

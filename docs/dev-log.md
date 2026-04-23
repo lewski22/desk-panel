@@ -14,7 +14,7 @@ Historia prac, naprawionych błędów i otwartych zadań.
 
 **UX:**
 - Spójne kolory statusów: `#10b981` wolne / `#f59e0b` zarezerwowane / `#ef4444` zajęte / `#a1a1aa` offline — we wszystkich komponentach (DeskPin, DeskToken, DeskCard, KioskPage, DashboardPage).
-- Brand token `#B53578` w jednym miejscu (`index.css` + `tailwind.config.js`).
+- Brand token `#9C2264` w jednym miejscu (`index.css` + `tailwind.config.js`).
 
 ---
 

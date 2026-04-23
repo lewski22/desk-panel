@@ -5,8 +5,8 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#B53578',
-          hover:   '#9d2d66',
+          DEFAULT: '#9C2264',
+          hover:   '#831A55',
         },
       },
       minHeight: { touch: '2.75rem' },
