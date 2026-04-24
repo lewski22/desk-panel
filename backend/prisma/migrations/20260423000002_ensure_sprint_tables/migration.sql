@@ -194,11 +194,8 @@ CREATE INDEX IF NOT EXISTS "SubscriptionEvent_organizationId_createdAt_idx"
   ON "SubscriptionEvent"("organizationId", "createdAt" DESC);
 
 -- ─── Sprint B: InAppNotifType values ─────────────────────────
-
-ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRING';
-ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_EXPIRED';
-ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'TRIAL_EXPIRING';
-ALTER TYPE "InAppNotifType" ADD VALUE IF NOT EXISTS 'LIMIT_WARNING';
+-- NOTE: InAppNotifType enum was dropped in migration 20260419000001_fix_notiftype_to_text
+-- (columns converted to TEXT). No ALTER TYPE needed — new values are plain strings.
 
 -- ─── Sprint B: NotificationRule ──────────────────────────────
 
