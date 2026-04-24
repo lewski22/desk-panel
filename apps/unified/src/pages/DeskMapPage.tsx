@@ -153,7 +153,7 @@ export function DeskMapPage() {
   };
 
   // Załaduj resources gdy zakładka aktywna
-  useEffect(() => {
+  const loadResources = useCallback(() => {
     if (mapTab === 'desks' || !locationId) return;
     const typeMap: Record<string, string> = { rooms: 'ROOM', parking: 'PARKING' };
     setResLoading(true);
@@ -162,6 +162,8 @@ export function DeskMapPage() {
       .catch((e) => console.error('[DeskMapPage] resources.list', e))
       .finally(() => setResLoading(false));
   }, [mapTab, locationId]);
+
+  useEffect(() => { loadResources(); }, [loadResources]);
 
   const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId);
 
@@ -290,7 +292,7 @@ export function DeskMapPage() {
         <BookingModal
           resource={bookTarget}
           onClose={() => setBookTarget(null)}
-          onBooked={() => { setBookTarget(null); }}
+          onBooked={() => { setBookTarget(null); loadResources(); }}
         />
       )}
 

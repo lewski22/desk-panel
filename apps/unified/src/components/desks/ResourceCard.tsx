@@ -25,7 +25,14 @@ interface Props {
 export function ResourceCard({ resource, onBook, compact = false }: Props) {
   const { t } = useTranslation();
   const meta = TYPE_META[resource.type] ?? TYPE_META.ROOM;
-  const isActive = resource.status === 'ACTIVE';
+  const isActive  = resource.status === 'ACTIVE';
+  const isOccupied = isActive && !!resource.currentBooking;
+
+  const statusBadge = !isActive
+    ? { cls: 'bg-zinc-100 text-zinc-500',      label: t('resource.status.inactive') }
+    : isOccupied
+    ? { cls: 'bg-red-100 text-red-700',         label: t('resource.status.occupied')  }
+    : { cls: 'bg-emerald-100 text-emerald-700', label: t('resource.status.free')      };
 
   return (
     <div className={`rounded-xl border p-4 flex flex-col gap-2.5 transition-all hover:shadow-md ${meta.color} ${!isActive ? 'opacity-60' : ''}`}>
@@ -38,12 +45,23 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
             <p className="text-xs text-zinc-400 font-mono">{resource.code}</p>
           </div>
         </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-          isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
-        }`}>
-          {isActive ? t('resource.status.active') : t('resource.status.inactive')}
+        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
+          {statusBadge.label}
         </span>
       </div>
+
+      {/* Current booking info */}
+      {isOccupied && resource.currentBooking && (
+        <div className="bg-red-50/80 border border-red-100 rounded-lg px-2.5 py-1.5 text-[11px] text-red-700">
+          {resource.currentBooking.user?.firstName
+            ? `${resource.currentBooking.user.firstName} ${resource.currentBooking.user.lastName ?? ''}`.trim()
+            : t('resource.someone')}
+          {' · '}
+          {new Date(resource.currentBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {'–'}
+          {new Date(resource.currentBooking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      )}
 
       {/* Type-specific details */}
       {resource.type === 'ROOM' && resource.capacity && (

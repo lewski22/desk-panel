@@ -9,6 +9,9 @@ export default {
           hover:   '#831A55',
         },
       },
+      fontFamily: {
+        display: ['Sora', 'system-ui', 'sans-serif'],
+      },
       minHeight: { touch: '2.75rem' },
       minWidth:  { touch: '2.75rem' },
     },

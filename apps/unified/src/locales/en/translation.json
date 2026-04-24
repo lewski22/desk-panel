@@ -925,8 +925,11 @@
     "empty_sub": "Add conference rooms or parking spots.",
     "status": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "free": "Available",
+      "occupied": "In use"
     },
+    "someone": "Someone",
     "vehicle": {
       "car": "Car",
       "moto": "Motorcycle",

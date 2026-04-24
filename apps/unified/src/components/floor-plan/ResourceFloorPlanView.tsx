@@ -15,17 +15,12 @@ interface Props {
   onBook:     (r: Resource) => void;
 }
 
-const PIN_COLOR: Record<string, string> = {
-  ACTIVE:      '#10b981',
-  MAINTENANCE: '#a1a1aa',
-};
-
 // ── Resource pin (SVG) ────────────────────────────────────────
 function ResourcePin({ res, canvasW, canvasH, onClick }: {
-  res: Resource; canvasW: number; canvasH: number; onClick: (r: Resource) => void;
+  res: Resource & { currentBooking?: any }; canvasW: number; canvasH: number; onClick: (r: Resource) => void;
 }) {
   const [hover, setHover] = useState(false);
-  const fill = PIN_COLOR[res.status] ?? PIN_COLOR.MAINTENANCE;
+  const fill = res.status !== 'ACTIVE' ? '#a1a1aa' : res.currentBooking ? '#ef4444' : '#10b981';
   const cx   = ((res.posX ?? 50) / 100) * canvasW;
   const cy   = ((res.posY ?? 50) / 100) * canvasH;
   const r    = hover ? 14 : 11;
@@ -60,7 +55,8 @@ function ResourceInfoCard({ res, style, onClose, onBook }: {
   onClose: () => void; onBook: () => void;
 }) {
   const { t } = useTranslation();
-  const isActive = res.status === 'ACTIVE';
+  const isActive   = res.status === 'ACTIVE';
+  const isOccupied = isActive && !!res.currentBooking;
 
   return (
     <div className="absolute z-30 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 w-56"
@@ -75,10 +71,25 @@ function ResourceInfoCard({ res, style, onClose, onBook }: {
       </p>
       {res.zone && <p className="text-xs text-zinc-400 mb-2">{res.zone}</p>}
       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-        isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-zinc-100 text-zinc-500'
+        !isActive   ? 'bg-zinc-100 text-zinc-500'     :
+        isOccupied  ? 'bg-red-100 text-red-700'        :
+                      'bg-emerald-50 text-emerald-600'
       }`}>
-        {isActive ? t('resource.status.active') : t('resource.status.inactive')}
+        {!isActive  ? t('resource.status.inactive') :
+         isOccupied ? t('resource.status.occupied')  :
+                      t('resource.status.free')}
       </span>
+      {isOccupied && res.currentBooking && (
+        <p className="text-[11px] text-red-600 mt-1">
+          {res.currentBooking.user?.firstName
+            ? `${res.currentBooking.user.firstName} ${res.currentBooking.user.lastName ?? ''}`.trim()
+            : t('resource.someone')}
+          {' '}
+          {new Date(res.currentBooking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {'–'}
+          {new Date(res.currentBooking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      )}
       {isActive && (
         <button onClick={onBook}
           className="mt-3 w-full bg-brand hover:bg-brand-hover text-white text-xs font-semibold

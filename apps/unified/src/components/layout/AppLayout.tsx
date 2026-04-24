@@ -105,8 +105,8 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
       className={({ isActive }) =>
         `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
           isActive
-            ? 'bg-zinc-800 text-zinc-100'
-            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50'
+            ? 'bg-brand/10 text-brand'
+            : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
         }`
       }
       title={collapsed ? label : undefined}
@@ -165,7 +165,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {/* Logo + user header */}
-      <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800/80 shrink-0">
+      <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-200 shrink-0">
         {/* Avatar / Logo */}
         {collapsed && !mobile ? (
           <LogoMark size={32} className="shrink-0" />
@@ -177,7 +177,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
                 : user.email[0].toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-white text-xs font-semibold truncate">
+              <div className="text-zinc-800 text-xs font-semibold truncate">
                 {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
               </div>
               <div className="text-brand text-[10px] font-semibold uppercase tracking-wider mt-0.5">
@@ -189,7 +189,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         {!mobile && (
           <button
             onClick={toggleCollapsed}
-            className="shrink-0 text-zinc-500 hover:text-zinc-200 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-800 transition-colors"
+            className="shrink-0 text-zinc-400 hover:text-zinc-700 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors"
             title={collapsed ? t('layout.expand') : t('layout.collapse')}
           >
             <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
@@ -201,7 +201,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         )}
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
-            className="ml-auto text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="ml-auto text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
             aria-label="Zamknij menu">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3.29 3.29a1 1 0 0 1 1.42 0L8 6.59l3.29-3.3a1 1 0 1 1 1.42 1.42L9.41 8l3.3 3.29a1 1 0 0 1-1.42 1.42L8 9.41l-3.29 3.3a1 1 0 0 1-1.42-1.42L6.59 8 3.3 4.71a1 1 0 0 1 0-1.42z"/>
@@ -222,14 +222,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
           if (!visibleItems.length) return null;
 
           return (
-            <div key={group.key} className={gi > 0 ? 'mt-3 pt-3 border-t border-zinc-800/50' : 'mt-1'}>
+            <div key={group.key} className={gi > 0 ? 'mt-3 pt-3 border-t border-zinc-200' : 'mt-1'}>
               {(!collapsed || mobile) && (
-                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-600 select-none">
+                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400 select-none">
                   {t(group.key)}
                 </div>
               )}
               {(collapsed && !mobile) && gi > 0 && (
-                <div className="mx-2 mb-2 h-px bg-zinc-800/50" />
+                <div className="mx-2 mb-2 h-px bg-zinc-200" />
               )}
               <div className="space-y-px">
                 {visibleItems.map(item => (
@@ -249,11 +249,11 @@ export function AppLayout({ user, onLogout, children }: Props) {
       </nav>
 
       {/* ── BOTTOM: Change password / Language / Bell / Logout ── */}
-      <div className="border-t border-zinc-800/50 shrink-0 px-2 py-2 space-y-px">
+      <div className="border-t border-zinc-200 shrink-0 px-2 py-2 space-y-px">
         {/* Change password — ukryty gdy sidebar zwinięty (dostępny przez ikonę) */}
         <button
           onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 transition-colors"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
           title={collapsed && !mobile ? t('layout.change_password') : undefined}
         >
           <IconKey size={16} className="shrink-0" />
@@ -266,7 +266,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
           <NotificationBell role={user.role} />
           <button
             onClick={doLogout}
-            className={`flex items-center gap-1.5 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors ${
               collapsed && !mobile
                 ? 'w-8 h-8 justify-center'
                 : 'px-2 py-1.5 text-xs'
@@ -315,11 +315,11 @@ export function AppLayout({ user, onLogout, children }: Props) {
       )}
 
       {/* Mobile topbar — pt-safe handles PWA status bar on notched devices */}
-      <div className="md:hidden flex items-center gap-3 px-4 py-3 pt-safe bg-zinc-900 border-b border-zinc-800 shrink-0 z-30"
+      <div className="md:hidden flex items-center gap-3 px-4 py-3 pt-safe bg-white border-b border-zinc-200 shrink-0 z-30"
            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button
           onClick={() => setMobileOpen(true)}
-          className="text-zinc-400 hover:text-zinc-100 p-2 rounded-lg hover:bg-zinc-800 transition-colors min-h-touch min-w-touch flex items-center justify-center"
+          className="text-zinc-500 hover:text-zinc-800 p-2 rounded-lg hover:bg-zinc-100 transition-colors min-h-touch min-w-touch flex items-center justify-center"
           aria-label={t('layout.open_menu')}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -329,7 +329,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
           </svg>
         </button>
         <LogoMark size={28} />
-        <span className="text-white font-bold text-sm tracking-widest">RESERTI</span>
+        <span className="text-zinc-800 font-bold text-sm tracking-widest">RESERTI</span>
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell role={user.role} />
         </div>
@@ -339,7 +339,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
       {mobileOpen && (
         <>
           <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="md:hidden fixed inset-y-0 left-0 z-50 flex flex-col bg-zinc-900 shadow-2xl"
+          <aside className="md:hidden fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-2xl"
                  style={{ width: 'calc(18rem + env(safe-area-inset-left))', paddingLeft: 'env(safe-area-inset-left)' }}>
             <SidebarContent mobile />
           </aside>
@@ -348,7 +348,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className={`hidden md:flex flex-col bg-zinc-900 transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'} border-r border-zinc-800`}>
+        <aside className={`hidden md:flex flex-col bg-white transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'} border-r border-zinc-200`}>
           <SidebarContent />
         </aside>
 

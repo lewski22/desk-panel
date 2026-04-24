@@ -925,8 +925,11 @@
     "empty_sub": "Dodaj sale konferencyjne lub miejsca parkingowe.",
     "status": {
       "active": "Aktywny",
-      "inactive": "Nieaktywny"
+      "inactive": "Nieaktywny",
+      "free": "Wolna",
+      "occupied": "Zajęta"
     },
+    "someone": "Ktoś",
     "vehicle": {
       "car": "Samochód",
       "moto": "Motocykl",

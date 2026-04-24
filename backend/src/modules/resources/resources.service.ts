@@ -13,13 +13,30 @@ export class ResourcesService {
 
   // ── Lista zasobów per lokalizacja ─────────────────────────────
   async findAll(locationId: string, type?: string) {
-    return this.prisma.resource.findMany({
+    const now = new Date();
+    const resources = await this.prisma.resource.findMany({
       where: {
         locationId,
         status: 'ACTIVE',
         ...(type && { type: type as any }),
       },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
+      include: {
+        bookings: {
+          where: {
+            status:    'CONFIRMED',
+            startTime: { lte: now },
+            endTime:   { gt:  now },
+          },
+          select: { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
+          take: 1,
+        },
+      },
+    });
+
+    return resources.map(r => {
+      const { bookings, ...rest } = r;
+      return { ...rest, currentBooking: bookings[0] ?? null };
     });
   }
 

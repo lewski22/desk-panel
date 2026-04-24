@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { appApi } from '../api/client';
 import { Stat, Card, Spinner, Modal, Btn, EmptyState } from '../components/ui';
+import { InsightsWidget } from '../components/insights/InsightsWidget';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 
@@ -21,7 +22,7 @@ import { pl, enUS } from 'date-fns/locale';
 const ACCENT     = 'var(--brand)';
 const C_OCCUPIED = '#ef4444';
 const C_RESERVED = '#f59e0b';
-const C_FREE     = '#34d399';
+const C_FREE     = '#10B981';
 
 // ── Helpers ──────────────────────────────────────────────────
 function useRole() {
@@ -62,7 +63,7 @@ function TrendBadge({ pct, prevLabel }: { pct: number; prevLabel?: string }) {
     <span ref={ref} className="relative inline-block"
       onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded cursor-default ${
-        good ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+        good ? 'bg-green-50/80 text-green-700' : 'bg-red-50/80 text-red-700'
       }`}>
         {up ? '↑' : '↓'} {Math.abs(pct)}%
       </span>
@@ -92,7 +93,7 @@ function KpiCard({
       <p className={`text-[10px] sm:text-xs font-medium uppercase tracking-wide truncate leading-tight ${accent ? 'text-white/70' : 'text-zinc-400'}`}>
         {label}
       </p>
-      <p className={`text-xl sm:text-2xl font-bold font-mono ${accent ? 'text-white' : 'text-zinc-800'}`}>
+      <p className={`text-xl sm:text-2xl font-bold font-display ${accent ? 'text-white' : 'text-zinc-800'}`}>
         {value}
       </p>
       <div className="flex items-center gap-2 min-w-0">
@@ -336,7 +337,7 @@ export function DashboardPage() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const load = useCallback(async (silent = false) => {
-    if (!locationId) return;
+    if (!locationId) { setLoading(false); return; }
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
@@ -377,15 +378,27 @@ export function DashboardPage() {
       name:  m.method,
       label: t(`methods.${m.method}`, m.method),
       value: m._count,
-      color: m.method === 'NFC' ? '#6366f1' : m.method === 'QR' ? '#38bdf8' : '#a78bfa',
+      color: m.method === 'NFC' ? '#9C2264' : m.method === 'QR' ? '#10B981' : '#F59E0B',
     })),
   [ext?.methods, i18n.language]);
 
   const occupiedDesks = useMemo(() => desks.filter(d => d.isOccupied).length, [desks]);
   const todayCheckins = ext?.weekData?.[ext.weekData.length - 1]?.checkins ?? 0;
   const onlineCount   = useMemo(() => desks.filter(d => d.isOnline).length, [desks]);
+  const offlineCount  = useMemo(() => desks.filter(d => !d.isOnline && d.status === 'ACTIVE').length, [desks]);
 
   if (loading) return <Spinner />;
+
+  if (!loading && desks.length === 0 && !locationId) return (
+    <div className="flex flex-col items-center justify-center py-24 gap-4">
+      <div className="text-5xl">🖥️</div>
+      <h2 className="text-lg font-display font-semibold text-zinc-800">{t('dashboard.empty.title')}</h2>
+      <p className="text-sm text-zinc-500 text-center max-w-sm">{t('dashboard.empty.hint')}</p>
+      <a href="/desks" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-hover transition-colors">
+        {t('dashboard.empty.cta')}
+      </a>
+    </div>
+  );
 
   const now = new Date();
 
@@ -422,8 +435,16 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions — tylko dla Admin+ */}
-      <QuickActions locationId={locationId} onRefresh={load} />
+      {/* Beacon offline alert */}
+      {offlineCount > 0 && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 text-sm">
+          <span>📡</span>
+          <span className="text-amber-800 font-medium">{offlineCount} {t('dashboard.beacons_offline')}</span>
+          <a href="/devices" className="ml-auto text-amber-700 underline text-xs hover:no-underline">
+            {t('dashboard.check_devices')}
+          </a>
+        </div>
+      )}
 
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5">
@@ -451,6 +472,9 @@ export function DashboardPage() {
         />
       </div>
 
+      {/* Quick Actions — tylko dla Admin+ */}
+      <QuickActions locationId={locationId} onRefresh={load} />
+
       {/* 7-day trend chart — tylko dla Admin+ */}
       {isAdmin && <Card className="p-4 sm:p-5 mb-4 overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
@@ -471,7 +495,11 @@ export function DashboardPage() {
             <YAxis tick={{ fontSize:11, fill:'#a1a1aa' }} axisLine={false} tickLine={false} width={24} />
             <Tooltip contentStyle={{ borderRadius:8, border:'1px solid #e4e4e7', fontSize:12 }}
               cursor={{ fill:'#f9f9f9' }} />
-            <Bar dataKey="checkins" name={t('dashboard.checkins')} fill={ACCENT} radius={[4,4,0,0]} />
+            <Bar dataKey="checkins" name={t('dashboard.checkins')} radius={[4,4,0,0]}>
+              {(ext?.weekData ?? []).map((_: any, i: number, arr: any[]) => (
+                <Cell key={i} fill={ACCENT} opacity={i === arr.length - 1 ? 1 : 0.35} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
         </div>
@@ -530,6 +558,13 @@ export function DashboardPage() {
         {/* Today's Issues */}
         <IssuesWidget locationId={locationId} />
       </div>
+
+      {/* Insights */}
+      {isAdmin && locationId && (
+        <div className="mb-4">
+          <InsightsWidget locationId={locationId} compact />
+        </div>
+      )}
 
       {/* Bottom row: Top desks + Methods — tylko dla Admin+ */}
       {isAdmin && <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
