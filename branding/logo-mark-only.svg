@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+  <rect width="40" height="40" rx="9" fill="#9C2264"/>
+  <!-- NFC dot -->
+  <circle cx="12.5" cy="20" r="2.5" fill="white"/>
+  <!-- NFC arc 1 — inner -->
+  <path d="M18 12 Q28 12 28 20 Q28 28 18 28"
+        fill="none" stroke="white" stroke-width="2.2"
+        stroke-linecap="round" opacity="0.95"/>
+  <!-- NFC arc 2 — outer -->
+  <path d="M18 8 Q32 8 32 20 Q32 32 18 32"
+        fill="none" stroke="white" stroke-width="1.4"
+        stroke-linecap="round" opacity="0.45"/>
+</svg>

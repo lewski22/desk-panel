@@ -6,6 +6,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
+import { LogoMark } from '../logo/LogoMark';
 import { appApi } from '../../api/client';
 import { BottomNav } from './BottomNav';
 import { NotificationBell } from './NotificationBell';
@@ -167,9 +168,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800/80 shrink-0">
         {/* Avatar / Logo */}
         {collapsed && !mobile ? (
-          <div className="w-8 h-8 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center shrink-0">
-            <span className="text-brand font-black text-sm">R</span>
-          </div>
+          <LogoMark size={32} className="shrink-0" />
         ) : (
           <>
             <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">

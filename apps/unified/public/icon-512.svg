@@ -1,5 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112.64" fill="#9C2264"/>
-  <text x="256" y="363.00800000000004" font-family="system-ui, -apple-system, sans-serif"
-    font-weight="900" font-size="281.6" fill="white" text-anchor="middle">R</text>
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="42%" r="65%">
+      <stop offset="0%"   stop-color="#B02B70"/>
+      <stop offset="100%" stop-color="#7A1A4E"/>
+    </radialGradient>
+    <radialGradient id="dotglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="white" opacity="0.04"/>
+
+  <!-- Glow behind dot -->
+  <circle cx="152" cy="256" r="72" fill="url(#dotglow)"/>
+
+  <!-- NFC dot -->
+  <circle cx="152" cy="256" r="30" fill="white"/>
+
+  <!-- NFC arc 1 — inner -->
+  <path d="M210 164 Q330 164 330 256 Q330 348 210 348"
+        fill="none" stroke="white" stroke-width="28"
+        stroke-linecap="round" opacity="0.95"/>
+
+  <!-- NFC arc 2 — mid -->
+  <path d="M210 110 Q396 110 396 256 Q396 402 210 402"
+        fill="none" stroke="white" stroke-width="19"
+        stroke-linecap="round" opacity="0.52"/>
+
+  <!-- NFC arc 3 — outer -->
+  <path d="M210 58 Q458 58 458 256 Q458 454 210 454"
+        fill="none" stroke="white" stroke-width="13"
+        stroke-linecap="round" opacity="0.20"/>
 </svg>

@@ -15,7 +15,7 @@ export default defineConfig({
         name:             'Reserti',
         short_name:       'Reserti',
         description:      'Rezerwacja biurek z beaconami NFC',
-        theme_color:      '#B53578',
+        theme_color:      '#9C2264',
         background_color: '#09090f',
         display:          'standalone',
         start_url:        '/dashboard',
