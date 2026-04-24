@@ -328,7 +328,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
             <rect x="2" y="14" width="16" height="2" rx="1"/>
           </svg>
         </button>
-        <span className="text-brand font-black text-lg tracking-tight">R</span>
+        <LogoMark size={28} />
         <span className="text-white font-bold text-sm tracking-widest">RESERTI</span>
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell role={user.role} />

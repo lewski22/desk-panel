@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { LogoMark } from '../components/logo/LogoMark';
 
 const MSVG = <svg width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>;
 
@@ -130,8 +131,10 @@ export function LoginPage({ onLogin }: Props) {
           style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '48px 48px' }} />
         <div className="relative w-full max-w-sm">
           <div className="text-center mb-10">
-            <p className="text-brand font-black text-5xl leading-none tracking-tight">R</p>
-            <p className="text-white font-bold text-xl tracking-widest mt-1">RESERTI</p>
+            <div className="flex justify-center mb-3">
+              <LogoMark size={64} />
+            </div>
+            <p className="text-white font-bold text-xl tracking-widest">RESERTI</p>
             <p className="text-zinc-600 text-[10px] tracking-widest uppercase mt-1">Desk Management</p>
           </div>
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">

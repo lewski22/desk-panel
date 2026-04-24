@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { LogoMark } from '../components/logo/LogoMark';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
@@ -119,7 +120,9 @@ export function QrCheckinPage() {
       style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-brand font-black text-4xl">R</p>
+          <div className="flex justify-center mb-2">
+            <LogoMark size={48} />
+          </div>
           <p className="text-white font-bold tracking-widest text-sm mt-0.5">RESERTI</p>
         </div>
         {children}

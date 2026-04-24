@@ -8,6 +8,7 @@ import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation }  from 'react-i18next';
 import { appApi }           from '../api/client';
+import { LogoMark }         from '../components/logo/LogoMark';
 
 // ── Kolory statusu ────────────────────────────────────────────
 const S_FREE     = '#10b981';
@@ -256,7 +257,7 @@ export function KioskPage() {
       <div className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur px-6 py-4 border-b border-zinc-800
         flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-brand font-black text-2xl">R</span>
+          <LogoMark size={32} />
           <div>
             <p className="font-bold text-lg leading-none">{location?.name ?? t('kiosk.default_office')}</p>
             <p className="text-xs text-zinc-500 mt-0.5">
