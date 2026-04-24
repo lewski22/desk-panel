@@ -81,8 +81,9 @@ export function PwaBanners() {
 
       {/* Update banner */}
       {showUpdate && (
-        <div className="fixed bottom-20 sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-80 z-[60]
-          bg-zinc-900 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3">
+        <div className="fixed sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-80 z-[60]
+          bg-zinc-900 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 8px)' }}>
           <span className="text-lg select-none">🔄</span>
           <p className="flex-1 text-xs font-medium">{t('pwa.update_ready')}</p>
           <button
@@ -97,8 +98,9 @@ export function PwaBanners() {
 
       {/* Offline-ready toast */}
       {offlineReady && (
-        <div className="fixed bottom-20 sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-72 z-[60]
-          bg-emerald-600 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3">
+        <div className="fixed sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-72 z-[60]
+          bg-emerald-600 text-white rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 8px)' }}>
           <span className="text-lg select-none">✅</span>
           <p className="flex-1 text-xs font-medium">{t('pwa.offline_ready')}</p>
         </div>
@@ -106,8 +108,9 @@ export function PwaBanners() {
 
       {/* Install prompt */}
       {showInstall && (
-        <div className="fixed bottom-20 sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-80 z-[60]
-          bg-white border border-zinc-200 rounded-xl shadow-2xl px-4 py-3">
+        <div className="fixed sm:bottom-4 inset-x-4 sm:inset-x-auto sm:right-4 sm:left-auto sm:w-80 z-[60]
+          bg-white border border-zinc-200 rounded-xl shadow-2xl px-4 py-3"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom) + 8px)' }}>
           <div className="flex items-start gap-3">
             <img src="/icon-192.svg" alt="" className="w-10 h-10 rounded-xl shrink-0" />
             <div className="flex-1 min-w-0">

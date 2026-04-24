@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input, Spinner } from '../components/ui';
 import { PlanBadge } from '../components/subscription/PlanBadge';
+import { OrgInsightsWidget } from '../components/insights/InsightsWidget';
 
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
@@ -672,7 +673,7 @@ export function OwnerPage() {
   const [stats, setStats]       = useState<any>(null);
   const [orgs,  setOrgs]        = useState<any[]>([]);
   const [subDash, setSubDash]   = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'>(
+  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'|'insights'>(
     searchParams.get('tab') === 'sub' ? 'sub' : 'orgs'
   );
   const [search, setSearch]     = useState('');
@@ -775,7 +776,7 @@ export function OwnerPage() {
       {/* Tabs + filtry */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 overflow-x-auto">
-          {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów']] as const).map(([tab, label]) => (
+          {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów'],['insights','🤖 AI Insights']] as const).map(([tab, label]) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
@@ -877,6 +878,13 @@ export function OwnerPage() {
 
       {/* Zakładka Szablony planów */}
       {activeTab === 'plans' && <PlanTemplatesTab />}
+
+      {/* Zakładka AI Insights — per lokalizacja wszystkich org */}
+      {activeTab === 'insights' && (
+        <div className="bg-white border border-zinc-100 rounded-xl p-5">
+          <OrgInsightsWidget />
+        </div>
+      )}
 
       {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} onCreated={load} />}
       {editOrg    && <EditOrgModal org={editOrg} onClose={() => setEditOrg(null)} onSaved={load} />}

@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { appApi }            from '../api/client';
 import { Card, EmptyState, Spinner } from '../components/ui';
+import { InsightsWidget }            from '../components/insights/InsightsWidget';
 
 // ── Constants ─────────────────────────────────────────────────────
 const ACCENT   = 'var(--brand)';
@@ -18,7 +19,7 @@ const METHOD_COLORS: Record<string, string> = {
   MANUAL:  '#f59e0b',
   UNKNOWN: '#a1a1aa',
 };
-const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk'] as const;
+const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'insights'] as const;
 type Tab = typeof TABS[number];
 
 // ── Utils ──────────────────────────────────────────────────────────
@@ -600,7 +601,7 @@ function ReportsPage() {
   const filters = useMemo<Filters>(() => ({ from, to, locationId }), [from, to, locationId]);
 
   useEffect(() => {
-    appApi.locations.list().then(r => setLocations(Array.isArray(r) ? r : [])).catch(() => {});
+    appApi.locations.list().then(r => setLocations(Array.isArray(r) ? r : [])).catch((e) => console.error('[ReportsPage] load locations', e));
   }, []);
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
@@ -673,6 +674,14 @@ function ReportsPage() {
       {activeTab === 'methods'      && <MethodsTab filters={filters} />}
       {activeTab === 'by_user'      && <ByUserTab filters={filters} />}
       {activeTab === 'by_desk'      && <ByDeskTab filters={filters} />}
+      {activeTab === 'insights' && (
+        <Card className="p-5">
+          {locationId
+            ? <InsightsWidget locationId={locationId} showRefresh />
+            : <p className="text-sm text-zinc-400 text-center py-6">{t('reports.insights.select_location')}</p>
+          }
+        </Card>
+      )}
     </div>
   );
 }

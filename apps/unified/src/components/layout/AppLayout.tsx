@@ -103,25 +103,29 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 ${
+        `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 min-h-[36px] ${
           isActive
-            ? 'bg-brand/10 text-brand'
-            : 'text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100'
+            ? 'text-white'
+            : 'hover:bg-black/[0.04]'
         }`
       }
+      style={({ isActive }) => ({
+        background: isActive ? '#9C2264' : undefined,
+        color:      isActive ? '#fff' : '#4A3F6B',
+      })}
       title={collapsed ? label : undefined}
     >
       {({ isActive }) => (
         <>
           {/* Left-edge active indicator */}
           {isActive && (
-            <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-brand rounded-r-full" />
+            <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: 'rgba(255,255,255,0.5)' }} />
           )}
           <Icon
             size={16}
-            className={`shrink-0 transition-colors ${isActive ? 'text-brand' : ''}`}
+            className="shrink-0 transition-colors"
           />
-          {!collapsed && <span className="truncate leading-none">{label}</span>}
+          {!collapsed && <span className="truncate leading-tight">{label}</span>}
         </>
       )}
     </NavLink>
@@ -165,7 +169,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {/* Logo + user header */}
-      <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-200 shrink-0">
+      <div className="flex items-center gap-2.5 px-3 py-3 shrink-0" style={{ borderBottom: '1px solid #DDD6F5' }}>
         {/* Avatar / Logo */}
         {collapsed && !mobile ? (
           <LogoMark size={32} className="shrink-0" />
@@ -222,14 +226,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
           if (!visibleItems.length) return null;
 
           return (
-            <div key={group.key} className={gi > 0 ? 'mt-3 pt-3 border-t border-zinc-200' : 'mt-1'}>
+            <div key={group.key} className={gi > 0 ? 'mt-3 pt-3' : 'mt-1'} style={gi > 0 ? { borderTop: '1px solid #DDD6F5' } : {}}>
               {(!collapsed || mobile) && (
-                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400 select-none">
+                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] select-none" style={{ color: '#9B93A8' }}>
                   {t(group.key)}
                 </div>
               )}
               {(collapsed && !mobile) && gi > 0 && (
-                <div className="mx-2 mb-2 h-px bg-zinc-200" />
+                <div className="mx-2 mb-2 h-px" style={{ background: '#DDD6F5' }} />
               )}
               <div className="space-y-px">
                 {visibleItems.map(item => (
@@ -249,11 +253,12 @@ export function AppLayout({ user, onLogout, children }: Props) {
       </nav>
 
       {/* ── BOTTOM: Change password / Language / Bell / Logout ── */}
-      <div className="border-t border-zinc-200 shrink-0 px-2 py-2 space-y-px">
+      <div className="shrink-0 px-2 py-2 space-y-px" style={{ borderTop: '1px solid #DDD6F5' }}>
         {/* Change password — ukryty gdy sidebar zwinięty (dostępny przez ikonę) */}
         <button
           onClick={() => { setShowChangePwd(true); if (mobile) setMobileOpen(false); }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors hover:bg-black/[0.04]"
+          style={{ color: '#4A3F6B' }}
           title={collapsed && !mobile ? t('layout.change_password') : undefined}
         >
           <IconKey size={16} className="shrink-0" />
@@ -315,11 +320,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
       )}
 
       {/* Mobile topbar — pt-safe handles PWA status bar on notched devices */}
-      <div className="md:hidden flex items-center gap-3 px-4 py-3 pt-safe bg-white border-b border-zinc-200 shrink-0 z-30"
-           style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <div className="md:hidden flex items-center gap-3 px-4 py-3 shrink-0 z-30 bg-white"
+           style={{ borderBottom: '1px solid #DDD6F5', paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button
           onClick={() => setMobileOpen(true)}
-          className="text-zinc-500 hover:text-zinc-800 p-2 rounded-lg hover:bg-zinc-100 transition-colors min-h-touch min-w-touch flex items-center justify-center"
+          className="p-2 rounded-lg transition-colors min-h-touch min-w-touch flex items-center justify-center"
+          style={{ color: '#6B5F7A' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#1A0A2E'; (e.currentTarget as HTMLElement).style.background = '#F4F0FB'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#6B5F7A'; (e.currentTarget as HTMLElement).style.background = ''; }}
           aria-label={t('layout.open_menu')}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
@@ -329,9 +337,9 @@ export function AppLayout({ user, onLogout, children }: Props) {
           </svg>
         </button>
         <LogoMark size={28} />
-        <span className="text-zinc-800 font-bold text-sm tracking-widest">RESERTI</span>
+        <span className="font-bold text-sm tracking-widest" style={{ color: '#1A0A2E' }}>RESERTI</span>
         <div className="ml-auto flex items-center gap-2">
-          <NotificationBell role={user.role} />
+          <NotificationBell role={user.role} light />
         </div>
       </div>
 
@@ -339,8 +347,8 @@ export function AppLayout({ user, onLogout, children }: Props) {
       {mobileOpen && (
         <>
           <div className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="md:hidden fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-2xl"
-                 style={{ width: 'calc(18rem + env(safe-area-inset-left))', paddingLeft: 'env(safe-area-inset-left)' }}>
+          <aside className="md:hidden fixed inset-y-0 left-0 z-50 flex flex-col shadow-2xl"
+                 style={{ width: 'calc(18rem + env(safe-area-inset-left))', paddingLeft: 'env(safe-area-inset-left)', background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}>
             <SidebarContent mobile />
           </aside>
         </>
@@ -348,7 +356,8 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className={`hidden md:flex flex-col bg-white transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'} border-r border-zinc-200`}>
+        <aside className={`hidden md:flex flex-col transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'}`}
+               style={{ background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}>
           <SidebarContent />
         </aside>
 

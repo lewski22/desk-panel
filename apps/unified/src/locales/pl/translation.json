@@ -564,7 +564,11 @@
       "reservations": "Rezerwacje",
       "methods":      "Metody",
       "by_user":      "Per osoba",
-      "by_desk":      "Per biurko"
+      "by_desk":      "Per biurko",
+      "insights":     "AI Insights"
+    },
+    "insights": {
+      "select_location": "Wybierz lokalizację aby zobaczyć insighty"
     },
     "snapshot": {
       "hint":                "Dane bieżące (stan na teraz) — niezależne od wybranego zakresu dat",
@@ -697,7 +701,8 @@
     "none_filters_sub": "Spróbuj zmienić filtry lub datę.",
     "show_all": "Pokaż wszystkie",
     "recurring_badge": "Cykliczna",
-    "swipe_hint": "Przesuń aby anulować"
+    "swipe_hint": "Przesuń aby anulować",
+    "rooms_section": "Sale i parking"
   },
   "provisioning": {
     "title": "Provisioning",

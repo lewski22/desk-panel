@@ -58,7 +58,7 @@ function timeAgo(dateStr: string, t: (k: string, opts?: any) => string): string 
 }
 
 // ════════════════════════════════════════════════════════════════
-export function NotificationBell({ role }: { role: string }) {
+export function NotificationBell({ role, light }: { role: string; light?: boolean }) {
   const { t, i18n } = useTranslation();
   const [items,    setItems]    = useState<any[]>([]);
   const [unread,   setUnread]   = useState(0);
@@ -138,7 +138,9 @@ export function NotificationBell({ role }: { role: string }) {
       <button
         onClick={openPanel}
         className={`relative p-2 rounded-lg transition-colors ${
-          open ? 'bg-zinc-800' : 'hover:bg-zinc-800'
+          light
+            ? open ? 'bg-[#F4F0FB]' : 'hover:bg-[#F4F0FB]'
+            : open ? 'bg-zinc-800'  : 'hover:bg-zinc-800'
         }`}
         aria-label={unread > 0 ? t('notifications.bell_label_n', { count: unread }) : t('notifications.bell_label')}
       >
@@ -146,7 +148,7 @@ export function NotificationBell({ role }: { role: string }) {
         {unread > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-0.5
             bg-brand text-white text-[9px] font-bold rounded-full
-            flex items-center justify-center leading-none ring-2 ring-zinc-900">
+            flex items-center justify-center leading-none ring-2 ${light ? 'ring-white' : 'ring-zinc-900'}">
             {unread > 99 ? '99+' : unread}
           </span>
         )}

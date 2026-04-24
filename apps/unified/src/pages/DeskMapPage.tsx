@@ -18,6 +18,8 @@ import { ReservationModal } from '../components/desks/ReservationModal';
 import { appApi }           from '../api/client';
 import { EmptyState }       from '../components/ui';
 import { useOrgModules }    from '../hooks/useOrgModules';
+import { RecommendationBanner } from '../components/recommendations/RecommendationBanner';
+import { localDateStr }         from '../utils/date';
 
 // ── Helpers ──────────────────────────────────────────────────
 function occupancyColor(occupied: number, total: number) {
@@ -112,6 +114,9 @@ export function DeskMapPage() {
 
   const userRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
+  }, []);
+  const userId = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.id ?? ''; } catch { return ''; }
   }, []);
   const isAdmin   = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(userRole);
   const isStaff   = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
@@ -228,6 +233,18 @@ export function DeskMapPage() {
       )}
       {!loading && desks.length === 0 && !error && (
         <EmptyState icon="🪑" title={t('deskmap.no_desks_title')} sub={t('deskmap.no_desks_sub')} />
+      )}
+
+      {mapTab === 'desks' && locationId && userId && (
+        <RecommendationBanner
+          locationId={locationId}
+          userId={userId}
+          date={localDateStr()}
+          onReserve={deskId => {
+            const desk = desks.find(d => d.id === deskId);
+            if (desk) setReservationTarget(desk);
+          }}
+        />
       )}
 
       {desks.length > 0 && viewMode === 'plan' && mapTab === 'desks' && (

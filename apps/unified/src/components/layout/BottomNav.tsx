@@ -48,8 +48,9 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
     { to: '/reports',      icon: IconPieChart,  labelKey: 'layout.nav.reports' },
   ],
   OWNER: [
-    { to: '/owner',         icon: IconGear, labelKey: 'layout.nav.owner' },
-    { to: '/owner?tab=sub', icon: IconCard, labelKey: 'layout.nav.subscription' },
+    { to: '/owner',         icon: IconGear,     labelKey: 'layout.nav.owner' },
+    { to: '/dashboard',     icon: IconBarChart, labelKey: 'layout.nav.dashboard' },
+    { to: '/owner?tab=sub', icon: IconCard,     labelKey: 'layout.nav.subscription' },
   ],
 };
 
@@ -77,8 +78,9 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-zinc-900 border-t border-zinc-800 flex items-stretch"
+      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex items-stretch bg-white"
       style={{
+        borderTop:     '1px solid #DDD6F5',
         paddingBottom: 'env(safe-area-inset-bottom)',
         paddingLeft:   'env(safe-area-inset-left)',
         paddingRight:  'env(safe-area-inset-right)',
@@ -93,12 +95,11 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
           <NavLink
             key={item.to}
             to={item.to}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 relative min-w-0 min-h-touch transition-colors ${
-              active ? 'text-[#e06aaa]' : 'text-zinc-500 active:text-zinc-300'
-            }`}
+            className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 relative min-w-0 min-h-touch transition-colors"
+            style={{ color: active ? '#9C2264' : '#6B5F7A' }}
           >
             {active && (
-              <span className="absolute top-0 inset-x-3 h-0.5 bg-brand rounded-b-full" />
+              <span className="absolute top-0 inset-x-3 h-0.5 rounded-b-full bg-brand" />
             )}
             <span className="relative">
               <Icon size={22} />
@@ -108,7 +109,7 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
                 </span>
               )}
             </span>
-            <span className="text-[10px] font-medium leading-none truncate max-w-full px-0.5">
+            <span className="text-[10px] font-medium leading-tight truncate max-w-[56px] px-0.5">
               {t(item.labelKey).split(' ').slice(0, 2).join(' ')}
             </span>
           </NavLink>

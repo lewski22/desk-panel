@@ -135,14 +135,23 @@ function canCheckin(r: any): boolean {
 export function MyReservationsPage() {
   const { t, i18n } = useTranslation();
   const [reservations, setReservations] = useState<any[]>([]);
+  const [bookings,     setBookings]     = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [err,          setErr]          = useState('');
   const [cancelling,   setCancelling]   = useState<string | null>(null);
   const [checkingIn,   setCheckingIn]   = useState<string | null>(null);
+  const [cancellingB,  setCancellingB]  = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
-    try { setReservations(await appApi.reservations.getMy()); }
+    try {
+      const [res, bk] = await Promise.all([
+        appApi.reservations.getMy(),
+        appApi.bookings.myList(),
+      ]);
+      setReservations(res);
+      setBookings(bk);
+    }
     catch (e: any) { setErr(e.message); }
     setLoading(false);
   }, []);
@@ -155,6 +164,14 @@ export function MyReservationsPage() {
     try { await appApi.reservations.cancel(id); await load(); }
     catch (e: any) { setErr(e.message); }
     setCancelling(null);
+  };
+
+  const cancelBooking = async (id: string) => {
+    if (!confirm(t('reservations.confirm_cancel_simple'))) return;
+    setCancellingB(id);
+    try { await appApi.bookings.cancel(id); await load(); }
+    catch (e: any) { setErr(e.message); }
+    setCancellingB(null);
   };
 
   const checkin = async (id: string) => {
@@ -199,7 +216,7 @@ export function MyReservationsPage() {
 
       {err && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{err}</div>}
 
-      {reservations.length === 0 ? (
+      {reservations.length === 0 && bookings.length === 0 ? (
         <EmptyState icon="📅" title={t('reservations.none')} sub={t('reservations.none_hint')} />
       ) : (
         <div className="space-y-6">
@@ -233,6 +250,53 @@ export function MyReservationsPage() {
                     <StatusBadge status={r.status} />
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Rezerwacje sal konferencyjnych i parkingów */}
+          {bookings.length > 0 && (
+            <div>
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+                🏛 {t('reservations.rooms_section')}
+              </h2>
+              <div className="space-y-3">
+                {bookings.map(b => {
+                  const start = new Date(b.startTime);
+                  const end   = new Date(b.endTime);
+                  const isPast = end < new Date();
+                  return (
+                    <div key={b.id} className={`bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}>
+                      <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-lg shrink-0">
+                        {b.resource?.type === 'PARKING' ? '🅿️' : '🏛'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          {start.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {' · '}
+                          {start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                          {'–'}
+                          {end.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        {b.resource?.location?.name && (
+                          <p className="text-[11px] text-zinc-400">{b.resource.location.name}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <StatusBadge status={b.status} />
+                        {!isPast && b.status === 'CONFIRMED' && (
+                          <button
+                            onClick={() => cancelBooking(b.id)}
+                            disabled={cancellingB === b.id}
+                            className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                            {cancellingB === b.id ? '…' : t('reservations.cancel')}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

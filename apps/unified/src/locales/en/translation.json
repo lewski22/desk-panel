@@ -564,7 +564,11 @@
       "reservations": "Reservations",
       "methods":      "Methods",
       "by_user":      "By person",
-      "by_desk":      "By desk"
+      "by_desk":      "By desk",
+      "insights":     "AI Insights"
+    },
+    "insights": {
+      "select_location": "Select a location to view insights"
     },
     "snapshot": {
       "hint":                "Live data (current state) — independent of the selected date range",
@@ -697,7 +701,8 @@
     "none_filters_sub": "Try changing the filters or date.",
     "show_all": "Show all",
     "recurring_badge": "Recurring",
-    "swipe_hint": "Swipe to cancel"
+    "swipe_hint": "Swipe to cancel",
+    "rooms_section": "Rooms & parking"
   },
   "provisioning": {
     "title": "Provisioning",

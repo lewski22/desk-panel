@@ -86,7 +86,7 @@ export class ResourcesService {
   async getAvailability(resourceId: string, date: string) {
     const resource = await this.findOne(resourceId);
 
-    // Wszystkie bookings na ten dzień
+    // Wszystkie bookings na ten dzień (wall-clock UTC — 00:00–23:59 biurowego dnia)
     const dayStart = new Date(`${date}T00:00:00.000Z`);
     const dayEnd   = new Date(`${date}T23:59:59.999Z`);
 
@@ -161,7 +161,7 @@ export class ResourcesService {
   async myBookings(userId: string, fromDate?: string) {
     const from = fromDate ? new Date(fromDate) : new Date();
     return this.prisma.booking.findMany({
-      where:   { userId, status: 'CONFIRMED', startTime: { gte: from } },
+      where:   { userId, status: 'CONFIRMED', endTime: { gte: from } },
       include: { resource: { select: { id: true, name: true, type: true, location: { select: { name: true } } } } },
       orderBy: { startTime: 'asc' },
       take:    20,

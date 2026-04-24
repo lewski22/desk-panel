@@ -16,7 +16,7 @@ function useLocations() {
         setActiveLocId(locs[0].id);
         localStorage.setItem('provisioning_loc', locs[0].id);
       }
-    }).catch(() => {});
+    }).catch((e) => console.error('[ProvisioningPage] load locations', e));
   }, []);
   const setLoc = (id: string) => {
     setActiveLocId(id);

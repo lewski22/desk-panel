@@ -69,13 +69,17 @@ export function BookingModal({ resource, onClose, onBooked }: Props) {
     if (!startTime || !endTime) return;
     setSaving(true); setErr(null);
     try {
-      const startISO = new Date(`${date}T${startTime}:00`).toISOString();
-      const endISO   = new Date(`${date}T${endTime}:00`).toISOString();
-      // Dodaj 30 min do endTime (endTime to start ostatniego slotu)
-      const endDt = new Date(`${date}T${endTime}:00`);
-      endDt.setMinutes(endDt.getMinutes() + 30);
+      // Traktuj godziny jako wall-clock UTC — bez konwersji strefy
+      // Sloty na backendzie też są wall-clock UTC (T08:00:00.000Z = "8 rano w biurze")
+      const [eh, em] = endTime.split(':').map(Number);
+      const endMinutes = eh * 60 + em + 30;
+      const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+      const endM = String(endMinutes % 60).padStart(2, '0');
       await appApi.resources.book(resource.id, {
-        date, startTime: startISO, endTime: endDt.toISOString(), notes,
+        date,
+        startTime: `${date}T${startTime}:00.000Z`,
+        endTime:   `${date}T${endH}:${endM}:00.000Z`,
+        notes,
       });
       onBooked();
     } catch (e: any) {
