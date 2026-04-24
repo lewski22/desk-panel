@@ -137,6 +137,31 @@ export class ReservationsService {
       throw new ConflictException('Desk is not available for booking');
     }
 
+    // Validate booking times against office opening hours (wall-clock UTC convention)
+    if (desk.location?.openTime && desk.location?.closeTime) {
+      const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+
+      // Extract HH:MM from the ISO wall-clock strings sent by the frontend (e.g. "2026-04-24T09:00:00.000Z")
+      const startHhmm = dto.startTime.slice(11, 16); // "09:00"
+      const endHhmm   = dto.endTime.slice(11, 16);   // "17:00"
+
+      const startMin  = toMin(startHhmm);
+      const endMin    = toMin(endHhmm);
+      const openMin   = toMin(desk.location.openTime);
+      const closeMin  = toMin(desk.location.closeTime);
+      const durationH = (endMin - startMin) / 60;
+
+      if (startMin < openMin) {
+        throw new ConflictException(`Rezerwacja nie może zaczynać się przed otwarciem biura (${desk.location.openTime})`);
+      }
+      if (endMin > closeMin) {
+        throw new ConflictException(`Rezerwacja nie może kończyć się po zamknięciu biura (${desk.location.closeTime})`);
+      }
+      if (desk.location.maxHoursPerDay && durationH > desk.location.maxHoursPerDay) {
+        throw new ConflictException(`Maksymalna długość rezerwacji to ${desk.location.maxHoursPerDay}h`);
+      }
+    }
+
     const conflict = await this.prisma.reservation.findFirst({
       where: {
         deskId: dto.deskId,

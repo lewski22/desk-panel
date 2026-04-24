@@ -84,7 +84,12 @@ export class ResourcesService {
 
   // ── Dostępność zasobu na dany dzień ───────────────────────────
   async getAvailability(resourceId: string, date: string) {
-    const resource = await this.findOne(resourceId);
+    // Load resource together with location hours so slots respect office openTime/closeTime
+    const resource = await this.prisma.resource.findUnique({
+      where:   { id: resourceId },
+      include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true } } },
+    });
+    if (!resource) throw new NotFoundException('Resource not found');
 
     // Wszystkie bookings na ten dzień (wall-clock UTC — 00:00–23:59 biurowego dnia)
     const dayStart = new Date(`${date}T00:00:00.000Z`);
@@ -100,15 +105,23 @@ export class ResourcesService {
       orderBy: { startTime: 'asc' },
     });
 
-    // Generuj wolne sloty (co 30 min, 8:00–20:00)
+    // Parse office hours from location (fallback: 08:00–20:00 for legacy locations without config)
+    const [openH,  openM]  = ((resource.location as any)?.openTime  ?? '08:00').split(':').map(Number);
+    const [closeH, closeM] = ((resource.location as any)?.closeTime ?? '20:00').split(':').map(Number);
+    const openTotal  = openH  * 60 + openM;
+    const closeTotal = closeH * 60 + closeM;
+
+    // Generate 30-min slots bounded by office openTime–closeTime (not hardcoded 8–20)
     const slots: { time: string; available: boolean; bookingId?: string }[] = [];
-    for (let h = 8; h < 20; h++) {
-      for (const m of [0, 30]) {
-        const slotStart = new Date(`${date}T${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00.000Z`);
-        const slotEnd   = new Date(slotStart.getTime() + 30 * 60_000);
-        const conflict  = bookings.find(b => b.startTime < slotEnd && b.endTime > slotStart);
-        slots.push({ time: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`, available: !conflict, bookingId: conflict?.id });
-      }
+    for (let totalMin = openTotal; totalMin + 30 <= closeTotal; totalMin += 30) {
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const slotStart = new Date(`${date}T${hh}:${mm}:00.000Z`);
+      const slotEnd   = new Date(slotStart.getTime() + 30 * 60_000);
+      const conflict  = bookings.find(b => b.startTime < slotEnd && b.endTime > slotStart);
+      slots.push({ time: `${hh}:${mm}`, available: !conflict, bookingId: conflict?.id });
     }
 
     return { resource, date, bookings, slots };

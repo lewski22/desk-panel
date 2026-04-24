@@ -22,10 +22,19 @@ describe('useOrgModules', () => {
     expect(result.current.isEnabled('ROOMS')).toBe(true);
   });
 
-  it('SUPER_ADMIN: isEnabled always true', () => {
+  it('SUPER_ADMIN: respects enabledModules like other non-OWNER roles', () => {
+    // SUPER_ADMIN with a specific module list must be restricted (fixes the bypass bug)
+    localStorage.setItem('app_user', JSON.stringify({ role: 'SUPER_ADMIN', enabledModules: ['DESKS'] }));
+    const { result } = renderHook(() => useOrgModules());
+    expect(result.current.isEnabled('DESKS')).toBe(true);
+    expect(result.current.isEnabled('PARKING')).toBe(false);
+  });
+
+  it('SUPER_ADMIN: empty enabledModules = all modules active (backward compat / legacy org)', () => {
     localStorage.setItem('app_user', JSON.stringify({ role: 'SUPER_ADMIN', enabledModules: [] }));
     const { result } = renderHook(() => useOrgModules());
     expect(result.current.isEnabled('PARKING')).toBe(true);
+    expect(result.current.isEnabled('ROOMS')).toBe(true);
   });
 
   it('empty enabledModules = all modules active (backward compat)', () => {
