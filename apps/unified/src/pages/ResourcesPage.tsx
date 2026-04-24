@@ -63,9 +63,11 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
       else        await appApi.resources.create(locationId, payload);
       onSaved();
     } catch (e: any) {
-      setErr(e.message ?? t('common.error'));
+      console.error('[ResourceModal] save failed', e);
+      setErr(e?.message || t('common.error'));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   return (
