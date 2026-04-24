@@ -13,7 +13,8 @@ import path from 'path';
 import fs from 'fs';
 
 const require = createRequire(import.meta.url);
-const sharp   = require('sharp');
+let sharp;
+try { sharp = require('sharp'); } catch { sharp = null; }
 
 const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
@@ -81,6 +82,11 @@ async function generateSplash([w, h, _scale, device]) {
 }
 
 (async () => {
+  if (!sharp) {
+    console.log('sharp not available — skipping icon generation (pre-built PNGs expected in public/)');
+    process.exit(0);
+  }
+
   console.log('Generating PWA icons...\n');
 
   // Icons
