@@ -159,7 +159,7 @@ export const appApi = {
     batchPositions: (updates: any[])          => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
     remove:        (id: string)              => req<any>(`/desks/${id}`, { method: 'DELETE' }),
     permanentDelete: (id: string)            => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
-    unpair:        (id: string)              => req<any>(`/desks/${id}/unpair`, { method: 'DELETE' }),
+    unpair:        (id: string)              => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
     getAvailable:  (locId: string, start: string, end: string) =>
       req<any[]>(`/desks/available?locationId=${locId}&startTime=${start}&endTime=${end}`),
     getByQr:       (token: string)           => req<any>(`/desks/qr/${token}`),
