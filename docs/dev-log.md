@@ -6,6 +6,72 @@ Historia prac, naprawionych błędów i otwartych zadań.
 
 ## Zrealizowane (chronologicznie)
 
+### 2026-04-25 — Bugfix Sprint + UX Mapy + Date Picker + Nowe funkcje
+
+#### Krytyczne (K1–K6)
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| K1 | QR bez PWA → pętla odświeżania | `QrCheckinPage.tsx`, `LoginPage.tsx` — `sessionStorage` returnTo |
+| K2 | Web check-in niemożliwy dla rezerwacji przez web | `checkins.service.ts` — akceptuje CONFIRMED, method=WEB, dedup |
+| K3 | Walidacja godzin błędna na kolejny dzień (`slice` → `Intl.DateTimeFormat` + timezone) | `reservations.service.ts` |
+| K4 | Przyszłe rezerwacje widoczne jako zajęte dziś | `desks.service.ts` — filtr `date` + `startTime: { lte: now }` |
+| K5 | PWA modal pod mapą | `ReservationModal.tsx` — `createPortal(modal, document.body)` |
+| K6 | Zaproszony user nie pojawia się na liście | `UsersPage.tsx` — `load()` po invite |
+
+#### Regresje
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| R1 | STAFF dostęp do raportów (routing + nawigacja) | `App.tsx`, `AppLayout.tsx`, `BottomNav.tsx`, `reports.controller.ts` |
+| R2 | STAFF miał brak mapy biurek | naprawione przy R1 |
+
+#### Zaległości
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| Z1 | Brakujące klucze i18n (`dashboard.beacons_offline`, `push.*`) | `pl/translation.json`, `en/translation.json` |
+| Z2 | AI Insights `POST /insights/refresh-all` | `insights.controller.ts` |
+| Z3 | Provisioning empty state zamiast spinnera | `ProvisioningPage.tsx` — `devLoaded` flag |
+
+#### Zmiany wymagań
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| W1 | STAFF widzi raporty | backend guard + routing + nav |
+| W2 | END_USER nie widzi nazw przy rezerwacjach | `desks.service.ts` `actorRole` masking, `DeskCard.tsx` |
+| W3 | END_USER nie widzi statystyk | `DeskMap.tsx` — `{!isEndUser && <Stats>}` |
+
+#### Wybór daty na mapie
+
+- Backend: `GET /locations/:id/desks/status?date=YYYY-MM-DD` — filtruje rezerwacje po `date` field, check-iny tylko dla dzisiaj
+- Frontend: date picker w `DeskMapPage.tsx`, `useDesks(locationId, date)`, amber banner dla nie-dzisiejszej daty, `initialDate` w `ReservationModal`
+
+#### Nowe UX (N-F1 – N-F10)
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| N-F1 | Domyślne biuro z localStorage (`user_default_location_{userId}`) + przycisk "Domyślne" | `DeskMapPage.tsx` |
+| N-F2 | Własne rezerwacje w kolorze violet (`'mine'` status) na mapie | `DeskPin.tsx`, `FloorPlanView.tsx` |
+| N-F3 | `DeskStats` wydzielony nad mapę (niezależny od viewMode) | `DeskMap.tsx` → export `DeskStats`, `DeskMapPage.tsx` |
+| N-F4 | Floor + zone w tooltipie DeskPin | `DeskPin.tsx` |
+| N-F5 | `/weekly` ukryte z nawigacji END_USER | `AppLayout.tsx`, `BottomNav.tsx` |
+| N-F6 | "Aktywne" → "Biurka" w Moich rezerwacjach | `MyReservationsPage.tsx` |
+| N-F7 | Zoom controls (−/+/Reset) + Ctrl+scroll w FloorPlanView | `FloorPlanView.tsx` |
+| N-F8 | `TimePicker` — dropdown godziny/minuty co 10 min | `components/ui/TimePicker.tsx`, `ReservationModal.tsx` |
+| N-F9 | `useDirtyGuard` hook + `DirtyGuardDialog` (infrastruktura) | `hooks/useDirtyGuard.ts`, `components/ui/DirtyGuardDialog.tsx` |
+| N-F10 | Spójny styl przycisku Anuluj | `MyReservationsPage.tsx` |
+
+**i18n:** `reservations.desks`, `deskmap.set_default`, `dirty_guard.*`, `dashboard.legend.mine` (pl + en)
+
+#### Otwarte po tej sesji
+
+- **R1 pełny** — `DashboardPage.tsx`: `isAtLeastStaff = isAdmin || isStaff`, zmiana `{isAdmin && ...}` dla KPI/wykresów widocznych przez STAFF
+- **R3** — Beacon LED desync — analiza `beacons.service.ts` + retransmit stanu LED po heartbeat
+- **N-F9 wdrożenie** — dirty guard podpiąć w EditLocationModal, EditUserModal, EditOrgModal
+
+---
+
 ### 2026-04-21 — Security Fixes + Status Colors
 
 **Security:**
