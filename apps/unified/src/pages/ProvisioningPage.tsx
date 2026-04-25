@@ -426,28 +426,15 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
     setDesks(d);
   };
 
-  // Auto-refresh co 15s gdy są beacony in_progress
+  // Auto-refresh co 15s zawsze — aktualizuje isOnline/lastSeen/firmwareVersion
   React.useEffect(() => {
     load();
     appApi.devices.firmwareLatest().then(setLatestFw).catch(() => {});
-  }, [load]);
-
-  React.useEffect(() => {
-    const hasInProgress = devices.some(d => d.otaStatus === 'in_progress');
-    if (hasInProgress) {
-      if (!autoRefreshRef.current) {
-        autoRefreshRef.current = setInterval(load, 15_000);
-      }
-    } else {
-      if (autoRefreshRef.current) {
-        clearInterval(autoRefreshRef.current);
-        autoRefreshRef.current = null;
-      }
-    }
+    autoRefreshRef.current = setInterval(load, 15_000);
     return () => {
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     };
-  }, [devices, load]);
+  }, [load]);
 
   React.useEffect(() => { loadDesks(form.locId); }, [form.locId]);
 
