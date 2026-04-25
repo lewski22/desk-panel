@@ -251,10 +251,13 @@ export function OrganizationsPage() {
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
   });
-  const [saving,       setSaving]       = useState(false);
-  const [err,          setErr]          = useState('');
-  const [installModal, setInstallModal] = useState<any>(null);
-  const [azureModal,   setAzureModal]   = useState<any>(null);
+  const [saving,          setSaving]          = useState(false);
+  const [err,             setErr]             = useState('');
+  const [installModal,    setInstallModal]    = useState<any>(null);
+  const [azureModal,      setAzureModal]      = useState<any>(null);
+  const [wifiSsid,        setWifiSsid]        = useState('');
+  const [wifiPass,        setWifiPass]        = useState('');
+  const [wifiPassVisible, setWifiPassVisible] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -273,6 +276,7 @@ export function OrganizationsPage() {
   const openCreate = () => {
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
       organizationId: user?.organizationId ?? '' });
+    setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
     setModal('create');
   };
@@ -287,8 +291,13 @@ export function OrganizationsPage() {
       country: loc.country ?? '',
       organizationId: loc.organizationId,
     });
+    setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
     setModal('edit');
+    // Pre-fill WiFi credentials from backend (decrypted)
+    appApi.locations.getWifiCredentials(loc.id)
+      .then(c => { setWifiSsid(c.wifiSsid ?? ''); setWifiPass(c.wifiPass ?? ''); })
+      .catch(() => {});
   };
 
   const save = async () => {
@@ -303,6 +312,8 @@ export function OrganizationsPage() {
           timezone: form.timezone,
           country: form.country || undefined,
           organizationId: orgId,
+          wifiSsid: wifiSsid || undefined,
+          wifiPass: wifiPass || undefined,
         });
       } else if (target) {
         await appApi.locations.update(target.id, {
@@ -311,6 +322,8 @@ export function OrganizationsPage() {
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
           timezone: form.timezone,
           country: form.country || null,
+          wifiSsid: wifiSsid,
+          wifiPass: wifiPass,
         });
       }
       setModal(null);
@@ -477,6 +490,38 @@ export function OrganizationsPage() {
               ))}
             </select>
             <p className="text-xs text-zinc-400 mt-1">{t('organizations.form.country_hint')}</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.wifi_ssid_label')}</label>
+            <input
+              type="text"
+              value={wifiSsid}
+              onChange={e => setWifiSsid(e.target.value)}
+              placeholder={t('organizations.form.wifi_ssid_placeholder')}
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.wifi_pass_label')}</label>
+            <div className="relative">
+              <input
+                type={wifiPassVisible ? 'text' : 'password'}
+                value={wifiPass}
+                onChange={e => setWifiPass(e.target.value)}
+                placeholder="••••••••"
+                className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 pr-16"
+              />
+              <button
+                type="button"
+                onClick={() => setWifiPassVisible(v => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs"
+              >
+                {wifiPassVisible ? t('common.hide') : t('common.show')}
+              </button>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1">{t('organizations.form.wifi_hint')}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

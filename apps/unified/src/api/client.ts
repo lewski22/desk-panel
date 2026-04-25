@@ -148,6 +148,8 @@ export const appApi = {
     // Dashboard extended / issues
     extended: (id: string)      => req<any>(`/locations/${id}/analytics/extended`),
     issues:   (id: string)      => req<any>(`/locations/${id}/issues`),
+    getWifiCredentials: (locationId: string) =>
+      req<{ wifiSsid: string | null; wifiPass: string | null }>(`/locations/${locationId}/wifi-credentials`),
   },
 
   // ── Desks ────────────────────────────────────────────────────

@@ -3,11 +3,12 @@ import { DevicesController }        from './devices.controller';
 import { DevicesService }           from './devices.service';
 import { GatewaysModule }           from '../gateways/gateways.module';
 import { InAppNotificationsModule } from '../inapp-notifications/inapp-notifications.module';
+import { LocationsModule }          from '../locations/locations.module';
 import { ScheduleModule }           from '@nestjs/schedule';
 import { ConfigModule }             from '@nestjs/config';
 
 @Module({
-  imports:     [ScheduleModule.forRoot(), GatewaysModule, InAppNotificationsModule, ConfigModule],
+  imports:     [ScheduleModule.forRoot(), GatewaysModule, InAppNotificationsModule, LocationsModule, ConfigModule],
   controllers: [DevicesController],
   providers:   [DevicesService],
   exports:     [DevicesService],

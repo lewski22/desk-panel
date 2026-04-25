@@ -695,7 +695,11 @@
       "limits_hint":  "Opening hours and limits define when and how long users can reserve desks. Walk-in via QR ends automatically at closing time.",
       "country_label":"Country (for holidays)",
       "country_auto": "— no holiday adjustment —",
-      "country_hint": "Used to exclude public holidays when calculating utilization working days"
+      "country_hint": "Used to exclude public holidays when calculating utilization working days",
+      "wifi_ssid_label": "WiFi SSID (for beacons)",
+      "wifi_ssid_placeholder": "NetworkName",
+      "wifi_pass_label": "WiFi Password",
+      "wifi_hint": "WiFi credentials are encrypted and used when provisioning beacons"
     }
   },
   "organizations_extra": {
@@ -870,7 +874,9 @@
       "provisioned_ok": "Beacon registered successfully",
       "provision_serial_hint": "Paste the above via Serial Monitor (115200 baud) when the beacon is in provisioning mode.",
       "beacon_count_outdated": "{{count}} beacon(s) need updating"
-    }
+    },
+    "wifi_prefill_hint": "WiFi credentials are pre-filled from the location settings. You can edit them.",
+    "wifi_missing_hint": "This location has no WiFi configured. Go to location settings and set the network credentials to complete the provisioning command."
   },
   "notifications": {
     "bell_label": "Notifications",
@@ -982,6 +988,8 @@
     "copy": "Copy",
     "close": "Close",
     "cancel": "Cancel",
+    "show": "Show",
+    "hide": "Hide",
     "status": "Status",
     "actions": "Actions",
     "all_offices": "All offices",

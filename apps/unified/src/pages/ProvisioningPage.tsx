@@ -397,6 +397,9 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
   const [result,   setResult]   = React.useState<any>(null);
   const [form,     setForm]     = React.useState({ hardwareId: '', deskId: '', gatewayId: '', locId: activeLocId });
   const [busy,     setBusy]     = React.useState(false);
+  const [wifiSsid,        setWifiSsid]        = React.useState('');
+  const [wifiPass,        setWifiPass]        = React.useState('');
+  const [wifiPassVisible, setWifiPassVisible] = React.useState(false);
   const [filterLoc,    setFilterLoc]    = React.useState('all');
   const [assignTarget, setAssignTarget] = React.useState<any>(null);
   const [assignDeskId, setAssignDeskId] = React.useState('');
@@ -511,6 +514,26 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       setToast({ msg: `${t('common.error')}: ${e?.message}`, type: 'error' });
     }
     setOtaAllBusy(false);
+  };
+
+  // ── Gateway change: pre-fill WiFi from location ───────────
+  const onGatewayChange = async (gatewayId: string) => {
+    setForm(f => ({ ...f, gatewayId }));
+    const gw    = gateways.find((g: any) => g.id === gatewayId);
+    const locId = gw?.location?.id ?? gw?.locationId;
+    if (locId) {
+      try {
+        const creds = await appApi.locations.getWifiCredentials(locId);
+        setWifiSsid(creds.wifiSsid ?? '');
+        setWifiPass(creds.wifiPass ?? '');
+      } catch {
+        setWifiSsid('');
+        setWifiPass('');
+      }
+    } else {
+      setWifiSsid('');
+      setWifiPass('');
+    }
   };
 
   // ── Provision ─────────────────────────────────────────────
@@ -817,7 +840,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
       {modal && (
         <Modal
           title={t('provisioning.add_provisioning')}
-          onClose={() => { setModal(false); setResult(null); }}
+          onClose={() => { setModal(false); setResult(null); setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false); }}
         >
           {!result ? (
             <div className="space-y-3">
@@ -831,7 +854,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
               <FormField label="Gateway">
                 <select
                   value={form.gatewayId}
-                  onChange={e => setForm(f => ({ ...f, gatewayId: e.target.value }))}
+                  onChange={e => onGatewayChange(e.target.value)}
                   className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
                 >
                   <option value="">{t('provisioning.gateway.select_placeholder')}</option>
@@ -840,6 +863,33 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                   ))}
                 </select>
               </FormField>
+              <FormField label="WiFi SSID">
+                <Input
+                  value={wifiSsid}
+                  onChange={e => setWifiSsid(e.target.value)}
+                  placeholder="NazwaSieci"
+                />
+              </FormField>
+              <FormField label="WiFi Password">
+                <div className="relative">
+                  <Input
+                    type={wifiPassVisible ? 'text' : 'password'}
+                    value={wifiPass}
+                    onChange={e => setWifiPass(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setWifiPassVisible(v => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs"
+                  >
+                    {wifiPassVisible ? 'Ukryj' : 'Pokaż'}
+                  </button>
+                </div>
+              </FormField>
+              <p className="text-xs text-zinc-400">
+                {t('provisioning.wifi_prefill_hint')}
+              </p>
               <FormField label={t('provisioning.device.desk_optional_label')}>
                 <select
                   value={form.deskId}
@@ -868,36 +918,46 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
               <p className="text-sm text-emerald-600 font-semibold">
                 ✓ {t('provisioning.device.provisioned_ok')}
               </p>
-              <div className="bg-zinc-50 rounded-xl p-4 space-y-2 font-mono text-xs">
-                {[
-                  ['PROVISION:{'],
-                  [`  "device_id": "${result.deviceId}"`],
-                  [`  "gateway_id": "${result.gatewayId}"`],
-                  [`  "mqtt_host": "...",`],
-                  [`  "mqtt_user": "${result.mqttUsername}"`],
-                  [`  "mqtt_pass": "${result.mqttPassword}"`],
-                  ['}'],
-                ].map(([line], i) => (
-                  <div key={i} className="text-zinc-600 break-all">{line}</div>
-                ))}
-              </div>
-              <p className="text-xs text-zinc-400">
-                {t('provisioning.device.provision_serial_hint')}
-              </p>
-              <div className="flex gap-2 justify-end">
-                <Btn
-                  variant="secondary"
-                  onClick={() => {
-                    const cmd = `PROVISION:{"device_id":"${result.deviceId}","gateway_id":"${result.gatewayId}","mqtt_host":"","mqtt_user":"${result.mqttUsername}","mqtt_pass":"${result.mqttPassword}"}`;
-                    navigator.clipboard.writeText(cmd);
-                  }}
-                >
-                  {t('common.copy')}
-                </Btn>
-                <Btn onClick={() => { setModal(false); setResult(null); }}>
-                  {t('common.close')}
-                </Btn>
-              </div>
+              {result.wifiMissing && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg px-3 py-2">
+                  ⚠ {t('provisioning.wifi_missing_hint')}
+                </div>
+              )}
+              {(() => {
+                const provisionPayload = {
+                  wifi_ssid:  result.wifiSsid  ?? wifiSsid,
+                  wifi_pass:  result.wifiPass  ?? wifiPass,
+                  mqtt_host:  result.mqttHost  ?? '',
+                  mqtt_port:  result.mqttPort  ?? 1883,
+                  mqtt_user:  result.mqttUsername,
+                  mqtt_pass:  result.mqttPassword,
+                  device_id:  result.deviceId,
+                  desk_id:    result.deskId    ?? '',
+                  gateway_id: result.gatewayId,
+                };
+                const fullCmd = `PROVISION:${JSON.stringify(provisionPayload)}`;
+                return (
+                  <>
+                    <div className="bg-zinc-950 text-emerald-400 rounded-xl p-4 font-mono text-xs break-all select-all">
+                      {fullCmd}
+                    </div>
+                    <p className="text-xs text-zinc-400">
+                      {t('provisioning.device.provision_serial_hint')}
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <Btn
+                        variant="secondary"
+                        onClick={() => navigator.clipboard.writeText(fullCmd)}
+                      >
+                        {t('common.copy')}
+                      </Btn>
+                      <Btn onClick={() => { setModal(false); setResult(null); setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false); }}>
+                        {t('common.close')}
+                      </Btn>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </Modal>

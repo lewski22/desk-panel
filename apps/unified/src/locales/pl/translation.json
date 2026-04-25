@@ -695,7 +695,11 @@
       "limits_hint":  "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.",
       "country_label":"Kraj (dla świąt)",
       "country_auto": "— bez uwzględnienia świąt —",
-      "country_hint": "Wpływa na liczenie dni roboczych w raporcie utilizacji"
+      "country_hint": "Wpływa na liczenie dni roboczych w raporcie utilizacji",
+      "wifi_ssid_label": "WiFi SSID (dla beaconów)",
+      "wifi_ssid_placeholder": "NazwaSieci",
+      "wifi_pass_label": "WiFi Hasło",
+      "wifi_hint": "Dane WiFi są szyfrowane i używane podczas provisioning beaconów"
     }
   },
   "organizations_extra": {
@@ -870,7 +874,9 @@
       "provisioned_ok": "Beacon zarejestrowany pomyślnie",
       "provision_serial_hint": "Wklej powyższe przez Serial Monitor (115200 baud) gdy beacon jest w trybie provisioning.",
       "beacon_count_outdated": "{{count}} beacon(ów) wymaga aktualizacji"
-    }
+    },
+    "wifi_prefill_hint": "Dane WiFi są wstępnie wczytane z ustawień lokacji. Możesz je edytować.",
+    "wifi_missing_hint": "Lokacja nie ma skonfigurowanego WiFi. Przejdź do ustawień lokacji i ustaw dane sieci, aby komenda provisioning była kompletna."
   },
   "notifications": {
     "bell_label": "Powiadomienia",
@@ -982,6 +988,8 @@
     "copy": "Kopiuj",
     "close": "Zamknij",
     "cancel": "Anuluj",
+    "show": "Pokaż",
+    "hide": "Ukryj",
     "status": "Status",
     "actions": "Akcje",
     "all_offices": "Wszystkie biura",

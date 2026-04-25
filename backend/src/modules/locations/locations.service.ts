@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService }    from '../../database/prisma.service';
+import { WifiCryptoService } from '../crypto/wifi-crypto.service';
 
 export interface CreateLocationDto {
   organizationId: string;
@@ -11,14 +12,19 @@ export interface CreateLocationDto {
   closeTime?: string;      // HH:mm, e.g. "17:00"
   maxDaysAhead?: number;   // Max dni do przodu przy rezerwacji (default: 14)
   maxHoursPerDay?: number; // Max długość jednej rezerwacji w godzinach (default: 8)
+  wifiSsid?: string;       // plaintext — encrypted before storing
+  wifiPass?: string;       // plaintext — encrypted before storing
 }
 
 @Injectable()
 export class LocationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma:      PrismaService,
+    private wifiCrypto:  WifiCryptoService,
+  ) {}
 
   async findAll(organizationId?: string) {
-    return this.prisma.location.findMany({
+    const rows = await this.prisma.location.findMany({
       where: organizationId ? { organizationId } : undefined,
       include: {
         _count:       { select: { desks: true, gateways: true } },
@@ -26,10 +32,14 @@ export class LocationsService {
       },
       orderBy: { name: 'asc' },
     });
+    return rows.map(({ wifiSsidEnc, wifiPassEnc, ...loc }) => ({
+      ...loc,
+      hasWifi: !!wifiSsidEnc,
+    }));
   }
 
   async findOne(id: string) {
-    const loc = await this.prisma.location.findUnique({
+    const raw = await this.prisma.location.findUnique({
       where: { id },
       include: {
         desks:    { orderBy: [{ floor: 'asc' }, { code: 'asc' }] },
@@ -37,8 +47,9 @@ export class LocationsService {
         organization: { select: { name: true } },
       },
     });
-    if (!loc) throw new NotFoundException(`Location ${id} not found`);
-    return loc;
+    if (!raw) throw new NotFoundException(`Location ${id} not found`);
+    const { wifiSsidEnc, wifiPassEnc, ...loc } = raw;
+    return { ...loc, hasWifi: !!wifiSsidEnc };
   }
 
   async create(dto: CreateLocationDto) {
@@ -46,8 +57,30 @@ export class LocationsService {
   }
 
   async update(id: string, dto: Partial<CreateLocationDto> & { isActive?: boolean; kioskPin?: string | null }) {
-    // Single query — throws P2025 if not found, no pre-fetch needed
-    return this.prisma.location.update({ where: { id }, data: dto });
+    const { wifiSsid, wifiPass, ...rest } = dto as any;
+
+    const wifiData: Record<string, string | null> = {};
+    if (wifiSsid !== undefined) {
+      wifiData.wifiSsidEnc = wifiSsid ? this.wifiCrypto.encrypt(wifiSsid) : null;
+    }
+    if (wifiPass !== undefined) {
+      wifiData.wifiPassEnc = wifiPass ? this.wifiCrypto.encrypt(wifiPass) : null;
+    }
+
+    return this.prisma.location.update({ where: { id }, data: { ...rest, ...wifiData } });
+  }
+
+  async getWifiCredentials(id: string): Promise<{ wifiSsid: string | null; wifiPass: string | null }> {
+    const loc = await this.prisma.location.findUnique({
+      where:  { id },
+      select: { wifiSsidEnc: true, wifiPassEnc: true },
+    });
+    if (!loc) throw new NotFoundException(`Location ${id} not found`);
+
+    return {
+      wifiSsid: loc.wifiSsidEnc ? this.wifiCrypto.decrypt(loc.wifiSsidEnc) : null,
+      wifiPass: loc.wifiPassEnc ? this.wifiCrypto.decrypt(loc.wifiPassEnc) : null,
+    };
   }
 
   async verifyKioskPin(locationId: string, pin: string): Promise<{ ok: boolean }> {

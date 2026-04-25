@@ -148,6 +148,9 @@ model Location {
   kioskPin       String?
   country        String?  // FEATURE P4-B3: ISO 3166-1 alpha-2 code for holiday-aware workday counting
 
+  wifiSsidEnc    String?  // AES-256-GCM encrypted, format: hex(iv):hex(authTag):hex(ciphertext)
+  wifiPassEnc    String?  // AES-256-GCM encrypted, format: hex(iv):hex(authTag):hex(ciphertext)
+
   floorPlanUrl   String?
   floorPlanKey   String?  // Tech Debt #3 — R2/S3 CDN key
   floorPlanW     Int?

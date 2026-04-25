@@ -165,6 +165,19 @@ export class LocationsController {
     return this.svc.deleteFloorPlan(id, floor);
   }
 
+  @Get(':id/wifi-credentials')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Get decrypted WiFi credentials for provisioning — org-isolated' })
+  async getWifiCredentials(@Param('id') id: string, @Request() req: any) {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
+      const loc = await this.svc.findOne(id);
+      if (loc.organizationId !== req.user.organizationId) {
+        throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+      }
+    }
+    return this.svc.getWifiCredentials(id);
+  }
+
   @Patch(':id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   async update(@Param('id') id: string, @Body() dto: Partial<CreateLocationDto>, @Request() req: any) {

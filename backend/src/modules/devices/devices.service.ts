@@ -2,10 +2,11 @@ import {
   Injectable, Logger, NotFoundException, BadRequestException, ConflictException, ForbiddenException,
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { ConfigService }  from '@nestjs/config';
-import { PrismaService }  from '../../database/prisma.service';
+import { ConfigService }   from '@nestjs/config';
+import { PrismaService }   from '../../database/prisma.service';
 import { GatewaysService } from '../gateways/gateways.service';
 import { InAppNotificationsService, InAppNotifType } from '../inapp-notifications/inapp-notifications.service';
+import { WifiCryptoService } from '../crypto/wifi-crypto.service';
 import * as bcrypt from 'bcrypt';
 
 export interface ProvisionDeviceDto {
@@ -19,10 +20,11 @@ export class DevicesService {
   private readonly logger = new Logger(DevicesService.name);
 
   constructor(
-    private prisma:    PrismaService,
-    private gateways:  GatewaysService,
-    private config:    ConfigService,
-    private inapp:     InAppNotificationsService,
+    private prisma:      PrismaService,
+    private gateways:    GatewaysService,
+    private config:      ConfigService,
+    private inapp:       InAppNotificationsService,
+    private wifiCrypto:  WifiCryptoService,
   ) {}
 
   // ── Provisioning ──────────────────────────────────────────────
@@ -47,13 +49,33 @@ export class DevicesService {
 
     await this.gateways.addBeaconCredentials(dto.gatewayId, mqttUsername, mqttPassword, dto.deskId);
 
+    const gateway = await this.prisma.gateway.findUnique({
+      where:   { id: dto.gatewayId },
+      include: { location: { select: { wifiSsidEnc: true, wifiPassEnc: true } } },
+    });
+
+    const wifiSsid = gateway?.location?.wifiSsidEnc
+      ? this.wifiCrypto.decrypt(gateway.location.wifiSsidEnc)
+      : null;
+    const wifiPass = gateway?.location?.wifiPassEnc
+      ? this.wifiCrypto.decrypt(gateway.location.wifiPassEnc)
+      : null;
+
+    const mqttHost = gateway?.ipAddress ?? process.env.MQTT_HOST ?? '';
+    const mqttPort = parseInt(process.env.MQTT_PORT ?? '1883', 10);
+
     return {
       deviceId:     device.id,
       hardwareId:   device.hardwareId,
       mqttUsername,
       mqttPassword,
-      deskId:       device.deskId,
-      gatewayId:    device.gatewayId,
+      mqttHost,
+      mqttPort,
+      deskId:       device.deskId   ?? '',
+      gatewayId:    device.gatewayId ?? '',
+      wifiSsid,
+      wifiPass,
+      wifiMissing:  !wifiSsid,
     };
   }
 
