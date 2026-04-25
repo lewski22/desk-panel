@@ -149,6 +149,16 @@ export class GatewaysService {
       select: { isOnline: true, deskId: true, id: true },
     });
 
+    // Guard: beacon nie istnieje w DB — gateway ma nieaktualny cache
+    // Rzucamy NotFoundException (404) zamiast pozwolić Prismie crashować z P2025 (500)
+    if (!prev) {
+      this.logger.warn(
+        `deviceHeartbeat: device not found in DB — hardwareId=${hardwareId}. ` +
+        `Gateway cache may be stale. Beacon requires re-provisioning.`
+      );
+      throw new NotFoundException(`Device with hardwareId ${hardwareId} not found`);
+    }
+
     const device = await this.prisma.device.update({
       where: { hardwareId },
       data: {
