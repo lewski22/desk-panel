@@ -140,27 +140,26 @@ export class GatewaysService {
     });
   }
 
-  async deviceHeartbeat(hardwareId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
+  async deviceHeartbeat(deviceId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
     const online = isOnline === false ? false : true;
 
     // Snapshot przed updatem — potrzebny do wykrycia powrotu online
+    // Lookup po Device.id (CUID) — beacon wysyła device_id z NVS po provisioning
     const prev = await this.prisma.device.findUnique({
-      where:  { hardwareId },
+      where:  { id: deviceId },
       select: { isOnline: true, deskId: true, id: true },
     });
 
-    // Guard: beacon nie istnieje w DB — gateway ma nieaktualny cache
-    // Rzucamy NotFoundException (404) zamiast pozwolić Prismie crashować z P2025 (500)
     if (!prev) {
       this.logger.warn(
-        `deviceHeartbeat: device not found in DB — hardwareId=${hardwareId}. ` +
-        `Gateway cache may be stale. Beacon requires re-provisioning.`
+        `deviceHeartbeat: device not found — id=${deviceId}. ` +
+        `Beacon NVS may be stale or device was deleted. Re-provisioning required.`
       );
-      throw new NotFoundException(`Device with hardwareId ${hardwareId} not found`);
+      throw new NotFoundException(`Device ${deviceId} not found`);
     }
 
     const device = await this.prisma.device.update({
-      where: { hardwareId },
+      where: { id: deviceId },
       data: {
         isOnline:  online,
         lastSeen:  new Date(),
@@ -179,7 +178,7 @@ export class GatewaysService {
         where: { id: device.id },
         data:  { otaStatus: 'success', otaFinishedAt: new Date() },
       });
-      this.logger.log(`OTA success confirmed by heartbeat: ${hardwareId} v${firmwareVersion}`);
+      this.logger.log(`OTA success confirmed by heartbeat: ${deviceId} v${firmwareVersion}`);
     }
 
     // LED recovery: beacon wrócił online po przerwie

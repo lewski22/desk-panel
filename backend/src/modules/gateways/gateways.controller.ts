@@ -133,10 +133,10 @@ export class GatewaysController {
   }
 
   // ── Device heartbeat (x-gateway-provision-key required) ───────
-  @Patch('device/:hardwareId/heartbeat')
+  @Patch('device/:deviceId/heartbeat')
   @ApiOperation({ summary: 'Beacon heartbeat — GATEWAY_PROVISION_KEY required' })
   async deviceHeartbeat(
-    @Param('hardwareId') hardwareId: string,
+    @Param('deviceId') deviceId: string,
     @Headers('x-gateway-provision-key') provKey?: string,
     @Body('rssi') rssi?: number,
     @Body('firmwareVersion') firmwareVersion?: string,
@@ -144,6 +144,6 @@ export class GatewaysController {
   ) {
     const expected = process.env.GATEWAY_PROVISION_KEY ?? '';
     if (!expected || provKey !== expected) throw new UnauthorizedException('Invalid provision key');
-    return this.svc.deviceHeartbeat(hardwareId, rssi, firmwareVersion, isOnline);
+    return this.svc.deviceHeartbeat(deviceId, rssi, firmwareVersion, isOnline);
   }
 }
