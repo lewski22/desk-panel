@@ -9,5 +9,6 @@ export const LED_PAYLOADS: Record<string, any> = {
   OCCUPIED: { command: 'SET_LED', params: { color: '#DC0000', animation: 'solid' } },
   FREE:     { command: 'SET_LED', params: { color: '#00C800', animation: 'solid' } },
   RESERVED: { command: 'SET_LED', params: { color: '#0050DC', animation: 'solid' } },
-  ERROR:    { command: 'SET_LED', params: { color: '#DC0000', animation: 'blink' } },
+  ERROR:          { command: 'SET_LED', params: { color: '#DC0000', animation: 'blink' } },
+  GUEST_RESERVED: { command: 'SET_LED', params: { color: '#C8A000', animation: 'solid' } },
 };

@@ -43,13 +43,10 @@ export function SubscriptionPage() {
 
   return (
     <div className="max-w-2xl">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-zinc-800">{t('subscription.title')}</h1>
-          <p className="text-sm text-zinc-400 mt-0.5">{t('subscription.subtitle')}</p>
-        </div>
-        <PlanBadge plan={data.plan} size="md" />
+      {/* Header — FIX P2-2: removed duplicate PlanBadge (plan shown inside the status card below) */}
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-zinc-800">{t('subscription.title')}</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">{t('subscription.subtitle')}</p>
       </div>
 
       {/* Plan status card */}

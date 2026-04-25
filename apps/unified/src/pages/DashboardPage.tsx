@@ -1,3 +1,4 @@
+// i18n audit P3
 /**
  * DashboardPage — Sprint A1
  * - KPI cards z trendem (↑↓) i tooltipem poprzedniego tygodnia
@@ -23,6 +24,14 @@ const ACCENT     = 'var(--brand)';
 const C_OCCUPIED = '#ef4444';
 const C_RESERVED = '#f59e0b';
 const C_FREE     = '#10B981';
+
+const METHOD_COLORS: Record<string, string> = {
+  NFC:        '#9C2264',
+  QR:         '#10B981',
+  MANUAL:     '#F59E0B',
+  WEB:        '#38BDF8',
+  NO_CHECKIN: '#A1A1AA',
+};
 
 // ── Helpers ──────────────────────────────────────────────────
 function useRole() {
@@ -378,7 +387,7 @@ export function DashboardPage() {
       name:  m.method,
       label: t(`methods.${m.method}`, m.method),
       value: m._count,
-      color: m.method === 'NFC' ? '#9C2264' : m.method === 'QR' ? '#10B981' : '#F59E0B',
+      color: METHOD_COLORS[m.method] ?? '#A1A1AA',
     })),
   [ext?.methods, i18n.language]);
 
@@ -435,8 +444,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Beacon offline alert */}
-      {offlineCount > 0 && (
+      {/* Beacon offline alert — FEATURE P4-3C: admin only */}
+      {offlineCount > 0 && isAdmin && (
         <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 text-sm">
           <span>📡</span>
           <span className="text-amber-800 font-medium">{offlineCount} {t('dashboard.beacons_offline')}</span>
@@ -446,8 +455,8 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-5">
+      {/* KPI Row — FEATURE P4-3C: beacons card hidden for END_USER */}
+      <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
         <KpiCard
           label={t('dashboard.kpi.occupancy_now')}
           value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
@@ -465,11 +474,13 @@ export function DashboardPage() {
           value={todayCheckins}
           trend={isAdmin ? ext?.weekTrend : undefined}
         />
-        <KpiCard
-          label={t('dashboard.kpi.beacons_online')}
-          value={onlineCount}
-          sub={t('dashboard.kpi.registered_of', { count: desks.length })}
-        />
+        {isAdmin && (
+          <KpiCard
+            label={t('dashboard.kpi.beacons_online')}
+            value={onlineCount}
+            sub={t('dashboard.kpi.registered_of', { count: desks.length })}
+          />
+        )}
       </div>
 
       {/* Quick Actions — tylko dla Admin+ */}

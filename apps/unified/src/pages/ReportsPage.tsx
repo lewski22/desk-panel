@@ -19,7 +19,7 @@ const METHOD_COLORS: Record<string, string> = {
   MANUAL:  '#f59e0b',
   UNKNOWN: '#a1a1aa',
 };
-const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'insights'] as const;
+const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization', 'insights'] as const;
 type Tab = typeof TABS[number];
 
 // ── Utils ──────────────────────────────────────────────────────────
@@ -588,6 +588,104 @@ function ByDeskTab({ filters }: { filters: Filters }) {
   );
 }
 
+// ── Utilization Tab (P4-B2) ────────────────────────────────────────
+interface UtilizationRow {
+  deskId: string; deskName: string; deskCode: string;
+  floor: string | null; zone: string | null;
+  locationId: string; locationName: string;
+  reservations: number; workdays: number; utilizationPct: number;
+}
+
+function UtilizationTab({ filters }: { filters: Filters }) {
+  const { t } = useTranslation();
+  const [data, setData]       = useState<UtilizationRow[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const rows = await appApi.reports.get('/utilization', params);
+      setData(rows ?? []);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const exportCsv = () => {
+    const header = [
+      t('reports.utilization.col_desk'), t('reports.utilization.col_code'),
+      t('reports.utilization.col_floor'), t('reports.utilization.col_zone'),
+      t('reports.utilization.col_location'), t('reports.utilization.col_reservations'),
+      t('reports.utilization.col_workdays'), t('reports.utilization.col_pct'),
+    ];
+    const rows = data.map(r => [
+      r.deskName, r.deskCode ?? '', r.floor ?? '', r.zone ?? '',
+      r.locationName, String(r.reservations), String(r.workdays), `${r.utilizationPct}%`,
+    ]);
+    downloadCsv([header, ...rows], `utilization-${filters.from}-${filters.to}.csv`);
+  };
+
+  const pctColor = (pct: number) =>
+    pct >= 70 ? 'text-emerald-600' : pct >= 30 ? 'text-amber-600' : 'text-zinc-400';
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm font-semibold text-zinc-700">{t('reports.utilization.title')}</p>
+        {data.length > 0 && (
+          <button onClick={exportCsv}
+            className="text-xs px-3 py-1.5 border border-zinc-200 rounded-lg hover:bg-zinc-50">
+            {t('reports.export.csv')}
+          </button>
+        )}
+      </div>
+      {loading ? (
+        <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
+      ) : data.length === 0 ? (
+        <EmptyState icon="📈" title={t('reports.no_data')} />
+      ) : (
+        <>
+          <p className="text-xs text-zinc-400 mb-3">{t('reports.utilization.hint', { workdays: data[0]?.workdays ?? 0 })}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-zinc-100">
+                  <th className="text-left py-2 pr-3 font-semibold text-zinc-400 uppercase tracking-wide">{t('reports.utilization.col_desk')}</th>
+                  <th className="text-left py-2 pr-3 font-semibold text-zinc-400 uppercase tracking-wide hidden sm:table-cell">{t('reports.utilization.col_floor')}</th>
+                  <th className="text-left py-2 pr-3 font-semibold text-zinc-400 uppercase tracking-wide hidden md:table-cell">{t('reports.utilization.col_location')}</th>
+                  <th className="text-right py-2 pr-3 font-semibold text-zinc-400 uppercase tracking-wide">{t('reports.utilization.col_reservations')}</th>
+                  <th className="text-right py-2 font-semibold text-zinc-400 uppercase tracking-wide">{t('reports.utilization.col_pct')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map(row => (
+                  <tr key={row.deskId} className="border-b border-zinc-50 hover:bg-zinc-50/50">
+                    <td className="py-2 pr-3">
+                      <span className="font-medium text-zinc-700">{row.deskName}</span>
+                      {row.deskCode && <span className="text-zinc-400 ml-1">· {row.deskCode}</span>}
+                    </td>
+                    <td className="py-2 pr-3 text-zinc-500 hidden sm:table-cell">{row.floor ?? '—'}</td>
+                    <td className="py-2 pr-3 text-zinc-500 hidden md:table-cell">{row.locationName}</td>
+                    <td className="py-2 pr-3 text-right font-mono text-zinc-600">{row.reservations}</td>
+                    <td className="py-2 text-right">
+                      <span className={`font-bold font-mono ${pctColor(row.utilizationPct)}`}>
+                        {row.utilizationPct}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────
 function ReportsPage() {
   const { t } = useTranslation();
@@ -674,12 +772,36 @@ function ReportsPage() {
       {activeTab === 'methods'      && <MethodsTab filters={filters} />}
       {activeTab === 'by_user'      && <ByUserTab filters={filters} />}
       {activeTab === 'by_desk'      && <ByDeskTab filters={filters} />}
+      {activeTab === 'utilization'  && <UtilizationTab filters={filters} />}
       {activeTab === 'insights' && (
+        // FIX P2-3: show in-context location picker when no location selected
         <Card className="p-5">
-          {locationId
-            ? <InsightsWidget locationId={locationId} showRefresh />
-            : <p className="text-sm text-zinc-400 text-center py-6">{t('reports.insights.select_location')}</p>
-          }
+          {locationId ? (
+            <InsightsWidget locationId={locationId} showRefresh />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-2xl mb-3">🔍</p>
+              <p className="text-sm font-medium text-zinc-700 mb-1">
+                {t('reports.insights.select_location')}
+              </p>
+              <p className="text-xs text-zinc-400 mb-4">
+                {t('reports.insights.select_location_hint', 'Choose an office to generate AI occupancy insights')}
+              </p>
+              {locations.length > 0 && (
+                <select
+                  value={locationId}
+                  onChange={e => setLocationId(e.target.value)}
+                  className="text-sm border border-zinc-200 rounded-lg px-3 py-2
+                             focus:outline-none focus:ring-1 focus:ring-brand bg-white
+                             min-w-[200px]">
+                  <option value="">{t('reports.filter.all')}</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
         </Card>
       )}
     </div>

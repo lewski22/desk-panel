@@ -227,7 +227,8 @@
       "rooms": "No conference rooms",
       "parking": "No parking spots",
       "sub": "An admin can add them in the management panel."
-    }
+    },
+    "location_no_desks": "No available desks"
   },
   "impersonate": {
     "back_to_login": "Back to login",
@@ -321,7 +322,8 @@
       "unpair_title": "Unpair beacon from desk",
       "deactivate": "Deactivate",
       "checkin": "Check-in",
-      "checkout": "Check-out"
+      "checkout": "End reservation",
+      "maintenance_blocked": "Desk in service — reservation not available"
     },
     "confirm": {
       "delete_permanent": "Permanently delete desk \"{{name}}\"? This operation is irreversible.",
@@ -367,6 +369,17 @@
       "occupied": "Occupied",
       "offline": "Offline"
     },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "filter": {
+      "search_placeholder": "Search by name or code…",
+      "all_floors": "All floors",
+      "all_statuses": "All statuses",
+      "results": "{{count}} of {{total}}",
+      "clear": "Clear"
+    },
     "reserve": {
       "title": "Reserve desk",
       "staff_label": "Employee",
@@ -380,6 +393,13 @@
       "submitting": "Reserving…",
       "action": "Reserve",
       "success": "Desk reserved! Check My reservations.",
+      "type_label": "Reservation type",
+      "type_hint": "(affects desk LED color)",
+      "type": {
+        "STANDARD": "Standard",
+        "GUEST": "Guest",
+        "TEAM": "Team"
+      },
       "errors": {
         "end_after_start": "End time must be after the start time.",
         "max_length": "Maximum reservation length is {{maxHours}}h.",
@@ -427,6 +447,15 @@
       "OFFICE_ADMIN": "Office Admin",
       "STAFF": "Staff",
       "END_USER": "User"
+    },
+    "filter": {
+      "search_placeholder": "Search by name or email…",
+      "all_roles": "All roles",
+      "has_card": "Has NFC card",
+      "no_card": "No card",
+      "all_cards": "All",
+      "results": "{{count}} results",
+      "clear": "Clear filters"
     },
     "modals": {
       "create_title": "New user",
@@ -541,6 +570,7 @@
   "methods": {
     "NFC": "NFC",
     "QR": "QR",
+    "WEB": "Web",
     "MANUAL": "Manual",
     "NO_CHECKIN": "No check-in"
   },
@@ -565,10 +595,12 @@
       "methods":      "Methods",
       "by_user":      "By person",
       "by_desk":      "By desk",
+      "utilization":  "Utilization",
       "insights":     "AI Insights"
     },
     "insights": {
-      "select_location": "Select a location to view insights"
+      "select_location": "Select a location to view insights",
+      "select_location_hint": "Choose an office to generate AI occupancy insights"
     },
     "snapshot": {
       "hint":                "Live data (current state) — independent of the selected date range",
@@ -616,6 +648,18 @@
       "count":    "Reservations",
       "csv":      "Export CSV"
     },
+    "utilization": {
+      "title":            "Desk utilization",
+      "hint":             "Percentage of working days ({{workdays}}) with at least 1 reservation",
+      "col_desk":         "Desk",
+      "col_code":         "Code",
+      "col_floor":        "Floor",
+      "col_zone":         "Zone",
+      "col_location":     "Location",
+      "col_reservations": "Reservations",
+      "col_workdays":     "Working days",
+      "col_pct":          "Utilization"
+    },
     "export": {
       "csv":        "↓ CSV",
       "xlsx":       "↓ XLSX",
@@ -648,7 +692,10 @@
       "timezone":     "Time zone",
       "max_days":     "Max days ahead",
       "max_hours":    "Max hours / booking",
-      "limits_hint":  "Opening hours and limits define when and how long users can reserve desks. Walk-in via QR ends automatically at closing time."
+      "limits_hint":  "Opening hours and limits define when and how long users can reserve desks. Walk-in via QR ends automatically at closing time.",
+      "country_label":"Country (for holidays)",
+      "country_auto": "— no holiday adjustment —",
+      "country_hint": "Used to exclude public holidays when calculating utilization working days"
     }
   },
   "organizations_extra": {
@@ -706,6 +753,8 @@
   },
   "provisioning": {
     "title": "Provisioning",
+    "subtitle": "Register and manage gateways and beacons",
+    "office_label": "Office:",
     "beacons_title": "Beacons (devices)",
     "gateways_title": "Gateways",
     "filter_office": "Filter by office",
@@ -754,7 +803,39 @@
       "remaining": "remaining"
     },
     "gateway": {
-      "install_title": "Gateway Installation",
+      "install_title": "Add gateway",
+      "install_how": "How to install the gateway:",
+      "install_step1": "Power on the Raspberry Pi (or any Linux device)",
+      "install_step2": "Open a terminal (SSH or local)",
+      "install_step3": "Paste the command below and press Enter",
+      "install_cmd_label": "Install command (valid 24h, one-time use)",
+      "install_office_label": "Office",
+      "install_valid_until": "Valid until",
+      "gateways_heading": "Gateways",
+      "new_gateway": "+ New gateway",
+      "col_name": "Name",
+      "col_id": "ID",
+      "col_office": "Office",
+      "col_ip": "IP",
+      "col_version": "Version",
+      "col_devices": "Devices",
+      "col_status": "Status",
+      "col_last_seen": "Last contact",
+      "copy_id": "Copy ID",
+      "update_btn": "↑ Update",
+      "update_title": "Update gateway to latest version",
+      "rotate_btn": "Rotate",
+      "rotate_title": "Rotate key (15 min window)",
+      "delete_btn": "Delete",
+      "delete_title": "Delete gateway",
+      "offline_diag": "Offline for {{count}} min — check: journalctl -u reserti-gateway -n 20",
+      "stale_diag": "No heartbeat for {{count}} min — check: systemctl status reserti-gateway",
+      "secret_modal_title": "New gateway secret",
+      "secret_unreachable": "Could not reach gateway — update manually before the window expires",
+      "secret_old_expires": "Old key expires",
+      "secret_manual_hint": "Manually: edit",
+      "secret_restart_hint": "and run",
+      "close": "Close",
       "rotate_secret": "Rotate secret",
       "last_seen": "Last seen",
       "never": "Never",
@@ -784,7 +865,11 @@
       "no_desk": "No desk",
       "select_desk_placeholder": "— select desk —",
       "desk_optional_label": "Desk (optional)",
-      "no_gateways": "No gateways — click \"+ New gateway\" to generate an installation command"
+      "no_gateways": "No gateways — click \"+ New gateway\" to generate an installation command",
+      "provision_btn": "Provisioning",
+      "provisioned_ok": "Beacon registered successfully",
+      "provision_serial_hint": "Paste the above via Serial Monitor (115200 baud) when the beacon is in provisioning mode.",
+      "beacon_count_outdated": "{{count}} beacon(s) need updating"
     }
   },
   "notifications": {
@@ -822,7 +907,54 @@
       }
     },
     "rules_labels": {
-      "GATEWAY_KEY_ROTATION_FAILED": "Gateway key rotation failed"
+      "GATEWAY_OFFLINE":            "Gateway offline",
+      "GATEWAY_BACK_ONLINE":        "Gateway back online",
+      "BEACON_OFFLINE":             "Beacon offline",
+      "FIRMWARE_UPDATE":            "Firmware update",
+      "GATEWAY_RESET_NEEDED":       "Gateway reset needed",
+      "RESERVATION_CHECKIN_MISSED": "Reservation check-in missed",
+      "SYSTEM_ANNOUNCEMENT":        "System announcement",
+      "GATEWAY_KEY_ROTATION_FAILED": "Gateway key rotation failed",
+      "SUBSCRIPTION_EXPIRING":      "Subscription expiring",
+      "SUBSCRIPTION_EXPIRED":       "Subscription expired",
+      "TRIAL_EXPIRING":             "Trial expiring",
+      "LIMIT_WARNING":              "Resource limit warning"
+    },
+    "log": {
+      "col_type":       "Type",
+      "col_subject":    "Subject",
+      "col_recipients": "Recipients",
+      "col_date":       "Date",
+      "col_status":     "Status"
+    },
+    "category": {
+      "infrastruktura": "Infrastructure",
+      "rezerwacje":     "Reservations",
+      "system":         "System"
+    },
+    "threshold_label": "Time threshold (minutes of silence → alert)",
+    "recipients_label": "Notification recipients",
+    "reservation_user_note": "Each user can enable/disable in their profile",
+    "recipients_sa_only": "Recipients for infrastructure notifications are managed by the system administrator.",
+    "smtp_env_hint": "SMTP configuration (environment variables)",
+    "smtp_how_title": "How does it work?",
+    "smtp_how_own": "Emails are sent from your address (e.g. noreply@company.com). Staff see your company's email, not Reserti.",
+    "smtp_how_global": "Emails sent by the Reserti system administrator. No configuration required.",
+    "smtp_how_secure": "SMTP password is encrypted with AES-256-GCM before storage. It is never returned by the API.",
+    "smtp_own_label": "Custom mailbox",
+    "smtp_global_label": "Global mailbox",
+    "smtp_secure_label": "Security",
+    "test_email_hint": "Send a test email to verify that the mail server is configured correctly.",
+    "log_tab": "Log",
+    "announce": {
+      "title": "System announcement",
+      "label_title": "Title",
+      "label_body": "Message",
+      "label_roles": "Send to",
+      "send": "Send",
+      "delivered": "Delivered to <strong>{{count}}</strong> users.",
+      "rules_how": "How it works:",
+      "rules_how_body": "Each rule defines which notification appears for users with a given role. Notifications are shared across all organizations — each organization only sees notifications related to its own infrastructure. System announcements are sent to all selected roles across all organizations."
     }
   },
   "deskcard": {
@@ -845,7 +977,17 @@
     }
   },
   "common": {
-    "na": "—"
+    "na": "—",
+    "error": "Error",
+    "copy": "Copy",
+    "close": "Close",
+    "cancel": "Cancel",
+    "status": "Status",
+    "actions": "Actions",
+    "all_offices": "All offices",
+    "online": "Online",
+    "offline": "Offline",
+    "loading": "Loading…"
   },
   "floorplan": {
     "editor": {

@@ -1,3 +1,4 @@
+// i18n audit P3
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
@@ -5,27 +6,23 @@ import { PageHeader, Btn } from '../components/ui';
 import { SmtpConfigSection } from './SmtpConfigSection';
 
 // ── Kategorie ────────────────────────────────────────────────────
-const CATEGORIES: { key: string; label: string; icon: string }[] = [
-  { key: 'infrastruktura', label: 'Infrastruktura IoT', icon: '📡' },
-  { key: 'rezerwacje',     label: 'Rezerwacje',          icon: '📋' },
-  { key: 'system',         label: 'System',              icon: '⚙️'  },
+const CATEGORIES: { key: string; icon: string }[] = [
+  { key: 'infrastruktura', icon: '📡' },
+  { key: 'rezerwacje',     icon: '📋' },
+  { key: 'system',         icon: '⚙️'  },
 ];
 
 // ── Tag kategorii ────────────────────────────────────────────────
 function CategoryBadge({ cat }: { cat: string }) {
+  const { t } = useTranslation();
   const colors: Record<string, string> = {
     infrastruktura: 'bg-red-50 text-red-600 border-red-200',
     rezerwacje:     'bg-blue-50 text-blue-600 border-blue-200',
     system:         'bg-purple-50 text-purple-600 border-purple-200',
   };
-  const labels: Record<string, string> = {
-    infrastruktura: 'IoT',
-    rezerwacje:     'Rezerwacje',
-    system:         'System',
-  };
   return (
     <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded border ${colors[cat] ?? 'bg-zinc-100 text-zinc-500 border-zinc-200'}`}>
-      {labels[cat] ?? cat}
+      {t(`notifications.category.${cat}`, cat)}
     </span>
   );
 }
@@ -132,7 +129,7 @@ function NotificationRow({
           {item.hasThreshold && (
             <div>
               <label className="text-xs font-medium text-zinc-600 block mb-1">
-                Próg czasowy (minuty ciszy → alert)
+                {t('notifications.threshold_label')}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -339,6 +336,7 @@ export function NotificationsPage() {
 
   const groupedByCategory = CATEGORIES.map(cat => ({
     ...cat,
+    label: t(`notifications.category.${cat.key}`, cat.key),
     items: settings.filter(s => s.category === cat.key),
   }));
 
@@ -366,7 +364,7 @@ export function NotificationsPage() {
                 ? 'border-[#B03472] text-[#B03472]'
                 : 'border-transparent text-zinc-500 hover:text-zinc-700'
             }`}>
-            {tabKey === 'settings' ? `⚙️ ${t('notifications.settings.title')}` : tabKey === 'smtp' ? `📧 ${t('notifications.settings.smtp_title')}` : '📋 Log'}
+            {tabKey === 'settings' ? `⚙️ ${t('notifications.settings.title')}` : tabKey === 'smtp' ? `📧 ${t('notifications.settings.smtp_title')}` : `📋 ${t('notifications.log_tab')}`}
           </button>
         ))}
       </div>
@@ -407,7 +405,7 @@ export function NotificationsPage() {
                 <div className="border border-zinc-200 rounded-xl p-4 bg-zinc-50">
                   <h3 className="font-semibold text-zinc-700 text-sm mb-1">{t('notifications.settings.test_email')}</h3>
                   <p className="text-xs text-zinc-400 mb-3">
-                    Wyślij testowy email aby sprawdzić czy serwer pocztowy jest poprawnie skonfigurowany.
+                    {t('notifications.test_email_hint')}
                   </p>
                   <div className="flex gap-2">
                     <Btn size="sm" onClick={handleTest} loading={testing}>{t('notifications.settings.test_email')}</Btn>
@@ -423,7 +421,7 @@ export function NotificationsPage() {
               {/* SMTP hint — SA only */}
               {isSA && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-blue-700 mb-1">Konfiguracja SMTP (zmienne środowiskowe)</p>
+                  <p className="text-xs font-semibold text-blue-700 mb-1">{t('notifications.smtp_env_hint')}</p>
                   <pre className="text-[11px] text-blue-600 leading-relaxed">{
 `SMTP_HOST=smtp.sendgrid.net
 SMTP_PORT=587
@@ -444,11 +442,11 @@ SMTP_FROM=Reserti <noreply@reserti.pl>`
         <div className="space-y-6">
           <SmtpConfigSection />
           <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-zinc-600 mb-2">Jak to działa?</p>
+            <p className="text-xs font-semibold text-zinc-600 mb-2">{t('notifications.smtp_how_title')}</p>
             <ul className="text-xs text-zinc-500 space-y-1.5 list-none">
-              <li>📧 <strong>Własna skrzynka</strong> — emaile wysyłane są z Twojego adresu (np. noreply@firma.pl). Pracownicy widzą email Twojej firmy, nie Reserti.</li>
-              <li>🌐 <strong>Globalna skrzynka</strong> — emaile wysyłane przez administratora systemu Reserti. Nie wymaga konfiguracji.</li>
-              <li>🔒 <strong>Bezpieczeństwo</strong> — hasło SMTP jest szyfrowane AES-256-GCM przed zapisem. Nigdy nie jest zwracane przez API.</li>
+              <li>📧 <strong>{t('notifications.smtp_own_label')}</strong> — {t('notifications.smtp_how_own')}</li>
+              <li>🌐 <strong>{t('notifications.smtp_global_label')}</strong> — {t('notifications.smtp_how_global')}</li>
+              <li>🔒 <strong>{t('notifications.smtp_secure_label')}</strong> — {t('notifications.smtp_how_secure')}</li>
             </ul>
           </div>
         </div>
@@ -464,7 +462,7 @@ SMTP_FROM=Reserti <noreply@reserti.pl>`
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-zinc-100">
-                    {['Typ', 'Temat', 'Odbiorcy', 'Data', 'Status'].map(h => (
+                    {[t('notifications.log.col_type'), t('notifications.log.col_subject'), t('notifications.log.col_recipients'), t('notifications.log.col_date'), t('notifications.log.col_status')].map(h => (
                       <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>

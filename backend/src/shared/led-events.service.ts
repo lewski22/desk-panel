@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
-export type LedState = 'OCCUPIED'|'FREE'|'RESERVED'|'ERROR';
+export type LedState = 'OCCUPIED'|'FREE'|'RESERVED'|'ERROR'|'GUEST_RESERVED';
 export interface LedEvent { deskId: string; state: LedState; }
 @Injectable()
 export class LedEventsService {

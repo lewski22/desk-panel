@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { NfcCardModal } from '../components/users/NfcCardModal';
@@ -26,12 +26,40 @@ export function UsersPage() {
   const [retDays,  setRetDays]  = useState(30);
   const [busy,     setBusy]     = useState(false);
   const [err,      setErr]      = useState('');
+  // FEATURE P4-1: filter state
+  const [search,     setSearch]     = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [cardFilter, setCardFilter] = useState<''|'has'|'none'>();
 
   const currentUserRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? '{}')?.role ?? ''; } catch { return ''; }
   }, []);
 
   const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
+
+  // FEATURE P4-1: reset filters when tab switches
+  const handleTabChange = useCallback((next: TabType) => {
+    setTab(next);
+    setSearch(''); setRoleFilter(''); setCardFilter('');
+  }, []);
+
+  // FEATURE P4-1: filtered list
+  const filtered = useMemo(() => {
+    let list = tab === 'active' ? users : deactivated;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(u =>
+        `${u.firstName ?? ''} ${u.lastName ?? ''}`.toLowerCase().includes(q) ||
+        (u.email ?? '').toLowerCase().includes(q)
+      );
+    }
+    if (roleFilter) list = list.filter(u => u.role === roleFilter);
+    if (cardFilter === 'has')  list = list.filter(u => !!u.cardUid);
+    if (cardFilter === 'none') list = list.filter(u => !u.cardUid);
+    return list;
+  }, [users, deactivated, tab, search, roleFilter, cardFilter]);
+
+  const anyFilterActive = !!(search || roleFilter || cardFilter);
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -119,13 +147,50 @@ export function UsersPage() {
 
       <div className="flex gap-1 mb-4 p-1 bg-zinc-100 rounded-xl w-fit">
         {(['active','deactivated'] as TabType[]).map(tabKey => (
-          <button key={tabKey} onClick={() => setTab(tabKey)}
+          <button key={tabKey} onClick={() => handleTabChange(tabKey)}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === tabKey ? 'bg-white shadow text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}`}>
             {tabKey === 'active'
               ? t('users.tabs.active', { count: users.length })
               : t('users.tabs.deactivated', { count: deactivated.length })}
           </button>
         ))}
+      </div>
+
+      {/* FEATURE P4-1: filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="relative w-full sm:w-64">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={t('users.filter.search_placeholder')}
+            className="w-full pl-8 pr-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </div>
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
+          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white">
+          <option value="">{t('users.filter.all_roles')}</option>
+          <option value="SUPER_ADMIN">{t('users.roles.SUPER_ADMIN')}</option>
+          <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
+          <option value="STAFF">{t('users.roles.STAFF')}</option>
+          <option value="END_USER">{t('users.roles.END_USER')}</option>
+        </select>
+        <select value={cardFilter ?? ''} onChange={e => setCardFilter(e.target.value as any)}
+          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white">
+          <option value="">{t('users.filter.all_cards')}</option>
+          <option value="has">{t('users.filter.has_card')}</option>
+          <option value="none">{t('users.filter.no_card')}</option>
+        </select>
+        {anyFilterActive && (
+          <>
+            <span className="text-xs text-zinc-400">{t('users.filter.results', { count: filtered.length })}</span>
+            <button onClick={() => { setSearch(''); setRoleFilter(''); setCardFilter(''); }}
+              className="text-xs text-brand hover:underline">
+              {t('users.filter.clear')}
+            </button>
+          </>
+        )}
       </div>
 
       {err && <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-600 text-sm">{err}</div>}
@@ -135,8 +200,8 @@ export function UsersPage() {
           t('users.table.name'), { label: t('users.table.email'), hideOnMobile: true },
           t('users.table.role'), { label: t('users.table.card'), hideOnMobile: true },
           { label: t('users.table.active'), hideOnMobile: true }, '',
-        ]} empty={!users.length}>
-          {users.map(u => (
+        ]} empty={!filtered.length}>
+          {filtered.map(u => (
             <TR key={u.id}>
               <TD>{u.firstName} {u.lastName}</TD>
               <TD mono hideOnMobile>{u.email}</TD>
@@ -177,8 +242,8 @@ export function UsersPage() {
           t('users.table.name'), { label: t('users.table.email'), hideOnMobile: true },
           t('users.table.role'), { label: t('users.table.deactivated'), hideOnMobile: true },
           { label: t('users.table.remove_in'), hideOnMobile: true }, '',
-        ]} empty={!deactivated.length}>
-          {deactivated.map(u => {
+        ]} empty={!filtered.length}>
+          {filtered.map(u => {
             const daysLeft = u.scheduledDeleteAt
               ? Math.max(0, Math.ceil((new Date(u.scheduledDeleteAt).getTime() - Date.now()) / 86400000))
               : null;

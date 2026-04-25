@@ -1,14 +1,14 @@
+// i18n audit P3
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
 
-// ALL_ROLES nie może wywoływać t() — jest poza komponentem React
 const ALL_ROLES = [
-  { key: 'SUPER_ADMIN',  label: 'Super Admin',  color: 'bg-purple-100 text-purple-700' },
-  { key: 'OFFICE_ADMIN', label: 'Office Admin', color: 'bg-blue-100 text-blue-700' },
-  { key: 'STAFF',        label: 'Staff',        color: 'bg-teal-100 text-teal-700' },
-  { key: 'END_USER',     label: 'Użytkownik',   color: 'bg-zinc-100 text-zinc-600' },
+  { key: 'SUPER_ADMIN',  color: 'bg-purple-100 text-purple-700' },
+  { key: 'OFFICE_ADMIN', color: 'bg-blue-100 text-blue-700' },
+  { key: 'STAFF',        color: 'bg-teal-100 text-teal-700' },
+  { key: 'END_USER',     color: 'bg-zinc-100 text-zinc-600' },
 ];
 
 const TYPE_ICON: Record<string, string> = {
@@ -22,10 +22,11 @@ const TYPE_ICON: Record<string, string> = {
 };
 
 function RoleTag({ role }: { role: string }) {
+  const { t } = useTranslation();
   const r = ALL_ROLES.find(x => x.key === role);
   return (
     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${r?.color ?? 'bg-zinc-100 text-zinc-500'}`}>
-      {r?.label ?? role}
+      {t(`roles.${role}`, role)}
     </span>
   );
 }
@@ -57,7 +58,7 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
   if (result) return (
     <Modal title={t('notifications.rules.saved')} onClose={onClose}>
       <p className="text-green-600 font-semibold mb-2">{t('notifications.rules.saved')}</p>
-      <p className="text-sm text-zinc-500">Dostarczono do <strong>{result.count}</strong> użytkowników.</p>
+      <p className="text-sm text-zinc-500" dangerouslySetInnerHTML={{ __html: t('notifications.announce.delivered', { count: result.count }) }} />
       <div className="mt-4"><Btn onClick={onClose}>{t('btn.cancel')}</Btn></div>
     </Modal>
   );
@@ -82,7 +83,7 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
                     ? 'bg-[#B03472] text-white border-[#B03472]'
                     : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
                 }`}>
-                {r.label}
+                {t(`roles.${r.key}`, r.key)}
               </button>
             ))}
           </div>
@@ -163,10 +164,7 @@ export function NotificationRulesPage() {
 
       {/* Info */}
       <div className="mb-5 p-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
-        <strong>Jak to działa:</strong> Każda reguła określa które powiadomienie pojawia się
-        u użytkowników z daną rolą. Powiadomienia są wspólne dla wszystkich firm —
-        każda firma widzi tylko powiadomienia dotyczące jej infrastruktury.
-        Ogłoszenia systemowe trafiają do wszystkich wybranych ról we wszystkich firmach.
+        <strong>{t('notifications.announce.rules_how')}</strong> {t('notifications.announce.rules_how_body')}
       </div>
 
       {loading ? (
@@ -214,7 +212,7 @@ export function NotificationRulesPage() {
                                 ? 'bg-[#B03472] text-white border-[#B03472]'
                                 : 'border-zinc-200 text-zinc-400 hover:border-zinc-300'
                             } disabled:cursor-not-allowed`}>
-                            {r.label}
+                            {t(`roles.${r.key}`, r.key)}
                           </button>
                         );
                       })}

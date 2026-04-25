@@ -133,8 +133,14 @@ export class ReservationsService {
       throw new ForbiddenException('Biurko należy do innej organizacji');
     }
 
+    // FIX P2-4: specific errors per status so the frontend can show meaningful messages
+    if (desk.status === 'MAINTENANCE') {
+      throw new ConflictException(
+        'To biurko jest aktualnie w trybie serwisowym i nie można go zarezerwować.',
+      );
+    }
     if (desk.status !== 'ACTIVE') {
-      throw new ConflictException('Desk is not available for booking');
+      throw new ConflictException('To biurko jest nieaktywne.');
     }
 
     // Validate booking times against office opening hours (wall-clock UTC convention)
@@ -179,22 +185,26 @@ export class ReservationsService {
 
     const reservation = await this.prisma.reservation.create({
       data: {
-        deskId:    dto.deskId,
+        deskId:          dto.deskId,
         userId,
-        date:      new Date(dto.date),
-        startTime: new Date(dto.startTime),
-        endTime:   new Date(dto.endTime),
-        notes:     dto.notes,
-        status:    ReservationStatus.CONFIRMED,
+        date:            new Date(dto.date),
+        startTime:       new Date(dto.startTime),
+        endTime:         new Date(dto.endTime),
+        notes:           dto.notes,
+        status:          ReservationStatus.CONFIRMED,
+        reservationType: dto.reservationType ?? 'STANDARD',
       },
       include: {
         desk: { select: { name: true, code: true } },
       },
     });
 
-    // ── Notify beacon + in-app map (LED: RESERVED state) ────────
+    // ── Notify beacon + in-app map (LED state depends on reservation type) ─
     this._notifyBeaconReservation(dto.deskId, reservation.startTime, reservation.endTime).catch(() => {});
-    this.ledEvents.emit(dto.deskId, 'RESERVED');
+    const ledState = (dto.reservationType === 'GUEST' || dto.reservationType === 'TEAM')
+      ? 'GUEST_RESERVED'
+      : 'RESERVED';
+    this.ledEvents.emit(dto.deskId, ledState);
 
     // ── Email notification ───────────────────────────────────────
     this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});

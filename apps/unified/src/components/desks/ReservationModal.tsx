@@ -1,6 +1,18 @@
 import { localDateStr, localDateTimeISO } from '../../utils/date';
 import { useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+// FIX P1-4: returns earliest allowed start time for a given date
+function getMinTime(date: string, openTime: string): string {
+  if (date !== localDateStr()) return openTime;
+  const now = new Date();
+  const minutes = now.getHours() * 60 + now.getMinutes() + 15;
+  const rounded = Math.ceil(minutes / 15) * 15;
+  const h = String(Math.floor(rounded / 60)).padStart(2, '0');
+  const m = String(rounded % 60).padStart(2, '0');
+  const roundedTime = `${h}:${m}`;
+  return roundedTime > openTime ? roundedTime : openTime;
+}
 import { DeskMapItem, LocationLimits } from '../../types/index';
 import { appApi } from '../../api/client';
 import { RecurringToggle, type RecurrenceConfig } from '../reservations/RecurringToggle';
@@ -23,15 +35,28 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
     return localDateStr(d);
   })();
   const [date,       setDate]      = useState(today);
-  const [start,      setStart]     = useState(limits?.openTime  ?? '09:00');
+  const openTime = limits?.openTime ?? '00:00';
+  const [start,      setStart]     = useState(() => getMinTime(today, limits?.openTime ?? '09:00')); // FIX P1-4
   const [end,        setEnd]       = useState(limits?.closeTime ?? '17:00');
   const [userId,     setUserId]    = useState('');
   const [busy,       setBusy]      = useState(false);
   const [err,        setErr]       = useState('');
   const [recurrence, setRecurrence] = useState<RecurrenceConfig>({ enabled: false, rule: '', label: '' });
   const [recurResult, setRecurResult] = useState<any>(null);
+  const [reservationType, setReservationType] = useState<'STANDARD' | 'GUEST' | 'TEAM'>('STANDARD');
+
+  // FIX P1-4: advance start time when date changes to today
+  useEffect(() => {
+    const min = getMinTime(date, openTime);
+    if (start < min) setStart(min);
+  }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async () => {
+    // FIX P1-4: client-side guard against past start times
+    const minTime = getMinTime(date, openTime);
+    if (date === localDateStr() && start < minTime) {
+      setErr('Nie można zarezerwować biurka na przeszłą godzinę.'); return;
+    }
     if (start >= end) { setErr(t('desks.reserve.errors.end_after_start')); return; }
     if (limits) {
       const [sh, sm] = start.split(':').map(Number);
@@ -50,6 +75,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
       const endISO   = localDateTimeISO(date, end);
       const body: any = { deskId: desk.id, date, startTime: startISO, endTime: endISO };
       if (!isEndUser && userId) body.targetUserId = userId;
+      if (!isEndUser && reservationType !== 'STANDARD') body.reservationType = reservationType;
 
       if (recurrence.enabled && recurrence.rule) {
         const result = await appApi.reservations.createRecurring({ ...body, recurrenceRule: recurrence.rule });
@@ -64,6 +90,9 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
     } catch (e: any) { setErr(e.message ?? t('desks.reserve.errors.failed')); }
     setBusy(false);
   };
+
+  // FIX P2-4: block reservation modal for MAINTENANCE desks
+  const isMaintenance = desk.status === 'MAINTENANCE';
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
@@ -80,7 +109,12 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
         </div>
         <div className="px-5 py-4 flex flex-col gap-4 overflow-y-auto flex-1"
              style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
-          {err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
+          {isMaintenance && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
+              ⚠ {t('desks.actions.maintenance_blocked', 'Biurko w serwisie — rezerwacja niemożliwa')}
+            </div>
+          )}
+          {!isMaintenance && err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
 
           {!isEndUser && (
             <div>
@@ -97,6 +131,30 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
             </div>
           )}
 
+          {!isEndUser && (
+            <div>
+              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">
+                {t('desks.reserve.type_label')}
+                <span className="text-zinc-300 font-normal ml-1">{t('desks.reserve.type_hint')}</span>
+              </label>
+              <div className="flex gap-2">
+                {(['STANDARD', 'GUEST', 'TEAM'] as const).map(type => (
+                  <button key={type} type="button"
+                    onClick={() => setReservationType(type)}
+                    className={`flex-1 py-2 rounded-xl border text-xs font-semibold transition-all ${
+                      reservationType === type
+                        ? type === 'STANDARD'
+                          ? 'bg-sky-50 border-sky-300 text-sky-700'
+                          : 'bg-amber-50 border-amber-300 text-amber-700'
+                        : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'
+                    }`}>
+                    {t(`desks.reserve.type.${type}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.date')}</label>
             <input type="date" value={date} min={today} max={maxDate} onChange={e => setDate(e.target.value)}
@@ -106,7 +164,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.from')}</label>
-              <input type="time" value={start} onChange={e => setStart(e.target.value)}
+              <input type="time" value={start} min={getMinTime(date, openTime)} onChange={e => setStart(e.target.value)} // FIX P1-4
                 className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
@@ -146,7 +204,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
               {t('btn.cancel')}
             </button>
-            <button onClick={submit} disabled={busy}
+            <button onClick={submit} disabled={busy || isMaintenance} // FIX P2-4
               className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-50">
               {busy
                 ? <span className="inline-flex items-center gap-2 justify-center">

@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService }                    from '../../database/prisma.service';
 import { ExportReportDto }                  from './dto/export-report.dto';
+import Holidays                             from 'date-holidays';
 
 export interface HeatmapCell {
   day:   number; // 0=Mon … 6=Sun
@@ -385,6 +386,88 @@ export class ReportsService {
         zones:             occupiedByZone,
       };
     }));
+  }
+
+  // ── Desk Utilization Report (P4-B2) ────────────────────────────
+  async getUtilization(orgId: string, from: Date, to: Date, locationId?: string) {
+    const desks = await this.prisma.desk.findMany({
+      where: {
+        location: { organizationId: orgId, ...(locationId ? { id: locationId } : {}) },
+        status: 'ACTIVE',
+      },
+      select: {
+        id: true, name: true, code: true, floor: true, zone: true,
+        location: { select: { id: true, name: true, country: true } },
+        reservations: {
+          where: {
+            date:   { gte: from, lte: to },
+            status: { in: ['CONFIRMED', 'COMPLETED', 'EXPIRED'] },
+          },
+          select: { id: true },
+        },
+      },
+    });
+
+    // Group by location to avoid re-computing workdays per desk
+    const workdaysByLoc = new Map<string, number>();
+    for (const d of desks) {
+      const locKey = d.location.id;
+      if (!workdaysByLoc.has(locKey)) {
+        workdaysByLoc.set(locKey, this._countWorkdays(from, to, d.location.country ?? undefined));
+      }
+    }
+
+    return desks.map(d => {
+      const workdays = workdaysByLoc.get(d.location.id) ?? 0;
+      return {
+        deskId:       d.id,
+        deskName:     d.name,
+        deskCode:     d.code,
+        floor:        d.floor,
+        zone:         d.zone,
+        locationId:   d.location.id,
+        locationName: d.location.name,
+        reservations: d.reservations.length,
+        workdays,
+        utilizationPct: workdays > 0
+          ? Math.round((d.reservations.length / workdays) * 100)
+          : 0,
+      };
+    }).sort((a, b) => b.utilizationPct - a.utilizationPct);
+  }
+
+  private _countWorkdays(from: Date, to: Date, country?: string): number {
+    // Build holiday set for the range if country code provided
+    let holidayDates: Set<string> | null = null;
+    if (country) {
+      try {
+        const hd = new Holidays(country);
+        const year = from.getFullYear();
+        const toYear = to.getFullYear();
+        const allHolidays: string[] = [];
+        for (let y = year; y <= toYear; y++) {
+          hd.getHolidays(y)
+            .filter(h => h.type === 'public')
+            .forEach(h => allHolidays.push(h.date.slice(0, 10)));
+        }
+        holidayDates = new Set(allHolidays);
+      } catch {}
+    }
+
+    let count = 0;
+    const cursor = new Date(from);
+    cursor.setHours(0, 0, 0, 0);
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    while (cursor <= end) {
+      const dow = cursor.getDay();
+      if (dow !== 0 && dow !== 6) {
+        const dateStr = cursor.toISOString().slice(0, 10);
+        if (!holidayDates || !holidayDates.has(dateStr)) count++;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return count;
   }
 
   // ── Utils ────────────────────────────────────────────────────────

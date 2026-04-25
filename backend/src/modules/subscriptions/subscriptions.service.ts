@@ -263,6 +263,7 @@ export class SubscriptionsService {
       },
     });
 
+    // FIX P1-5: totalMrr is in groszach (integer cents) — divide by 100 for display
     const totalMrr = orgs.reduce((sum, o) => sum + (o.mrr ?? 0), 0);
 
     const expiringSoon  = orgs.filter(o => {

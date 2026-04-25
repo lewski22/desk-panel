@@ -1,4 +1,4 @@
-import { IsString, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsBoolean, IsIn } from 'class-validator';
 
 export class CreateReservationDto {
   @IsString()
@@ -24,4 +24,9 @@ export class CreateReservationDto {
   @IsOptional()
   @IsBoolean()
   walkIn?: boolean;
+
+  // FEATURE P4-B1: guest/team reservation type for amber LED
+  @IsOptional()
+  @IsIn(['STANDARD', 'GUEST', 'TEAM'])
+  reservationType?: 'STANDARD' | 'GUEST' | 'TEAM';
 }

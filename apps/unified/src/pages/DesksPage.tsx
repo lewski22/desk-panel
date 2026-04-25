@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import QRCode from 'qrcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -75,6 +75,10 @@ export function DesksPage() {
   const [form,    setForm]    = useState({ name:'', code:'', floor:'', zone:'', locId });
   const [busy,    setBusy]    = useState(false);
   const [err,     setErr]     = useState('');
+  // FEATURE P4-2: filter state
+  const [search,       setSearch]       = useState('');
+  const [floorFilter,  setFloorFilter]  = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     appApi.locations.listAll().then(locs => {
@@ -91,6 +95,30 @@ export function DesksPage() {
     setLoading(false);
   };
   useEffect(() => { load(); }, [locId]);
+
+  // FEATURE P4-2: reset filters on location change
+  useEffect(() => { setSearch(''); setFloorFilter(''); setStatusFilter(''); }, [locId]);
+
+  // FEATURE P4-2: derived floors list + filtered desks
+  const uniqueFloors = useMemo(() =>
+    [...new Set(desks.map(d => d.floor).filter(Boolean))].sort() as string[],
+  [desks]);
+
+  const filtered = useMemo(() => {
+    let list = desks;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.code.toLowerCase().includes(q)
+      );
+    }
+    if (floorFilter)  list = list.filter(d => d.floor === floorFilter);
+    if (statusFilter) list = list.filter(d => d.status === statusFilter);
+    return list;
+  }, [desks, search, floorFilter, statusFilter]);
+
+  const anyFilterActive = !!(search || floorFilter || statusFilter);
 
   const switchLoc = (id: string) => { setLocId(id); localStorage.setItem('desks_loc', id); };
   const openEdit  = (desk: any)  => { setTarget(desk); setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '', locId }); setModal('edit'); };
@@ -132,8 +160,10 @@ export function DesksPage() {
     catch (e: any) { setErr(e.message); }
   };
 
+  // FIX P0-2: admin table shows lifecycle status (ACTIVE/INACTIVE), not occupancy —
+  // using 'desks.stats.free' (= "Wolne") for ACTIVE was misleading; use neutral admin labels
   const STATUS_LABEL: Record<string, string> = {
-    ACTIVE: t('desks.stats.free'), INACTIVE: t('desks.actions.deactivate'), MAINTENANCE: t('desks.actions.maintenance'),
+    ACTIVE: t('desks.status.active'), INACTIVE: t('desks.status.inactive'), MAINTENANCE: t('desks.actions.maintenance'),
   };
 
   if (loading && !desks.length) return <Spinner />;
@@ -160,14 +190,53 @@ export function DesksPage() {
         </div>
       )}
 
+      {/* FEATURE P4-2: filter bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t('desks.filter.search_placeholder')}
+          className="w-full sm:w-48 border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+        />
+        {uniqueFloors.length >= 2 && (
+          <select value={floorFilter} onChange={e => setFloorFilter(e.target.value)}
+            className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white">
+            <option value="">{t('desks.filter.all_floors')}</option>
+            {uniqueFloors.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        )}
+        <div className="flex gap-1">
+          {(['', 'ACTIVE', 'MAINTENANCE', 'INACTIVE'] as const).map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                statusFilter === s
+                  ? 'bg-brand text-white border-brand'
+                  : 'border-zinc-200 text-zinc-500 hover:border-zinc-300 bg-white'
+              }`}>
+              {s === '' ? t('desks.filter.all_statuses') : (STATUS_LABEL[s] ?? s)}
+            </button>
+          ))}
+        </div>
+        {anyFilterActive && (
+          <>
+            <span className="text-xs text-zinc-400">{t('desks.filter.results', { count: filtered.length, total: desks.length })}</span>
+            <button onClick={() => { setSearch(''); setFloorFilter(''); setStatusFilter(''); }}
+              className="text-xs text-brand hover:underline">
+              {t('desks.filter.clear')}
+            </button>
+          </>
+        )}
+      </div>
+
       {err && <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-600 text-sm">{err}</div>}
 
       <Table headers={[
         t('desks.col.location'), t('desks.col.code'), t('desks.col.name'),
         t('desks.col.desk_id'), t('desks.col.floor'), t('desks.col.zone'),
         t('desks.col.beacon'), t('desks.col.status'), t('desks.col.actions'),
-      ]} empty={!desks.length}>
-        {desks.map(d => (
+      ]} empty={!filtered.length}>
+        {filtered.map(d => (
           <TR key={d.id}>
             <TD><span className="text-xs text-zinc-500">{d.location?.name ?? '—'}</span></TD>
             <TD mono>{d.code}</TD>

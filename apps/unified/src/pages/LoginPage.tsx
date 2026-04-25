@@ -126,6 +126,7 @@ export function LoginPage({ onLogin }: Props) {
   return (
     <>
       {showEntra && <EntraIDModal onLogin={onLogin} onClose={() => setShowEntra(false)} />}
+      {/* intentional dark theme — standalone auth page outside AppLayout */}{/* FIX P2-1 */}
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4" style={{ fontFamily: "'DM Sans',sans-serif" }}>
         <div className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: 'linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)', backgroundSize: '48px 48px' }} />

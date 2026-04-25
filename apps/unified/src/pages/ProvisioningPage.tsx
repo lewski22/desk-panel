@@ -1,3 +1,4 @@
+// i18n audit P3
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
@@ -75,7 +76,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       setGwErr(`✓ ${r.oldVersion} → ${r.newVersion}`);
       setTimeout(load, 18_000);  // odśwież po restarcie
     } catch (e: any) {
-      setGwErr(`Błąd: ${e.message ?? e}`);
+      setGwErr(`${t('common.error')}: ${e.message ?? e}`);
     }
   };
 
@@ -102,18 +103,30 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const GW_COLS = [
+    t('provisioning.gateway.col_name'),
+    t('provisioning.gateway.col_id'),
+    t('provisioning.gateway.col_office'),
+    t('provisioning.gateway.col_ip'),
+    t('provisioning.gateway.col_version'),
+    t('provisioning.gateway.col_devices'),
+    t('provisioning.gateway.col_status'),
+    t('provisioning.gateway.col_last_seen'),
+    '',
+  ];
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-zinc-700">Gateway'e</h2>
-        <Btn onClick={openInstall}>+ Nowy gateway</Btn>
+        <h2 className="font-semibold text-zinc-700">{t('provisioning.gateway.gateways_heading')}</h2>
+        <Btn onClick={openInstall}>{t('provisioning.gateway.new_gateway')}</Btn>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-zinc-100">
         <table className="w-full text-left text-sm">
           <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>{['Nazwa','ID','Biuro','IP','Wersja','Urządzenia','Status','Ostatni kontakt',''].map(h =>
-              <th key={h} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
+            <tr>{GW_COLS.map((h, i) =>
+              <th key={i} className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
             )}</tr>
           </thead>
           <tbody>
@@ -131,10 +144,10 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                 diagMsg   = t('provisioning.gateway.never_connected');
                 diagColor = 'text-amber-600 bg-amber-50 border-amber-200';
               } else if (!gw.isOnline && stale) {
-                diagMsg   = `Offline od ${minutesSince} min — sprawdź: journalctl -u reserti-gateway -n 20`;
+                diagMsg   = t('provisioning.gateway.offline_diag', { count: minutesSince });
                 diagColor = 'text-red-600 bg-red-50 border-red-200';
               } else if (gw.isOnline && stale) {
-                diagMsg   = `Brak heartbeat od ${minutesSince} min — sprawdź: systemctl status reserti-gateway`;
+                diagMsg   = t('provisioning.gateway.stale_diag', { count: minutesSince });
                 diagColor = 'text-amber-600 bg-amber-50 border-amber-200';
               }
 
@@ -150,7 +163,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1">
                       <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{gw.id}</code>
-                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-brand transition-colors" title="Kopiuj ID">⎘</button>
+                      <button onClick={() => navigator.clipboard.writeText(gw.id)} className="text-zinc-400 hover:text-brand transition-colors" title={t('provisioning.gateway.copy_id')}>⎘</button>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-xs text-zinc-500">{gw.location?.name ?? '—'}</td>
@@ -170,20 +183,26 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                       {gw.ipAddress && (
                         <button onClick={() => handleUpdate(gw.id, gw.name)}
                           className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-sky-100 text-zinc-600 hover:text-sky-700 transition-colors"
-                          title="Zaktualizuj gateway do najnowszej wersji">↑ Update</button>
+                          title={t('provisioning.gateway.update_title')}>
+                          {t('provisioning.gateway.update_btn')}
+                        </button>
                       )}
                       <button onClick={() => handleRotateSecret(gw.id)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-amber-100 text-zinc-600 hover:text-amber-700 transition-colors"
-                        title="Rotuj klucz (15min okno)">🔑 Rotuj</button>
+                        title={t('provisioning.gateway.rotate_title')}>
+                        🔑 {t('provisioning.gateway.rotate_btn')}
+                      </button>
                       <button onClick={() => handleDelete(gw.id, gw.name)}
                         className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-red-100 text-zinc-600 hover:text-red-600 transition-colors"
-                        title="Usuń gateway">Usuń</button>
+                        title={t('provisioning.gateway.delete_title')}>
+                        {t('provisioning.gateway.delete_btn')}
+                      </button>
                     </div>
                   </td>
                 </tr>
                 {diagMsg && (
                   <tr className="border-b border-zinc-50">
-                    <td colSpan={8} className="px-4 py-2">
+                    <td colSpan={9} className="px-4 py-2">
                       <div className={`flex items-start gap-2 text-xs rounded-lg border px-3 py-2 ${diagColor}`}>
                         <span className="shrink-0 mt-0.5">⚠</span>
                         <div>
@@ -198,7 +217,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
               );
             })}
             {gateways.length === 0 && (
-              <tr><td colSpan={8} className="py-8 text-center text-zinc-400 text-sm">
+              <tr><td colSpan={9} className="py-8 text-center text-zinc-400 text-sm">
                 {t('provisioning.device.no_gateways')}
               </td></tr>
             )}
@@ -207,7 +226,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
       </div>
 
       {/* Modal: token instalacyjny */}
-      <Modal open={modal === 'install'} title="Dodaj gateway" onClose={() => setModal(null)}>
+      <Modal open={modal === 'install'} title={t('provisioning.gateway.install_title')} onClose={() => setModal(null)}>
         {busy && !tokenResult && (
           <div className="flex justify-center py-8">
             <div className="w-6 h-6 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
@@ -216,15 +235,15 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
         {tokenResult && (
           <div className="space-y-4">
             <div className="bg-zinc-50 rounded-xl p-4 border border-zinc-200">
-              <p className="text-sm font-semibold text-zinc-700 mb-2">Jak zainstalować gateway:</p>
+              <p className="text-sm font-semibold text-zinc-700 mb-2">{t('provisioning.gateway.install_how')}</p>
               <ol className="text-sm text-zinc-600 space-y-1.5 list-decimal list-inside">
-                <li>Włącz Raspberry Pi (lub inne urządzenie z Linuksem)</li>
-                <li>Otwórz terminal (SSH lub lokalnie)</li>
-                <li>Wklej poniższą komendę i naciśnij Enter</li>
+                <li>{t('provisioning.gateway.install_step1')}</li>
+                <li>{t('provisioning.gateway.install_step2')}</li>
+                <li>{t('provisioning.gateway.install_step3')}</li>
               </ol>
             </div>
             <div>
-              <p className="text-xs text-zinc-400 mb-1.5 font-medium">Komenda instalacyjna (ważna 24h, jednorazowa)</p>
+              <p className="text-xs text-zinc-400 mb-1.5 font-medium">{t('provisioning.gateway.install_cmd_label')}</p>
               <div className="bg-zinc-950 rounded-xl p-4 flex items-start gap-3">
                 <code className="text-emerald-400 text-xs font-mono flex-1 break-all leading-relaxed">{tokenResult.installCmd}</code>
                 <button onClick={() => copy(tokenResult.installCmd)}
@@ -235,11 +254,11 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
             </div>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-zinc-50 rounded-lg p-3">
-                <p className="text-zinc-400 mb-0.5">Biuro</p>
+                <p className="text-zinc-400 mb-0.5">{t('provisioning.gateway.install_office_label')}</p>
                 <p className="font-medium text-zinc-700">{tokenResult.location?.name}</p>
               </div>
               <div className="bg-zinc-50 rounded-lg p-3">
-                <p className="text-zinc-400 mb-0.5">Ważna do</p>
+                <p className="text-zinc-400 mb-0.5">{t('provisioning.gateway.install_valid_until')}</p>
                 <p className="font-medium text-zinc-700">
                   {new Date(tokenResult.expiresAt).toLocaleString('pl-PL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}
                 </p>
@@ -249,13 +268,13 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
               <span className="text-amber-500 shrink-0">⚠</span>
               <p className="text-xs text-amber-700">{t('provisioning.gateway.token_single_use')}</p>
             </div>
-            <div className="flex justify-end"><Btn onClick={() => setModal(null)}>Zamknij</Btn></div>
+            <div className="flex justify-end"><Btn onClick={() => setModal(null)}>{t('common.close')}</Btn></div>
           </div>
         )}
       </Modal>
 
       {/* Regenerate secret modal */}
-      <Modal open={modal === 'secret'} title="Nowy secret gateway" onClose={() => { setModal(null); setSecretResult(null); }}>
+      <Modal open={modal === 'secret'} title={t('provisioning.gateway.secret_modal_title')} onClose={() => { setModal(null); setSecretResult(null); }}>
         {secretResult && (
           <div className="space-y-3">
             {secretResult.gatewayReached ? (
@@ -264,7 +283,7 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
               </div>
             ) : (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm font-medium">
-                ⚠ Nie można połączyć z gateway — zaktualizuj ręcznie przed upływem okna
+                ⚠ {t('provisioning.gateway.secret_unreachable')}
               </div>
             )}
             <div className="bg-zinc-950 rounded-xl p-4 font-mono text-xs text-zinc-200 space-y-1">
@@ -276,11 +295,13 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
                 ✓ {t('provisioning.gateway.key_active')}
               </div>
               <div className="flex-1 p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-600">
-                ⏱ Stary klucz wygasa: {secretResult.expiresAt ? new Date(secretResult.expiresAt).toLocaleTimeString('pl-PL') : '—'}
+                ⏱ {t('provisioning.gateway.secret_old_expires')}: {secretResult.expiresAt ? new Date(secretResult.expiresAt).toLocaleTimeString('pl-PL') : '—'}
               </div>
             </div>
-            <p className="text-xs text-zinc-400">Ręcznie: edytuj <code className="bg-zinc-100 px-1 rounded">/opt/reserti-gateway/.env</code> i uruchom <code className="bg-zinc-100 px-1 rounded">systemctl restart reserti-gateway</code></p>
-            <div className="flex justify-end"><Btn onClick={() => { setModal(null); setSecretResult(null); }}>Zamknij</Btn></div>
+            <p className="text-xs text-zinc-400">
+              {t('provisioning.gateway.secret_manual_hint')} <code className="bg-zinc-100 px-1 rounded">/opt/reserti-gateway/.env</code> {t('provisioning.gateway.secret_restart_hint')} <code className="bg-zinc-100 px-1 rounded">systemctl restart reserti-gateway</code>
+            </p>
+            <div className="flex justify-end"><Btn onClick={() => { setModal(null); setSecretResult(null); }}>{t('common.close')}</Btn></div>
           </div>
         )}
       </Modal>
@@ -618,7 +639,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
           </div>
           {outdatedCount > 0 && (
             <span className="text-xs text-sky-600 font-medium">
-              {outdatedCount} {outdatedCount === 1 ? 'beacon' : 'beaconów'} wymaga aktualizacji
+              {t('provisioning.device.beacon_count_outdated', { count: outdatedCount })}
             </span>
           )}
         </div>
@@ -838,14 +859,14 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                   {t('common.cancel')}
                 </Btn>
                 <Btn onClick={provision} loading={busy}>
-                  Provisioning
+                  {t('provisioning.device.provision_btn')}
                 </Btn>
               </div>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-sm text-emerald-600 font-semibold">
-                ✓ Beacon zarejestrowany pomyślnie
+                ✓ {t('provisioning.device.provisioned_ok')}
               </p>
               <div className="bg-zinc-50 rounded-xl p-4 space-y-2 font-mono text-xs">
                 {[
@@ -861,7 +882,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
                 ))}
               </div>
               <p className="text-xs text-zinc-400">
-                Wklej powyższe przez Serial Monitor (115200 baud) gdy beacon jest w trybie provisioning.
+                {t('provisioning.device.provision_serial_hint')}
               </p>
               <div className="flex gap-2 justify-end">
                 <Btn
@@ -899,15 +920,15 @@ export function ProvisioningPage() {
             {t('provisioning.title')}
           </h1>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Rejestracja i zarządzanie gateway&apos;ami i beaconami
+            {t('provisioning.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
 
-          {/* Biuro switcher */}
+          {/* Office switcher */}
           {locations.length > 1 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400">Biuro:</span>
+              <span className="text-xs text-zinc-400">{t('provisioning.office_label')}</span>
               <select
                 value={activeLocId}
                 onChange={e => setLoc(e.target.value)}

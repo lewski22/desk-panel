@@ -22,19 +22,22 @@ import { RecommendationBanner } from '../components/recommendations/Recommendati
 import { localDateStr }         from '../utils/date';
 
 // ── Helpers ──────────────────────────────────────────────────
+// FIX P1-2: occupied = free desks count, total = active+online desks — invert thresholds
 function occupancyColor(occupied: number, total: number) {
-  const pct = total === 0 ? 0 : (occupied / total) * 100;
-  if (pct >= 90) return 'text-red-600 bg-red-50 border-red-200';
-  if (pct >= 70) return 'text-amber-600 bg-amber-50 border-amber-200';
-  return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+  const pct = total === 0 ? 100 : (occupied / total) * 100; // pct of FREE desks
+  if (pct <= 10) return 'text-red-600 bg-red-50 border-red-200';   // almost full
+  if (pct <= 30) return 'text-amber-600 bg-amber-50 border-amber-200'; // filling up
+  return 'text-emerald-600 bg-emerald-50 border-emerald-200'; // plenty free
 }
 
 // ── Location Tabs ─────────────────────────────────────────────
-function LocationTabs({ locations, activeId, desksPerLocation, onChange }: {
+function LocationTabs({ locations, activeId, desksPerLocation, onChange, userRole }: {
   locations: any[]; activeId: string;
   desksPerLocation: Record<string, { occupied: number; total: number }>;
   onChange: (id: string) => void;
+  userRole: string;
 }) {
+  const { t } = useTranslation();
   if (locations.length === 0) return null;
   if (locations.length === 1) return <p className="text-sm text-zinc-500 mb-4 font-medium">{locations[0].name}</p>;
   return (
@@ -43,11 +46,15 @@ function LocationTabs({ locations, activeId, desksPerLocation, onChange }: {
         const occ   = desksPerLocation[loc.id] ?? { occupied: 0, total: 0 };
         const active = loc.id === activeId;
         const color = occupancyColor(occ.occupied, occ.total);
+        // FEATURE P4-3A: gray out empty locations for END_USER
+        const isEmpty = occ.total === 0 && userRole === 'END_USER';
         return (
-          <button key={loc.id} onClick={() => onChange(loc.id)}
+          <button key={loc.id}
+            onClick={isEmpty ? undefined : () => onChange(loc.id)}
+            title={isEmpty ? t('deskmap.location_no_desks') : undefined}
             className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
               active ? 'bg-brand text-white border-brand shadow-sm' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-            }`}>
+            } ${isEmpty ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
             <span>{loc.name}</span>
             {occ.total > 0 && (
               <span className={`text-[10px] px-1.5 py-0.5 rounded-md border font-semibold ${active ? 'bg-white/20 text-white border-white/30' : color}`}>
@@ -174,9 +181,12 @@ export function DeskMapPage() {
 
   useEffect(() => {
     if (!locationId || desks.length === 0) return;
+    // FIX P1-2: show free/active count — "N free of M active" is more useful than "N occupied/total"
+    const activeDesksList = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
+    const freeDesksList   = activeDesksList.filter(d => !d.isOccupied && !d.currentReservation);
     setOccupancyCache(prev => ({
       ...prev,
-      [locationId]: { occupied: desks.filter(d => d.isOccupied).length, total: desks.length },
+      [locationId]: { occupied: freeDesksList.length, total: activeDesksList.length },
     }));
   }, [desks, locationId]);
 
@@ -196,20 +206,21 @@ export function DeskMapPage() {
         activeId={locationId}
         desksPerLocation={occupancyCache}
         onChange={setLocationId}
+        userRole={userRole}
       />
 
-      {/* Tab bar: Biurka | Sale | Parking — filtrowane przez moduły org */}
-      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 mb-4 w-fit">
+      {/* Tab bar: Biurka | Sale | Parking — filtrowane przez moduły org — FEATURE P4-4: larger buttons */}
+      <div className="flex gap-1 bg-zinc-100 rounded-xl p-1.5 mb-4 w-fit">
         {([
           ['desks',   '🪑', 'DESKS'  ],
           ['rooms',   '🏛', 'ROOMS'  ],
           ['parking', '🅿️', 'PARKING'],
         ] as const).filter(([, , mod]) => isEnabled(mod)).map(([tab, icon]) => (
           <button key={tab} onClick={() => setMapTab(tab as any)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
               mapTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
             }`}>
-            <span>{icon}</span>
+            <span className="text-base">{icon}</span>
             <span>{t(`deskmap.tab.${tab}`)}</span>
           </button>
         ))}
@@ -231,7 +242,7 @@ export function DeskMapPage() {
         <EmptyState icon="⚠️" title={t('deskmap.error_title')} sub={error}
           action={<button onClick={refetch} className="text-sm text-brand underline mt-2">{t('btn.retry')}</button>} />
       )}
-      {!loading && desks.length === 0 && !error && (
+      {!loading && desks.length === 0 && !error && mapTab === 'desks' && ( // FIX P1-1: only show desk empty state when on desks tab
         <EmptyState icon="🪑" title={t('deskmap.no_desks_title')} sub={t('deskmap.no_desks_sub')} />
       )}
 

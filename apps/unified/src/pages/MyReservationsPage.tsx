@@ -28,11 +28,12 @@ function StatusBadge({ status }: { status: string }) {
 
 // ── Swipeable reservation card ────────────────────────────────
 function ReservationCard({
-  r, locale, onCancel, cancelling, onCheckin, checkingIn,
+  r, locale, onCancel, cancelling, onCheckin, checkingIn, onCheckout, checkingOut,
 }: {
   r: any; locale: string;
   onCancel: (id: string) => void; cancelling: string | null;
   onCheckin: (id: string) => void; checkingIn: string | null;
+  onCheckout: (checkinId: string) => void; checkingOut: string | null; // FIX P1-3
 }) {
   const { t }           = useTranslation();
   const [offset, setOffset] = useState(0);       // px translation
@@ -108,12 +109,22 @@ function ReservationCard({
                 {checkingIn === r.id ? '…' : t('desks.actions.checkin', 'Check-in')}
               </button>
             )}
-            <button
-              onClick={() => onCancel(r.id)}
-              disabled={cancelling === r.id}
-              className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
-              {cancelling === r.id ? '…' : t('reservations.cancel')}
-            </button>
+            {/* FIX P1-3: show Zakończ when checked in, Anuluj otherwise */}
+            {r.checkin && !r.checkin.checkedOutAt ? (
+              <button
+                onClick={() => onCheckout(r.checkin.id)}
+                disabled={checkingOut === r.checkin.id}
+                className="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium disabled:opacity-40">
+                {checkingOut === r.checkin.id ? '…' : t('desks.actions.checkout')}
+              </button>
+            ) : (
+              <button
+                onClick={() => onCancel(r.id)}
+                disabled={cancelling === r.id}
+                className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
+                {cancelling === r.id ? '…' : t('reservations.cancel')}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -140,6 +151,7 @@ export function MyReservationsPage() {
   const [err,          setErr]          = useState('');
   const [cancelling,   setCancelling]   = useState<string | null>(null);
   const [checkingIn,   setCheckingIn]   = useState<string | null>(null);
+  const [checkingOut,  setCheckingOut]  = useState<string | null>(null); // FIX P1-3
   const [cancellingB,  setCancellingB]  = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -172,6 +184,14 @@ export function MyReservationsPage() {
     try { await appApi.bookings.cancel(id); await load(); }
     catch (e: any) { setErr(e.message); }
     setCancellingB(null);
+  };
+
+  // FIX P1-3: checkout handler — ends the active checkin for a reservation
+  const checkout = async (checkinId: string) => {
+    setCheckingOut(checkinId);
+    try { await appApi.checkins.checkout(checkinId); await load(); }
+    catch (e: any) { setErr(e?.response?.data?.message ?? e.message); }
+    setCheckingOut(null);
   };
 
   const checkin = async (id: string) => {
@@ -227,7 +247,8 @@ export function MyReservationsPage() {
                 {active.map(r => (
                   <ReservationCard key={r.id} r={r} locale={locale}
                     onCancel={cancel} cancelling={cancelling}
-                    onCheckin={checkin} checkingIn={checkingIn} />
+                    onCheckin={checkin} checkingIn={checkingIn}
+                    onCheckout={checkout} checkingOut={checkingOut} />
                 ))}
               </div>
             </div>

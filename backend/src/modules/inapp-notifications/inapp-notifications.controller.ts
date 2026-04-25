@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Request, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
@@ -13,6 +13,7 @@ import { AnnounceDto }               from './dto/announce.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class InAppNotificationsController {
+  private readonly logger = new Logger(InAppNotificationsController.name);
   constructor(private svc: InAppNotificationsService) {}
 
   // ── User endpoints ───────────────────────────────────────────
@@ -37,7 +38,10 @@ export class InAppNotificationsController {
   @Get('rules')
   @UseGuards(RolesGuard)
   @Roles(UserRole.OWNER, UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  getRules() { return this.svc.getRules(); }
+  async getRules() { // FIX P0-1: guard against schema mismatch crashing Owner panel
+    try { return await this.svc.getRules(); }
+    catch (e) { this.logger.warn('getRules failed, returning []: ' + (e as Error).message); return []; }
+  }
 
   @Post('rules')
   @UseGuards(RolesGuard)

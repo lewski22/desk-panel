@@ -209,9 +209,17 @@ export function ReservationsAdminPage() {
                       <p className="text-xs text-zinc-400">{r.user?.firstName} {r.user?.lastName}</p>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>
-                        {t(`reservations.status.${r.status.toLowerCase()}`)}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>
+                          {t(`reservations.status.${r.status.toLowerCase()}`)}
+                        </span>
+                        {/* FEATURE P4-B1: amber badge for non-standard reservation types */}
+                        {r.reservationType && r.reservationType !== 'STANDARD' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                            {t(`desks.reserve.type.${r.reservationType}`, r.reservationType)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
                       {r.checkin ? (

@@ -227,7 +227,8 @@
       "rooms": "Brak sal konferencyjnych",
       "parking": "Brak miejsc parkingowych",
       "sub": "Administrator może je dodać w panelu zarządzania."
-    }
+    },
+    "location_no_desks": "Brak dostępnych biurek"
   },
   "impersonate": {
     "back_to_login": "Wróć do logowania",
@@ -321,7 +322,8 @@
       "unpair_title": "Odparuj beacon od biurka",
       "deactivate": "Dezaktywuj",
       "checkin": "Check-in",
-      "checkout": "Check-out"
+      "checkout": "Zakończ rezerwację",
+      "maintenance_blocked": "Biurko w serwisie — rezerwacja niemożliwa"
     },
     "confirm": {
       "delete_permanent": "Trwale usunąć biurko \"{{name}}\"? Uwaga: ta operacja jest nieodwracalna.",
@@ -367,6 +369,17 @@
       "occupied": "Zajęte",
       "offline": "Offline"
     },
+    "status": {
+      "active": "Aktywne",
+      "inactive": "Nieaktywne"
+    },
+    "filter": {
+      "search_placeholder": "Szukaj po nazwie lub kodzie…",
+      "all_floors": "Wszystkie piętra",
+      "all_statuses": "Wszystkie statusy",
+      "results": "{{count}} z {{total}}",
+      "clear": "Wyczyść"
+    },
     "reserve": {
       "title": "Zarezerwuj biurko",
       "staff_label": "Pracownik",
@@ -380,6 +393,13 @@
       "submitting": "Rezerwowanie…",
       "action": "Zarezerwuj",
       "success": "Biurko zarezerwowane! Sprawdź Moje rezerwacje.",
+      "type_label": "Typ rezerwacji",
+      "type_hint": "(wpływa na kolor LED biurka)",
+      "type": {
+        "STANDARD": "Standardowa",
+        "GUEST": "Gość",
+        "TEAM": "Zespół"
+      },
       "errors": {
         "end_after_start": "Godzina końca musi być późniejsza niż początek.",
         "max_length": "Maksymalna długość rezerwacji to {{maxHours}}h.",
@@ -427,6 +447,15 @@
       "OFFICE_ADMIN": "Office Admin",
       "STAFF": "Staff",
       "END_USER": "Użytkownik"
+    },
+    "filter": {
+      "search_placeholder": "Szukaj po nazwie lub emailu…",
+      "all_roles": "Wszystkie role",
+      "has_card": "Ma kartę NFC",
+      "no_card": "Brak karty NFC",
+      "all_cards": "Wszystkie",
+      "results": "{{count}} wyników",
+      "clear": "Wyczyść filtry"
     },
     "modals": {
       "create_title": "Nowy użytkownik",
@@ -541,6 +570,7 @@
   "methods": {
     "NFC": "NFC",
     "QR": "QR",
+    "WEB": "Web",
     "MANUAL": "Ręczny",
     "NO_CHECKIN": "Brak"
   },
@@ -565,10 +595,12 @@
       "methods":      "Metody",
       "by_user":      "Per osoba",
       "by_desk":      "Per biurko",
+      "utilization":  "Utilizacja",
       "insights":     "AI Insights"
     },
     "insights": {
-      "select_location": "Wybierz lokalizację aby zobaczyć insighty"
+      "select_location": "Wybierz lokalizację aby zobaczyć insighty",
+      "select_location_hint": "Wybierz biuro, aby wygenerować insighty AI o zajętości"
     },
     "snapshot": {
       "hint":                "Dane bieżące (stan na teraz) — niezależne od wybranego zakresu dat",
@@ -616,6 +648,18 @@
       "count":    "Rezerwacji",
       "csv":      "Eksportuj CSV"
     },
+    "utilization": {
+      "title":            "Utilizacja biurek",
+      "hint":             "Procent dni roboczych ({{workdays}}) z co najmniej 1 rezerwacją",
+      "col_desk":         "Biurko",
+      "col_code":         "Kod",
+      "col_floor":        "Piętro",
+      "col_zone":         "Strefa",
+      "col_location":     "Lokalizacja",
+      "col_reservations": "Rezerwacji",
+      "col_workdays":     "Dni robocze",
+      "col_pct":          "Utilizacja"
+    },
     "export": {
       "csv":        "↓ CSV",
       "xlsx":       "↓ XLSX",
@@ -648,7 +692,10 @@
       "timezone":     "Strefa czasowa",
       "max_days":     "Max dni do przodu",
       "max_hours":    "Max godzin / rezerwacja",
-      "limits_hint":  "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia."
+      "limits_hint":  "Godziny pracy i limity określają, kiedy i jak długo użytkownicy mogą rezerwować biurka. Walk-in przez QR kończy się automatycznie o godzinie zamknięcia.",
+      "country_label":"Kraj (dla świąt)",
+      "country_auto": "— bez uwzględnienia świąt —",
+      "country_hint": "Wpływa na liczenie dni roboczych w raporcie utilizacji"
     }
   },
   "organizations_extra": {
@@ -706,6 +753,8 @@
   },
   "provisioning": {
     "title": "Provisioning",
+    "subtitle": "Rejestracja i zarządzanie gateway'ami i beaconami",
+    "office_label": "Biuro:",
     "beacons_title": "Beacony (urządzenia)",
     "gateways_title": "Gatewaye",
     "filter_office": "Filtruj po biurze",
@@ -754,7 +803,39 @@
       "remaining": "pozostało"
     },
     "gateway": {
-      "install_title": "Instalacja Gateway",
+      "install_title": "Dodaj gateway",
+      "install_how": "Jak zainstalować gateway:",
+      "install_step1": "Włącz Raspberry Pi (lub inne urządzenie z Linuksem)",
+      "install_step2": "Otwórz terminal (SSH lub lokalnie)",
+      "install_step3": "Wklej poniższą komendę i naciśnij Enter",
+      "install_cmd_label": "Komenda instalacyjna (ważna 24h, jednorazowa)",
+      "install_office_label": "Biuro",
+      "install_valid_until": "Ważna do",
+      "gateways_heading": "Gateway'e",
+      "new_gateway": "+ Nowy gateway",
+      "col_name": "Nazwa",
+      "col_id": "ID",
+      "col_office": "Biuro",
+      "col_ip": "IP",
+      "col_version": "Wersja",
+      "col_devices": "Urządzenia",
+      "col_status": "Status",
+      "col_last_seen": "Ostatni kontakt",
+      "copy_id": "Kopiuj ID",
+      "update_btn": "↑ Update",
+      "update_title": "Zaktualizuj gateway do najnowszej wersji",
+      "rotate_btn": "Rotuj",
+      "rotate_title": "Rotuj klucz (15min okno)",
+      "delete_btn": "Usuń",
+      "delete_title": "Usuń gateway",
+      "offline_diag": "Offline od {{count}} min — sprawdź: journalctl -u reserti-gateway -n 20",
+      "stale_diag": "Brak heartbeat od {{count}} min — sprawdź: systemctl status reserti-gateway",
+      "secret_modal_title": "Nowy secret gateway",
+      "secret_unreachable": "Nie można połączyć z gateway — zaktualizuj ręcznie przed upływem okna",
+      "secret_old_expires": "Stary klucz wygasa",
+      "secret_manual_hint": "Ręcznie: edytuj",
+      "secret_restart_hint": "i uruchom",
+      "close": "Zamknij",
       "rotate_secret": "Rotacja klucza",
       "last_seen": "Ostatnio widziany",
       "never": "Nigdy",
@@ -784,7 +865,11 @@
       "no_desk": "Brak biurka",
       "select_desk_placeholder": "— wybierz biurko —",
       "desk_optional_label": "Biurko (opcjonalne)",
-      "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną"
+      "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną",
+      "provision_btn": "Provisioning",
+      "provisioned_ok": "Beacon zarejestrowany pomyślnie",
+      "provision_serial_hint": "Wklej powyższe przez Serial Monitor (115200 baud) gdy beacon jest w trybie provisioning.",
+      "beacon_count_outdated": "{{count}} beacon(ów) wymaga aktualizacji"
     }
   },
   "notifications": {
@@ -822,7 +907,54 @@
       }
     },
     "rules_labels": {
-      "GATEWAY_KEY_ROTATION_FAILED": "Rotacja klucza gateway nieudana"
+      "GATEWAY_OFFLINE":            "Gateway offline",
+      "GATEWAY_BACK_ONLINE":        "Gateway online",
+      "BEACON_OFFLINE":             "Beacon offline",
+      "FIRMWARE_UPDATE":            "Aktualizacja firmware",
+      "GATEWAY_RESET_NEEDED":       "Gateway wymaga resetu",
+      "RESERVATION_CHECKIN_MISSED": "Brak check-in do rezerwacji",
+      "SYSTEM_ANNOUNCEMENT":        "Ogłoszenie systemowe",
+      "GATEWAY_KEY_ROTATION_FAILED": "Rotacja klucza gateway nieudana",
+      "SUBSCRIPTION_EXPIRING":      "Subskrypcja wygasa",
+      "SUBSCRIPTION_EXPIRED":       "Subskrypcja wygasła",
+      "TRIAL_EXPIRING":             "Trial wygasa",
+      "LIMIT_WARNING":              "Ostrzeżenie o limicie"
+    },
+    "log": {
+      "col_type":       "Typ",
+      "col_subject":    "Temat",
+      "col_recipients": "Odbiorcy",
+      "col_date":       "Data",
+      "col_status":     "Status"
+    },
+    "category": {
+      "infrastruktura": "Infrastruktura",
+      "rezerwacje":     "Rezerwacje",
+      "system":         "System"
+    },
+    "threshold_label": "Próg czasowy (minuty ciszy → alert)",
+    "recipients_label": "Odbiorcy powiadomień",
+    "reservation_user_note": "Każdy użytkownik może włączyć/wyłączyć w swoim profilu",
+    "recipients_sa_only": "Odbiorcy dla powiadomień infrastruktury są zarządzani przez administratora systemu.",
+    "smtp_env_hint": "Konfiguracja SMTP (zmienne środowiskowe)",
+    "smtp_how_title": "Jak to działa?",
+    "smtp_how_own": "Emaile wysyłane są z Twojego adresu (np. noreply@firma.pl). Pracownicy widzą email Twojej firmy, nie Reserti.",
+    "smtp_how_global": "Emaile wysyłane przez administratora systemu Reserti. Nie wymaga konfiguracji.",
+    "smtp_how_secure": "Hasło SMTP jest szyfrowane AES-256-GCM przed zapisem. Nigdy nie jest zwracane przez API.",
+    "smtp_own_label": "Własna skrzynka",
+    "smtp_global_label": "Globalna skrzynka",
+    "smtp_secure_label": "Bezpieczeństwo",
+    "test_email_hint": "Wyślij testowy email aby sprawdzić czy serwer pocztowy jest poprawnie skonfigurowany.",
+    "log_tab": "Log",
+    "announce": {
+      "title": "Ogłoszenie systemowe",
+      "label_title": "Tytuł ogłoszenia",
+      "label_body": "Treść",
+      "label_roles": "Wyślij do",
+      "send": "Wyślij",
+      "delivered": "Dostarczono do <strong>{{count}}</strong> użytkowników.",
+      "rules_how": "Jak to działa:",
+      "rules_how_body": "Każda reguła określa które powiadomienie pojawia się u użytkowników z daną rolą. Powiadomienia są wspólne dla wszystkich firm — każda firma widzi tylko powiadomienia dotyczące jej infrastruktury. Ogłoszenia systemowe trafiają do wszystkich wybranych ról we wszystkich firmach."
     }
   },
   "deskcard": {
@@ -845,7 +977,17 @@
     }
   },
   "common": {
-    "na": "—"
+    "na": "—",
+    "error": "Błąd",
+    "copy": "Kopiuj",
+    "close": "Zamknij",
+    "cancel": "Anuluj",
+    "status": "Status",
+    "actions": "Akcje",
+    "all_offices": "Wszystkie biura",
+    "online": "Online",
+    "offline": "Offline",
+    "loading": "Ładowanie…"
   },
   "floorplan": {
     "editor": {

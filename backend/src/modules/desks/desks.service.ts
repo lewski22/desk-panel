@@ -9,10 +9,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { DeskStatus } from '@prisma/client';
 import { CreateDeskDto } from './dto/create-desk.dto';
 import { UpdateDeskDto } from './dto/update-desk.dto';
+import { LedEventsService } from '../../shared/led-events.service'; // FIX P2-4
 
 @Injectable()
 export class DesksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ledEvents: LedEventsService, // FIX P2-4
+  ) {}
 
   async findAll(locationId: string) {
     return this.prisma.desk.findMany({
@@ -86,7 +90,14 @@ export class DesksService {
 
   async update(id: string, dto: UpdateDeskDto, actorOrgId?: string) {
     await this.assertDeskInOrg(id, actorOrgId);
-    return this.prisma.desk.update({ where: { id }, data: dto });
+    const updated = await this.prisma.desk.update({ where: { id }, data: dto });
+    // FIX P2-4: signal beacon LED on MAINTENANCE toggle — fire-and-forget
+    if (dto.status === 'MAINTENANCE') {
+      this.ledEvents.emit(id, 'ERROR'); // amber/unavailable state
+    } else if (dto.status === 'ACTIVE') {
+      this.ledEvents.emit(id, 'FREE');  // revert to idle green
+    }
+    return updated;
   }
 
   async remove(id: string, actorOrgId?: string) {

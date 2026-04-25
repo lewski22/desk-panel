@@ -7,6 +7,35 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
 }
 
+// FEATURE P4-B3: ISO 3166-1 alpha-2 country codes for holiday-aware workday counting
+const COUNTRY_OPTIONS = [
+  { code: 'PL', label: 'Polska (PL)' },
+  { code: 'DE', label: 'Niemcy (DE)' },
+  { code: 'GB', label: 'Wielka Brytania (GB)' },
+  { code: 'FR', label: 'Francja (FR)' },
+  { code: 'CZ', label: 'Czechy (CZ)' },
+  { code: 'SK', label: 'Słowacja (SK)' },
+  { code: 'HU', label: 'Węgry (HU)' },
+  { code: 'RO', label: 'Rumunia (RO)' },
+  { code: 'AT', label: 'Austria (AT)' },
+  { code: 'NL', label: 'Holandia (NL)' },
+  { code: 'BE', label: 'Belgia (BE)' },
+  { code: 'ES', label: 'Hiszpania (ES)' },
+  { code: 'IT', label: 'Włochy (IT)' },
+  { code: 'PT', label: 'Portugalia (PT)' },
+  { code: 'SE', label: 'Szwecja (SE)' },
+  { code: 'NO', label: 'Norwegia (NO)' },
+  { code: 'DK', label: 'Dania (DK)' },
+  { code: 'FI', label: 'Finlandia (FI)' },
+  { code: 'US', label: 'USA (US)' },
+  { code: 'CA', label: 'Kanada (CA)' },
+  { code: 'AU', label: 'Australia (AU)' },
+  { code: 'SG', label: 'Singapur (SG)' },
+  { code: 'JP', label: 'Japonia (JP)' },
+  { code: 'IN', label: 'Indie (IN)' },
+  { code: 'AE', label: 'Zjednoczone Emiraty (AE)' },
+];
+
 // ── Modal: konfiguracja Azure SSO ────────────────────────────
 function AzureConfigModal({ location, onClose }: { location: any; onClose: () => void }) {
   const [config,   setConfig]   = useState<any>(null);
@@ -220,7 +249,7 @@ export function OrganizationsPage() {
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
-    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
+    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
   });
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
@@ -242,7 +271,7 @@ export function OrganizationsPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
-    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw',
+    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
       organizationId: user?.organizationId ?? '' });
     setErr('');
     setModal('create');
@@ -255,6 +284,7 @@ export function OrganizationsPage() {
       openTime: loc.openTime ?? '08:00', closeTime: loc.closeTime ?? '17:00',
       maxDaysAhead: loc.maxDaysAhead ?? 14, maxHoursPerDay: loc.maxHoursPerDay ?? 8,
       timezone: loc.timezone ?? 'Europe/Warsaw',
+      country: loc.country ?? '',
       organizationId: loc.organizationId,
     });
     setErr('');
@@ -271,6 +301,7 @@ export function OrganizationsPage() {
           openTime: form.openTime, closeTime: form.closeTime,
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
           timezone: form.timezone,
+          country: form.country || undefined,
           organizationId: orgId,
         });
       } else if (target) {
@@ -279,6 +310,7 @@ export function OrganizationsPage() {
           openTime: form.openTime, closeTime: form.closeTime,
           maxDaysAhead: form.maxDaysAhead, maxHoursPerDay: form.maxHoursPerDay,
           timezone: form.timezone,
+          country: form.country || null,
         });
       }
       setModal(null);
@@ -430,6 +462,21 @@ export function OrganizationsPage() {
               <option value="Australia/Sydney">Australia/Sydney (UTC+10/+11)</option>
               <option value="UTC">UTC</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.country_label')}</label>
+            <select
+              value={form.country}
+              onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+            >
+              <option value="">{t('organizations.form.country_auto')}</option>
+              {COUNTRY_OPTIONS.map(c => (
+                <option key={c.code} value={c.code}>{c.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-zinc-400 mt-1">{t('organizations.form.country_hint')}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

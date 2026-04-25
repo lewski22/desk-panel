@@ -128,6 +128,21 @@ export class ReportsController {
     return this.reports.getReservationsByDesk(resolvedOrgId, fromDate, toDate, locationId);
   }
 
+  // ── Desk Utilization (P4-B2) ───────────────────────────────────
+  @Get('utilization')
+  @Roles(...REPORT_ROLES)
+  async utilization(
+    @Query('from') from: string,
+    @Query('to')   to:   string,
+    @Query('locationId') locationId: string | undefined,
+    @Query('orgId')      orgId:      string | undefined,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getUtilization(resolvedOrgId, fromDate, toDate, locationId);
+  }
+
   // ── Dashboard snapshot — KPI bieżącego dnia ────────────────────
   @Get('snapshot')
   @Roles(...REPORT_ROLES)

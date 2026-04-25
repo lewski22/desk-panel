@@ -57,8 +57,9 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
 
   const isEndUser = userRole === 'END_USER';
 
+  // FEATURE P4-3B: END_USER only sees ACTIVE desks with an online beacon
   const visibleDesks = isEndUser
-    ? desks.filter(d => d.status === 'ACTIVE')
+    ? desks.filter(d => d.status === 'ACTIVE' && d.isOnline)
     : desks;
 
   const floors = groupByFloor(visibleDesks);
