@@ -111,6 +111,9 @@ export class ReservationsService {
     if ((dto as any).targetUserId && !staffRoles.includes(actorRole ?? '')) {
       throw new ForbiddenException('Nie masz uprawnień do rezerwacji dla innego użytkownika');
     }
+    if (dto.reservationType && dto.reservationType !== 'STANDARD' && !staffRoles.includes(actorRole ?? '')) {
+      throw new ForbiddenException('Nie masz uprawnień do tworzenia rezerwacji GUEST/TEAM');
+    }
     const userId = (dto as any).targetUserId ?? actorId;
 
     const desk = await this.prisma.desk.findUnique({
