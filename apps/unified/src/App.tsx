@@ -136,7 +136,7 @@ export default function App() {
                     <Guard user={user} allowed={ADMIN_ROLES}><ProvisioningPage /></Guard>
                   } />
                   <Route path="/reports" element={
-                    <Guard user={user} allowed={ADMIN_ROLES}><ReportsPage /></Guard>
+                    <Guard user={user} allowed={STAFF_ROLES}><ReportsPage /></Guard>
                   } />
                   <Route path="/organizations" element={
                     <Guard user={user} allowed={SUPER_ONLY}><OrganizationsPage /></Guard>

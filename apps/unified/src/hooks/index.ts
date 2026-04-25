@@ -7,7 +7,7 @@ import { DeskMapItem, LocationLimits, Reservation } from '../types/index';
 // żeby strona mogła wybrać biuro dynamicznie
 
 // ── useDesks: polls desk status every 15s ────────────────────
-export function useDesks(locationId: string) {
+export function useDesks(locationId: string, date?: string) {
   const [desks,          setDesks]          = useState<DeskMapItem[]>([]);
   const [locationLimits, setLocationLimits] = useState<LocationLimits | null>(null);
   const [loading,        setLoading]        = useState(true);
@@ -17,7 +17,7 @@ export function useDesks(locationId: string) {
   const loadDesks = useCallback(async () => {
     if (!locationId) return;
     try {
-      const { desks, locationLimits: limits } = await appApi.desks.status(locationId);
+      const { desks, locationLimits: limits } = await appApi.desks.status(locationId, date);
       setDesks(desks);
       setLocationLimits(limits);
       setLastUpdated(new Date());
@@ -27,7 +27,7 @@ export function useDesks(locationId: string) {
     } finally {
       setLoading(false);
     }
-  }, [locationId]);
+  }, [locationId, date]);
 
   useEffect(() => {
     loadDesks();
@@ -75,6 +75,7 @@ export function useReservations(locationId: string, user: any) {
   return { reservations, loading, error, refetch: load, cancel };
 }
 
+export { useDirtyGuard } from './useDirtyGuard';
 export { useSortable } from './useSortable';
 export type { SortState, SortDir } from './useSortable';
 

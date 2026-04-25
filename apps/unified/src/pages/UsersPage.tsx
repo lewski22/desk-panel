@@ -77,6 +77,7 @@ export function UsersPage() {
     try {
       await appApi.auth.inviteUser({ email: inviteForm.email, role: inviteForm.role });
       setInviteSent(true);
+      load(true);
     } catch(e:any) { setErr(e.message); }
     setBusy(false);
   };

@@ -9,7 +9,8 @@ import { RolesGuard }        from '../auth/guards/roles.guard';
 import { ReportsService }    from './reports.service';
 import { ExportReportDto }   from './dto/export-report.dto';
 
-const REPORT_ROLES = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN'] as const;
+const REPORT_ROLES        = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'] as const;
+const REPORT_EXPORT_ROLES = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN'] as const;
 
 /**
  * ReportsController — Sprint C
@@ -42,7 +43,7 @@ export class ReportsController {
 
   // ── Export CSV / XLSX ──────────────────────────────────────────
   @Get('export')
-  @Roles(...REPORT_ROLES)
+  @Roles(...REPORT_EXPORT_ROLES)
   async export(
     @Query() dto: ExportReportDto,
     @Res()   res: Response,
@@ -167,7 +168,7 @@ export class ReportsController {
       return queryOrgId;
     }
 
-    // OFFICE_ADMIN — pobierz orgId z tokenu
+    // OFFICE_ADMIN / STAFF — scoped to own org
     if (!user.organizationId) {
       throw new ForbiddenException('No organizationId in token');
     }

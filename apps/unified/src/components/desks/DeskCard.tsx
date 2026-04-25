@@ -16,6 +16,7 @@ interface Props {
   onQuickBook?:  (desk: DeskMapItem, fullDay: boolean) => void;
   hideActions?:  boolean;
   showAvatars?:  boolean;  // Sprint A2 — tylko STAFF+
+  isEndUser?:    boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -81,7 +82,7 @@ function QuickBookPopover({ desk, onFullDay, onChoose, onClose }: {
 }
 
 // ── DeskCard ─────────────────────────────────────────────────
-export function DeskCard({ desk, onCheckin, onCheckout, onQuickBook, hideActions = false, showAvatars = false }: Props) {
+export function DeskCard({ desk, onCheckin, onCheckout, onQuickBook, hideActions = false, showAvatars = false, isEndUser = false }: Props) {
   const { t }        = useTranslation();
   const [showPopover, setShowPopover] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -141,7 +142,9 @@ export function DeskCard({ desk, onCheckin, onCheckout, onQuickBook, hideActions
       {/* Reservation info */}
       {res && (
         <div className={`text-xs mt-1 ${desk.isOccupied ? 'text-indigo-100' : 'text-zinc-600'}`}>
-          <p className="font-medium">{res.user?.firstName} {res.user?.lastName}</p>
+          {!isEndUser && res.user && (
+            <p className="font-medium">{res.user.firstName} {res.user.lastName}</p>
+          )}
           <p>{format(new Date(res.startTime), 'HH:mm')}–{format(new Date(res.endTime), 'HH:mm')}</p>
         </div>
       )}

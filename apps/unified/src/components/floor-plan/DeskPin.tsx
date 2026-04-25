@@ -11,30 +11,34 @@ import { DeskPosition } from './useFloorPlanEditor';
 const PIN_FILL: Record<string, string> = {
   free:     '#10b981',  // emerald
   reserved: '#f59e0b',  // amber
+  mine:     '#7c3aed',  // violet — moja rezerwacja
   occupied: '#ef4444',  // red
   offline:  '#a1a1aa',  // zinc
 };
 
-function deskStatus(d: DeskMapItem): string {
+function deskStatus(d: DeskMapItem, currentUserId?: string): string {
   if (!d.isOnline || d.status === 'MAINTENANCE') return 'offline';
-  if (d.isOccupied)         return 'occupied';
-  if (d.currentReservation) return 'reserved';
+  if (d.isOccupied) return 'occupied';
+  if (d.currentReservation) {
+    return (currentUserId && d.currentReservation.userId === currentUserId) ? 'mine' : 'reserved';
+  }
   return 'free';
 }
 
 interface Props {
-  desk:     DeskMapItem;
-  pos:      DeskPosition;
-  canvasW:  number;
-  canvasH:  number;
-  showAvatars: boolean;  // STAFF+ widzi inicjały
-  onClick:  (desk: DeskMapItem) => void;
+  desk:          DeskMapItem;
+  pos:           DeskPosition;
+  canvasW:       number;
+  canvasH:       number;
+  showAvatars:   boolean;  // STAFF+ widzi inicjały
+  currentUserId?: string;
+  onClick:       (desk: DeskMapItem) => void;
 }
 
-export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, onClick }: Props) {
+export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, currentUserId, onClick }: Props) {
   const { t }     = useTranslation();
   const [hover, setHover] = useState(false);
-  const status = deskStatus(desk);
+  const status = deskStatus(desk, currentUserId);
   const fill   = PIN_FILL[status] ?? PIN_FILL.offline;
 
   const cx = (pos.posX / 100) * canvasW;
@@ -49,8 +53,8 @@ export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, onClick }: P
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {/* Pulsująca animacja dla wolnych biurek */}
-      {status === 'free' && (
+      {/* Pulsująca animacja dla wolnych biurek i własnych rezerwacji */}
+      {(status === 'free' || status === 'mine') && (
         <circle r={18} fill={fill} opacity={0.15}>
           <animate attributeName="r"    values="12;20;12" dur="2s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.2;0;0.2" dur="2s" repeatCount="indefinite" />
@@ -72,11 +76,17 @@ export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, onClick }: P
 
       {/* Tooltip przy hover */}
       {hover && (
-        <g transform="translate(16, -28)">
-          <rect x={0} y={0} width={80} height={30} rx={4} fill="#18181b" opacity={0.9} />
+        <g transform="translate(16, -36)">
+          <rect x={0} y={0} width={90} height={desk.floor ? 38 : 30} rx={4} fill="#18181b" opacity={0.9} />
           <text x={8} y={12} fontSize={9} fontWeight="600" fill="white"
             style={{ pointerEvents: 'none' }}>{desk.name}</text>
-          <text x={8} y={23} fontSize={8} fill="#a1a1aa"
+          {desk.floor && (
+            <text x={8} y={22} fontSize={8} fill="#d4d4d8"
+              style={{ pointerEvents: 'none' }}>
+              {t('deskcard.floor')} {desk.floor}{desk.zone ? ` · ${desk.zone}` : ''}
+            </text>
+          )}
+          <text x={8} y={desk.floor ? 33 : 23} fontSize={8} fill="#a1a1aa"
             style={{ pointerEvents: 'none' }}>
             {status === 'free' ? t('desks.stats.free') : status === 'occupied' ? t('desks.stats.occupied') : status === 'reserved' ? t('desks.stats.reserved') : t('devices.status.offline')}
           </text>

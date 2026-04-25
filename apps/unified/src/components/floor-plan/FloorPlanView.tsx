@@ -14,10 +14,12 @@ import { appApi }            from '../../api/client';
 import { format }            from 'date-fns';
 
 interface Props {
-  locationId:   string;
-  desks:        DeskMapItem[];
-  userRole:     string;
-  onReserve?:   (desk: DeskMapItem) => void;  // otwiera ReservationModal
+  locationId:     string;
+  desks:          DeskMapItem[];
+  userRole:       string;
+  selectedDate?:  string;
+  currentUserId?: string;
+  onReserve?:     (desk: DeskMapItem) => void;  // otwiera ReservationModal
 }
 
 // ── Desk Info Popup ───────────────────────────────────────────
@@ -102,6 +104,7 @@ function Legend() {
   const items = [
     { color: '#10b981', label: t('dashboard.legend.free') },
     { color: '#f59e0b', label: t('dashboard.legend.reserved') },
+    { color: '#7c3aed', label: t('dashboard.legend.mine', 'Moja rezerwacja') },
     { color: '#ef4444', label: t('dashboard.legend.occupied') },
     { color: '#a1a1aa', label: t('dashboard.legend.offline') },
   ];
@@ -151,7 +154,7 @@ function popupStyle(
 }
 
 // ── Main FloorPlanView ────────────────────────────────────────
-export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props) {
+export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, onReserve }: Props) {
   const { t }                  = useTranslation();
   const [floorPlan, setFP]     = useState<any>(null);
   const [loading,   setL]      = useState(true);
@@ -159,7 +162,18 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
   const [freeOnly,  setFO]     = useState(false);
   const [floors,    setFloors] = useState<string[]>([]);
   const [activeFloor, setActiveFloor] = useState<string>('');
+  const [zoom,      setZoom]   = useState(1.0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const ZOOM_STEP = 0.2;
+  const ZOOM_MIN  = 0.5;
+  const ZOOM_MAX  = 3.0;
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z - e.deltaY * 0.001).toFixed(2))));
+  };
 
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
@@ -236,16 +250,34 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
         </span>
       </div>
 
+      {/* Zoom controls */}
+      <div className="flex items-center gap-2 mb-2 justify-end">
+        <button onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(1)))}
+          className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono">
+          −
+        </button>
+        <span className="text-xs text-zinc-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
+        <button onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(1)))}
+          className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono">
+          +
+        </button>
+        <button onClick={() => setZoom(1.0)}
+          className="text-xs text-zinc-400 hover:text-zinc-600 ml-1 px-2 py-1 rounded-lg border border-zinc-200 hover:bg-zinc-100">
+          Reset
+        </button>
+      </div>
+
       {/* SVG canvas */}
       <div ref={containerRef}
         className="relative bg-zinc-100 rounded-xl overflow-auto border border-zinc-200"
         style={{ maxHeight: '65vh' }}
-        onClick={() => setSel(null)}>
+        onClick={() => setSel(null)}
+        onWheel={handleWheel}>
         <svg
-          width={canvasW}
-          height={canvasH}
+          width={canvasW * zoom}
+          height={canvasH * zoom}
           viewBox={`0 0 ${canvasW} ${canvasH}`}
-          style={{ display: 'block', background: '#fafafa', maxWidth: '100%', height: 'auto' }}
+          style={{ display: 'block', background: '#fafafa' }}
         >
           <image href={floorPlan.floorPlanUrl} x={0} y={0}
             width={canvasW} height={canvasH} preserveAspectRatio="xMidYMid meet" />
@@ -258,6 +290,7 @@ export function FloorPlanView({ locationId, desks, userRole, onReserve }: Props)
               canvasW={canvasW}
               canvasH={canvasH}
               showAvatars={isStaff}
+              currentUserId={currentUserId}
               onClick={d => setSel(d)}
             />
           ))}

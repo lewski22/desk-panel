@@ -144,29 +144,48 @@ export class DesksService {
     return { deskId: id, date, bookedSlots: reservations };
   }
 
-  async getCurrentStatus(locationId: string) {
+  async getCurrentStatus(locationId: string, actorRole?: string, date?: string) {
+    const isEndUser = actorRole === 'END_USER';
     const now = new Date();
+    const tz = 'Europe/Warsaw';
+
+    // Determine target day string (YYYY-MM-DD) in the location's timezone
+    const dayStr = date ?? now.toLocaleDateString('sv-SE', { timeZone: tz });
+    const isToday = dayStr === now.toLocaleDateString('sv-SE', { timeZone: tz });
+
+    // Day boundaries in UTC (wall-clock convention: 00:00–23:59:59 local)
+    const dayStart = new Date(`${dayStr}T00:00:00.000Z`);
+    const dayEnd   = new Date(`${dayStr}T23:59:59.999Z`);
+
     const desks = await this.prisma.desk.findMany({
       where: { locationId, status: DeskStatus.ACTIVE },
       include: {
         device:   { select: { isOnline: true } },
         location: { select: { openTime: true, closeTime: true, maxDaysAhead: true, maxHoursPerDay: true, timezone: true } },
         checkins: {
-          where: { checkedOutAt: null },
-          take: 1,
-          orderBy: { checkedInAt: 'desc' },
-                  select: {
-            userId: true,
+          where: isToday
+            ? {
+                checkedOutAt: null,
+                OR: [
+                  { reservation: { endTime: { gte: now } } },
+                  { reservationId: null, checkedInAt: { gte: new Date(now.getTime() - 12 * 3600 * 1000) } },
+                ],
+              }
+            : { id: 'never' },
+          take: isToday ? 1 : 0,
+          orderBy: { checkedInAt: 'desc' as const },
+          select: {
+            userId:      true,
             checkedInAt: true,
-            user: { select: { firstName: true, lastName: true, email: true } },
+            user:        { select: { firstName: true, lastName: true, email: true } },
           },
         },
         reservations: {
           where: {
-            status: { in: ['CONFIRMED', 'PENDING'] },
-            // Pokaż rezerwację aktywną LUB zaplanowaną na dziś (bez limitu 30min)
-            // Użytkownik może check-in przez QR o każdej porze dnia
-            endTime: { gte: now },
+            status:    { in: ['CONFIRMED', 'PENDING'] },
+            date:      new Date(`${dayStr}T00:00:00.000Z`),
+            startTime: { lt: dayEnd },
+            endTime:   { gt: isToday ? now : dayStart },
           },
           take: 1,
           orderBy: { startTime: 'asc' },
@@ -211,17 +230,17 @@ export class DesksService {
         width:      d.width    ?? 2,
         height:     d.height   ?? 1,
         currentCheckin: d.checkins[0] ? {
-          userId:      d.checkins[0].userId,
+          userId:      isEndUser ? undefined : d.checkins[0].userId,
           checkedInAt: d.checkins[0].checkedInAt.toISOString(),
-          user:        d.checkins[0].user,
+          user:        isEndUser ? undefined : d.checkins[0].user,
         } : null,
         currentReservation: res ? {
           id:        res.id,
-          userId:    res.userId,
-          user:      res.user,
+          userId:    isEndUser ? undefined : res.userId,
+          user:      isEndUser ? undefined : res.user,
           startTime: res.startTime.toISOString(),
           endTime:   res.endTime.toISOString(),
-          qrToken:   res.qrToken,
+          qrToken:   isEndUser ? undefined : res.qrToken,
         } : null,
       };
     });

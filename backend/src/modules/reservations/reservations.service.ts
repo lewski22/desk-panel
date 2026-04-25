@@ -150,9 +150,18 @@ export class ReservationsService {
     if (desk.location?.openTime && desk.location?.closeTime) {
       const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
 
-      // Extract HH:MM from the ISO wall-clock strings sent by the frontend (e.g. "2026-04-24T09:00:00.000Z")
-      const startHhmm = dto.startTime.slice(11, 16); // "09:00"
-      const endHhmm   = dto.endTime.slice(11, 16);   // "17:00"
+      // Extract HH:MM in the location's local timezone
+      const tz = desk.location?.timezone ?? 'Europe/Warsaw';
+      const toLocalHHMM = (iso: string) => {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+          hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
+        }).formatToParts(new Date(iso));
+        const h = parts.find(p => p.type === 'hour')?.value   ?? '00';
+        const m = parts.find(p => p.type === 'minute')?.value ?? '00';
+        return `${h}:${m}`;
+      };
+      const startHhmm = toLocalHHMM(dto.startTime);
+      const endHhmm   = toLocalHHMM(dto.endTime);
 
       const startMin  = toMin(startHhmm);
       const endMin    = toMin(endHhmm);
@@ -387,15 +396,31 @@ export class ReservationsService {
   @Cron('0 */15 * * * *')
   async expireOld() {
     const now = new Date();
-    const result = await this.prisma.reservation.updateMany({
+
+    // Pobierz deskId przed updatem — updateMany nie zwraca rekordów
+    const toExpire = await this.prisma.reservation.findMany({
       where: {
         status:  ReservationStatus.CONFIRMED,
         endTime: { lt: now },
       },
-      data: { status: ReservationStatus.EXPIRED },
+      select: { id: true, deskId: true },
     });
-    if (result.count > 0) this.logger.log(`Expired ${result.count} stale reservation(s)`);
-    return result.count;
+
+    if (toExpire.length === 0) return 0;
+
+    await this.prisma.reservation.updateMany({
+      where: { id: { in: toExpire.map(r => r.id) } },
+      data:  { status: ReservationStatus.EXPIRED },
+    });
+
+    this.logger.log(`Expired ${toExpire.length} stale reservation(s)`);
+
+    // Emituj LED FREE dla każdego biurka — beacon musi dostać aktualizację
+    for (const r of toExpire) {
+      this.ledEvents.emit(r.deskId, 'FREE');
+    }
+
+    return toExpire.length;
   }
 
   // ── Private helpers ──────────────────────────────────────────

@@ -10,6 +10,7 @@
 import {
   Controller, Get, Post, Query, UseGuards, Request, ForbiddenException,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }   from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }     from '../auth/guards/roles.guard';
@@ -49,6 +50,14 @@ export class InsightsController {
     if (!resolvedOrgId) return { locations: [] };
     const locations = await this.svc.getForOrg(resolvedOrgId);
     return { locations };
+  }
+
+  @Post('refresh-all')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Trigger insight generation for all locations (useful for first run)' })
+  async refreshAll() {
+    await this.svc.cronGenerateAll();
+    return { triggered: true };
   }
 
   @Post('refresh')

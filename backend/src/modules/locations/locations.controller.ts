@@ -55,7 +55,7 @@ export class LocationsController {
   }
 
   @Get(':id/analytics/extended')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Extended analytics — org-isolated' })
   async getExtendedAnalytics(@Param('id') id: string, @Request() req: any) {
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {

@@ -78,8 +78,13 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'Real-time occupancy map for location' })
-  currentStatus(@Param('locationId') locationId: string) {
-    return this.desks.getCurrentStatus(locationId);
+  @ApiQuery({ name: 'date', required: false, example: '2026-05-01', description: 'YYYY-MM-DD — show availability for this date (defaults to today)' })
+  currentStatus(
+    @Param('locationId') locationId: string,
+    @Query('date') date?: string,
+    @Request() req?: any,
+  ) {
+    return this.desks.getCurrentStatus(locationId, req?.user?.role, date);
   }
 
   @Get('desks/:id')

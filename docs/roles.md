@@ -123,7 +123,7 @@ Domyślna rola każdego nowego użytkownika. Korzysta z biurek.
 | CRUD użytkowników | ❌ | ❌ | ✅ | ✅ | — |
 | Provisioning beaconów | ❌ | ❌ | ✅ | ✅ | — |
 | OTA firmware | ❌ | ❌ | ✅ | ✅ | — |
-| Raporty i analityka | ❌ | ❌ | ✅ | ✅ | — |
+| Raporty i analityka | ❌ | ✅ | ✅ | ✅ | — |
 | Konfiguracja SMTP | ❌ | ❌ | ❌ | ✅ | — |
 | Konfiguracja SSO (Entra ID) | ❌ | ❌ | ❌ | ✅ | — |
 | **Stan subskrypcji (v0.12)** | ❌ | ❌ | ❌ | ✅ | — |

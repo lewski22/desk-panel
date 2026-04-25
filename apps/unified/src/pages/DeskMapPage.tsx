@@ -9,7 +9,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation }  from 'react-i18next';
 import { useNavigate }      from 'react-router-dom';
 import { useDesks }         from '../hooks';
-import { DeskMap }                  from '../components/desks/DeskMap';
+import { DeskMap, DeskStats }        from '../components/desks/DeskMap';
 import { FloorPlanView }            from '../components/floor-plan/FloorPlanView';
 import { ResourceFloorPlanView }    from '../components/floor-plan/ResourceFloorPlanView';
 import { ResourceCard }             from '../components/desks/ResourceCard';
@@ -92,12 +92,27 @@ function ViewToggle({ mode, onChange, hasPlan }: { mode: ViewMode; onChange: (m:
   );
 }
 
+// ── Helpers ──────────────────────────────────────────────────
+const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+
 // ── Main Page ─────────────────────────────────────────────────
 export function DeskMapPage() {
   const { t }       = useTranslation();
   const navigate    = useNavigate();
   const [locations,     setLocations]     = useState<any[]>([]);
-  const [locationId,    setLocationId]    = useState(import.meta.env.VITE_LOCATION_ID ?? '');
+  const [locationId,    setLocationId]    = useState<string>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('app_user') ?? 'null');
+      if (stored?.id) {
+        const pref = localStorage.getItem(`user_default_location_${stored.id}`);
+        if (pref) return pref;
+      }
+      const last = localStorage.getItem('desks_loc');
+      if (last) return last;
+    } catch {}
+    return import.meta.env.VITE_LOCATION_ID ?? '';
+  });
+  const [selectedDate,  setSelectedDate]  = useState<string>(todayStr());
   const [locLoading,    setLocLoading]    = useState(true);
   const [occupancyCache, setOccupancyCache] = useState<Record<string, { occupied: number; total: number }>>({});
   const [hasPlan,       setHasPlan]       = useState(false);
@@ -177,7 +192,7 @@ export function DeskMapPage() {
 
   useEffect(() => { loadResources(); }, [loadResources]);
 
-  const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId);
+  const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId, selectedDate);
 
   useEffect(() => {
     if (!locationId || desks.length === 0) return;
@@ -205,9 +220,26 @@ export function DeskMapPage() {
         locations={locations}
         activeId={locationId}
         desksPerLocation={occupancyCache}
-        onChange={setLocationId}
+        onChange={id => { setLocationId(id); localStorage.setItem('desks_loc', id); }}
         userRole={userRole}
       />
+
+      {locations.length > 1 && locationId && (
+        <div className="flex justify-end -mt-2 mb-3">
+          <button
+            onClick={() => {
+              try {
+                const stored = JSON.parse(localStorage.getItem('app_user') ?? 'null');
+                if (stored?.id) {
+                  localStorage.setItem(`user_default_location_${stored.id}`, locationId);
+                }
+              } catch {}
+            }}
+            className="text-xs text-brand hover:underline font-medium">
+            ☆ {t('deskmap.set_default', 'Domyślne')}
+          </button>
+        </div>
+      )}
 
       {/* Tab bar: Biurka | Sale | Parking — filtrowane przez moduły org — FEATURE P4-4: larger buttons */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1.5 mb-4 w-fit">
@@ -225,6 +257,41 @@ export function DeskMapPage() {
           </button>
         ))}
       </div>
+
+      {/* Date picker */}
+      {mapTab === 'desks' && (
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          <label className="text-xs font-medium text-zinc-500 shrink-0">
+            {t('deskmap.date_label', 'Pokaż dostępność na:')}
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            min={todayStr()}
+            max={(() => {
+              const d = new Date();
+              d.setDate(d.getDate() + (locationLimits?.maxDaysAhead ?? 14));
+              return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+            })()}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-700
+                       focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand
+                       bg-white cursor-pointer"
+          />
+          {selectedDate !== todayStr() && (
+            <button
+              onClick={() => setSelectedDate(todayStr())}
+              className="text-xs text-brand hover:underline font-medium">
+              {t('deskmap.today', 'Dziś')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Stats — above map, for non-END_USER on desks tab */}
+      {mapTab === 'desks' && !isEndUser && desks.length > 0 && (
+        <DeskStats desks={desks} />
+      )}
 
       {/* Toolbar row: View toggle + Edit floor plan link */}
       <div className="flex items-center justify-between mb-1">
@@ -263,6 +330,8 @@ export function DeskMapPage() {
           locationId={locationId}
           desks={desks}
           userRole={userRole}
+          selectedDate={selectedDate}
+          currentUserId={userId}
           onReserve={desk => setReservationTarget(desk)}
         />
       )}
@@ -276,6 +345,7 @@ export function DeskMapPage() {
           userRole={userRole}
           showAvatars={isStaff}
           users={reservationUsers}
+          selectedDate={selectedDate}
         />
       )}
 
@@ -331,6 +401,7 @@ export function DeskMapPage() {
           isEndUser={isEndUser}
           users={reservationUsers}
           limits={locationLimits}
+          initialDate={selectedDate}
           onClose={() => setReservationTarget(null)}
           onSuccess={() => { setReservationTarget(null); refetch(); }}
         />

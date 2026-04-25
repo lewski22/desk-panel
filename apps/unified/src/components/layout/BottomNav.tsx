@@ -7,7 +7,7 @@ import { NavLink, useLocation }        from 'react-router-dom';
 import { useTranslation }               from 'react-i18next';
 import { appApi }                       from '../../api/client';
 import {
-  IconFloorPlan, IconCalendar, IconClipboard, IconFolder,
+  IconFloorPlan, IconClipboard, IconFolder,
   IconBarChart, IconBeacon, IconUsers, IconPieChart,
   IconGear, IconCard,
 } from '../icons/SidebarIcons';
@@ -27,13 +27,12 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
   END_USER: [
     { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
     { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
-    { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          module: 'WEEKLY_VIEW' },
   ],
   STAFF: [
-    { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
-    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
-    { to: '/dashboard',       icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
-    { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',   module: 'DESKS' },
+    { to: '/map',          icon: IconFloorPlan, labelKey: 'layout.nav.map',         module: 'DESKS' },
+    { to: '/reservations', icon: IconFolder,    labelKey: 'layout.nav.reservations', module: 'DESKS' },
+    { to: '/dashboard',    icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
+    { to: '/reports',      icon: IconPieChart,  labelKey: 'layout.nav.reports' },
   ],
   OFFICE_ADMIN: [
     { to: '/map',          icon: IconFloorPlan, labelKey: 'layout.nav.map',         module: 'DESKS' },

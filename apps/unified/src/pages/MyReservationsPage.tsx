@@ -121,7 +121,7 @@ function ReservationCard({
               <button
                 onClick={() => onCancel(r.id)}
                 disabled={cancelling === r.id}
-                className="text-xs px-3 py-1.5 rounded-xl border border-zinc-200 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-colors text-zinc-500 disabled:opacity-40">
+                className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors font-medium disabled:opacity-40">
                 {cancelling === r.id ? '…' : t('reservations.cancel')}
               </button>
             )}
@@ -242,7 +242,7 @@ export function MyReservationsPage() {
         <div className="space-y-6">
           {active.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.active')}</h2>
+              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.desks', 'Biurka')}</h2>
               <div className="space-y-3">
                 {active.map(r => (
                   <ReservationCard key={r.id} r={r} locale={locale}
@@ -310,7 +310,7 @@ export function MyReservationsPage() {
                           <button
                             onClick={() => cancelBooking(b.id)}
                             disabled={cancellingB === b.id}
-                            className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                            className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors font-medium disabled:opacity-40">
                             {cancellingB === b.id ? '…' : t('reservations.cancel')}
                           </button>
                         )}

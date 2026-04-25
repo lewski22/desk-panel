@@ -211,6 +211,9 @@
   "deskmap": {
     "location_label": "Biuro:",
     "loading": "Ładowanie mapy biurek…",
+    "date_label":    "Pokaż dostępność na:",
+    "today":         "Dziś",
+    "showing_for":   "Dostępność na dzień",
     "conn_error": "Błąd połączenia",
     "stale_warning": "Problem z połączeniem — dane mogą być nieaktualne",
     "no_location_title": "Brak przypisanego biura",
@@ -228,7 +231,14 @@
       "parking": "Brak miejsc parkingowych",
       "sub": "Administrator może je dodać w panelu zarządzania."
     },
-    "location_no_desks": "Brak dostępnych biurek"
+    "location_no_desks": "Brak dostępnych biurek",
+    "set_default": "Domyślne"
+  },
+  "dirty_guard": {
+    "title": "Niezapisane zmiany",
+    "message": "Masz niezapisane zmiany. Czy na pewno chcesz wyjść?",
+    "stay": "Zostań",
+    "discard": "Odrzuć zmiany"
   },
   "impersonate": {
     "back_to_login": "Wróć do logowania",
@@ -531,6 +541,8 @@
       "other": "Inne"
     },
     "no_data": "Brak danych",
+    "beacons_offline": "{{count}} beacon offline",
+    "check_devices": "Sprawdź urządzenia",
     "top": {
       "title": "Top biurka (30 dni)",
       "checkins_suffix": "check-inów"
@@ -544,6 +556,7 @@
     "legend": {
       "free": "Wolne",
       "reserved": "Rezerwacja",
+      "mine": "Moja rezerwacja",
       "occupied": "Zajęte",
       "offline": "Offline"
     },
@@ -733,6 +746,7 @@
     "none": "Brak rezerwacji",
     "none_hint": "Przejdź do mapy biurek, aby zarezerwować miejsce",
     "active": "Aktywne",
+    "desks": "Biurka",
     "history": "Historia",
     "status": {
       "confirmed": "Potwierdzone",
@@ -869,6 +883,8 @@
       "no_desk": "Brak biurka",
       "select_desk_placeholder": "— wybierz biurko —",
       "desk_optional_label": "Biurko (opcjonalne)",
+      "no_beacons_title": "Brak zarejestrowanych urządzeń",
+      "no_beacons_sub": "Użyj komendy PROVISION:{...} w Serial Monitorze aby dodać beacon.",
       "no_gateways": "Brak gateway'ów — kliknij \"+ Nowy gateway\" aby wygenerować komendę instalacyjną",
       "provision_btn": "Provisioning",
       "provisioned_ok": "Beacon zarejestrowany pomyślnie",
@@ -1130,6 +1146,9 @@
     }
   },
   "push": {
+    "title":       "Reserti",
+    "subtitle":    "Powiadomienie z systemu rezerwacji",
+    "description": "Masz nową wiadomość dotyczącą Twojej rezerwacji",
     "banner_title": "Włącz powiadomienia push",
     "banner_sub": "Bądź na bieżąco z rezerwacjami i alertami IoT",
     "card_title": "Powiadomienia w czasie rzeczywistym",

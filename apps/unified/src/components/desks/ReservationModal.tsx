@@ -1,6 +1,7 @@
 import { localDateStr, localDateTimeISO } from '../../utils/date';
 import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 // FIX P1-4: returns earliest allowed start time for a given date
 function getMinTime(date: string, openTime: string): string {
@@ -16,17 +17,19 @@ function getMinTime(date: string, openTime: string): string {
 import { DeskMapItem, LocationLimits } from '../../types/index';
 import { appApi } from '../../api/client';
 import { RecurringToggle, type RecurrenceConfig } from '../reservations/RecurringToggle';
+import { TimePicker } from '../ui/TimePicker';
 
 interface Props {
-  desk:       DeskMapItem;
-  onClose:    () => void;
-  onSuccess:  () => void;
-  isEndUser?: boolean;
-  users?:     any[];
-  limits?:    LocationLimits | null;
+  desk:         DeskMapItem;
+  onClose:      () => void;
+  onSuccess:    () => void;
+  isEndUser?:   boolean;
+  users?:       any[];
+  limits?:      LocationLimits | null;
+  initialDate?: string;
 }
 
-export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [], limits }: Props) {
+export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, users = [], limits, initialDate }: Props) {
   const today   = localDateStr();
   const { t }   = useTranslation();
   const maxDate = (() => {
@@ -34,7 +37,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
     d.setDate(d.getDate() + (limits?.maxDaysAhead ?? 14));
     return localDateStr(d);
   })();
-  const [date,       setDate]      = useState(today);
+  const [date,       setDate]      = useState(initialDate ?? today);
   const openTime = limits?.openTime ?? '00:00';
   const [start,      setStart]     = useState(() => getMinTime(today, limits?.openTime ?? '09:00')); // FIX P1-4
   const [end,        setEnd]       = useState(limits?.closeTime ?? '17:00');
@@ -94,7 +97,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
   // FIX P2-4: block reservation modal for MAINTENANCE desks
   const isMaintenance = desk.status === 'MAINTENANCE';
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm max-h-[92vh] flex flex-col">
         <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
@@ -162,16 +165,20 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.from')}</label>
-              <input type="time" value={start} min={getMinTime(date, openTime)} onChange={e => setStart(e.target.value)} // FIX P1-4
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
-            </div>
-            <div>
-              <label className="block text-xs text-zinc-500 mb-1.5 font-medium">{t('desks.reserve.to')}</label>
-              <input type="time" value={end} onChange={e => setEnd(e.target.value)}
-                className="w-full border border-zinc-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
-            </div>
+            <TimePicker
+              value={start}
+              onChange={setStart}
+              min={getMinTime(date, openTime)}
+              max={end || limits?.closeTime}
+              label={t('desks.reserve.from')}
+            />
+            <TimePicker
+              value={end}
+              onChange={setEnd}
+              min={start || limits?.openTime}
+              max={limits?.closeTime}
+              label={t('desks.reserve.to')}
+            />
           </div>
 
           <p className="text-[11px] text-zinc-400 -mt-1">
@@ -218,4 +225,5 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
       </div>
     </div>
   );
+  return createPortal(modal, document.body);
 }

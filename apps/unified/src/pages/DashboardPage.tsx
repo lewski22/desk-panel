@@ -336,7 +336,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locationId   = useLocationId();
   const role         = useRole();
-  const isAdmin      = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(role);
+  const isAdmin         = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(role);
+  const isAtLeastStaff  = isAdmin || role === 'STAFF';
   const locale       = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
   const [ext,          setExt]          = useState<any>(null);
@@ -483,6 +484,8 @@ export function DashboardPage() {
         )}
       </div>
 
+      {/* Spacer — KPI grid ends */}
+
       {/* Quick Actions — tylko dla Admin+ */}
       <QuickActions locationId={locationId} onRefresh={load} />
 
@@ -517,7 +520,7 @@ export function DashboardPage() {
       </Card>}
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAdmin ? 'sm:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2'}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAtLeastStaff ? 'sm:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2'}`}>
         {isAdmin && <HourlyChart hourly={ext?.hourly} />}
 
         {/* Zone occupancy */}

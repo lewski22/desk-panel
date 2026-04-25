@@ -407,6 +407,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
   const [latestFw,     setLatestFw]     = React.useState<any>(null);
   const [otaAllBusy,   setOtaAllBusy]   = React.useState(false);
   const [toast,        setToast]        = React.useState<{ msg: string; type: 'info'|'success'|'error' } | null>(null);
+  const [devLoaded,    setDevLoaded]    = React.useState(false);
   const autoRefreshRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   React.useEffect(() => { setForm(f => ({ ...f, locId: activeLocId })); }, [activeLocId]);
@@ -418,6 +419,7 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
     ]);
     setDevices(dev);
     setGateways(gw);
+    setDevLoaded(true);
   }, []);
 
   const loadDesks = async (locId: string) => {
@@ -783,7 +785,16 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
             {filteredDevices.length === 0 && (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-zinc-400 text-sm">
-                  {t('common.loading')}
+                  {!devLoaded
+                    ? t('common.loading')
+                    : (
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-2xl">📡</span>
+                        <p className="font-medium text-zinc-600">{t('provisioning.no_beacons_title')}</p>
+                        <p className="text-xs text-zinc-400">{t('provisioning.no_beacons_sub')}</p>
+                      </div>
+                    )
+                  }
                 </td>
               </tr>
             )}

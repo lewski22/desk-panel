@@ -48,7 +48,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'],
     items: [
       { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
-      { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'WEEKLY_VIEW' },
+      { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'], module: 'WEEKLY_VIEW' },
       { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
       { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],            module: 'DESKS' },
     ],
@@ -70,7 +70,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],
     items: [
       { to: '/dashboard', icon: IconBarChart,  labelKey: 'layout.nav.dashboard', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
-      { to: '/reports',   icon: IconPieChart,  labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/reports',   icon: IconPieChart,  labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
     ],
   },
   {

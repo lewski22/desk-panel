@@ -155,7 +155,7 @@ export const appApi = {
   // ── Desks ────────────────────────────────────────────────────
   desks: {
     list:         (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
-    status:       (locId: string)            => req<any>(`/locations/${locId}/desks/status`),
+    status:       (locId: string, date?: string) => req<any>(`/locations/${locId}/desks/status${date ? `?date=${date}` : ''}`),
     create:       (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
     update:       (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
     batchPositions: (updates: any[])          => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),

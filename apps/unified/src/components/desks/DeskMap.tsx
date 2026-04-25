@@ -5,6 +5,8 @@ import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
 import { ReservationModal } from './ReservationModal';
 
+const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+
 interface Props {
   desks: DeskMapItem[];
   lastUpdated: Date | null;
@@ -12,6 +14,7 @@ interface Props {
   userRole?: string;
   locationLimits?: LocationLimits | null;
   users?: any[];
+  selectedDate?: string;
 }
 
 function groupByFloor(desks: DeskMapItem[]) {
@@ -24,7 +27,7 @@ function groupByFloor(desks: DeskMapItem[]) {
   return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
 }
 
-function Stats({ desks }: { desks: DeskMapItem[] }) {
+export function DeskStats({ desks }: { desks: DeskMapItem[] }) {
   const { t } = useTranslation();
   const active   = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
   const free     = active.filter(d => !d.isOccupied && !d.currentReservation).length;
@@ -49,7 +52,7 @@ function Stats({ desks }: { desks: DeskMapItem[] }) {
 }
 
 
-export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits, showAvatars = false, users = [] }: Props & { showAvatars?: boolean }) {
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits, showAvatars = false, users = [], selectedDate }: Props & { showAvatars?: boolean }) {
   const { t } = useTranslation();
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
@@ -104,6 +107,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
           isEndUser={isEndUser}
           users={users}
           limits={locationLimits}
+          initialDate={selectedDate}
           onClose={() => setReservationTarget(null)}
           onSuccess={handleReservationSuccess}
         />
@@ -132,7 +136,12 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
         </div>
       )}
 
-      <Stats desks={desks} />
+      {selectedDate && selectedDate !== todayStr() && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-4 text-center">
+          📅 {t('deskmap.showing_for', 'Dostępność na dzień')}{' '}
+          <strong>{new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>
+        </p>
+      )}
 
       {isEndUser && visibleDesks.length === 0 && (
         <div className="text-center py-16 text-zinc-400">
@@ -158,7 +167,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
                 <div key={desk.id}
                   onClick={() => setReservationTarget(desk)}
                   className="cursor-pointer active:scale-95 transition-transform select-none">
-                  <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} hideActions />
+                  <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} hideActions isEndUser />
                 </div>
               ) : (
                 // Staff/Admin — check-in otwiera modal rezerwacji, check-out działa bezpośrednio

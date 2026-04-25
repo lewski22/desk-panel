@@ -211,6 +211,9 @@
   "deskmap": {
     "location_label": "Office:",
     "loading": "Loading desk map…",
+    "date_label":    "Show availability for:",
+    "today":         "Today",
+    "showing_for":   "Showing availability for",
     "conn_error": "Connection error",
     "stale_warning": "Connection issue — data may be outdated",
     "no_location_title": "No office assigned",
@@ -228,7 +231,14 @@
       "parking": "No parking spots",
       "sub": "An admin can add them in the management panel."
     },
-    "location_no_desks": "No available desks"
+    "location_no_desks": "No available desks",
+    "set_default": "Set as default"
+  },
+  "dirty_guard": {
+    "title": "Unsaved changes",
+    "message": "You have unsaved changes. Are you sure you want to leave?",
+    "stay": "Stay",
+    "discard": "Discard changes"
   },
   "impersonate": {
     "back_to_login": "Back to login",
@@ -531,6 +541,8 @@
       "other": "Other"
     },
     "no_data": "No data",
+    "beacons_offline": "{{count}} beacon offline",
+    "check_devices": "Check devices",
     "top": {
       "title": "Top desks (30 days)",
       "checkins_suffix": "check-ins"
@@ -544,6 +556,7 @@
     "legend": {
       "free": "Free",
       "reserved": "Reserved",
+      "mine": "My reservation",
       "occupied": "Occupied",
       "offline": "Offline"
     },
@@ -733,6 +746,7 @@
     "none": "No reservations",
     "none_hint": "Go to the desk map to create a reservation",
     "active": "Active",
+    "desks": "Desks",
     "history": "History",
     "status": {
       "confirmed": "Confirmed",
@@ -869,6 +883,8 @@
       "no_desk": "No desk",
       "select_desk_placeholder": "— select desk —",
       "desk_optional_label": "Desk (optional)",
+      "no_beacons_title": "No registered devices",
+      "no_beacons_sub": "Use the PROVISION:{...} command in Serial Monitor to add a beacon.",
       "no_gateways": "No gateways — click \"+ New gateway\" to generate an installation command",
       "provision_btn": "Provisioning",
       "provisioned_ok": "Beacon registered successfully",
@@ -1130,6 +1146,9 @@
     }
   },
   "push": {
+    "title":       "Reserti",
+    "subtitle":    "Desk booking notification",
+    "description": "You have a new update regarding your reservation",
     "banner_title": "Enable push notifications",
     "banner_sub": "Stay updated on reservations and IoT alerts",
     "card_title": "Real-time notifications",
