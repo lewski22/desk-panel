@@ -185,6 +185,81 @@ function QuickActions({ locationId, onRefresh }: { locationId: string; onRefresh
   );
 }
 
+// ── AttentionSection ─────────────────────────────────────────
+const ATTENTION_COLORS: Record<string, { bg: string; border: string; text: string; btn: string }> = {
+  amber: { bg: 'bg-amber-50',   border: 'border-amber-200', text: 'text-amber-800',   btn: 'text-amber-700 hover:text-amber-900'   },
+  blue:  { bg: 'bg-sky-50',     border: 'border-sky-200',   text: 'text-sky-800',     btn: 'text-sky-700 hover:text-sky-900'     },
+  red:   { bg: 'bg-red-50',     border: 'border-red-200',   text: 'text-red-800',     btn: 'text-red-700 hover:text-red-900'     },
+};
+
+function AttentionSection({ desks, offlineCount, isAdmin }: {
+  desks: any[]; offlineCount: number; isAdmin: boolean;
+}) {
+  const { t }    = useTranslation();
+  const navigate = useNavigate();
+  const now      = new Date();
+
+  const beaconAlert = isAdmin && offlineCount > 0 ? {
+    id: 'beacons', icon: '📡', color: 'amber',
+    text: `${offlineCount} beacon${offlineCount > 1 ? 'ów' : ''} offline`,
+    sub:  t('dashboard.beacons_offline'),
+    action: () => navigate('/devices'),
+    actionLabel: t('dashboard.check_devices'),
+  } : null;
+
+  const soonDesks = desks.filter(d => {
+    if (!d.currentReservation || d.isOccupied) return false;
+    const diff = (new Date(d.currentReservation.startTime).getTime() - now.getTime()) / 60_000;
+    return diff > 0 && diff < 30;
+  });
+  const soonAlert = soonDesks.length > 0 ? {
+    id: 'soon', icon: '⏰', color: 'blue',
+    text: `${soonDesks.length} rezerwacja${soonDesks.length > 1 ? 'e' : ''} za chwilę`,
+    sub:  t('dashboard.attention.soon_sub', 'Brak check-in w ciągu 30 minut'),
+    action: () => navigate('/reservations'),
+    actionLabel: t('dashboard.attention.see_reservations', 'Zobacz rezerwacje'),
+  } : null;
+
+  const maintenanceDesks = desks.filter(d => d.status === 'MAINTENANCE');
+  const maintenanceAlert = isAdmin && maintenanceDesks.length > 0 ? {
+    id: 'maintenance', icon: '🔧', color: 'red',
+    text: `${maintenanceDesks.length} biurko${maintenanceDesks.length > 1 ? 'a' : ''} w serwisie`,
+    sub:  maintenanceDesks.map((d: any) => d.name).slice(0, 3).join(', '),
+    action: () => navigate('/desks'),
+    actionLabel: t('dashboard.attention.manage_desks', 'Zarządzaj biurkami'),
+  } : null;
+
+  const alerts = [beaconAlert, soonAlert, maintenanceAlert].filter(Boolean) as NonNullable<typeof beaconAlert>[];
+  if (!alerts.length) return null;
+
+  return (
+    <div className="mb-4">
+      <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+        {t('dashboard.attention.title', 'Wymaga uwagi')}
+      </p>
+      <div className="flex flex-col gap-2">
+        {alerts.map(alert => {
+          const c = ATTENTION_COLORS[alert.color];
+          return (
+            <div key={alert.id}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${c.bg} ${c.border}`}>
+              <span className="text-lg shrink-0">{alert.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold ${c.text}`}>{alert.text}</p>
+                {alert.sub && <p className="text-xs text-zinc-500 truncate mt-0.5">{alert.sub}</p>}
+              </div>
+              <button onClick={alert.action}
+                className={`text-xs font-semibold shrink-0 transition-colors ${c.btn}`}>
+                {alert.actionLabel} →
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Today's Issues Widget ─────────────────────────────────────
 const ISSUE_ICONS: Record<string, string> = {
   BEACON_OFFLINE: '🔴',
@@ -445,16 +520,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Beacon offline alert — FEATURE P4-3C: admin only */}
-      {offlineCount > 0 && isAdmin && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4 text-sm">
-          <span>📡</span>
-          <span className="text-amber-800 font-medium">{offlineCount} {t('dashboard.beacons_offline')}</span>
-          <a href="/devices" className="ml-auto text-amber-700 underline text-xs hover:no-underline">
-            {t('dashboard.check_devices')}
-          </a>
-        </div>
-      )}
+      {/* Attention section — replaces inline beacon alert */}
+      <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} />
 
       {/* KPI Row — FEATURE P4-3C: beacons card hidden for END_USER */}
       <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>

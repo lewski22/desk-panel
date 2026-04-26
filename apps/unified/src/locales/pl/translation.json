@@ -55,12 +55,14 @@
       "management": "Zarządzanie",
       "analytics": "Analityka",
       "config": "Konfiguracja",
+      "settings": "Ustawienia",
       "operator": "Operator"
     },
     "nav": {
       "map": "Mapa biurek",
       "my_reservations": "Moje rezerwacje",
       "reservations": "Wszystkie rezerwacje",
+      "search": "Szukaj",
       "desks": "Biurka",
       "users": "Użytkownicy",
       "devices": "Urządzenia",
@@ -583,6 +585,12 @@
         "OTA_FAILED": "Błąd aktualizacji",
         "NO_CHECKIN": "Brak check-in"
       }
+    },
+    "attention": {
+      "title": "Wymaga uwagi",
+      "soon_sub": "Brak check-in w ciągu 30 minut",
+      "see_reservations": "Zobacz rezerwacje",
+      "manage_desks": "Zarządzaj biurkami"
     }
   },
   "methods": {
@@ -591,6 +599,10 @@
     "WEB": "Web",
     "MANUAL": "Ręczny",
     "NO_CHECKIN": "Brak"
+  },
+  "search": {
+    "placeholder": "Szukaj biurek, użytkowników, stron…",
+    "no_results": "Brak wyników dla „{{q}}""
   },
   "reports": {
     "kpi": {

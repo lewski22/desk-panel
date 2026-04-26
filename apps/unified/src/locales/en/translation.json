@@ -55,12 +55,14 @@
       "management": "Management",
       "analytics": "Analytics",
       "config": "Configuration",
+      "settings": "Settings",
       "operator": "Operator"
     },
     "nav": {
       "map": "Desk Map",
       "my_reservations": "My Reservations",
       "reservations": "All Reservations",
+      "search": "Search",
       "desks": "Desks",
       "users": "Users",
       "devices": "Devices",
@@ -583,6 +585,12 @@
         "OTA_FAILED": "OTA update failed",
         "NO_CHECKIN": "Missing check-in"
       }
+    },
+    "attention": {
+      "title": "Needs attention",
+      "soon_sub": "No check-in within 30 minutes",
+      "see_reservations": "View reservations",
+      "manage_desks": "Manage desks"
     }
   },
   "methods": {
@@ -591,6 +599,10 @@
     "WEB": "Web",
     "MANUAL": "Manual",
     "NO_CHECKIN": "No check-in"
+  },
+  "search": {
+    "placeholder": "Search desks, users, pages…",
+    "no_results": "No results for \"{{q}}\""
   },
   "reports": {
     "kpi": {
