@@ -490,7 +490,7 @@ export function OrganizationsPage() {
             <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.country_label')}</label>
             <select
               value={form.country}
-              onChange={e => { setForm(f => ({ ...f, country: e.target.value })); markDirty(); }}}
+              onChange={e => { setForm(f => ({ ...f, country: e.target.value })); markDirty(); }}
               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">{t('organizations.form.country_auto')}</option>
@@ -537,13 +537,13 @@ export function OrganizationsPage() {
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_days')}</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
-                onChange={e => { setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) })); markDirty(); }}}
+                onChange={e => { setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) })); markDirty(); }}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_hours')}</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
-                onChange={e => { setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) })); markDirty(); }}}
+                onChange={e => { setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) })); markDirty(); }}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
