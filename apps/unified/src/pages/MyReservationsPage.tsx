@@ -283,9 +283,12 @@ export function MyReservationsPage() {
               </h2>
               <div className="space-y-3">
                 {bookings.map(b => {
-                  const start = new Date(b.startTime);
-                  const end   = new Date(b.endTime);
-                  const isPast = end < new Date();
+                  const isPast = new Date(b.endTime) < new Date();
+                  const TZ = 'Europe/Warsaw';
+                  const fmtTime = (iso: string) =>
+                    new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+                  const fmtDate = (iso: string) =>
+                    new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
                   return (
                     <div key={b.id} className={`bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}>
                       <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-lg shrink-0">
@@ -294,11 +297,11 @@ export function MyReservationsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
                         <p className="text-xs text-zinc-500 mt-0.5">
-                          {start.toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {fmtDate(b.startTime)}
                           {' · '}
-                          {start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                          {fmtTime(b.startTime)}
                           {'–'}
-                          {end.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                          {fmtTime(b.endTime)}
                         </p>
                         {b.resource?.location?.name && (
                           <p className="text-[11px] text-zinc-400">{b.resource.location.name}</p>

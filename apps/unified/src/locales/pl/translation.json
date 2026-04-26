@@ -717,7 +717,11 @@
       "wifi_ssid_label": "WiFi SSID (dla beaconów)",
       "wifi_ssid_placeholder": "NazwaSieci",
       "wifi_pass_label": "WiFi Hasło",
-      "wifi_hint": "Dane WiFi są szyfrowane i używane podczas provisioning beaconów"
+      "wifi_hint": "Dane WiFi są szyfrowane i używane podczas provisioning beaconów",
+      "parking_mode":   "Tryb rezerwacji parkingu",
+      "parking_hourly": "Godzinowy (wybór godziny)",
+      "parking_allday": "Na cały dzień (brak wyboru godziny)",
+      "parking_hint":   "Czy miejsca parkingowe są rezerwowane na konkretne godziny czy na cały dzień."
     }
   },
   "organizations_extra": {
@@ -1091,6 +1095,10 @@
     "edit_title": "Edytuj: {{name}}",
     "create_title": "Nowy zasób",
     "confirm_book": "Potwierdź rezerwację",
+    "book_allday":  "Zarezerwuj cały dzień",
+    "allday_free":  "Miejsce dostępne na cały dzień",
+    "allday_taken": "Miejsce zajęte na ten dzień",
+    "allday_hint":  "Rezerwacja obejmuje cały dzień roboczy.",
     "confirm_remove": "Usunąć zasób \"{{name}}\"?",
     "select_time": "Wybierz godziny",
     "select_end": "Kliknij koniec przedziału",

@@ -717,7 +717,11 @@
       "wifi_ssid_label": "WiFi SSID (for beacons)",
       "wifi_ssid_placeholder": "NetworkName",
       "wifi_pass_label": "WiFi Password",
-      "wifi_hint": "WiFi credentials are encrypted and used when provisioning beacons"
+      "wifi_hint": "WiFi credentials are encrypted and used when provisioning beacons",
+      "parking_mode":   "Parking booking mode",
+      "parking_hourly": "Hourly (time slot selection)",
+      "parking_allday": "All day (no time selection)",
+      "parking_hint":   "Whether parking spots are booked for specific hours or for the entire day."
     }
   },
   "organizations_extra": {
@@ -1091,6 +1095,10 @@
     "edit_title": "Edit: {{name}}",
     "create_title": "New resource",
     "confirm_book": "Confirm booking",
+    "book_allday":  "Reserve for the whole day",
+    "allday_free":  "Spot available for the whole day",
+    "allday_taken": "Spot is taken for this day",
+    "allday_hint":  "Reservation covers the entire working day.",
     "confirm_remove": "Remove resource \"{{name}}\"?",
     "select_time": "Select time slot",
     "select_end": "Click end of range",

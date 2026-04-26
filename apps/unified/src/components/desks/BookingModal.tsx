@@ -1,14 +1,11 @@
 /**
- * BookingModal — Sprint E2
+ * BookingModal — Sprint E2 + FIX
  * Modal rezerwacji sali konferencyjnej / parkingu
- * - Pobiera wolne sloty (co 30 min 8–20)
- * - Wizualna oś czasu dostępności
- * - Wybór przedziału czasowego
+ * - HOURLY: sloty 30-min z siatką wyboru
+ * - ALL_DAY: jeden slot "cały dzień" dla parkingów
  */
 import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { format }          from 'date-fns';
-import { pl, enUS }        from 'date-fns/locale';
 import { appApi }          from '../../api/client';
 import { Modal, Btn }      from '../ui';
 import { localDateStr }    from '../../utils/date';
@@ -21,8 +18,7 @@ interface Props {
 }
 
 export function BookingModal({ resource, onClose, onBooked, initialDate }: Props) {
-  const { t, i18n }   = useTranslation();
-  const dfns           = i18n.language === 'en' ? enUS : pl;
+  const { t }                     = useTranslation();
   const [date, setDate]           = useState(initialDate ?? localDateStr());
   const [avail, setAvail]         = useState<any>(null);
   const [loading, setLoading]     = useState(false);
@@ -41,7 +37,6 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
       .finally(() => setLoading(false));
   }, [resource.id, date]);
 
-  // Obsługa wyboru przedziału — klik start → klik end
   const handleSlotClick = (time: string, available: boolean) => {
     if (!available) return;
     if (!startTime || endTime) {
@@ -67,21 +62,29 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
   }, [startTime, endTime, avail?.slots]);
 
   const handleBook = async () => {
-    if (!startTime || !endTime) return;
     setSaving(true); setErr(null);
     try {
-      // Traktuj godziny jako wall-clock UTC — bez konwersji strefy
-      // Sloty na backendzie też są wall-clock UTC (T08:00:00.000Z = "8 rano w biurze")
-      const [eh, em] = endTime.split(':').map(Number);
-      const endMinutes = eh * 60 + em + 30;
-      const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
-      const endM = String(endMinutes % 60).padStart(2, '0');
-      await appApi.resources.book(resource.id, {
-        date,
-        startTime: `${date}T${startTime}:00.000Z`,
-        endTime:   `${date}T${endH}:${endM}:00.000Z`,
-        notes,
-      });
+      if (avail?.allDayMode) {
+        await appApi.resources.book(resource.id, {
+          date,
+          startTime: `${date}T00:00:00.000Z`,
+          endTime:   `${date}T23:59:59.000Z`,
+          allDay:    true,
+          notes,
+        });
+      } else {
+        if (!startTime || !endTime) { setSaving(false); return; }
+        const [eh, em] = endTime.split(':').map(Number);
+        const endMinutes = eh * 60 + em + 30;
+        const endH = String(Math.floor(endMinutes / 60)).padStart(2, '0');
+        const endM = String(endMinutes % 60).padStart(2, '0');
+        await appApi.resources.book(resource.id, {
+          date,
+          startTime: `${date}T${startTime}:00.000Z`,
+          endTime:   `${date}T${endH}:${endM}:00.000Z`,
+          notes,
+        });
+      }
       onBooked();
     } catch (e: any) {
       setErr(e.message ?? t('common.error'));
@@ -107,55 +110,79 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
             className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
 
-        {/* Slots grid */}
+        {/* Slots / ALL_DAY */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-zinc-500 font-medium">{t('resource.select_time')}</label>
-            {startTime && !endTime && (
-              <p className="text-xs text-brand">{t('resource.select_end')}</p>
-            )}
-            {startTime && endTime && (
-              <p className="text-xs text-emerald-600 font-semibold">
-                {startTime}–{endTime} (+30m) · {durationMin} min
-              </p>
-            )}
-          </div>
+          {!avail?.allDayMode && (
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-zinc-500 font-medium">{t('resource.select_time')}</label>
+              {startTime && !endTime && (
+                <p className="text-xs text-brand">{t('resource.select_end')}</p>
+              )}
+              {startTime && endTime && (
+                <p className="text-xs text-emerald-600 font-semibold">
+                  {startTime}–{endTime} (+30m) · {durationMin} min
+                </p>
+              )}
+            </div>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-6">
               <div className="w-4 h-4 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
             </div>
-          ) : (
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-64 overflow-y-auto pr-1">
-              {(avail?.slots ?? []).map((slot: any) => {
-                const isSel     = selectedSlots.has(slot.time);
-                const isStart   = slot.time === startTime;
-                const isEnd     = slot.time === endTime;
-                return (
-                  <button
-                    key={slot.time}
-                    disabled={!slot.available}
-                    onClick={() => handleSlotClick(slot.time, slot.available)}
-                    className={`py-2 px-1 rounded-lg text-xs font-medium transition-all text-center ${
-                      !slot.available
-                        ? 'bg-red-50 text-red-300 border border-red-100 cursor-not-allowed'
-                        : isStart || isEnd
-                        ? 'bg-brand text-white border-brand shadow-sm'
-                        : isSel
-                        ? 'bg-brand/20 text-brand border-brand/30'
-                        : 'bg-zinc-50 text-zinc-600 border border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
-                    }`}
-                  >
-                    {slot.time}
-                  </button>
-                );
-              })}
+          ) : avail?.allDayMode ? (
+            <div className="rounded-xl border border-zinc-200 p-4 text-center">
+              {avail.available ? (
+                <>
+                  <p className="text-emerald-600 font-semibold text-sm mb-1">
+                    {t('resource.allday_free', 'Miejsce dostępne na cały dzień')}
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    {t('resource.allday_hint', 'Rezerwacja obejmuje cały dzień roboczy.')}
+                  </p>
+                </>
+              ) : (
+                <p className="text-red-500 font-semibold text-sm">
+                  {t('resource.allday_taken', 'Miejsce zajęte na ten dzień')}
+                  {avail.currentBooking?.user?.firstName
+                    ? ` — ${avail.currentBooking.user.firstName} ${avail.currentBooking.user.lastName ?? ''}`
+                    : ''}
+                </p>
+              )}
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-64 overflow-y-auto pr-1">
+                {(avail?.slots ?? []).map((slot: any) => {
+                  const isSel   = selectedSlots.has(slot.time);
+                  const isStart = slot.time === startTime;
+                  const isEnd   = slot.time === endTime;
+                  return (
+                    <button
+                      key={slot.time}
+                      disabled={!slot.available}
+                      onClick={() => handleSlotClick(slot.time, slot.available)}
+                      className={`py-2 px-1 rounded-lg text-xs font-medium transition-all text-center ${
+                        !slot.available
+                          ? 'bg-red-50 text-red-300 border border-red-100 cursor-not-allowed'
+                          : isStart || isEnd
+                          ? 'bg-brand text-white border-brand shadow-sm'
+                          : isSel
+                          ? 'bg-brand/20 text-brand border-brand/30'
+                          : 'bg-zinc-50 text-zinc-600 border border-zinc-200 hover:bg-zinc-100 hover:border-zinc-300'
+                      }`}
+                    >
+                      {slot.time}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-zinc-400 mt-2">
+                <span className="inline-block w-3 h-3 rounded bg-zinc-50 border border-zinc-200 mr-1" />{t('resource.legend.free')}
+                <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-100 ml-3 mr-1" />{t('resource.legend.taken')}
+              </p>
+            </>
           )}
-          <p className="text-[10px] text-zinc-400 mt-2">
-            <span className="inline-block w-3 h-3 rounded bg-zinc-50 border border-zinc-200 mr-1" />{t('resource.legend.free')}
-            <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-100 ml-3 mr-1" />{t('resource.legend.taken')}
-          </p>
         </div>
 
         {/* Notes */}
@@ -170,10 +197,18 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
 
         <div className="flex justify-end gap-2 pt-1">
           <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
-          <Btn onClick={handleBook} loading={saving}
-            disabled={!startTime || !endTime}>
-            {t('resource.confirm_book')}
-          </Btn>
+          {avail?.allDayMode
+            ? avail?.available && (
+                <Btn onClick={handleBook} loading={saving}>
+                  {t('resource.book_allday', 'Zarezerwuj cały dzień')}
+                </Btn>
+              )
+            : (
+                <Btn onClick={handleBook} loading={saving} disabled={!startTime || !endTime}>
+                  {t('resource.confirm_book')}
+                </Btn>
+              )
+          }
         </div>
       </div>
     </Modal>

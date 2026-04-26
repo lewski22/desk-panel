@@ -101,14 +101,12 @@ export class ResourcesService {
 
   // ── Dostępność zasobu na dany dzień ───────────────────────────
   async getAvailability(resourceId: string, date: string) {
-    // Load resource together with location hours so slots respect office openTime/closeTime
     const resource = await this.prisma.resource.findUnique({
       where:   { id: resourceId },
-      include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true } } },
+      include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true, parkingBookingMode: true } } },
     });
     if (!resource) throw new NotFoundException('Resource not found');
 
-    // Wszystkie bookings na ten dzień (wall-clock UTC — 00:00–23:59 biurowego dnia)
     const dayStart = new Date(`${date}T00:00:00.000Z`);
     const dayEnd   = new Date(`${date}T23:59:59.999Z`);
 
@@ -122,13 +120,27 @@ export class ResourcesService {
       orderBy: { startTime: 'asc' },
     });
 
-    // Parse office hours from location (fallback: 08:00–20:00 for legacy locations without config)
+    // ALL_DAY mode — jeden slot "cały dzień" dla parkingu
+    const isAllDay = resource.type === 'PARKING'
+      && (resource.location as any)?.parkingBookingMode === 'ALL_DAY';
+
+    if (isAllDay) {
+      const conflict = bookings[0] ?? null;
+      return {
+        resource, date, bookings,
+        allDayMode: true,
+        available:  !conflict,
+        currentBooking: conflict,
+        slots: [],
+      };
+    }
+
+    // HOURLY — standardowe sloty 30-minutowe
     const [openH,  openM]  = ((resource.location as any)?.openTime  ?? '08:00').split(':').map(Number);
     const [closeH, closeM] = ((resource.location as any)?.closeTime ?? '20:00').split(':').map(Number);
     const openTotal  = openH  * 60 + openM;
     const closeTotal = closeH * 60 + closeM;
 
-    // Generate 30-min slots bounded by office openTime–closeTime (not hardcoded 8–20)
     const slots: { time: string; available: boolean; bookingId?: string }[] = [];
     for (let totalMin = openTotal; totalMin + 30 <= closeTotal; totalMin += 30) {
       const h = Math.floor(totalMin / 60);
@@ -141,15 +153,20 @@ export class ResourcesService {
       slots.push({ time: `${hh}:${mm}`, available: !conflict, bookingId: conflict?.id });
     }
 
-    return { resource, date, bookings, slots };
+    return { resource, date, bookings, allDayMode: false, slots };
   }
 
   // ── Utwórz booking z walidacją konfliktów ─────────────────────
   async createBooking(resourceId: string, userId: string, dto: {
-    date: string; startTime: string; endTime: string; notes?: string;
+    date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean;
   }) {
-    const start = new Date(dto.startTime);
-    const end   = new Date(dto.endTime);
+    let start = new Date(dto.startTime);
+    let end   = new Date(dto.endTime);
+
+    if (dto.allDay) {
+      start = new Date(`${dto.date}T00:00:00.000Z`);
+      end   = new Date(`${dto.date}T23:59:59.000Z`);
+    }
 
     if (end <= start) throw new ConflictException('endTime musi być późniejszy niż startTime');
 

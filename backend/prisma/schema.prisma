@@ -142,8 +142,9 @@ model Location {
   isActive       Boolean  @default(true)
   openTime       String   @default("08:00")
   closeTime      String   @default("17:00")
-  maxDaysAhead   Int      @default(14)
-  maxHoursPerDay Int      @default(8)
+  maxDaysAhead        Int    @default(14)
+  maxHoursPerDay      Int    @default(8)
+  parkingBookingMode  String @default("HOURLY")
 
   kioskPin       String?
   country        String?  // FEATURE P4-B3: ISO 3166-1 alpha-2 code for holiday-aware workday counting

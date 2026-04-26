@@ -251,7 +251,7 @@ export function OrganizationsPage() {
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
-    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
+    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
   });
   const [saving,          setSaving]          = useState(false);
   const [err,             setErr]             = useState('');
@@ -281,7 +281,7 @@ export function OrganizationsPage() {
 
   const openCreate = () => {
     resetDirty();
-    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
+    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
       organizationId: user?.organizationId ?? '' });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
@@ -297,6 +297,7 @@ export function OrganizationsPage() {
       maxDaysAhead: loc.maxDaysAhead ?? 14, maxHoursPerDay: loc.maxHoursPerDay ?? 8,
       timezone: loc.timezone ?? 'Europe/Warsaw',
       country: loc.country ?? '',
+      parkingBookingMode: loc.parkingBookingMode ?? 'HOURLY',
       organizationId: loc.organizationId,
     });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
@@ -332,6 +333,7 @@ export function OrganizationsPage() {
           country: form.country || null,
           wifiSsid: wifiSsid,
           wifiPass: wifiPass,
+          parkingBookingMode: form.parkingBookingMode,
         });
       }
       resetDirty();
@@ -548,6 +550,22 @@ export function OrganizationsPage() {
             </div>
           </div>
           <p className="text-xs text-zinc-400">{t('organizations.form.limits_hint')}</p>
+          <div>
+            <label className="block text-xs text-zinc-400 mb-1 font-medium">
+              {t('organizations.form.parking_mode', 'Tryb rezerwacji parkingu')}
+            </label>
+            <select
+              value={form.parkingBookingMode}
+              onChange={e => { setForm(f => ({ ...f, parkingBookingMode: e.target.value })); markDirty(); }}
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+            >
+              <option value="HOURLY">{t('organizations.form.parking_hourly', 'Godzinowy (wybór godziny)')}</option>
+              <option value="ALL_DAY">{t('organizations.form.parking_allday', 'Na cały dzień (brak wyboru godziny)')}</option>
+            </select>
+            <p className="text-[10px] text-zinc-400 mt-1">
+              {t('organizations.form.parking_hint', 'Określa czy miejsca parkingowe są rezerwowane na konkretne godziny czy na cały dzień roboczy.')}
+            </p>
+          </div>
           <div className="flex gap-2 mt-1 justify-end">
             <Btn variant="secondary" onClick={requestClose}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}

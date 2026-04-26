@@ -8,12 +8,13 @@ export interface CreateLocationDto {
   address?: string;
   city?: string;
   timezone?: string;
-  openTime?: string;       // HH:mm, e.g. "08:00"
-  closeTime?: string;      // HH:mm, e.g. "17:00"
-  maxDaysAhead?: number;   // Max dni do przodu przy rezerwacji (default: 14)
-  maxHoursPerDay?: number; // Max długość jednej rezerwacji w godzinach (default: 8)
-  wifiSsid?: string;       // plaintext — encrypted before storing
-  wifiPass?: string;       // plaintext — encrypted before storing
+  openTime?: string;            // HH:mm, e.g. "08:00"
+  closeTime?: string;           // HH:mm, e.g. "17:00"
+  maxDaysAhead?: number;        // Max dni do przodu przy rezerwacji (default: 14)
+  maxHoursPerDay?: number;      // Max długość jednej rezerwacji w godzinach (default: 8)
+  parkingBookingMode?: string;  // "HOURLY" | "ALL_DAY" (default: "HOURLY")
+  wifiSsid?: string;            // plaintext — encrypted before storing
+  wifiPass?: string;            // plaintext — encrypted before storing
 }
 
 @Injectable()

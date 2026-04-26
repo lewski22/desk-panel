@@ -69,23 +69,19 @@ function LocationTabs({ locations, activeId, desksPerLocation, onChange, userRol
 }
 
 // ── Resource Stats ────────────────────────────────────────────
-function ResourceStats({ resources, mapTab }: { resources: any[]; mapTab: string }) {
+function ResourceStats({ resources }: { resources: any[] }) {
   const { t } = useTranslation();
 
-  const free     = resources.filter(r => r.status === 'ACTIVE' && !r.currentBooking).length;
-  const booked   = resources.filter(r => r.status === 'ACTIVE' && !!r.currentBooking).length;
-  const inactive = resources.filter(r => r.status !== 'ACTIVE').length;
+  const free   = resources.filter(r => r.status === 'ACTIVE' && !r.currentBooking).length;
+  const booked = resources.filter(r => r.status === 'ACTIVE' && !!r.currentBooking).length;
 
   const stats = [
     { num: free,   color: '#10b981', bg: '#d1fae5', label: t('desks.stats.free') },
     { num: booked, color: '#f59e0b', bg: '#fef3c7', label: t('resource.status.occupied') },
-    ...(inactive > 0
-      ? [{ num: inactive, color: '#a1a1aa', bg: '#f4f4f5', label: t('resource.status.inactive') }]
-      : []),
   ];
 
   return (
-    <div className="grid mb-3" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+    <div className="grid grid-cols-2 mb-3">
       {stats.map(({ num, color, bg, label }) => (
         <div key={label}
           className="flex flex-col items-center justify-center py-3 px-2 border-r border-zinc-100 last:border-r-0"
@@ -455,7 +451,7 @@ export function DeskMapPage() {
           ) : (
             <>
               {resources.length > 0 && (
-                <ResourceStats resources={resources} mapTab={mapTab} />
+                <ResourceStats resources={resources} />
               )}
               {resources.some(r => r.posX != null) && (
                 <ViewToggle mode={resViewMode} onChange={setResViewMode} hasPlan={true} />
