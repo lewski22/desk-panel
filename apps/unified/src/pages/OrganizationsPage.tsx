@@ -323,6 +323,7 @@ export function OrganizationsPage() {
           organizationId: orgId,
           wifiSsid: wifiSsid || undefined,
           wifiPass: wifiPass || undefined,
+          parkingBookingMode: form.parkingBookingMode,
         });
       } else if (target) {
         await appApi.locations.update(target.id, {
