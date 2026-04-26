@@ -722,7 +722,7 @@
     "stat_desks":         "biurek",
     "stat_gateways":      "gatewayów",
     "stat_limits":        "max",
-    "no_search_results":  "Brak biur pasujących do „{{q}}"",
+    "no_search_results":  "Brak biur pasujących do „{{q}}”",
     "clear_search":       "Wyczyść wyszukiwanie",
     "gateway_token_single_use": "Token jest jednorazowy — po użyciu wygasa. Jeśli instalacja się nie powiedzie, wróć tutaj i wygeneruj nowy.",
     "form": {
