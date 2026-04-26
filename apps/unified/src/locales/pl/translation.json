@@ -603,7 +603,7 @@
   },
   "search": {
     "placeholder": "Szukaj biurek, użytkowników, stron…",
-    "no_results": "Brak wyników dla „{{q}}""
+    "no_results": "Brak wyników dla \"{{q}}\""
   },
   "reports": {
     "kpi": {
