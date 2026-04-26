@@ -283,11 +283,11 @@ export class CheckinsService {
       where: {
         id:     reservationId,
         userId,
-        status: ReservationStatus.CONFIRMED,
+        status: { in: [ReservationStatus.CONFIRMED, ReservationStatus.PENDING] },
         endTime: { gte: new Date() },
       },
     });
-    if (!reservation) throw new ForbiddenException('Brak aktywnej rezerwacji lub brak dostępu');
+    if (!reservation) throw new ForbiddenException('Brak rezerwacji lub brak dostępu');
 
     const existing = await this.prisma.checkin.findUnique({ where: { reservationId } });
     if (existing && !existing.checkedOutAt) return existing;

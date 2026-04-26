@@ -793,7 +793,9 @@
     "show_all": "Pokaż wszystkie",
     "recurring_badge": "Cykliczna",
     "swipe_hint": "Przesuń aby anulować",
-    "rooms_section": "Sale i parking"
+    "rooms_section": "Sale i parking",
+    "checkin_now": "Potwierdź obecność",
+    "checkin_early": "Potwierdź rezerwację"
   },
   "provisioning": {
     "title": "Provisioning",

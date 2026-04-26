@@ -793,7 +793,9 @@
     "show_all": "Show all",
     "recurring_badge": "Recurring",
     "swipe_hint": "Swipe to cancel",
-    "rooms_section": "Rooms & parking"
+    "rooms_section": "Rooms & parking",
+    "checkin_now": "Confirm presence",
+    "checkin_early": "Confirm reservation"
   },
   "provisioning": {
     "title": "Provisioning",

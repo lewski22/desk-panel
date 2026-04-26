@@ -105,8 +105,13 @@ function ReservationCard({
               <button
                 onClick={() => onCheckin(r.id)}
                 disabled={checkingIn === r.id}
-                className="text-xs px-3 py-1.5 rounded-xl bg-brand text-white hover:bg-brand-hover transition-colors font-medium disabled:opacity-40">
-                {checkingIn === r.id ? '…' : t('desks.actions.checkin', 'Check-in')}
+                className="text-xs text-brand hover:text-brand-hover px-3 py-1.5 rounded-lg border border-brand/30 hover:border-brand/50 hover:bg-brand/5 transition-colors font-semibold disabled:opacity-40">
+                {checkingIn === r.id
+                  ? '…'
+                  : Date.now() >= new Date(r.startTime).getTime()
+                    ? t('reservations.checkin_now', 'Potwierdź obecność')
+                    : t('reservations.checkin_early', 'Potwierdź rezerwację')
+                }
               </button>
             )}
             {/* FIX P1-3: show Zakończ when checked in, Anuluj otherwise */}
@@ -133,14 +138,10 @@ function ReservationCard({
 }
 
 function canCheckin(r: any): boolean {
-  if (r.status !== 'CONFIRMED') return false;
+  if (!['CONFIRMED', 'PENDING'].includes(r.status)) return false;
   if (r.checkedInAt) return false;
   if (r.checkin && !r.checkin.checkedOutAt) return false;
-  const now   = Date.now();
-  const start = new Date(r.startTime).getTime();
-  const end   = new Date(r.endTime).getTime();
-  const grace = 15 * 60 * 1000;
-  return now >= start - grace && now <= end;
+  return Date.now() <= new Date(r.endTime).getTime();
 }
 
 export function MyReservationsPage() {
