@@ -79,7 +79,10 @@
       "resources": "Sale i Parking",
       "visitors": "Goście",
       "subscription": "Subskrypcja",
-      "more": "Więcej"
+      "more": "Więcej",
+      "map_short":              "Mapa",
+      "reservations_short":     "Moje",
+      "notifications_short":    "Alerty"
     },
     "session_warning_title": "Sesja wygaśnie za 1 minutę",
     "session_warning_body": "Kliknij \"Przedłuż\" aby pozostać zalogowanym.",
@@ -806,8 +809,11 @@
     "recurring_badge": "Cykliczna",
     "swipe_hint": "Przesuń aby anulować",
     "rooms_section": "Sale i parking",
-    "checkin_now": "Potwierdź obecność",
-    "checkin_early": "Potwierdź rezerwację"
+    "checkin_now":           "Potwierdź obecność",
+    "checkin_early":         "Potwierdź rezerwację",
+    "active_section":        "Aktywne",
+    "reservation_single":    "rezerwacja",
+    "reservation_plural":    "rezerwacje"
   },
   "provisioning": {
     "title": "Provisioning",

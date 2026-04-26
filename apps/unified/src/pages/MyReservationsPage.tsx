@@ -2,12 +2,9 @@
  * MyReservationsPage — Sprint H2
  * Dodano swipe-left → reveal "Anuluj" (iOS Mail pattern)
  */
-import { localDateStr } from '../utils/date';
-import { parseISO } from 'date-fns';
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
-import { useSwipe }        from '../hooks/useSwipe';
 import { EmptyState }      from '../components/ui';
 
 function StatusBadge({ status }: { status: string }) {
@@ -26,110 +23,90 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// ── Swipeable reservation card ────────────────────────────────
 function ReservationCard({
   r, locale, onCancel, cancelling, onCheckin, checkingIn, onCheckout, checkingOut,
 }: {
   r: any; locale: string;
-  onCancel: (id: string) => void; cancelling: string | null;
-  onCheckin: (id: string) => void; checkingIn: string | null;
-  onCheckout: (checkinId: string) => void; checkingOut: string | null; // FIX P1-3
+  onCancel:   (id: string)        => void; cancelling:  string | null;
+  onCheckin:  (id: string)        => void; checkingIn:  string | null;
+  onCheckout: (checkinId: string) => void; checkingOut: string | null;
 }) {
-  const { t }           = useTranslation();
-  const [offset, setOffset] = useState(0);       // px translation
-  const [revealed, setRevealed] = useState(false); // anuluj widoczny
-  const startX = useRef<number | null>(null);
-  const REVEAL_THRESHOLD = 80; // px żeby odsłonić przycisk
+  const { t } = useTranslation();
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (startX.current === null) return;
-    const dx = e.touches[0].clientX - startX.current;
-    if (dx > 0 && !revealed) return; // blokuj swipe w prawo gdy zwinięty
-    setOffset(revealed ? Math.min(0, dx - REVEAL_THRESHOLD) : Math.min(0, dx));
-  };
-  const handleTouchEnd = () => {
-    if (offset < -REVEAL_THRESHOLD) {
-      setRevealed(true); setOffset(-REVEAL_THRESHOLD);
-    } else {
-      setRevealed(false); setOffset(0);
-    }
-    startX.current = null;
-  };
+  const TZ = 'Europe/Warsaw';
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: TZ });
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
 
-  const close = () => { setRevealed(false); setOffset(0); };
+  const started      = Date.now() >= new Date(r.startTime).getTime();
+  const accentColor  = r.status === 'CONFIRMED' ? '#B53578' : '#f59e0b';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
-      {/* Delete button behind */}
-      <div className="absolute inset-y-0 right-0 flex items-center px-4 bg-red-500 rounded-2xl">
-        <button
-          onClick={() => { close(); onCancel(r.id); }}
-          disabled={cancelling === r.id}
-          className="text-white text-sm font-semibold px-2">
-          {cancelling === r.id ? '…' : t('reservations.cancel')}
-        </button>
-      </div>
+    <div className="bg-white rounded-2xl overflow-hidden border border-zinc-200">
+      <div style={{ height: 3, background: `linear-gradient(90deg, ${accentColor}, ${accentColor}99)` }} />
 
-      {/* Draggable card */}
-      <div
-        className="bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 relative"
-        style={{ transform: `translateX(${offset}px)`, transition: startX.current === null ? 'transform 0.2s' : 'none' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onClick={() => revealed && close()}
-      >
-        <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-sm shrink-0">
-          {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-zinc-800 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            {parseISO(r.date.slice(0,10)).toLocaleDateString(locale, { weekday:'short', day:'2-digit', month:'2-digit' })}
-            {' · '}
-            {new Date(r.startTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
-            –
-            {new Date(r.endTime).toLocaleTimeString(locale, { hour:'2-digit', minute:'2-digit' })}
-          </p>
-          {r.recurrenceGroupId && (
-            <p className="text-[10px] text-brand mt-0.5">↻ {t('reservations.recurring_badge')}</p>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-2 shrink-0">
-          <StatusBadge status={r.status} />
-          <div className="flex gap-1.5">
-            {canCheckin(r) && (
-              <button
-                onClick={() => onCheckin(r.id)}
-                disabled={checkingIn === r.id}
-                className="text-xs px-3 py-1.5 rounded-xl bg-brand text-white hover:bg-brand-hover transition-colors font-medium disabled:opacity-40">
-                {checkingIn === r.id
-                  ? '…'
-                  : Date.now() >= new Date(r.startTime).getTime()
-                    ? t('reservations.checkin_now', 'Potwierdź obecność')
-                    : t('reservations.checkin_early', 'Potwierdź rezerwację')
-                }
-              </button>
-            )}
-            {r.checkin && !r.checkin.checkedOutAt ? (
-              <button
-                onClick={() => onCheckout(r.checkin.id)}
-                disabled={checkingOut === r.checkin.id}
-                className="text-xs px-3 py-1.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors font-medium disabled:opacity-40">
-                {checkingOut === r.checkin.id ? '…' : t('desks.actions.checkout')}
-              </button>
-            ) : (
-              <button
-                onClick={() => onCancel(r.id)}
-                disabled={cancelling === r.id}
-                className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors font-medium disabled:opacity-40">
-                {cancelling === r.id ? '…' : t('reservations.cancel')}
-              </button>
-            )}
+      <div className="p-3.5">
+        {/* Wiersz 1: awatar + nazwa biurka + lokalizacja + badge */}
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-sm shrink-0">
+            {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-zinc-800 leading-tight truncate">
+              {r.desk?.name ?? t('deskcard.desk_fallback')}
+            </p>
+            <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight truncate">
+              {[r.desk?.location?.name, r.desk?.floor ? `${t('floorplan.floor_label', 'Piętro')} ${r.desk.floor}` : null]
+                .filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <StatusBadge status={r.status} />
+        </div>
+
+        {/* Czas jako pigułka */}
+        <div className="inline-flex items-center gap-1.5 bg-zinc-50 border border-zinc-100 rounded-lg px-2.5 py-1.5 mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
+          <span className="text-[11px] text-zinc-600 font-medium">
+            {fmtDate(r.startTime)} · {fmtTime(r.startTime)}–{fmtTime(r.endTime)}
+          </span>
+          {r.recurrenceGroupId && <span className="text-[10px] text-brand ml-1">↻</span>}
+        </div>
+
+        {/* Przyciski */}
+        <div className="flex gap-2">
+          {canCheckin(r) && (
+            <button
+              onClick={() => onCheckin(r.id)}
+              disabled={checkingIn === r.id}
+              className="flex-1 bg-brand text-white rounded-xl py-2.5 text-[12px] font-semibold disabled:opacity-40 transition-colors hover:bg-brand-hover active:scale-[0.98]"
+            >
+              {checkingIn === r.id
+                ? '…'
+                : started
+                  ? t('reservations.checkin_now',   'Potwierdź obecność')
+                  : t('reservations.checkin_early', 'Potwierdź rezerwację')
+              }
+            </button>
+          )}
+
+          {r.checkin && !r.checkin.checkedOutAt ? (
+            <button
+              onClick={() => onCheckout(r.checkin.id)}
+              disabled={checkingOut === r.checkin.id}
+              className="flex-1 bg-indigo-600 text-white rounded-xl py-2.5 text-[12px] font-semibold disabled:opacity-40 transition-colors hover:bg-indigo-700 active:scale-[0.98]"
+            >
+              {checkingOut === r.checkin.id ? '…' : t('desks.actions.checkout')}
+            </button>
+          ) : (
+            <button
+              onClick={() => onCancel(r.id)}
+              disabled={cancelling === r.id}
+              className="bg-zinc-100 text-zinc-600 rounded-xl py-2.5 px-4 text-[12px] font-semibold disabled:opacity-40 transition-colors hover:bg-zinc-200 active:scale-[0.98] shrink-0"
+            >
+              {cancelling === r.id ? '…' : t('reservations.cancel')}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -207,6 +184,8 @@ export function MyReservationsPage() {
     setCheckingIn(null);
   };
 
+  const [showHistory, setShowHistory] = useState(false);
+
   const locale   = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
   const active   = reservations.filter(r => ['PENDING','CONFIRMED'].includes(r.status));
   const inactive = reservations.filter(r => !['PENDING','CONFIRMED'].includes(r.status));
@@ -221,18 +200,17 @@ export function MyReservationsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
-        <button onClick={load}
-          className="text-sm px-4 py-2 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-600">
-          ↺ {t('btn.refresh')}
+        <button
+          onClick={load}
+          className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-500 flex items-center justify-center"
+          title={t('btn.refresh')}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M13.5 2.5A6.5 6.5 0 1 0 14.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M11 2.5h3.5v3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </button>
       </div>
-
-      {/* Swipe hint — tylko mobile */}
-      {active.length > 0 && (
-        <p className="sm:hidden text-[10px] text-zinc-400 mb-3 text-center">
-          ← {t('reservations.swipe_hint')}
-        </p>
-      )}
 
       {err && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{err}</div>}
 
@@ -242,7 +220,16 @@ export function MyReservationsPage() {
         <div className="space-y-6">
           {active.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.desks', 'Biurka')}</h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                  {t('reservations.active_section', 'Aktywne')}
+                </h2>
+                <span className="text-[11px] text-zinc-400">
+                  {active.length} {active.length === 1
+                    ? t('reservations.reservation_single', 'rezerwacja')
+                    : t('reservations.reservation_plural', 'rezerwacje')}
+                </span>
+              </div>
               <div className="space-y-3">
                 {active.map(r => (
                   <ReservationCard key={r.id} r={r} locale={locale}
@@ -255,23 +242,37 @@ export function MyReservationsPage() {
           )}
           {inactive.length > 0 && (
             <div>
-              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t('reservations.history')}</h2>
-              <div className="space-y-2">
-                {inactive.map(r => (
-                  <div key={r.id} className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center gap-3 opacity-70">
-                    <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-xs shrink-0">
-                      {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? t('deskcard.desk_fallback')}</p>
-                      <p className="text-xs text-zinc-400">
-                        {parseISO(r.date.slice(0,10)).toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' })}
-                      </p>
-                    </div>
-                    <StatusBadge status={r.status} />
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                  {t('reservations.history')}
+                </h2>
+                <button
+                  onClick={() => setShowHistory(v => !v)}
+                  className="text-xs text-brand font-semibold"
+                >
+                  {showHistory ? 'Zwiń ↑' : `Pokaż wszystkie (${inactive.length}) →`}
+                </button>
               </div>
+              {showHistory && (
+                <div className="space-y-2">
+                  {inactive.map(r => (
+                    <div key={r.id} className="bg-zinc-50 border border-zinc-100 rounded-xl p-3 flex items-center gap-3 opacity-70">
+                      <div className="w-8 h-8 rounded-lg bg-zinc-200 flex items-center justify-center text-zinc-500 font-bold text-xs shrink-0">
+                        {r.desk?.code?.split('-').pop()?.slice(0,2) ?? '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? '—'}</p>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          {new Date(r.startTime).toLocaleDateString('pl-PL', {
+                            weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Warsaw',
+                          })}
+                        </p>
+                      </div>
+                      <StatusBadge status={r.status} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

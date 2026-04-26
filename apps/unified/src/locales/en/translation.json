@@ -79,7 +79,10 @@
       "resources": "Rooms & Parking",
       "visitors": "Visitors",
       "subscription": "Subscription",
-      "more": "More"
+      "more": "More",
+      "map_short":              "Map",
+      "reservations_short":     "Mine",
+      "notifications_short":    "Alerts"
     },
     "session_warning_title": "Session expires in 1 minute",
     "session_warning_body": "Click \"Extend\" to stay logged in.",
@@ -806,8 +809,11 @@
     "recurring_badge": "Recurring",
     "swipe_hint": "Swipe to cancel",
     "rooms_section": "Rooms & parking",
-    "checkin_now": "Confirm presence",
-    "checkin_early": "Confirm reservation"
+    "checkin_now":           "Confirm presence",
+    "checkin_early":         "Confirm reservation",
+    "active_section":        "Active",
+    "reservation_single":    "reservation",
+    "reservation_plural":    "reservations"
   },
   "provisioning": {
     "title": "Provisioning",

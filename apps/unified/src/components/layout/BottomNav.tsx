@@ -9,7 +9,7 @@ import { appApi }                       from '../../api/client';
 import {
   IconFloorPlan, IconClipboard, IconFolder,
   IconBarChart, IconBeacon, IconUsers, IconPieChart,
-  IconGear, IconCard,
+  IconGear, IconCard, IconBell,
 } from '../icons/SidebarIcons';
 
 type NavIcon = React.FC<{ className?: string; size?: number }>;
@@ -26,8 +26,9 @@ interface NavEntry {
 
 const NAV_BY_ROLE: Record<string, NavEntry[]> = {
   END_USER: [
-    { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
-    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
+    { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map_short',          module: 'DESKS' },
+    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.reservations_short', badge: true, module: 'DESKS' },
+    { to: '/notifications',   icon: IconBell,      labelKey: 'layout.nav.notifications_short' },
   ],
   STAFF: [
     { to: '/map',          icon: IconFloorPlan, labelKey: 'layout.nav.map',         module: 'DESKS' },
