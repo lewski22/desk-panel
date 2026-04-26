@@ -376,7 +376,7 @@ export function DeskMapPage() {
       />
 
       {/* Stats — above map */}
-      {desks.length > 0 && mapTab === 'desks' && (
+      {desks.length > 0 && mapTab === 'desks' && !isEndUser && (
         <DeskStats desks={desks} currentUserId={userId} />
       )}
 
@@ -477,7 +477,7 @@ export function DeskMapPage() {
             />
           ) : (
             <>
-              {resources.length > 0 && (
+              {resources.length > 0 && !isEndUser && (
                 <ResourceStats resources={resources} />
               )}
               {resources.some(r => r.posX != null) && (
