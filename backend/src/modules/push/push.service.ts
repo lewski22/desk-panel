@@ -37,7 +37,16 @@ export class PushService implements OnModuleInit {
     return this.prisma.pushSubscription.deleteMany({ where: { userId, endpoint } });
   }
 
+  async countSubscriptions(): Promise<number> {
+    return this.prisma.pushSubscription.count();
+  }
+
   async notifyUser(userId: string, payload: { title: string; body: string; url?: string }) {
+    if (!this.vapidPublicKey) {
+      this.logger.warn(`notifyUser(${userId}) skipped — VAPID keys not configured`);
+      return;
+    }
+
     const subs = await this.prisma.pushSubscription.findMany({ where: { userId } });
     if (!subs.length) return;
 

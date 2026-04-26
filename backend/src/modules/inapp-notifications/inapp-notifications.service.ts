@@ -3,6 +3,7 @@ import { Cron }                from '@nestjs/schedule';
 import { PrismaService }       from '../../database/prisma.service';
 import { IntegrationEventService } from '../integrations/integration-event.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushService }          from '../push/push.service';
 
 export enum InAppNotifType {
   GATEWAY_OFFLINE          = 'GATEWAY_OFFLINE',
@@ -39,6 +40,7 @@ export class InAppNotificationsService {
     private readonly prisma:            PrismaService,
     private readonly integrationEvents: IntegrationEventService,
     private readonly notifications:     NotificationsService,
+    private readonly pushService:       PushService,
   ) {}
 
   // ── Utwórz powiadomienie (z deduplication) ────────────────────
@@ -160,7 +162,33 @@ export class InAppNotificationsService {
       }).catch(() => {});
     }
 
+    // Web push — błędy (brak subskrypcji, brak VAPID) nie przerywają flow
+    await Promise.allSettled(
+      users.map(u =>
+        this.pushService.notifyUser(u.id, { title, body, url: '/notifications' }),
+      ),
+    );
+
     return { count: users.length };
+  }
+
+  async notifyOrgPush(
+    orgId:   string,
+    roles:   string[],
+    payload: { title: string; body: string; url?: string },
+  ): Promise<void> {
+    const users = await this.prisma.user.findMany({
+      where: {
+        organizationId: orgId,
+        role:           { in: roles as any },
+        isActive:       true,
+      },
+      select: { id: true },
+    });
+
+    await Promise.allSettled(
+      users.map(u => this.pushService.notifyUser(u.id, payload)),
+    );
   }
 
   // ── Cron: co 5 min — skanuj offline gateway/beacon ───────────
