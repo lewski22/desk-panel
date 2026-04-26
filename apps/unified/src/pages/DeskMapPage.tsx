@@ -68,6 +68,38 @@ function LocationTabs({ locations, activeId, desksPerLocation, onChange, userRol
   );
 }
 
+// ── Resource Stats ────────────────────────────────────────────
+function ResourceStats({ resources, mapTab }: { resources: any[]; mapTab: string }) {
+  const { t } = useTranslation();
+
+  const free     = resources.filter(r => r.status === 'ACTIVE' && !r.currentBooking).length;
+  const booked   = resources.filter(r => r.status === 'ACTIVE' && !!r.currentBooking).length;
+  const inactive = resources.filter(r => r.status !== 'ACTIVE').length;
+
+  const stats = [
+    { num: free,   color: '#10b981', bg: '#d1fae5', label: t('desks.stats.free') },
+    { num: booked, color: '#f59e0b', bg: '#fef3c7', label: t('resource.status.occupied') },
+    ...(inactive > 0
+      ? [{ num: inactive, color: '#a1a1aa', bg: '#f4f4f5', label: t('resource.status.inactive') }]
+      : []),
+  ];
+
+  return (
+    <div className="grid mb-3" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+      {stats.map(({ num, color, bg, label }) => (
+        <div key={label}
+          className="flex flex-col items-center justify-center py-3 px-2 border-r border-zinc-100 last:border-r-0"
+          style={{ background: num > 0 ? bg + '33' : undefined }}>
+          <span className="text-xl font-medium leading-none" style={{ color: num > 0 ? color : '#a1a1aa' }}>
+            {num}
+          </span>
+          <span className="text-[10px] text-zinc-400 mt-1 text-center leading-tight">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── View Toggle ───────────────────────────────────────────────
 type ViewMode = 'plan' | 'cards';
 
@@ -265,11 +297,11 @@ export function DeskMapPage() {
     if (mapTab === 'desks' || !locationId) return;
     const typeMap: Record<string, string> = { rooms: 'ROOM', parking: 'PARKING' };
     setResLoading(true);
-    appApi.resources.list(locationId, typeMap[mapTab])
+    appApi.resources.list(locationId, typeMap[mapTab], selectedDate)
       .then(setResources)
       .catch((e) => console.error('[DeskMapPage] resources.list', e))
       .finally(() => setResLoading(false));
-  }, [mapTab, locationId]);
+  }, [mapTab, locationId, selectedDate]);
 
   useEffect(() => { loadResources(); }, [loadResources]);
 
@@ -339,14 +371,12 @@ export function DeskMapPage() {
         ))}
       </div>
 
-      {/* Day slider — nad DeskStats */}
-      {mapTab === 'desks' && (
-        <DaySlider
-          selected={selectedDate}
-          onChange={setSelectedDate}
-          maxDaysAhead={locationLimits?.maxDaysAhead ?? 14}
-        />
-      )}
+      {/* Day slider — wspólny dla wszystkich tabów */}
+      <DaySlider
+        selected={selectedDate}
+        onChange={setSelectedDate}
+        maxDaysAhead={locationLimits?.maxDaysAhead ?? 14}
+      />
 
       {/* Stats — above map */}
       {desks.length > 0 && mapTab === 'desks' && (
@@ -424,6 +454,9 @@ export function DeskMapPage() {
             />
           ) : (
             <>
+              {resources.length > 0 && (
+                <ResourceStats resources={resources} mapTab={mapTab} />
+              )}
               {resources.some(r => r.posX != null) && (
                 <ViewToggle mode={resViewMode} onChange={setResViewMode} hasPlan={true} />
               )}
@@ -449,6 +482,7 @@ export function DeskMapPage() {
       {bookTarget && (
         <BookingModal
           resource={bookTarget}
+          initialDate={selectedDate}
           onClose={() => setBookTarget(null)}
           onBooked={() => { setBookTarget(null); loadResources(); }}
         />

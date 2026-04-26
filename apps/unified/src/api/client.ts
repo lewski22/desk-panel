@@ -251,7 +251,13 @@ export const appApi = {
 
   // ── Resources ─────────────────────────────────────────────────
   resources: {
-    list:         (locId: string, type?: string)  => req<any[]>(`/locations/${locId}/resources${type ? `?type=${type}` : ''}`),
+    list: (locId: string, type?: string, date?: string) => {
+      const params = new URLSearchParams();
+      if (type) params.set('type', type);
+      if (date) params.set('date', date);
+      const qs = params.toString();
+      return req<any[]>(`/locations/${locId}/resources${qs ? `?${qs}` : ''}`);
+    },
     create:       (locId: string, body: any)      => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
     update:       (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove:       (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),

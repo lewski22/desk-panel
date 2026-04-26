@@ -5,7 +5,7 @@ import {
   Controller, Get, Post, Patch, Delete,
   Param, Body, Query, UseGuards, Request, HttpCode,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard }  from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }    from '../auth/guards/roles.guard';
 import { Roles }         from '../auth/decorators/roles.decorator';
@@ -26,11 +26,14 @@ export class ResourcesController {
   @Get('locations/:locationId/resources')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'List resources (rooms, parking, equipment) for a location' })
+  @ApiQuery({ name: 'type', required: false })
+  @ApiQuery({ name: 'date', required: false, example: '2026-05-01' })
   findAll(
     @Param('locationId') locationId: string,
     @Query('type')       type?:      string,
+    @Query('date')       date?:      string,
   ) {
-    return this.svc.findAll(locationId, type);
+    return this.svc.findAll(locationId, type, date);
   }
 
   @Post('locations/:locationId/resources')

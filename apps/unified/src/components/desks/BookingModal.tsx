@@ -14,15 +14,16 @@ import { Modal, Btn }      from '../ui';
 import { localDateStr }    from '../../utils/date';
 
 interface Props {
-  resource: any;
-  onClose:  () => void;
-  onBooked: () => void;
+  resource:     any;
+  onClose:      () => void;
+  onBooked:     () => void;
+  initialDate?: string;
 }
 
-export function BookingModal({ resource, onClose, onBooked }: Props) {
+export function BookingModal({ resource, onClose, onBooked, initialDate }: Props) {
   const { t, i18n }   = useTranslation();
   const dfns           = i18n.language === 'en' ? enUS : pl;
-  const [date, setDate]           = useState(localDateStr());
+  const [date, setDate]           = useState(initialDate ?? localDateStr());
   const [avail, setAvail]         = useState<any>(null);
   const [loading, setLoading]     = useState(false);
   const [startTime, setStartTime] = useState<string | null>(null);

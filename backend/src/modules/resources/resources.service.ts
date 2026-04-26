@@ -12,8 +12,28 @@ export class ResourcesService {
   constructor(private prisma: PrismaService) {}
 
   // ── Lista zasobów per lokalizacja ─────────────────────────────
-  async findAll(locationId: string, type?: string) {
+  async findAll(locationId: string, type?: string, date?: string) {
     const now = new Date();
+    const todayWaw = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+    const isToday  = !date || date === todayWaw;
+
+    let bookingWhere: any;
+    if (isToday) {
+      bookingWhere = {
+        status:    'CONFIRMED',
+        startTime: { lte: now },
+        endTime:   { gt:  now },
+      };
+    } else {
+      const dayStart = new Date(`${date}T00:00:00.000Z`);
+      const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+      bookingWhere = {
+        status:    'CONFIRMED',
+        startTime: { gte: dayStart },
+        endTime:   { lte: dayEnd  },
+      };
+    }
+
     const resources = await this.prisma.resource.findMany({
       where: {
         locationId,
@@ -23,13 +43,10 @@ export class ResourcesService {
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
       include: {
         bookings: {
-          where: {
-            status:    'CONFIRMED',
-            startTime: { lte: now },
-            endTime:   { gt:  now },
-          },
-          select: { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
-          take: 1,
+          where:   bookingWhere,
+          select:  { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
+          orderBy: { startTime: 'asc' },
+          take:    1,
         },
       },
     });
