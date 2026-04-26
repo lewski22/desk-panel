@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Reservation } from '../../types/index';
 import { format } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
+import { STATUS_CFG } from '../../utils/reservationStatus';
 
 interface Props {
   reservations: Reservation[];
@@ -109,29 +110,58 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-semibold text-zinc-800">{t('reservations.today_title')}</h2>
           <p className="text-xs text-zinc-400">
             {format(new Date(), 'EEEE, d MMMM yyyy', { locale: i18n.language === 'en' ? enUS : pl })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            className="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 text-zinc-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          >
-            <option value="ALL">Wszystkie ({reservations.length})</option>
-            <option value="CONFIRMED">Potwierdzone</option>
-            <option value="PENDING">Oczekujące</option>
-            <option value="COMPLETED">Zakończone</option>
-            <option value="CANCELLED">Anulowane</option>
-          </select>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Chip Wszystkie */}
           <button
-            onClick={onRefresh}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors"
+            onClick={() => setFilter('ALL')}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+              filter === 'ALL'
+                ? 'bg-zinc-800 text-white border-zinc-800'
+                : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300'
+            }`}
           >
+            {t('reservations.filter.all')} {filter === 'ALL' && `(${reservations.length})`}
+          </button>
+
+          {/* Chipy statusów */}
+          {(['CONFIRMED','PENDING','COMPLETED','CANCELLED'] as const).map(s => {
+            const cfg   = STATUS_CFG[s];
+            const count = reservations.filter(r => r.status === s).length;
+            if (count === 0) return null;
+            const isActive = filter === s;
+            return (
+              <button key={s}
+                onClick={() => setFilter(isActive ? 'ALL' : s)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                            border text-xs font-medium transition-all ${
+                  isActive ? 'text-white border-transparent' : 'bg-white border-zinc-200 hover:border-zinc-300'
+                }`}
+                style={isActive
+                  ? { background: cfg.activeBg }
+                  : { color: cfg.text }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: isActive ? 'rgba(255,255,255,0.8)' : cfg.dot }} />
+                {cfg.label}
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+                  style={{ background: isActive ? 'rgba(255,255,255,0.2)' : cfg.bg,
+                           color: isActive ? '#fff' : cfg.text }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+
+          <button onClick={onRefresh}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 bg-white
+                       text-zinc-400 hover:bg-zinc-50 transition-colors">
             ↻
           </button>
         </div>

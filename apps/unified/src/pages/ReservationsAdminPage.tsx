@@ -4,14 +4,147 @@
  * - Bulk actions: Zaznacz + Anuluj zaznaczone
  * - Kontekstowy empty state
  */
-import { localDateStr } from '../utils/date';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
-import { Btn, Card, EmptyState, SortHeader, SortState } from '../components/ui';
+import { Btn, EmptyState, SortHeader } from '../components/ui';
 import { format } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 import { useSortable } from '../hooks/useSortable';
+import { STATUS_CFG } from '../utils/reservationStatus';
+
+const TZ = 'Europe/Warsaw';
+
+function todayLocal() {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });
+}
+
+function DaySlider({ selected, onChange }: {
+  selected: string;
+  onChange:  (d: string) => void;
+}) {
+  const { i18n } = useTranslation();
+  const today = todayLocal();
+
+  const days = useMemo(() => {
+    const result: string[] = [];
+    const base = new Date();
+    base.setDate(base.getDate() - 3);
+    for (let i = 0; i <= 17; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      result.push(d.toLocaleDateString('sv-SE', { timeZone: TZ }));
+    }
+    return result;
+  }, []);
+
+  const fmt = (dateStr: string) => {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return {
+      day: d.toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL',
+        { day: 'numeric', timeZone: TZ }),
+      dow: d.toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL',
+        { weekday: 'short', timeZone: TZ }),
+    };
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {days.map(dateStr => {
+        const { day, dow } = fmt(dateStr);
+        const isToday    = dateStr === today;
+        const isSelected = dateStr === selected;
+        const isPast     = dateStr < today;
+        return (
+          <button
+            key={dateStr}
+            onClick={() => onChange(dateStr)}
+            className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl border
+                        text-xs font-medium transition-all min-w-[44px] ${
+              isSelected
+                ? 'bg-brand text-white border-brand'
+                : isPast
+                ? 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:border-zinc-200'
+                : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+            }`}
+          >
+            <span className={`text-[10px] mb-0.5 ${isSelected ? 'text-white/80' : 'text-zinc-400'}`}>
+              {dow}
+            </span>
+            <span className="leading-none">{day}</span>
+            {isToday && !isSelected && (
+              <span className="mt-0.5 w-1 h-1 rounded-full bg-brand" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function StatusChips({ counts, selected, onChange }: {
+  counts:   Record<string, number>;
+  selected: string;
+  onChange:  (s: string) => void;
+}) {
+  const { t } = useTranslation();
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <button
+        onClick={() => onChange('')}
+        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                    border text-xs font-medium transition-all ${
+          !selected
+            ? 'bg-zinc-800 text-white border-zinc-800'
+            : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+        }`}
+      >
+        {t('reservations.filter.all', 'Wszystkie')}
+        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+          !selected ? 'bg-white/20 text-white' : 'bg-zinc-100 text-zinc-500'
+        }`}>
+          {total}
+        </span>
+      </button>
+
+      {Object.entries(STATUS_CFG).map(([s, cfg]) => {
+        const count    = counts[s] ?? 0;
+        const isActive = selected === s;
+        return (
+          <button
+            key={s}
+            onClick={() => onChange(selected === s ? '' : s)}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                        border text-xs font-medium transition-all ${
+              isActive
+                ? 'text-white border-transparent'
+                : 'bg-white border-zinc-200 hover:border-zinc-300'
+            }`}
+            style={isActive
+              ? { background: cfg.activeBg, borderColor: cfg.activeBg }
+              : { color: cfg.text }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ background: isActive ? 'rgba(255,255,255,0.8)' : cfg.dot }}
+            />
+            {cfg.label}
+            {count > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                isActive ? 'bg-white/20 text-white' : 'text-zinc-500'
+              }`}
+              style={!isActive ? { background: cfg.bg } : {}}>
+                {count}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 const STATUS_CLS: Record<string, string> = {
   CONFIRMED: 'bg-emerald-100 text-emerald-700',
@@ -28,7 +161,7 @@ export function ReservationsAdminPage() {
 
   const [res, setRes]         = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate]       = useState(localDateStr());
+  const [date, setDate]       = useState(todayLocal());
   const [status, setStatus]   = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -81,7 +214,6 @@ export function ReservationsAdminPage() {
     return item.startTime;
   }), [res, sort, sortArray]);
 
-  const statuses = ['CONFIRMED','PENDING','CANCELLED','EXPIRED','COMPLETED'];
   const cancellable = res.filter(r => ['CONFIRMED','PENDING'].includes(r.status));
   const allSelected = cancellable.length > 0 && selected.size === cancellable.length;
 
@@ -91,40 +223,30 @@ export function ReservationsAdminPage() {
         <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reservationsAdmin.title')}</h1>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 mb-5 flex-wrap items-end">
-        <div>
-          <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.date')}</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
-        </div>
-        <div>
-          <label className="block text-xs text-zinc-400 mb-1">{t('reservations.filter.status')}</label>
-          <select value={status} onChange={e => setStatus(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30">
-            <option value="">{t('reservations.filter.all')}</option>
-            {statuses.map(s => (
-              <option key={s} value={s}>{t(`reservations.status.${s.toLowerCase()}`)}</option>
-            ))}
-          </select>
-        </div>
-        <button onClick={load} className="px-4 py-2 text-sm rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-          ↺ {t('btn.refresh')}
-        </button>
+      {/* Day slider */}
+      <div className="mb-4">
+        <DaySlider selected={date} onChange={d => setDate(d)} />
       </div>
 
-      {/* Status summary */}
-      <div className="grid grid-cols-5 gap-2 mb-5">
-        {statuses.map(s => {
-          const count = res.filter(r => r.status === s).length;
-          return (
-            <button key={s} onClick={() => setStatus(status === s ? '' : s)}
-              className={`border rounded-xl p-3 text-center transition-all ${status === s ? 'border-brand bg-brand/5' : 'border-zinc-100 bg-white hover:border-zinc-200'}`}>
-              <p className="text-lg font-bold font-mono text-zinc-700">{count}</p>
-              <p className="text-[10px] text-zinc-400 mt-0.5 truncate">{t(`reservations.status.${s.toLowerCase()}`)}</p>
-            </button>
-          );
-        })}
+      {/* Status chips + refresh */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <StatusChips
+          counts={Object.fromEntries(
+            ['CONFIRMED','PENDING','COMPLETED','CANCELLED','EXPIRED'].map(s => [
+              s,
+              res.filter(r => r.status === s).length,
+            ])
+          )}
+          selected={status}
+          onChange={setStatus}
+        />
+        <button
+          onClick={load}
+          className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 bg-white
+                     text-zinc-500 hover:bg-zinc-50 transition-colors flex-shrink-0"
+        >
+          ↺ {t('btn.refresh')}
+        </button>
       </div>
 
       {/* Bulk action bar */}
@@ -213,7 +335,6 @@ export function ReservationsAdminPage() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cls}`}>
                           {t(`reservations.status.${r.status.toLowerCase()}`)}
                         </span>
-                        {/* FEATURE P4-B1: amber badge for non-standard reservation types */}
                         {r.reservationType && r.reservationType !== 'STANDARD' && (
                           <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
                             {t(`desks.reserve.type.${r.reservationType}`, r.reservationType)}
