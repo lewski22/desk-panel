@@ -1,9 +1,10 @@
 /**
- * AppLayout — v0.18.0
- * Sidebar z grupami nawigacyjnymi + ikony Noun Project + zmiana hasła w dole sidebara
+ * AppLayout — v0.19.0
+ * Sidebar z grupami nawigacyjnymi + collapsible Ustawienia + GlobalSearch (Cmd+K)
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { GlobalSearch } from './GlobalSearch';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
 import { LogoMark } from '../logo/LogoMark';
@@ -42,6 +43,8 @@ interface NavGroup {
   items: { to: string; icon: NavIcon; labelKey: string; roles: string[]; module?: AppModule }[];
 }
 
+const SETTINGS_PATHS = ['/organizations', '/integrations', '/notifications', '/subscription'];
+
 const NAV_GROUPS: NavGroup[] = [
   {
     key:   'layout.group.workspace',
@@ -49,8 +52,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
       { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'], module: 'WEEKLY_VIEW' },
-      { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
-      { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],            module: 'DESKS' },
+      { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['STAFF','END_USER'], module: 'DESKS' },
+      { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'DESKS' },
     ],
   },
   {
@@ -69,12 +72,12 @@ const NAV_GROUPS: NavGroup[] = [
     key:   'layout.group.analytics',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'],
     items: [
-      { to: '/dashboard', icon: IconBarChart,  labelKey: 'layout.nav.dashboard', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
-      { to: '/reports',   icon: IconPieChart,  labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/dashboard', icon: IconBarChart, labelKey: 'layout.nav.dashboard', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/reports',   icon: IconPieChart, labelKey: 'layout.nav.reports',   roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
     ],
   },
   {
-    key:   'layout.group.config',
+    key:   'layout.group.settings',
     roles: ['SUPER_ADMIN','OFFICE_ADMIN'],
     items: [
       { to: '/organizations', icon: IconBuildings, labelKey: 'layout.nav.organizations', roles: ['SUPER_ADMIN'] },
@@ -166,7 +169,21 @@ export function AppLayout({ user, onLogout, children }: Props) {
     onLogout();
   };
 
-  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => {
+    const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+      () => SETTINGS_PATHS.some(p => location.pathname.startsWith(p))
+        ? new Set()
+        : new Set(['layout.group.settings']),
+    );
+
+    const toggleGroup = (key: string) =>
+      setCollapsedGroups(prev => {
+        const next = new Set(prev);
+        next.has(key) ? next.delete(key) : next.add(key);
+        return next;
+      });
+
+    return (
     <>
       {/* Logo + user header */}
       <div className="flex items-center gap-2.5 px-3 py-3 shrink-0" style={{ borderBottom: '1px solid #DDD6F5' }}>
@@ -190,9 +207,26 @@ export function AppLayout({ user, onLogout, children }: Props) {
             </div>
           </>
         )}
+        {/* Search button */}
+        {(!collapsed || mobile) && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('reserti:search'))}
+            className="ml-auto p-1.5 rounded-lg transition-colors shrink-0"
+            style={{ color: '#9B93A8' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#4A3F6B'; (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.04)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9B93A8'; (e.currentTarget as HTMLElement).style.background = ''; }}
+            title="Szukaj (Ctrl+K)"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M9.5 9.5l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+          </button>
+        )}
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
-            className="ml-auto text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
+            style={{ color: '#9B93A8' }}
             aria-label="Zamknij menu">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
               <path d="M3.29 3.29a1 1 0 0 1 1.42 0L8 6.59l3.29-3.3a1 1 0 1 1 1.42 1.42L9.41 8l3.3 3.29a1 1 0 0 1-1.42 1.42L8 9.41l-3.29 3.3a1 1 0 0 1-1.42-1.42L6.59 8 3.3 4.71a1 1 0 0 1 0-1.42z"/>
@@ -212,28 +246,44 @@ export function AppLayout({ user, onLogout, children }: Props) {
           });
           if (!visibleItems.length) return null;
 
+          const isSettings  = group.key === 'layout.group.settings';
+          const isCollapsed = collapsedGroups.has(group.key);
+
           return (
             <div key={group.key} className={gi > 0 ? 'mt-3 pt-3' : 'mt-1'} style={gi > 0 ? { borderTop: '1px solid #DDD6F5' } : {}}>
               {(!collapsed || mobile) && (
-                <div className="px-3 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] select-none" style={{ color: '#9B93A8' }}>
-                  {t(group.key)}
-                </div>
+                <button
+                  onClick={isSettings ? () => toggleGroup(group.key) : undefined}
+                  className={`w-full flex items-center justify-between px-3 pt-1 pb-1.5 ${isSettings ? 'cursor-pointer' : 'cursor-default'}`}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] select-none" style={{ color: '#9B93A8' }}>
+                    {t(group.key)}
+                  </span>
+                  {isSettings && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"
+                      style={{ color: '#9B93A8', transform: isCollapsed ? undefined : 'rotate(180deg)', transition: 'transform 0.15s' }}>
+                      <path d="M5 7L1 3h8L5 7z"/>
+                    </svg>
+                  )}
+                </button>
               )}
               {(collapsed && !mobile) && gi > 0 && (
                 <div className="mx-2 mb-2 h-px" style={{ background: '#DDD6F5' }} />
               )}
-              <div className="space-y-px">
-                {visibleItems.map(item => (
-                  <NavItem
-                    key={item.to}
-                    to={item.to}
-                    icon={item.icon}
-                    label={t(item.labelKey)}
-                    collapsed={collapsed && !mobile}
-                    onClick={mobile ? () => setMobileOpen(false) : undefined}
-                  />
-                ))}
-              </div>
+              {(!isSettings || !isCollapsed) && (
+                <div className="space-y-px">
+                  {visibleItems.map(item => (
+                    <NavItem
+                      key={item.to}
+                      to={item.to}
+                      icon={item.icon}
+                      label={t(item.labelKey)}
+                      collapsed={collapsed && !mobile}
+                      onClick={mobile ? () => setMobileOpen(false) : undefined}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}
@@ -271,10 +321,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </div>
       </div>
     </>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col h-screen bg-zinc-50 overflow-hidden" style={{ fontFamily: "'DM Sans',sans-serif" }}>
+
+      {/* Global Search — mounts always, listens for Cmd+K */}
+      <GlobalSearch />
 
       {/* Change Password Modal — rendered at top level */}
       {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
