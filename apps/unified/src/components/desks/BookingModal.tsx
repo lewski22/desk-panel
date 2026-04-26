@@ -8,6 +8,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../../api/client';
 import { Modal, Btn }      from '../ui';
+import { CharCount }       from '../ui/CharCount';
 import { localDateStr }    from '../../utils/date';
 
 interface Props {
@@ -187,8 +188,11 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
 
         {/* Notes */}
         <div>
-          <label className="block text-xs text-zinc-500 font-medium mb-1">{t('resource.notes')}</label>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+          <div className="flex justify-between items-baseline mb-1">
+            <label className="block text-xs text-zinc-500 font-medium">{t('resource.notes')}</label>
+            <CharCount value={notes} max={200} />
+          </div>
+          <textarea value={notes} onChange={e => setNotes(e.target.value.slice(0, 200))} rows={2}
             placeholder={t('resource.notes_placeholder')}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>

@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
+import { toast } from '../components/ui/Toast';
 
 const ALL_ROLES = [
   { key: 'SUPER_ADMIN',  color: 'bg-purple-100 text-purple-700' },
@@ -104,7 +105,6 @@ export function NotificationRulesPage() {
   const [rules,        setRules]        = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
-  const [saved,        setSaved]        = useState(false);
   const [showAnnounce, setShowAnnounce] = useState(false);
   const [err,          setErr]          = useState('');
 
@@ -132,15 +132,14 @@ export function NotificationRulesPage() {
     }));
 
   const handleSave = async () => {
-    setSaving(true); setErr(''); setSaved(false);
+    setSaving(true); setErr('');
     try {
       await appApi.inapp.saveRules(rules.map(r => ({
         type:        r.type,
         enabled:     r.enabled,
         targetRoles: r.targetRoles,
       })));
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      toast(t('toast.rules_saved', 'Reguły zapisano'));
     } catch (e: any) { setErr(e.message); }
     setSaving(false);
   };
@@ -154,7 +153,7 @@ export function NotificationRulesPage() {
           <div className="flex gap-2">
             <Btn variant="secondary" onClick={() => setShowAnnounce(true)}>{t('notifications.rules.announce')}</Btn>
             <Btn onClick={handleSave} loading={saving}>
-              {saved ? t('notifications.rules.saved') : t('notifications.rules.save')}
+              {t('notifications.rules.save')}
             </Btn>
           </div>
         }

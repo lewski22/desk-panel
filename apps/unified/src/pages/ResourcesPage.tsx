@@ -13,6 +13,7 @@ import {
   Spinner, EmptyState, PageHeader,
 } from '../components/ui';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { toast } from '../components/ui/Toast';
 
 const RESOURCE_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'] as const;
 
@@ -320,7 +321,7 @@ export function ResourcesPage() {
           resource={modal === 'create' ? undefined : modal}
           locationId={locationId}
           onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); load(); }}
+          onSaved={() => { setModal(null); toast(t('toast.resource_saved', 'Zasób zapisano')); load(); }}
         />
       )}
     </div>

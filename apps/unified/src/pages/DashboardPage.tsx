@@ -17,6 +17,7 @@ import { appApi } from '../api/client';
 import { Stat, Card, Spinner, Modal, Btn, EmptyState } from '../components/ui';
 import { SkeletonKpi } from '../components/ui/Skeleton';
 import { InsightsWidget } from '../components/insights/InsightsWidget';
+import { OnboardingChecklist } from '../components/onboarding/OnboardingChecklist';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 
@@ -421,6 +422,8 @@ export function DashboardPage() {
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [usersCount,   setUsersCount]   = useState(0);
+  const [hasPlan,      setHasPlan]      = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!locationId) { setLoading(false); return; }
@@ -435,9 +438,19 @@ export function DashboardPage() {
       setDesks(d?.desks ?? d ?? []);
       setLastRefreshed(new Date());
     } catch {}
+    if (isAdmin) {
+      try {
+        const users = await appApi.users.list();
+        setUsersCount(Array.isArray(users) ? users.length : (users?.total ?? 0));
+      } catch {}
+      try {
+        const plan = await appApi.locations.floorPlan.get(locationId);
+        setHasPlan(!!(plan?.imageUrl || plan?.svgData));
+      } catch {}
+    }
     setLoading(false);
     setRefreshing(false);
-  }, [locationId]);
+  }, [locationId, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -518,6 +531,17 @@ export function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Onboarding checklist — tylko dla nowych adminów */}
+      {isAdmin && !loading && locationId && (
+        <OnboardingChecklist
+          desksCount={desks.length}
+          hasPlan={hasPlan}
+          usersCount={usersCount}
+          beaconsCount={desks.filter((d: any) => d.beaconId || d.isOnline).length}
+          locationId={locationId}
+        />
+      )}
 
       {/* Attention section — replaces inline beacon alert */}
       <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} />

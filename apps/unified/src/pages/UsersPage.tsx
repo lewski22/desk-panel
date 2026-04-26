@@ -8,6 +8,7 @@ import { useDirtyGuard } from '../hooks';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
+import { toast } from '../components/ui/Toast';
 
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
   SUPER_ADMIN: 'purple', OFFICE_ADMIN: 'blue', STAFF: 'zinc', END_USER: 'green',
@@ -94,6 +95,7 @@ export function UsersPage() {
     try {
       await appApi.users.create({ ...form });
       resetDirty(); setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
+      toast(t('toast.user_created', 'Użytkownik utworzony'));
       load(true);
     } catch(e:any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
@@ -110,7 +112,12 @@ export function UsersPage() {
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr(''); setFieldErrors({});
-    try { await appApi.users.update(target.id, editForm); resetDirty(); setModal(null); load(true); }
+    try {
+      await appApi.users.update(target.id, editForm);
+      resetDirty(); setModal(null);
+      toast(t('toast.user_saved', 'Użytkownik zapisany'));
+      load(true);
+    }
     catch(e:any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };

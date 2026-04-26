@@ -10,6 +10,7 @@ import { useDirtyGuard } from '../hooks';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
+import { toast } from '../components/ui/Toast';
 
 const STAFF_URL = window.location.origin;
 
@@ -135,14 +136,24 @@ export function DesksPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setGlobalErr(''); setFieldErrors({});
-    try { await appApi.desks.create(form.locId || locId, form); resetDirty(); setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId }); await load(); }
+    try {
+      await appApi.desks.create(form.locId || locId, form);
+      resetDirty(); setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId });
+      toast(t('toast.desk_saved', 'Biurko zapisano'));
+      await load();
+    }
     catch (e: any) { const p = parseApiError(e); setGlobalErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setGlobalErr(''); setFieldErrors({});
-    try { await appApi.desks.update(target.id, form); resetDirty(); setModal(null); await load(); }
+    try {
+      await appApi.desks.update(target.id, form);
+      resetDirty(); setModal(null);
+      toast(t('toast.desk_saved', 'Biurko zapisano'));
+      await load();
+    }
     catch (e: any) { const p = parseApiError(e); setGlobalErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };

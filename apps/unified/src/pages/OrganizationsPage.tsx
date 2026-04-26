@@ -6,6 +6,7 @@ import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
+import { toast } from '../components/ui/Toast';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
@@ -345,6 +346,7 @@ export function OrganizationsPage() {
       }
       resetDirty();
       setModal(null);
+      toast(t('toast.location_saved', 'Biuro zapisano'));
       await load();
     } catch (e: any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setSaving(false);

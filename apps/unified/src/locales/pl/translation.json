@@ -238,7 +238,11 @@
     "set_default": "Domyślne",
     "legend": {
       "mine": "Moje"
-    }
+    },
+    "last_updated": "Zaktualizowano",
+    "no_plan_title": "Brak planu piętra",
+    "no_plan_sub": "Dodaj plan piętra, aby zobaczyć biurka na mapie.",
+    "no_plan_cta": "+ Dodaj plan piętra"
   },
   "dirty_guard": {
     "title": "Niezapisane zmiany",
@@ -1471,5 +1475,25 @@
     "success_title": "Konto zostało utworzone!",
     "success_body": "Możesz teraz zalogować się do Reserti.",
     "go_to_login": "Przejdź do logowania"
+  },
+  "toast": {
+    "location_saved": "Biuro zapisano",
+    "user_created": "Użytkownik utworzony",
+    "user_saved": "Użytkownik zapisany",
+    "desk_saved": "Biurko zapisane",
+    "resource_saved": "Zasób zapisany",
+    "visitor_invited": "Zaproszenie wysłano",
+    "rules_saved": "Reguły zapisano"
+  },
+  "onboarding": {
+    "title": "Konfiguracja biura",
+    "progress": "{{done}}/{{total}} kroków ukończonych",
+    "complete": "Gotowe! Biuro skonfigurowane.",
+    "step": {
+      "desks": "Dodaj biurka",
+      "plan": "Plan piętra",
+      "users": "Zaproś użytkowników",
+      "beacon": "Podłącz beacon"
+    }
   }
 }

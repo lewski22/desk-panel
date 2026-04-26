@@ -10,6 +10,7 @@ import LanguageSwitcher from '../LanguageSwitcher';
 import { LogoMark } from '../logo/LogoMark';
 import { appApi } from '../../api/client';
 import { BottomNav } from './BottomNav';
+import { Toaster }   from '../ui/Toast';
 import { NotificationBell } from './NotificationBell';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import {
@@ -421,6 +422,9 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       {/* Mobile bottom nav */}
       <BottomNav userRole={user.role} enabledModules={enabledModules} />
+
+      {/* Global toast notifications */}
+      <Toaster />
     </div>
   );
 }

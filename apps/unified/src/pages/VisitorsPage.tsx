@@ -9,6 +9,7 @@ import {
   Btn, Card, Modal, Input, FormField, Spinner, EmptyState,
 } from '../components/ui';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { toast } from '../components/ui/Toast';
 import { DaySlider, todayLocal } from '../components/ui/DaySlider';
 import { format }          from 'date-fns';
 import { pl, enUS }        from 'date-fns/locale';
@@ -52,6 +53,7 @@ function InviteModal({ locationId, onClose, onSaved }: {
     try {
       await appApi.visitors.invite(locationId, form);
       setIsDirty(false);
+      toast(t('toast.visitor_invited', 'Zaproszenie wysłano'));
       onSaved(); onClose();
     } catch (e: any) { setErr(e.message); }
     setSaving(false);

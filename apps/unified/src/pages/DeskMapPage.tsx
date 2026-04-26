@@ -20,6 +20,7 @@ import { EmptyState }       from '../components/ui';
 import { useOrgModules }    from '../hooks/useOrgModules';
 import { RecommendationBanner } from '../components/recommendations/RecommendationBanner';
 import { localDateStr }         from '../utils/date';
+import { format }               from 'date-fns';
 
 // ── Helpers ──────────────────────────────────────────────────
 // FIX P1-2: occupied = free desks count, total = active+online desks — invert thresholds
@@ -379,16 +380,27 @@ export function DeskMapPage() {
         <DeskStats desks={desks} currentUserId={userId} />
       )}
 
-      {/* Toolbar row: View toggle + Edit floor plan link */}
+      {/* Toolbar row: View toggle + last updated + Edit floor plan link */}
       <div className="flex items-center justify-between mb-1">
         {mapTab === 'desks' && <ViewToggle mode={viewMode} onChange={handleViewMode} hasPlan={hasPlan} />}
-        {isAdmin && locationId && (
-          <button
-            onClick={() => navigate(`/floor-plan/${locationId}`)}
-            className="text-xs text-brand hover:underline flex items-center gap-1">
-            ✏ {t('floorplan.view.edit_plan')}
+        <div className="flex items-center gap-3 ml-auto">
+          {lastUpdated && (
+            <span className="text-[11px] text-zinc-400">
+              {t('deskmap.last_updated', 'Zaktualizowano')} {format(lastUpdated, 'HH:mm')}
+            </span>
+          )}
+          <button onClick={refetch} title={t('btn.refresh', 'Odśwież')}
+            className="text-zinc-400 hover:text-zinc-600 transition-colors text-sm">
+            ↺
           </button>
-        )}
+          {isAdmin && locationId && (
+            <button
+              onClick={() => navigate(`/floor-plan/${locationId}`)}
+              className="text-xs text-brand hover:underline flex items-center gap-1">
+              ✏ {t('floorplan.view.edit_plan')}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && desks.length === 0 && (
@@ -411,7 +423,22 @@ export function DeskMapPage() {
         />
       )}
 
-      {desks.length > 0 && viewMode === 'plan' && mapTab === 'desks' && (
+      {viewMode === 'plan' && !hasPlan && mapTab === 'desks' && !loading && (
+        <EmptyState
+          icon="🗺"
+          title={t('deskmap.no_plan_title', 'Brak planu piętra')}
+          sub={t('deskmap.no_plan_sub', 'Dodaj plan piętra, aby zobaczyć biurka na mapie.')}
+          action={isAdmin && locationId ? (
+            <button
+              onClick={() => navigate(`/floor-plan/${locationId}`)}
+              className="mt-2 px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity">
+              {t('deskmap.no_plan_cta', '+ Dodaj plan piętra')}
+            </button>
+          ) : undefined}
+        />
+      )}
+
+      {desks.length > 0 && hasPlan && viewMode === 'plan' && mapTab === 'desks' && (
         <FloorPlanView
           locationId={locationId}
           desks={desks}

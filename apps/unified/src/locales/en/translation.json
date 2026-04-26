@@ -238,7 +238,11 @@
     "set_default": "Set as default",
     "legend": {
       "mine": "Mine"
-    }
+    },
+    "last_updated": "Updated",
+    "no_plan_title": "No floor plan",
+    "no_plan_sub": "Add a floor plan to view desks on the map.",
+    "no_plan_cta": "+ Add floor plan"
   },
   "dirty_guard": {
     "title": "Unsaved changes",
@@ -1471,5 +1475,25 @@
     "success_title": "Account created!",
     "success_body": "You can now log in to Reserti.",
     "go_to_login": "Go to login"
+  },
+  "toast": {
+    "location_saved": "Office saved",
+    "user_created": "User created",
+    "user_saved": "User saved",
+    "desk_saved": "Desk saved",
+    "resource_saved": "Resource saved",
+    "visitor_invited": "Invitation sent",
+    "rules_saved": "Rules saved"
+  },
+  "onboarding": {
+    "title": "Office setup",
+    "progress": "{{done}}/{{total}} steps completed",
+    "complete": "All done! Office is configured.",
+    "step": {
+      "desks": "Add desks",
+      "plan": "Floor plan",
+      "users": "Invite users",
+      "beacon": "Connect beacon"
+    }
   }
 }
