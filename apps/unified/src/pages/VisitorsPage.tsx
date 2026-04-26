@@ -8,6 +8,7 @@ import { appApi }          from '../api/client';
 import {
   Btn, Card, Modal, Input, FormField, Spinner, EmptyState,
 } from '../components/ui';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { localDateStr }    from '../utils/date';
 import { format }          from 'date-fns';
 import { pl, enUS }        from 'date-fns/locale';
@@ -28,10 +29,20 @@ function InviteModal({ locationId, onClose, onSaved }: {
     firstName: '', lastName: '', email: '',
     company: '', visitDate: localDateStr(), purpose: '',
   });
-  const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState('');
+  const [isDirty,   setIsDirty]   = useState(false);
+  const [showGuard, setShowGuard] = useState(false);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setIsDirty(true);
+  };
+
+  const requestClose = () => {
+    if (isDirty) setShowGuard(true);
+    else onClose();
+  };
 
   const submit = async () => {
     if (!form.firstName || !form.lastName || !form.email || !form.visitDate) {
@@ -40,13 +51,15 @@ function InviteModal({ locationId, onClose, onSaved }: {
     setSaving(true); setErr('');
     try {
       await appApi.visitors.invite(locationId, form);
+      setIsDirty(false);
       onSaved(); onClose();
     } catch (e: any) { setErr(e.message); }
     setSaving(false);
   };
 
   return (
-    <Modal title={t('visitors.invite_title')} onClose={onClose}>
+    <>
+    <Modal title={t('visitors.invite_title')} onClose={requestClose}>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <Input label={t('users.form.firstName')} value={form.firstName} onChange={e => set('firstName', e.target.value)} />
@@ -64,11 +77,19 @@ function InviteModal({ locationId, onClose, onSaved }: {
         </div>
         {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="flex gap-2 justify-end pt-1">
-          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
+          <Btn variant="secondary" onClick={requestClose}>{t('btn.cancel')}</Btn>
           <Btn onClick={submit} loading={saving}>{t('visitors.invite_btn')}</Btn>
         </div>
       </div>
     </Modal>
+
+    {showGuard && (
+      <DirtyGuardDialog
+        onConfirm={() => { setShowGuard(false); onClose(); }}
+        onCancel={() => setShowGuard(false)}
+      />
+    )}
+    </>
   );
 }
 

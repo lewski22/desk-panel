@@ -89,17 +89,19 @@ export function UsersPage() {
     e.preventDefault(); setBusy(true); setErr('');
     try {
       await appApi.users.create({ ...form });
-      setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
+      resetDirty(); setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
       load(true);
     } catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
 
-  const closeEditModal = () => setModal(null);
-  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } = useDirtyGuard(closeEditModal);
+  const closeModal = () => setModal(null);
+  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } = useDirtyGuard(closeModal);
 
   const openEdit = (u: any) => {
-    setTarget(u); setEditForm({ firstName: u.firstName ?? '', lastName: u.lastName ?? '', email: u.email, role: u.role }); resetDirty(); setModal('edit');
+    resetDirty();
+    setTarget(u); setEditForm({ firstName: u.firstName ?? '', lastName: u.lastName ?? '', email: u.email, role: u.role });
+    setModal('edit');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -147,7 +149,7 @@ export function UsersPage() {
             <Btn variant="secondary" onClick={() => { setInviteForm({ email:'', role:'END_USER' }); setInviteSent(false); setErr(''); setModal('invite'); }}>
               {t('users.invite.btn')}
             </Btn>
-            <Btn onClick={() => setModal('create')}>{t('pages.users.new')}</Btn>
+            <Btn onClick={() => { resetDirty(); setModal('create'); }}>{t('pages.users.new')}</Btn>
           </div>
         }
       />
@@ -330,15 +332,15 @@ export function UsersPage() {
       )}
 
       {modal === 'create' && (
-        <Modal title={t('users.modals.create_title')} onClose={() => setModal(null)}>
+        <Modal title={t('users.modals.create_title')} onClose={requestClose}>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t('users.form.firstName')} value={form.firstName} onChange={e => setForm(f => ({...f,firstName:e.target.value}))} />
-              <Input label={t('users.form.lastName')} value={form.lastName} onChange={e => setForm(f => ({...f,lastName:e.target.value}))} />
+              <Input label={t('users.form.firstName')} value={form.firstName} onChange={e => { setForm(f => ({...f,firstName:e.target.value})); markDirty(); }} />
+              <Input label={t('users.form.lastName')} value={form.lastName} onChange={e => { setForm(f => ({...f,lastName:e.target.value})); markDirty(); }} />
             </div>
-            <Input label={t('users.form.email')} type="email" required value={form.email} onChange={e => setForm(f => ({...f,email:e.target.value}))} />
-            <Input label={t('users.form.password')} type="password" required minLength={8} value={form.password} onChange={e => setForm(f => ({...f,password:e.target.value}))} />
-            <Select label={t('users.form.role')} value={form.role} onChange={e => setForm(f => ({...f,role:e.target.value}))}>
+            <Input label={t('users.form.email')} type="email" required value={form.email} onChange={e => { setForm(f => ({...f,email:e.target.value})); markDirty(); }} />
+            <Input label={t('users.form.password')} type="password" required minLength={8} value={form.password} onChange={e => { setForm(f => ({...f,password:e.target.value})); markDirty(); }} />
+            <Select label={t('users.form.role')} value={form.role} onChange={e => { setForm(f => ({...f,role:e.target.value})); markDirty(); }}>
               <option value="END_USER">{t('users.roles.END_USER')}</option>
               <option value="STAFF">{t('users.roles.STAFF')}</option>
               <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
@@ -347,7 +349,7 @@ export function UsersPage() {
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{t('users.actions.create')}</Btn>
-              <Btn variant="secondary" onClick={() => setModal(null)} type="button">{t('btn.cancel')}</Btn>
+              <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>
             </div>
           </form>
         </Modal>

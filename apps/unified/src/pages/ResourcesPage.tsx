@@ -12,6 +12,7 @@ import {
   Btn, Card, Modal, Input, Select, FormField,
   Spinner, EmptyState, PageHeader,
 } from '../components/ui';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 
 const RESOURCE_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'] as const;
 
@@ -39,15 +40,30 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
     zone:        resource?.zone        ?? '',
     amenities:   resource?.amenities   ?? [] as string[],
   });
-  const [saving, setSaving] = useState(false);
-  const [err,    setErr]    = useState<string | null>(null);
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState<string | null>(null);
+  const [isDirty,   setIsDirty]   = useState(false);
+  const [showGuard, setShowGuard] = useState(false);
 
-  const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => {
+    setForm(f => ({ ...f, [k]: v }));
+    setIsDirty(true);
+  };
 
-  const toggleAmenity = (a: string) =>
-    set('amenities', form.amenities.includes(a)
-      ? form.amenities.filter((x: string) => x !== a)
-      : [...form.amenities, a]);
+  const toggleAmenity = (a: string) => {
+    setIsDirty(true);
+    setForm(f => ({
+      ...f,
+      amenities: f.amenities.includes(a)
+        ? f.amenities.filter((x: string) => x !== a)
+        : [...f.amenities, a],
+    }));
+  };
+
+  const requestClose = () => {
+    if (isDirty) setShowGuard(true);
+    else onClose();
+  };
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.code.trim()) { setErr(t('resource.form.required')); return; }
@@ -61,6 +77,7 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
       };
       if (isEdit) await appApi.resources.update(resource.id, payload);
       else        await appApi.resources.create(locationId, payload);
+      setIsDirty(false);
       onSaved();
     } catch (e: any) {
       console.error('[ResourceModal] save failed', e);
@@ -71,7 +88,8 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
   };
 
   return (
-    <Modal title={isEdit ? t('resource.edit_title', { name: resource.name }) : t('resource.create_title')} onClose={onClose}>
+    <>
+    <Modal title={isEdit ? t('resource.edit_title', { name: resource.name }) : t('resource.create_title')} onClose={requestClose}>
       <div className="space-y-4">
         <FormField label={t('resource.form.type')}>
           <Select value={form.type} onChange={e => set('type', e.target.value)}>
@@ -122,20 +140,28 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Input label={t('desks.form.floor')} value={form.floor}
+          <Input label={t('desks.form.label.floor')} value={form.floor}
             onChange={e => set('floor', e.target.value)} placeholder="2" />
-          <Input label={t('desks.form.zone')} value={form.zone}
+          <Input label={t('desks.form.label.zone')} value={form.zone}
             onChange={e => set('zone', e.target.value)} placeholder="A" />
         </div>
 
         {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
+          <Btn variant="secondary" onClick={requestClose}>{t('btn.cancel')}</Btn>
           <Btn onClick={handleSave} loading={saving}>{t('btn.save')}</Btn>
         </div>
       </div>
     </Modal>
+
+    {showGuard && (
+      <DirtyGuardDialog
+        onConfirm={() => { setShowGuard(false); onClose(); }}
+        onCancel={() => setShowGuard(false)}
+      />
+    )}
+    </>
   );
 }
 
