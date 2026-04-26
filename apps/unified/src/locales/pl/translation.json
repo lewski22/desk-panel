@@ -1267,6 +1267,13 @@
     "never_tested": "Nie testowano",
     "has_config": "Konfiguracja zapisana",
     "no_config": "Brak konfiguracji",
+    "step_of": "Krok {{current}} z {{total}}",
+    "status": {
+      "connected":   "Połączone",
+      "configuring": "Konfiguracja",
+      "available":   "Dostępne",
+      "error":       "Błąd"
+    },
     "providers": {
       "AZURE_ENTRA": { "name": "Azure Entra ID", "description": "Logowanie SSO przez Microsoft — pracownicy logują się kontem firmowym Microsoft" },
       "SLACK": { "name": "Slack", "description": "Powiadomienia na kanale Slack — rezerwacje, check-iny, alerty IoT" },

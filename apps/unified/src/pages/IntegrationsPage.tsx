@@ -1,197 +1,138 @@
 /**
- * IntegrationsPage — Sprint F
- *
- * Marketplace integracji per organizacja.
- * Każda integracja to karta z statusem + przycisk konfiguracji.
+ * IntegrationsPage — Sprint F2
+ * Katalog integracji per organizacja + stepper konfiguracji
  *
  * apps/unified/src/pages/IntegrationsPage.tsx
- *
  * Route: /settings/integrations
  * Roles: SUPER_ADMIN, OWNER
  */
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { appApi }         from '../api/client';
-import { ProviderCard }   from '../components/integrations/ProviderCard';
-import { AzureConfigForm }   from '../components/integrations/forms/AzureConfigForm';
-import { SlackConfigForm }   from '../components/integrations/forms/SlackConfigForm';
-import { GoogleConfigForm }  from '../components/integrations/forms/GoogleConfigForm';
-import { TeamsConfigForm }   from '../components/integrations/forms/TeamsConfigForm';
-import { WebhookConfigForm } from '../components/integrations/forms/WebhookConfigForm';
-import { EntraIdSection }    from '../components/integrations/EntraIdSection';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation }     from 'react-i18next';
+import { appApi }             from '../api/client';
+import { IntegrationCard }    from '../components/integrations/IntegrationCard';
+import { AzureConfigForm }    from '../components/integrations/forms/AzureConfigForm';
+import type { IntegrationStatus } from '../components/integrations/IntegrationCard';
 
-function getUser() {
-  try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
-}
+type Provider = 'AZURE_ENTRA' | 'GOOGLE_WORKSPACE' | 'GRAFANA';
+type ActiveForm = Provider | null;
 
-// ── Typy ────────────────────────────────────────────────────────
-type Provider = 'AZURE_ENTRA' | 'SLACK' | 'GOOGLE_WORKSPACE' | 'MICROSOFT_TEAMS' | 'WEBHOOK_CUSTOM';
+const MsIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <rect width="8" height="8" fill="white" opacity=".95"/>
+    <rect x="10" width="8" height="8" fill="white" opacity=".6"/>
+    <rect y="10" width="8" height="8" fill="white" opacity=".6"/>
+    <rect x="10" y="10" width="8" height="8" fill="white" opacity=".4"/>
+  </svg>
+);
 
-interface Integration {
-  id:            string;
-  provider:      Provider;
-  isEnabled:     boolean;
-  displayName:   string | null;
-  tenantHint:    string | null;
-  hasConfig:     boolean;
-  lastTestedAt:  string | null;
-  lastTestOk:    boolean | null;
-  lastTestError: string | null;
-  publicConfig?: Record<string, unknown>;
-}
+const GoogleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <path d="M9 7v3h4.8a4.5 4.5 0 1 1-1.1-4.7L14.8 3.7A7.5 7.5 0 1 0 16.5 9H9V7z" fill="white"/>
+  </svg>
+);
 
-const PROVIDER_ORDER: Provider[] = [
-  'AZURE_ENTRA',
-  'GOOGLE_WORKSPACE',
-  'SLACK',
-  'MICROSOFT_TEAMS',
-  'WEBHOOK_CUSTOM',
-];
+const GrafanaIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+    <rect x="2" y="8" width="14" height="2" rx="1" fill="white"/>
+    <rect x="7" y="3" width="4" height="12" rx="1" fill="white" opacity=".7"/>
+  </svg>
+);
 
-// ── Component ────────────────────────────────────────────────────
 export default function IntegrationsPage() {
   const { t } = useTranslation();
-
-  const user = getUser();
-  const [integrations, setIntegrations] = useState<Map<Provider, Integration>>(new Map());
+  const [integrations, setIntegrations] = useState<Record<string, any>>({});
   const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState('');
-  const [configuring,  setConfiguring]  = useState<Provider | null>(null);
-  const [testing,      setTesting]      = useState<Provider | null>(null);
-  const [testResult,   setTestResult]   = useState<{ provider: Provider; ok: boolean; msg: string } | null>(null);
+  const [activeForm,   setActiveForm]   = useState<ActiveForm>(null);
 
-  // ── Load ─────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
-      const list: Integration[] = await appApi.integrations.list();
-      const map = new Map<Provider, Integration>();
-      for (const item of list) map.set(item.provider as Provider, item);
+      const list = await appApi.integrations.list();
+      const map: Record<string, any> = {};
+      list.forEach((i: any) => { map[i.provider] = i; });
       setIntegrations(map);
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Błąd ładowania integracji');
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Handlers ──────────────────────────────────────────────────
-  const handleToggle = async (provider: Provider, isEnabled: boolean) => {
-    try {
-      const updated = await appApi.integrations.toggle(provider, isEnabled);
-      setIntegrations(prev => new Map(prev).set(provider, updated));
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Błąd zmiany statusu');
-    }
+  const getStatus = (provider: string): IntegrationStatus => {
+    const i = integrations[provider];
+    if (!i) return 'available';
+    if (i.lastTestOk === false) return 'error';
+    if (i.isEnabled) return 'connected';
+    return 'configuring';
   };
 
-  const handleRemove = async (provider: Provider) => {
-    if (!window.confirm(t('integrations.remove_confirm'))) return;
-    try {
-      await appApi.integrations.remove(provider);
-      setIntegrations(prev => {
-        const next = new Map(prev);
-        next.delete(provider);
-        return next;
-      });
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Błąd usuwania');
-    }
-  };
-
-  const handleTest = async (provider: Provider) => {
-    setTesting(provider);
-    setTestResult(null);
-    try {
-      const r = await appApi.integrations.test(provider);
-      setTestResult({ provider, ok: r.ok, msg: r.message });
-      // Odśwież wynik testu w danych
-      await load();
-    } catch (e: any) {
-      setTestResult({ provider, ok: false, msg: e?.response?.data?.message ?? 'Błąd testu' });
-    } finally {
-      setTesting(null);
-    }
-  };
-
-  const handleSaved = async () => {
-    setConfiguring(null);
-    await load();
-  };
-
-  // ── Render ────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ padding: 24, display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--color-border-secondary)', borderTopColor: 'var(--brand)', animation: 'spin 0.8s linear infinite' }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div className="flex justify-center py-10">
+        <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (activeForm === 'AZURE_ENTRA') {
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-zinc-800">{t('integrations.page_title')}</h1>
+          <p className="text-sm text-zinc-400 mt-0.5">{t('integrations.page_sub')}</p>
+        </div>
+        <div className="max-w-2xl">
+          <AzureConfigForm
+            integration={integrations['AZURE_ENTRA']}
+            onSaved={() => { load(); setActiveForm(null); }}
+            onCancel={() => setActiveForm(null)}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '24px 20px', maxWidth: 900 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 }}>
-          {t('integrations.page_title')}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>
-          {t('integrations.page_sub')}
-        </p>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-zinc-800">{t('integrations.page_title')}</h1>
+        <p className="text-sm text-zinc-400 mt-0.5">{t('integrations.page_sub')}</p>
       </div>
 
-      {/* Błąd globalny */}
-      {error && (
-        <div style={{ background: 'var(--color-background-danger)', color: 'var(--color-text-danger)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
-          {error}
-        </div>
-      )}
-
-      {/* Wynik testu */}
-      {testResult && (
-        <div style={{
-          background: testResult.ok ? 'var(--color-background-success)' : 'var(--color-background-danger)',
-          color: testResult.ok ? 'var(--color-text-success)' : 'var(--color-text-danger)',
-          borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13,
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          <span>{testResult.ok ? '✅' : '❌'}</span>
-          <span>{testResult.msg}</span>
-          <button onClick={() => setTestResult(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, opacity: 0.6 }}>×</button>
-        </div>
-      )}
-
-      {/* Formularz konfiguracji */}
-      {configuring && (
-        <div style={{ border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 16px', marginBottom: 20, background: 'var(--color-background-primary)' }}>
-          {configuring === 'AZURE_ENTRA'       && <AzureConfigForm   integration={integrations.get('AZURE_ENTRA')}         onSaved={handleSaved} onCancel={() => setConfiguring(null)} />}
-          {configuring === 'SLACK'              && <SlackConfigForm   integration={integrations.get('SLACK')}               onSaved={handleSaved} onCancel={() => setConfiguring(null)} />}
-          {configuring === 'GOOGLE_WORKSPACE'   && <GoogleConfigForm  integration={integrations.get('GOOGLE_WORKSPACE')}    onSaved={handleSaved} onCancel={() => setConfiguring(null)} />}
-          {configuring === 'MICROSOFT_TEAMS'    && <TeamsConfigForm   integration={integrations.get('MICROSOFT_TEAMS')}     onSaved={handleSaved} onCancel={() => setConfiguring(null)} />}
-          {configuring === 'WEBHOOK_CUSTOM'     && <WebhookConfigForm integration={integrations.get('WEBHOOK_CUSTOM')}      onSaved={handleSaved} onCancel={() => setConfiguring(null)} />}
-        </div>
-      )}
-
-      {/* Provider cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-        {PROVIDER_ORDER.map(provider => (
-          <ProviderCard
-            key={provider}
-            provider={provider}
-            integration={integrations.get(provider) ?? null}
-            isConfiguring={configuring === provider}
-            isTesting={testing === provider}
-            onConfigure={() => setConfiguring(configuring === provider ? null : provider)}
-            onToggle={(enabled) => handleToggle(provider, enabled)}
-            onTest={() => handleTest(provider)}
-            onRemove={() => handleRemove(provider)}
-          />
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-2xl mb-6">
+        <IntegrationCard
+          id="AZURE_ENTRA"
+          name="Azure Entra ID"
+          description="SSO · Teams · Outlook · Microsoft 365"
+          logo={<MsIcon />}
+          logoColor="#0078D4"
+          status={getStatus('AZURE_ENTRA')}
+          onSelect={() => setActiveForm('AZURE_ENTRA')}
+        />
+        <IntegrationCard
+          id="GOOGLE_WORKSPACE"
+          name="Google Workspace"
+          description="SSO przez Google OAuth 2.0"
+          logo={<GoogleIcon />}
+          logoColor="#EA4335"
+          status={getStatus('GOOGLE_WORKSPACE')}
+          onSelect={() => setActiveForm('GOOGLE_WORKSPACE')}
+        />
+        <IntegrationCard
+          id="GRAFANA"
+          name="Grafana"
+          description="Metryki beaconów i dashboardy"
+          logo={<GrafanaIcon />}
+          logoColor="#0F6E56"
+          status="available"
+          onSelect={() => {}}
+        />
       </div>
+
+      {activeForm === 'GOOGLE_WORKSPACE' && (
+        <div className="max-w-2xl border border-zinc-200 rounded-xl p-5 text-sm text-zinc-500 text-center">
+          Konfiguracja Google Workspace — wkrótce dostępna
+        </div>
+      )}
     </div>
   );
 }
