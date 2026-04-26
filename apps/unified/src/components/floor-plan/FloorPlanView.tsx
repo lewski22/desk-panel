@@ -34,7 +34,12 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect }: {
   anchorRect: DOMRect | null;
 }) {
   const { t } = useTranslation();
-  const isMobile = window.innerWidth < 640;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   const statusLabel = () => {
     if (!desk.isOnline) return { label: t('devices.status.offline'), color: 'text-zinc-500' };
@@ -166,41 +171,49 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
     setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z - e.deltaY * 0.001).toFixed(2))));
   };
 
-  // ── Pinch-to-zoom ─────────────────────────────────────────────
+  // ── Pinch-to-zoom (native listeners required for preventDefault to work) ──
   const lastTouchDist = useRef<number | null>(null);
-  const isPinching    = useRef(false);
 
-  const getTouchDist = (touches: React.TouchList) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 2) {
-      isPinching.current    = true;
-      lastTouchDist.current = getTouchDist(e.touches);
-      e.preventDefault();
-    } else {
-      isPinching.current    = false;
-      lastTouchDist.current = null;
-    }
-  };
+    const getTouchDist = (touches: TouchList) => {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 2 && lastTouchDist.current !== null) {
-      e.preventDefault();
-      const newDist = getTouchDist(e.touches);
-      const scale   = newDist / lastTouchDist.current;
-      lastTouchDist.current = newDist;
-      setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * scale)));
-    }
-  };
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        lastTouchDist.current = getTouchDist(e.touches);
+        e.preventDefault();
+      } else {
+        lastTouchDist.current = null;
+      }
+    };
 
-  const handleTouchEnd = () => {
-    lastTouchDist.current = null;
-    isPinching.current    = false;
-  };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && lastTouchDist.current !== null) {
+        e.preventDefault();
+        const newDist = getTouchDist(e.touches);
+        const scale   = newDist / lastTouchDist.current;
+        lastTouchDist.current = newDist;
+        setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * scale)));
+      }
+    };
+
+    const onTouchEnd = () => { lastTouchDist.current = null; };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: false });
+    el.addEventListener('touchend',   onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+      el.removeEventListener('touchend',   onTouchEnd);
+    };
+  }, []);
 
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
 
@@ -371,9 +384,6 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
         style={{ maxHeight: '65vh', touchAction: 'pan-x pan-y' }}
         onClick={() => { setSel(null); setSelRect(null); }}
         onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         <svg
           width={canvasW * zoom}
