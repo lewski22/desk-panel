@@ -1076,6 +1076,8 @@
       "free_only": "Tylko wolne",
       "desks_visible": "biurek"
     },
+    "floor_label": "Piętro",
+    "zoom_reset": "Reset",
     "rotate": "Obróć",
     "save_error": "Błąd zapisu. Spróbuj ponownie.",
     "discard_confirm": "Masz niezapisane zmiany. Na pewno odrzucić?"

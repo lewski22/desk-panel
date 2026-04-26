@@ -1076,6 +1076,8 @@
       "free_only": "Free only",
       "desks_visible": "desks"
     },
+    "floor_label": "Floor",
+    "zoom_reset": "Reset",
     "rotate": "Rotate",
     "save_error": "Save failed. Please try again.",
     "discard_confirm": "You have unsaved changes. Discard them?"
