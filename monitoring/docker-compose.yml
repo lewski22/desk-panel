@@ -28,7 +28,10 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana:10.4.2
+    build:
+      context: ./grafana
+      dockerfile: Dockerfile
+    image: reserti-grafana:latest
     container_name: reserti-grafana
     restart: unless-stopped
     environment:
@@ -37,12 +40,9 @@ services:
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3001}
       GF_ANALYTICS_REPORTING_ENABLED: 'false'
       GF_USERS_ALLOW_SIGN_UP: 'false'
-      # Pozwala embeddować dashboardy w iframie (opcjonalnie)
       GF_SECURITY_ALLOW_EMBEDDING: 'true'
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - '3001:3000'
     depends_on:
