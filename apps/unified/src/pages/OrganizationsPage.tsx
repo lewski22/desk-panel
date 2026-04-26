@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
-import { PageHeader, Btn, Card, Modal, Input } from '../components/ui';
+import { PageHeader, Btn, Modal, Input } from '../components/ui';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
@@ -245,11 +245,12 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 
 export function OrganizationsPage() {
   const user = getUser();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [locations, setLocations] = useState<any[]>([]);
   const [orgs,      setOrgs]      = useState<any[]>([]);
+  const [search,    setSearch]    = useState('');
   const [loading,   setLoading]   = useState(true);
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
@@ -352,12 +353,21 @@ export function OrganizationsPage() {
     setSaving(false);
   };
 
+  const totalDesks    = locations.reduce((s, l) => s + (l._count?.desks    ?? 0), 0);
+  const totalGateways = locations.reduce((s, l) => s + (l._count?.gateways ?? 0), 0);
+  const activeCount   = locations.filter(l => l.isActive).length;
+  const filtered      = locations.filter(l =>
+    !search ||
+    l.name.toLowerCase().includes(search.toLowerCase()) ||
+    (l.city    ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (l.address ?? '').toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
     <div>
       <PageHeader
         title={t('pages.organizations.title')}
         sub={t('organizations.subtitle')}
-        action={<Btn onClick={openCreate}>{t('organizations.new_location')}</Btn>}
       />
 
       {loading ? (
@@ -365,68 +375,180 @@ export function OrganizationsPage() {
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="grid gap-3">
-          {locations.map(loc => (
-            <Card key={loc.id} className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-lg shrink-0">
-                {loc.name[0].toUpperCase()}
+        <>
+          {/* ── Summary chips ─────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+            {[
+              { num: locations.length, label: t('organizations.summary.locations', 'Biur')      },
+              { num: activeCount,      label: t('organizations.summary.active',    'Aktywnych'), color: '#3B6D11' },
+              { num: totalDesks,       label: t('organizations.summary.desks',     'Biurek')     },
+              { num: totalGateways,    label: t('organizations.summary.gateways',  'Gatewayów')  },
+            ].map(({ num, label, color }) => (
+              <div key={label}
+                className="bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 text-center">
+                <p className="text-xl font-semibold" style={{ color: color ?? 'inherit' }}>{num}</p>
+                <p className="text-[11px] text-zinc-400 mt-0.5">{label}</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold text-zinc-800 truncate">{loc.name}</p>
-                  {!loc.isActive && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-medium">{t('organizations.inactive')}</span>
-                  )}
-                  {isSuperAdmin && loc.organization && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-500 font-medium">
-                      {loc.organization.name}
+            ))}
+          </div>
+
+          {/* ── Topbar: wyszukiwarka + przycisk dodaj ─────── */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <input
+              type="search"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={t('organizations.search_placeholder', 'Szukaj biura...')}
+              className="flex-1 min-w-[180px] max-w-sm h-9 border border-zinc-200 rounded-lg
+                         px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30
+                         bg-white text-zinc-800 placeholder-zinc-400"
+            />
+            <Btn onClick={openCreate}>
+              + {t('organizations.new_location', 'Nowe biuro')}
+            </Btn>
+          </div>
+
+          {/* ── Siatka kart ───────────────────────────────── */}
+          <div className="grid gap-3"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+
+            {filtered.map(loc => {
+              const desksCount    = loc._count?.desks    ?? 0;
+              const gatewaysCount = loc._count?.gateways ?? 0;
+              const avatarLetter  = loc.name[0]?.toUpperCase() ?? '?';
+
+              return (
+                <div key={loc.id}
+                  className={`bg-white border border-zinc-200 rounded-2xl overflow-hidden
+                              flex flex-col ${!loc.isActive ? 'opacity-60' : ''}`}
+                >
+                  <div className="h-0.5"
+                    style={{ background: loc.isActive ? '#10B981' : '#a1a1aa' }} />
+
+                  {/* Card head */}
+                  <div className="px-4 pt-3.5 pb-2.5 flex items-start gap-3 border-b border-zinc-100">
+                    <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center
+                                    text-base font-semibold"
+                      style={{ background: '#FBEAF0', color: '#993556' }}>
+                      {avatarLetter}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                        <p className="text-sm font-semibold text-zinc-800 truncate">{loc.name}</p>
+                        {!loc.isActive && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full
+                                           bg-zinc-100 text-zinc-500 font-medium">
+                            {t('organizations.inactive')}
+                          </span>
+                        )}
+                        {isSuperAdmin && loc.organization && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full
+                                           bg-violet-50 text-violet-700 font-medium">
+                            {loc.organization.name}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-zinc-400 leading-tight">
+                        {[loc.address, loc.city].filter(Boolean).join(', ')
+                          || t('organizations.no_address')}
+                      </p>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        {loc.timezone ?? 'Europe/Warsaw'} ·{' '}
+                        {loc.openTime ?? '08:00'}–{loc.closeTime ?? '17:00'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats row */}
+                  <div className="grid grid-cols-3 border-b border-zinc-100 divide-x divide-zinc-100">
+                    {[
+                      { num: desksCount,    label: t('organizations.stat_desks',    'biurek')    },
+                      { num: gatewaysCount, label: t('organizations.stat_gateways', 'gatewayów') },
+                      { num: `${loc.maxDaysAhead ?? 14}d·${loc.maxHoursPerDay ?? 8}h`,
+                                            label: t('organizations.stat_limits',   'max')       },
+                    ].map(({ num, label }) => (
+                      <div key={label} className="py-2.5 text-center">
+                        <p className="text-base font-semibold text-zinc-800 leading-none">{num}</p>
+                        <p className="text-[10px] text-zinc-400 mt-1">{label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Location ID */}
+                  <div className="px-4 py-2.5 border-b border-zinc-100 flex items-center gap-2">
+                    <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider shrink-0">
+                      {t('organizations.id_label')}
                     </span>
-                  )}
+                    <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200
+                                     rounded px-1.5 py-0.5 flex-1 truncate select-all">
+                      {loc.id}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(loc.id)}
+                      className="text-[11px] text-zinc-400 hover:text-brand transition-colors
+                                 border border-zinc-200 rounded px-1.5 py-0.5 shrink-0"
+                      title="Kopiuj ID"
+                    >⎘</button>
+                  </div>
+
+                  {/* Actions footer */}
+                  <div className="px-3 py-2.5 bg-zinc-50 flex gap-1.5 flex-wrap mt-auto">
+                    <button
+                      onClick={() => openEdit(loc)}
+                      className="text-[11px] px-3 py-1.5 rounded-lg border border-brand/40
+                                 bg-brand/5 text-brand hover:bg-brand/10 font-semibold
+                                 transition-colors flex-1 text-center"
+                    >
+                      {t('organizations_extra.edit', 'Edytuj')}
+                    </button>
+                    <button
+                      onClick={() => setInstallModal(loc)}
+                      className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-200
+                                 bg-white text-zinc-600 hover:bg-zinc-100 font-medium
+                                 transition-colors"
+                    >
+                      + Gateway
+                    </button>
+                    <button
+                      onClick={() => setAzureModal(loc)}
+                      className="text-[11px] px-2.5 py-1.5 rounded-lg border border-zinc-200
+                                 bg-white text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100
+                                 transition-colors"
+                      title="Azure / M365"
+                    >
+                      M365
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  {[loc.address, loc.city].filter(Boolean).join(', ') || t('organizations.no_address')}
-                </p>
-                {/* ID do prowizjonowania */}
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-wider">{t('organizations.id_label')}</span>
-                  <code className="text-[10px] font-mono text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded select-all">{loc.id}</code>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(loc.id); }}
-                    className="text-[10px] text-zinc-400 hover:text-brand transition-colors"
-                    title="Kopiuj ID"
-                  >⎘</button>
-                </div>
+              );
+            })}
+
+            {/* Empty state */}
+            {filtered.length === 0 && (
+              <div className="col-span-full text-center py-16 text-zinc-400">
+                {search ? (
+                  <>
+                    <p className="text-2xl mb-2">🔍</p>
+                    <p className="text-sm">
+                      {t('organizations.no_search_results', 'Brak biur pasujących do „{{q}}"', { q: search })}
+                    </p>
+                    <button
+                      onClick={() => setSearch('')}
+                      className="text-xs text-brand hover:underline mt-2"
+                    >
+                      {t('organizations.clear_search', 'Wyczyść wyszukiwanie')}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-3xl mb-2">🏢</p>
+                    <p className="text-sm">{t('organizations.no_locations')}</p>
+                  </>
+                )}
               </div>
-              {/* Godziny i limity */}
-              <div className="shrink-0 text-center px-4 border-l border-zinc-100">
-                <p className="text-sm font-mono font-semibold text-zinc-700">
-                  {loc.openTime ?? '08:00'} – {loc.closeTime ?? '17:00'}
-                </p>
-                <p className="text-xs text-zinc-400 mt-0.5">godziny pracy</p>
-                <p className="text-xs text-zinc-500 mt-1 font-medium">
-                  max {loc.maxDaysAhead ?? 14}d · {loc.maxHoursPerDay ?? 8}h
-                </p>
-                <p className="text-[10px] text-zinc-400 mt-1">
-                  {loc.timezone ?? 'Europe/Warsaw'}
-                </p>
-              </div>
-              <div className="shrink-0 flex items-center gap-2">
-                <p className="text-xs text-zinc-400">
-                  {new Date(loc.createdAt).toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL')}
-                </p>
-                <Btn variant="ghost" size="sm" onClick={() => setAzureModal(loc)}>{t('organizations_extra.m365_button')}</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => setInstallModal(loc)}>+ Gateway</Btn>
-                <Btn variant="ghost" size="sm" onClick={() => openEdit(loc)}>{t('organizations_extra.edit')}</Btn>
-              </div>
-            </Card>
-          ))}
-          {locations.length === 0 && (
-            <div className="text-center py-16 text-zinc-400">
-              <p className="text-3xl mb-2">🏢</p>
-              <p className="text-sm">{t('organizations.no_locations')}</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Create / Edit modal */}

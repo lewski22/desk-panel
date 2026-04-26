@@ -100,12 +100,12 @@ function ReservationCard({
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <StatusBadge status={r.status} />
-          <div className="hidden sm:flex gap-1.5">
+          <div className="flex gap-1.5">
             {canCheckin(r) && (
               <button
                 onClick={() => onCheckin(r.id)}
                 disabled={checkingIn === r.id}
-                className="text-xs text-brand hover:text-brand-hover px-3 py-1.5 rounded-lg border border-brand/30 hover:border-brand/50 hover:bg-brand/5 transition-colors font-semibold disabled:opacity-40">
+                className="text-xs px-3 py-1.5 rounded-xl bg-brand text-white hover:bg-brand-hover transition-colors font-medium disabled:opacity-40">
                 {checkingIn === r.id
                   ? '…'
                   : Date.now() >= new Date(r.startTime).getTime()
@@ -114,7 +114,6 @@ function ReservationCard({
                 }
               </button>
             )}
-            {/* FIX P1-3: show Zakończ when checked in, Anuluj otherwise */}
             {r.checkin && !r.checkin.checkedOutAt ? (
               <button
                 onClick={() => onCheckout(r.checkin.id)}

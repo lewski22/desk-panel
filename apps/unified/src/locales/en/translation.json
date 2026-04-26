@@ -712,6 +712,18 @@
     "valid_until": "Valid until",
     "no_address": "No address",
     "id_label": "ID:",
+    "summary": {
+      "locations": "Offices",
+      "active":    "Active",
+      "desks":     "Desks",
+      "gateways":  "Gateways"
+    },
+    "search_placeholder": "Search office...",
+    "stat_desks":         "desks",
+    "stat_gateways":      "gateways",
+    "stat_limits":        "max",
+    "no_search_results":  "No offices matching \"{{q}}\"",
+    "clear_search":       "Clear search",
     "gateway_token_single_use": "This is a one-time token — it expires after use. If installation fails, come back here and generate a new one.",
     "form": {
       "org_label":    "Organisation",
