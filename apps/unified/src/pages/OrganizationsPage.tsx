@@ -461,7 +461,7 @@ export function OrganizationsPage() {
             <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.timezone')}</label>
             <select
               value={form.timezone}
-              onChange={e => { setForm(f => ({ ...f, timezone: e.target.value })); markDirty(); }}}
+              onChange={e => { setForm(f => ({ ...f, timezone: e.target.value })); markDirty(); }}
               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="Europe/Warsaw">Europe/Warsaw (UTC+1/+2)</option>
