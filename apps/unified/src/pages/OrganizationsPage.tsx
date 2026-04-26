@@ -280,6 +280,7 @@ export function OrganizationsPage() {
   useEffect(() => { load(); }, []);
 
   const openCreate = () => {
+    resetDirty();
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '',
       organizationId: user?.organizationId ?? '' });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
@@ -288,6 +289,7 @@ export function OrganizationsPage() {
   };
 
   const openEdit = (loc: any) => {
+    resetDirty();
     setTarget(loc);
     setForm({
       name: loc.name, address: loc.address ?? '', city: loc.city ?? '',
@@ -436,22 +438,22 @@ export function OrganizationsPage() {
             onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty(); }}
             placeholder={t('organizations.form.name_ph')} />
           <Input label={t('organizations.form.address_label')} value={form.address}
-            onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+            onChange={e => { setForm(f => ({ ...f, address: e.target.value })); markDirty(); }}
             placeholder={t('organizations.form.address_ph')} />
           <Input label={t('organizations.form.city_label')} value={form.city}
-            onChange={e => setForm(f => ({ ...f, city: e.target.value }))}
+            onChange={e => { setForm(f => ({ ...f, city: e.target.value })); markDirty(); }}
             placeholder={t('organizations.form.city_ph')} />
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.open_time')}</label>
               <input type="time" value={form.openTime}
-                onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))}
+                onChange={e => { setForm(f => ({ ...f, openTime: e.target.value })); markDirty(); }}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.close_time')}</label>
               <input type="time" value={form.closeTime}
-                onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))}
+                onChange={e => { setForm(f => ({ ...f, closeTime: e.target.value })); markDirty(); }}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
@@ -459,7 +461,7 @@ export function OrganizationsPage() {
             <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.timezone')}</label>
             <select
               value={form.timezone}
-              onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
+              onChange={e => { setForm(f => ({ ...f, timezone: e.target.value })); markDirty(); }}}
               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="Europe/Warsaw">Europe/Warsaw (UTC+1/+2)</option>
@@ -488,7 +490,7 @@ export function OrganizationsPage() {
             <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.country_label')}</label>
             <select
               value={form.country}
-              onChange={e => setForm(f => ({ ...f, country: e.target.value }))}
+              onChange={e => { setForm(f => ({ ...f, country: e.target.value })); markDirty(); }}}
               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">{t('organizations.form.country_auto')}</option>
@@ -504,7 +506,7 @@ export function OrganizationsPage() {
             <input
               type="text"
               value={wifiSsid}
-              onChange={e => setWifiSsid(e.target.value)}
+              onChange={e => { setWifiSsid(e.target.value); markDirty(); }}
               placeholder={t('organizations.form.wifi_ssid_placeholder')}
               className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
@@ -516,7 +518,7 @@ export function OrganizationsPage() {
               <input
                 type={wifiPassVisible ? 'text' : 'password'}
                 value={wifiPass}
-                onChange={e => setWifiPass(e.target.value)}
+                onChange={e => { setWifiPass(e.target.value); markDirty(); }}
                 placeholder="••••••••"
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 pr-16"
               />
@@ -535,13 +537,13 @@ export function OrganizationsPage() {
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_days')}</label>
               <input type="number" min={1} max={365} value={form.maxDaysAhead}
-                onChange={e => setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) }))}
+                onChange={e => { setForm(f => ({ ...f, maxDaysAhead: Number(e.target.value) })); markDirty(); }}}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
             <div>
               <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('organizations.form.max_hours')}</label>
               <input type="number" min={1} max={24} value={form.maxHoursPerDay}
-                onChange={e => setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) }))}
+                onChange={e => { setForm(f => ({ ...f, maxHoursPerDay: Number(e.target.value) })); markDirty(); }}}
                 className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" />
             </div>
           </div>
