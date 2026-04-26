@@ -132,8 +132,8 @@ export function Select({ label, children, className = '', ...props }: SelectProp
 }
 
 // ── Modal ─────────────────────────────────────────────────────
-export function Modal({ open = true, title, onClose, children, wide = false }: {
-  open?: boolean; title: string; onClose: () => void; children: React.ReactNode; wide?: boolean;
+export function Modal({ open = true, title, onClose, children, wide = false, noPadding = false }: {
+  open?: boolean; title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; noPadding?: boolean;
 }) {
   if (!open) return null;
   return (
@@ -147,11 +147,17 @@ export function Modal({ open = true, title, onClose, children, wide = false }: {
         <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">
           <span className="w-10 h-1 bg-zinc-300 rounded-full" />
         </div>
-        <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-zinc-100 shrink-0">
-          <h3 className="font-semibold text-zinc-800">{title}</h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none min-w-touch min-h-touch flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
-        </div>
-        <div className="px-5 py-4 overflow-y-auto flex-1" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        {title ? (
+          <div className="flex items-center justify-between px-5 py-3 sm:py-4 border-b border-zinc-100 shrink-0">
+            <h3 className="font-semibold text-zinc-800">{title}</h3>
+            <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none min-w-touch min-h-touch flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+          </div>
+        ) : (
+          <div className="flex justify-end px-3 pt-1 shrink-0">
+            <button onClick={onClose} className="text-zinc-400 hover:text-zinc-700 text-xl leading-none min-w-touch min-h-touch flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors">×</button>
+          </div>
+        )}
+        <div className={`overflow-y-auto flex-1 ${noPadding ? '' : 'px-5 py-4'}`} style={{ paddingBottom: noPadding ? undefined : 'max(1rem, env(safe-area-inset-bottom))' }}>
           {children}
         </div>
       </div>

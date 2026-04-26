@@ -1,2 +1,2 @@
 -- AlterTable
-ALTER TABLE "Location" ADD COLUMN "parkingBookingMode" TEXT NOT NULL DEFAULT 'HOURLY';
+ALTER TABLE "Location" ADD COLUMN IF NOT EXISTS "parkingBookingMode" TEXT NOT NULL DEFAULT 'HOURLY';
