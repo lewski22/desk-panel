@@ -201,36 +201,51 @@ function notifGetLocalized(item: any, field: 'title' | 'body', lang: string): st
 
 
 // ── Lista in-app powiadomień ─────────────────────────────────────
-function NotificationsList() {
+function NotificationsList({ onUnreadChange }: { onUnreadChange?: (count: number) => void }) {
   const { t, i18n } = useTranslation();
   const [items,   setItems]   = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(false);
+
+  const updateItems = useCallback((next: any[]) => {
+    setItems(next);
+    onUnreadChange?.(next.filter((n: any) => !n.read).length);
+  }, [onUnreadChange]);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    try { setItems(await appApi.notifications.inapp()); } catch {}
+    setLoading(true); setError(false);
+    try { updateItems(await appApi.notifications.inapp()); } catch { setError(true); }
     setLoading(false);
-  }, []);
+  }, [updateItems]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleMarkAll = async () => {
     await appApi.notifications.markAllRead();
-    setItems((prev: any[]) => prev.map((n: any) => ({ ...n, read: true })));
+    updateItems(items.map((n: any) => ({ ...n, read: true })));
   };
 
   const handleRead = async (id: string) => {
     await appApi.notifications.markRead([id]);
-    setItems((prev: any[]) => prev.map((n: any) => n.id === id ? { ...n, read: true } : n));
+    updateItems(items.map((n: any) => n.id === id ? { ...n, read: true } : n));
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await appApi.notifications.deleteOne(id);
-    setItems((prev: any[]) => prev.filter((n: any) => n.id !== id));
+    updateItems(items.filter((n: any) => n.id !== id));
   };
 
   if (loading) return <div className="text-center py-16 text-zinc-400 text-sm">…</div>;
+
+  if (error) return (
+    <div className="text-center py-16">
+      <p className="text-zinc-400 text-sm mb-3">{t('common.error')}</p>
+      <button onClick={load} className="text-xs text-brand font-semibold hover:underline">
+        {t('btn.refresh')}
+      </button>
+    </div>
+  );
 
   if (items.length === 0) return (
     <div className="text-center py-16">
@@ -280,7 +295,7 @@ function NotificationsList() {
                   </span>
                   <button
                     onClick={e => handleDelete(item.id, e)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600 p-0.5 rounded text-xs leading-none"
+                    className="sm:opacity-0 sm:group-hover:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-600 p-0.5 rounded text-xs leading-none"
                   >
                     ×
                   </button>
@@ -507,7 +522,7 @@ export function NotificationsPage() {
       )}
 
       {/* Lista powiadomień */}
-      {tab === 'list' && <NotificationsList />}
+      {tab === 'list' && <NotificationsList onUnreadChange={setUnreadCount} />}
 
       {/* Settings tab */}
       {tab === 'settings' && (

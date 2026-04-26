@@ -250,7 +250,9 @@ export function MyReservationsPage() {
                   onClick={() => setShowHistory(v => !v)}
                   className="text-xs text-brand font-semibold"
                 >
-                  {showHistory ? 'Zwiń ↑' : `Pokaż wszystkie (${inactive.length}) →`}
+                  {showHistory
+                    ? t('reservations.history_collapse', 'Zwiń ↑')
+                    : t('reservations.history_show', 'Pokaż wszystkie ({{count}}) →', { count: inactive.length })}
                 </button>
               </div>
               {showHistory && (

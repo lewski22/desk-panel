@@ -813,7 +813,9 @@
     "checkin_early":         "Confirm reservation",
     "active_section":        "Active",
     "reservation_single":    "reservation",
-    "reservation_plural":    "reservations"
+    "reservation_plural":    "reservations",
+    "history_show":          "Show all ({{count}}) →",
+    "history_collapse":      "Collapse ↑"
   },
   "provisioning": {
     "title": "Provisioning",

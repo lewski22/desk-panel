@@ -813,7 +813,9 @@
     "checkin_early":         "Potwierdź rezerwację",
     "active_section":        "Aktywne",
     "reservation_single":    "rezerwacja",
-    "reservation_plural":    "rezerwacje"
+    "reservation_plural":    "rezerwacje",
+    "history_show":          "Pokaż wszystkie ({{count}}) →",
+    "history_collapse":      "Zwiń ↑"
   },
   "provisioning": {
     "title": "Provisioning",

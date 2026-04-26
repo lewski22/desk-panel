@@ -6,6 +6,35 @@ Historia prac, naprawionych błędów i otwartych zadań.
 
 ## Zrealizowane (chronologicznie)
 
+### 2026-04-26 — Floor Plan Portal + Notifications List + Reservations Redesign
+
+#### Zmiany
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| 1 | `DeskInfoCard` przeniesiona do portalu (`createPortal`) — rozwiązuje clipping w scrollującym kontenerze | `FloorPlanView.tsx` |
+| 2 | Mobile bottom sheet vs desktop popover — pozycjonowanie względem viewport (DOMRect) | `FloorPlanView.tsx`, `DeskPin.tsx` |
+| 3 | Pinch-to-zoom — natywne listenery `{ passive: false }` zamiast React props (React rejestruje passive domyślnie, `preventDefault` był ignorowany) | `FloorPlanView.tsx` |
+| 4 | `isMobile` odświeżany przy resize okna — poprzednio liczony raz przy renderze | `FloorPlanView.tsx` |
+| 5 | `my-reservations` dostępne dla SUPER_ADMIN i OFFICE_ADMIN | `AppLayout.tsx`, `BottomNav.tsx` |
+| 6 | Redesign karty rezerwacji — kolorowy pasek statusu, pigułka czasu, usunięcie swipe gesture | `MyReservationsPage.tsx` |
+| 7 | Historia rezerwacji zwijana (toggle "Pokaż wszystkie / Zwiń") | `MyReservationsPage.tsx` |
+| 8 | Nowa zakładka "Moje powiadomienia" jako domyślna w `NotificationsPage` | `NotificationsPage.tsx` |
+| 9 | Push opt-in refaktor — early-return guards zamiast zagnieżdżonych ternary | `NotificationsPage.tsx` |
+| 10 | `NotificationBell` polling 30s → 15s + `visibilitychange` refresh przy powrocie z tła | `NotificationBell.tsx` |
+
+#### Naprawione błędy (code review 2026-04-26)
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| B1 | Hardcoded polskie stringi w toggle historii (`'Zwiń ↑'`, `'Pokaż wszystkie...'`) → i18n keys | `MyReservationsPage.tsx`, `locales/*/translation.json` |
+| B2 | `unreadCount` badge w zakładce "Moje powiadomienia" nie aktualizował się po oznaczeniu jako przeczytane — `onUnreadChange` callback do `NotificationsList` | `NotificationsPage.tsx` |
+| B3 | Przycisk usuń powiadomienie (`×`) niewidoczny na mobile (`opacity-0 group-hover`) → `sm:opacity-0 sm:group-hover:opacity-100` | `NotificationsPage.tsx` |
+| B4 | `NotificationsList` brak stanu błędu — silently renderował empty state przy błędzie API | `NotificationsPage.tsx` |
+| B5 | `isPinching` ref — martwy kod (ustawiany ale nigdy czytany) | `FloorPlanView.tsx` |
+
+---
+
 ### 2026-04-25 — Bugfix Sprint + UX Mapy + Date Picker + Nowe funkcje
 
 #### Krytyczne (K1–K6)
