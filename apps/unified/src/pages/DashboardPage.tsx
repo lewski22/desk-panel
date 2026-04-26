@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { appApi } from '../api/client';
 import { Stat, Card, Spinner, Modal, Btn, EmptyState } from '../components/ui';
+import { SkeletonKpi } from '../components/ui/Skeleton';
 import { InsightsWidget } from '../components/insights/InsightsWidget';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
@@ -472,8 +473,6 @@ export function DashboardPage() {
   const onlineCount   = useMemo(() => desks.filter(d => d.isOnline).length, [desks]);
   const offlineCount  = useMemo(() => desks.filter(d => !d.isOnline && d.status === 'ACTIVE').length, [desks]);
 
-  if (loading) return <Spinner />;
-
   if (!loading && desks.length === 0 && !locationId) return (
     <div className="flex flex-col items-center justify-center py-24 gap-4">
       <div className="text-5xl">🖥️</div>
@@ -524,32 +523,36 @@ export function DashboardPage() {
       <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} />
 
       {/* KPI Row — FEATURE P4-3C: beacons card hidden for END_USER */}
-      <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
-        <KpiCard
-          label={t('dashboard.kpi.occupancy_now')}
-          value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
-          accent
-        />
-        <KpiCard
-          label={t('dashboard.kpi.occupied_desks')}
-          value={occupiedDesks}
-          sub={t('dashboard.kpi.of_active', { count: desks.length })}
-          trend={isAdmin ? ext?.weekTrend : undefined}
-          prevValue={isAdmin && ext?.lastWeekCount !== undefined ? String(ext.lastWeekCount) : undefined}
-        />
-        <KpiCard
-          label={t('dashboard.kpi.checkins_today')}
-          value={todayCheckins}
-          trend={isAdmin ? ext?.weekTrend : undefined}
-        />
-        {isAdmin && (
+      {loading ? (
+        <SkeletonKpi count={isAdmin ? 4 : 3} />
+      ) : (
+        <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
           <KpiCard
-            label={t('dashboard.kpi.beacons_online')}
-            value={onlineCount}
-            sub={t('dashboard.kpi.registered_of', { count: desks.length })}
+            label={t('dashboard.kpi.occupancy_now')}
+            value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
+            accent
           />
-        )}
-      </div>
+          <KpiCard
+            label={t('dashboard.kpi.occupied_desks')}
+            value={occupiedDesks}
+            sub={t('dashboard.kpi.of_active', { count: desks.length })}
+            trend={isAdmin ? ext?.weekTrend : undefined}
+            prevValue={isAdmin && ext?.lastWeekCount !== undefined ? String(ext.lastWeekCount) : undefined}
+          />
+          <KpiCard
+            label={t('dashboard.kpi.checkins_today')}
+            value={todayCheckins}
+            trend={isAdmin ? ext?.weekTrend : undefined}
+          />
+          {isAdmin && (
+            <KpiCard
+              label={t('dashboard.kpi.beacons_online')}
+              value={onlineCount}
+              sub={t('dashboard.kpi.registered_of', { count: desks.length })}
+            />
+          )}
+        </div>
+      )}
 
       {/* Spacer — KPI grid ends */}
 

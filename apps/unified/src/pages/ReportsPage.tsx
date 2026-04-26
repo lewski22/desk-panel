@@ -20,7 +20,20 @@ const METHOD_COLORS: Record<string, string> = {
   UNKNOWN: '#a1a1aa',
 };
 const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization', 'insights'] as const;
-type Tab = typeof TABS[number];
+type Tab     = typeof TABS[number];
+type Segment = 'today' | 'trends' | 'ai';
+
+const SEGMENT_TABS: Record<Segment, Tab[]> = {
+  today:  ['snapshot'],
+  trends: ['heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization'],
+  ai:     ['insights'],
+};
+
+const SEGMENT_LABELS: Record<Segment, string> = {
+  today:  'Dziś',
+  trends: 'Trendy',
+  ai:     'AI',
+};
 
 // ── Utils ──────────────────────────────────────────────────────────
 function todayStr()    { return new Date().toISOString().slice(0, 10); }
@@ -689,6 +702,7 @@ function UtilizationTab({ filters }: { filters: Filters }) {
 // ── Main Page ──────────────────────────────────────────────────────
 function ReportsPage() {
   const { t } = useTranslation();
+  const [segment,    setSegment]    = useState<Segment>('today');
   const [activeTab,  setActiveTab]  = useState<Tab>('snapshot');
   const [from,       setFrom]       = useState(monthAgoStr());
   const [to,         setTo]         = useState(todayStr());
@@ -749,21 +763,43 @@ function ReportsPage() {
         )}
       </div>
 
-      {/* Tab bar — scroll-x-fade hides scrollbar but allows swipe */}
-      <div className="scroll-x-fade -mx-4 sm:mx-0 px-4 sm:px-0 mb-5 border-b border-zinc-100">
-        <div className="flex gap-1 min-w-max sm:min-w-0">
-          {TABS.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px min-h-touch ${
-                activeTab === tab
-                  ? 'border-brand text-brand'
-                  : 'border-transparent text-zinc-500 active:text-zinc-700'
-              }`}>
-              {t(`reports.tabs.${tab}`)}
-            </button>
-          ))}
-        </div>
+      {/* Segment selector */}
+      <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl mb-4 self-start w-fit">
+        {(['today', 'trends', 'ai'] as Segment[]).map(s => (
+          <button
+            key={s}
+            onClick={() => { setSegment(s); setActiveTab(SEGMENT_TABS[s][0]); }}
+            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+              segment === s
+                ? 'bg-white text-zinc-800 shadow-sm'
+                : 'text-zinc-500 hover:text-zinc-700'
+            }`}
+          >
+            {s === 'ai' ? '✦ AI' : SEGMENT_LABELS[s]}
+          </button>
+        ))}
       </div>
+
+      {/* Sub-tabs — visible only in 'trends' segment */}
+      {segment === 'trends' && (
+        <div className="flex gap-0 border-b border-zinc-200 mb-5 overflow-x-auto scroll-x-fade -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="flex min-w-max sm:min-w-0">
+            {SEGMENT_TABS.trends.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                  activeTab === tab
+                    ? 'border-brand text-brand'
+                    : 'border-transparent text-zinc-500 hover:text-zinc-700'
+                }`}
+              >
+                {t(`reports.tabs.${tab}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tab content */}
       {activeTab === 'snapshot'     && <SnapshotTab filters={filters} />}

@@ -78,7 +78,8 @@
       "weekly": "Attendance",
       "resources": "Rooms & Parking",
       "visitors": "Visitors",
-      "subscription": "Subscription"
+      "subscription": "Subscription",
+      "more": "More"
     },
     "session_warning_title": "Session expires in 1 minute",
     "session_warning_body": "Click \"Extend\" to stay logged in.",

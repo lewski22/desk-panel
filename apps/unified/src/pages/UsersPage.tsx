@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { NfcCardModal } from '../components/users/NfcCardModal';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
+import { SkeletonRows } from '../components/ui/Skeleton';
 import { useDirtyGuard } from '../hooks';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { parseApiError, FieldErrors } from '../utils/parseApiError';
+import { FieldError } from '../components/ui/FieldError';
 
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
   SUPER_ADMIN: 'purple', OFFICE_ADMIN: 'blue', STAFF: 'zinc', END_USER: 'green',
@@ -26,8 +29,9 @@ export function UsersPage() {
   const [pendingInvites,   setPendingInvites]   = useState<{ email: string; role: string; expiresAt: string }[]>([]);
   const [editForm, setEditForm] = useState({ firstName:'', lastName:'', email:'', role:'END_USER' });
   const [retDays,  setRetDays]  = useState(30);
-  const [busy,     setBusy]     = useState(false);
-  const [err,      setErr]      = useState('');
+  const [busy,       setBusy]       = useState(false);
+  const [err,        setErr]        = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   // FEATURE P4-1: filter state
   const [search,     setSearch]     = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -86,12 +90,12 @@ export function UsersPage() {
   };
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); setBusy(true); setErr(''); setFieldErrors({});
     try {
       await appApi.users.create({ ...form });
       resetDirty(); setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
       load(true);
-    } catch(e:any) { setErr(e.message); }
+    } catch(e:any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };
 
@@ -105,9 +109,9 @@ export function UsersPage() {
   };
 
   const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); setBusy(true); setErr(''); setFieldErrors({});
     try { await appApi.users.update(target.id, editForm); resetDirty(); setModal(null); load(true); }
-    catch(e:any) { setErr(e.message); }
+    catch(e:any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };
 
@@ -132,7 +136,12 @@ export function UsersPage() {
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString(locale, { day:'2-digit', month:'2-digit', year:'numeric' });
 
-  if (loading) return <Spinner />;
+  if (loading) return (
+    <div>
+      <PageHeader title={t('pages.users.title')} sub="" />
+      <SkeletonRows rows={6} />
+    </div>
+  );
 
   const ROLE_LABEL: Record<string, string> = {
     SUPER_ADMIN: t('users.roles.SUPER_ADMIN'), OFFICE_ADMIN: t('users.roles.OFFICE_ADMIN'),
@@ -335,10 +344,16 @@ export function UsersPage() {
         <Modal title={t('users.modals.create_title')} onClose={requestClose}>
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t('users.form.firstName')} value={form.firstName} onChange={e => { setForm(f => ({...f,firstName:e.target.value})); markDirty(); }} />
+              <div>
+                <Input label={t('users.form.firstName')} value={form.firstName} onChange={e => { setForm(f => ({...f,firstName:e.target.value})); setFieldErrors(fe => ({...fe,firstName:''})); markDirty(); }} />
+                <FieldError error={fieldErrors.firstName} />
+              </div>
               <Input label={t('users.form.lastName')} value={form.lastName} onChange={e => { setForm(f => ({...f,lastName:e.target.value})); markDirty(); }} />
             </div>
-            <Input label={t('users.form.email')} type="email" required value={form.email} onChange={e => { setForm(f => ({...f,email:e.target.value})); markDirty(); }} />
+            <div>
+              <Input label={t('users.form.email')} type="email" required value={form.email} onChange={e => { setForm(f => ({...f,email:e.target.value})); setFieldErrors(fe => ({...fe,email:''})); markDirty(); }} />
+              <FieldError error={fieldErrors.email} />
+            </div>
             <Input label={t('users.form.password')} type="password" required minLength={8} value={form.password} onChange={e => { setForm(f => ({...f,password:e.target.value})); markDirty(); }} />
             <Select label={t('users.form.role')} value={form.role} onChange={e => { setForm(f => ({...f,role:e.target.value})); markDirty(); }}>
               <option value="END_USER">{t('users.roles.END_USER')}</option>
@@ -346,7 +361,7 @@ export function UsersPage() {
               <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
               {currentUserRole === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">{t('users.roles.SUPER_ADMIN')}</option>}
             </Select>
-            {err && <p className="text-xs text-red-500">{err}</p>}
+            {err && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{t('users.actions.create')}</Btn>
               <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>
@@ -362,7 +377,10 @@ export function UsersPage() {
               <Input label={t('users.form.firstName')} value={editForm.firstName} onChange={e => { setEditForm(f => ({...f,firstName:e.target.value})); markDirty(); }} />
               <Input label={t('users.form.lastName')} value={editForm.lastName} onChange={e => { setEditForm(f => ({...f,lastName:e.target.value})); markDirty(); }} />
             </div>
-            <Input label={t('users.form.email')} type="email" required value={editForm.email} onChange={e => { setEditForm(f => ({...f,email:e.target.value})); markDirty(); }} />
+            <div>
+              <Input label={t('users.form.email')} type="email" required value={editForm.email} onChange={e => { setEditForm(f => ({...f,email:e.target.value})); setFieldErrors(fe => ({...fe,email:''})); markDirty(); }} />
+              <FieldError error={fieldErrors.email} />
+            </div>
             <Select label={t('users.form.role')} value={editForm.role}
               disabled={target.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN'}
               onChange={e => { setEditForm(f => ({...f,role:e.target.value})); markDirty(); }}>
@@ -371,7 +389,7 @@ export function UsersPage() {
               <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
               {currentUserRole === 'SUPER_ADMIN' && <option value="SUPER_ADMIN">{t('users.roles.SUPER_ADMIN')}</option>}
             </Select>
-            {err && <p className="text-xs text-red-500">{err}</p>}
+            {err && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{t('users.actions.save')}</Btn>
               <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>

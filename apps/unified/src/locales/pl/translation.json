@@ -78,7 +78,8 @@
       "weekly": "Obecności",
       "resources": "Sale i Parking",
       "visitors": "Goście",
-      "subscription": "Subskrypcja"
+      "subscription": "Subskrypcja",
+      "more": "Więcej"
     },
     "session_warning_title": "Sesja wygaśnie za 1 minutę",
     "session_warning_body": "Kliknij \"Przedłuż\" aby pozostać zalogowanym.",

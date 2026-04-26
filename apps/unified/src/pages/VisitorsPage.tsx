@@ -9,7 +9,7 @@ import {
   Btn, Card, Modal, Input, FormField, Spinner, EmptyState,
 } from '../components/ui';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
-import { localDateStr }    from '../utils/date';
+import { DaySlider, todayLocal } from '../components/ui/DaySlider';
 import { format }          from 'date-fns';
 import { pl, enUS }        from 'date-fns/locale';
 
@@ -27,7 +27,7 @@ function InviteModal({ locationId, onClose, onSaved }: {
   const { t }   = useTranslation();
   const [form, setForm] = useState({
     firstName: '', lastName: '', email: '',
-    company: '', visitDate: localDateStr(), purpose: '',
+    company: '', visitDate: todayLocal(), purpose: '',
   });
   const [saving,    setSaving]    = useState(false);
   const [err,       setErr]       = useState('');
@@ -68,7 +68,7 @@ function InviteModal({ locationId, onClose, onSaved }: {
         <Input label={t('users.form.email')} type="email" value={form.email} onChange={e => set('email', e.target.value)} />
         <Input label={t('visitors.form.company')} value={form.company} onChange={e => set('company', e.target.value)} />
         <Input label={t('visitors.form.visit_date')} type="date" value={form.visitDate}
-          onChange={e => set('visitDate', e.target.value)} min={localDateStr()} />
+          onChange={e => set('visitDate', e.target.value)} min={todayLocal()} />
         <div>
           <label className="block text-xs text-zinc-500 font-medium mb-1">{t('visitors.form.purpose')}</label>
           <textarea value={form.purpose} onChange={e => set('purpose', e.target.value)} rows={2}
@@ -154,7 +154,7 @@ export function VisitorsPage() {
   const locale       = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
   const [locations, setLocations]   = useState<any[]>([]);
   const [locationId, setLocId]      = useState('');
-  const [date, setDate]             = useState(localDateStr());
+  const [date, setDate]             = useState(todayLocal());
   const [visitors, setVisitors]     = useState<any[]>([]);
   const [loading, setLoading]       = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -207,8 +207,7 @@ export function VisitorsPage() {
             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         )}
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none" />
+        <DaySlider selected={date} onChange={setDate} pastDays={7} futureDays={14} />
         <button onClick={load}
           className="px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-sm transition-colors">
           ↺ {t('btn.refresh')}

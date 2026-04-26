@@ -8,6 +8,8 @@ import {
 } from '../components/ui';
 import { useDirtyGuard } from '../hooks';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { parseApiError, FieldErrors } from '../utils/parseApiError';
+import { FieldError } from '../components/ui/FieldError';
 
 const STAFF_URL = window.location.origin;
 
@@ -75,8 +77,10 @@ export function DesksPage() {
   const [modal,   setModal]   = useState<'create'|'edit'|'qr'|null>(null);
   const [target,  setTarget]  = useState<any>(null);
   const [form,    setForm]    = useState({ name:'', code:'', floor:'', zone:'', locId });
-  const [busy,    setBusy]    = useState(false);
-  const [err,     setErr]     = useState('');
+  const [busy,       setBusy]       = useState(false);
+  const [err,        setErr]        = useState('');
+  const [globalErr,  setGlobalErr]  = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   // FEATURE P4-2: filter state
   const [search,       setSearch]       = useState('');
   const [floorFilter,  setFloorFilter]  = useState('');
@@ -130,16 +134,16 @@ export function DesksPage() {
   const openQr    = (desk: any)  => { setTarget(desk); setModal('qr'); };
 
   const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); setBusy(true); setGlobalErr(''); setFieldErrors({});
     try { await appApi.desks.create(form.locId || locId, form); resetDirty(); setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId }); await load(); }
-    catch (e: any) { setErr(e.message); }
+    catch (e: any) { const p = parseApiError(e); setGlobalErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErr('');
+    e.preventDefault(); setBusy(true); setGlobalErr(''); setFieldErrors({});
     try { await appApi.desks.update(target.id, form); resetDirty(); setModal(null); await load(); }
-    catch (e: any) { setErr(e.message); }
+    catch (e: any) { const p = parseApiError(e); setGlobalErr(p.global); setFieldErrors(p.fields); }
     setBusy(false);
   };
 
@@ -320,13 +324,21 @@ export function DesksPage() {
                 )}
               </div>
             )}
-            <Input label={t('desks.form.label.name')} placeholder="Desk A-01" required value={form.name} onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty(); }} />
-            <Input label={t('desks.form.label.code')} placeholder="A-01" required value={form.code} onChange={e => { setForm(f => ({ ...f, code: e.target.value })); markDirty(); }} />
+            <div>
+              <Input label={t('desks.form.label.name')} placeholder="Desk A-01" required value={form.name} onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setFieldErrors(fe => ({ ...fe, name: '' })); markDirty(); }} />
+              <FieldError error={fieldErrors.name} />
+            </div>
+            <div>
+              <Input label={t('desks.form.label.code')} placeholder="A-01" required value={form.code} onChange={e => { setForm(f => ({ ...f, code: e.target.value })); setFieldErrors(fe => ({ ...fe, code: '' })); markDirty(); }} />
+              <FieldError error={fieldErrors.code} />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Input label={t('desks.form.label.floor')} placeholder="1" value={form.floor} onChange={e => { setForm(f => ({ ...f, floor: e.target.value })); markDirty(); }} />
               <Input label={t('desks.form.label.zone')} placeholder="Open Space" value={form.zone} onChange={e => { setForm(f => ({ ...f, zone: e.target.value })); markDirty(); }} />
             </div>
-            {err && <p className="text-xs text-red-500">{err}</p>}
+            {globalErr && (
+              <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{globalErr}</p>
+            )}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{modal === 'create' ? t('btn.create') : t('btn.save')}</Btn>
               <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>

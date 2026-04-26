@@ -206,10 +206,14 @@ function PushOptInSection() {
         applicationServerKey: publicKey,
       });
 
+      const p256dhKey = sub.getKey('p256dh')!;
+      const authKey   = sub.getKey('auth')!;
+
       await appApi.push.subscribe({
-        endpoint:  sub.endpoint,
-        keys:      { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')!))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')!))) },
-        userAgent: navigator.userAgent,
+         endpoint:  sub.endpoint,
+          p256dh:    btoa(String.fromCharCode(...new Uint8Array(p256dhKey))),
+          auth:      btoa(String.fromCharCode(...new Uint8Array(authKey))),
+          userAgent: navigator.userAgent.slice(0, 200),
       });
       setSubbed(true);
     } catch (e: any) {

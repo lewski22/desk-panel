@@ -4,6 +4,8 @@ import { appApi } from '../api/client';
 import { PageHeader, Btn, Card, Modal, Input } from '../components/ui';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { parseApiError, FieldErrors } from '../utils/parseApiError';
+import { FieldError } from '../components/ui/FieldError';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
@@ -253,8 +255,9 @@ export function OrganizationsPage() {
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
   });
-  const [saving,          setSaving]          = useState(false);
-  const [err,             setErr]             = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [err,          setErr]          = useState('');
+  const [fieldErrors,  setFieldErrors]  = useState<FieldErrors>({});
   const [installModal,    setInstallModal]    = useState<any>(null);
   const [azureModal,      setAzureModal]      = useState<any>(null);
   const [wifiSsid,        setWifiSsid]        = useState('');
@@ -313,7 +316,7 @@ export function OrganizationsPage() {
   };
 
   const save = async () => {
-    setSaving(true); setErr('');
+    setSaving(true); setErr(''); setFieldErrors({});
     try {
       if (modal === 'create') {
         const orgId = form.organizationId || user?.organizationId;
@@ -343,7 +346,7 @@ export function OrganizationsPage() {
       resetDirty();
       setModal(null);
       await load();
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) { const p = parseApiError(e); setErr(p.global); setFieldErrors(p.fields); }
     setSaving(false);
   };
 
@@ -525,12 +528,15 @@ export function OrganizationsPage() {
                         </p>
                       </div>
                     )}
-                    <Input
-                      label={t('organizations.form.name_label')}
-                      value={form.name}
-                      onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty(); }}
-                      placeholder={t('organizations.form.name_ph')}
-                    />
+                    <div>
+                      <Input
+                        label={t('organizations.form.name_label')}
+                        value={form.name}
+                        onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setFieldErrors(fe => ({ ...fe, name: '' })); markDirty(); }}
+                        placeholder={t('organizations.form.name_ph')}
+                      />
+                      <FieldError error={fieldErrors.name} />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <Input
                         label={t('organizations.form.address_label')}

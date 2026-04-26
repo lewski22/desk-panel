@@ -8,6 +8,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { Btn, EmptyState, SortHeader } from '../components/ui';
+import { SkeletonCards } from '../components/ui/Skeleton';
 import { format } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 import { useSortable } from '../hooks/useSortable';
@@ -266,9 +267,7 @@ export function ReservationsAdminPage() {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
-        </div>
+        <SkeletonCards rows={5} />
       ) : sorted.length === 0 ? (
         <EmptyState
           icon="📋"
