@@ -183,7 +183,6 @@ function PushOptInSection() {
       setStatus('unsupported'); return;
     }
     setStatus(Notification.permission as any);
-    // Sprawdź czy jest aktywna subskrypcja
     navigator.serviceWorker.ready.then(reg =>
       reg.pushManager.getSubscription().then(sub => setSubbed(!!sub))
     ).catch(() => {});
@@ -192,33 +191,23 @@ function PushOptInSection() {
   const handleSubscribe = async () => {
     setLoading(true); setErr(null);
     try {
-      // Pobierz klucz VAPID
       const { publicKey } = await appApi.push.getVapidKey();
       if (!publicKey) throw new Error('Push nie jest skonfigurowany na serwerze');
-
       const perm = await Notification.requestPermission();
       setStatus(perm as any);
       if (perm !== 'granted') throw new Error(t('push.permission_denied'));
-
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly:    true,
-        applicationServerKey: publicKey,
-      });
-
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: publicKey });
       const p256dhKey = sub.getKey('p256dh')!;
       const authKey   = sub.getKey('auth')!;
-
       await appApi.push.subscribe({
-         endpoint:  sub.endpoint,
-          p256dh:    btoa(String.fromCharCode(...new Uint8Array(p256dhKey))),
-          auth:      btoa(String.fromCharCode(...new Uint8Array(authKey))),
-          userAgent: navigator.userAgent.slice(0, 200),
+        endpoint:  sub.endpoint,
+        p256dh:    btoa(String.fromCharCode(...new Uint8Array(p256dhKey))),
+        auth:      btoa(String.fromCharCode(...new Uint8Array(authKey))),
+        userAgent: navigator.userAgent.slice(0, 200),
       });
       setSubbed(true);
-    } catch (e: any) {
-      setErr(e.message ?? t('common.error'));
-    }
+    } catch (e: any) { setErr(e.message ?? t('common.error')); }
     setLoading(false);
   };
 
@@ -227,53 +216,40 @@ function PushOptInSection() {
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        await appApi.push.unsubscribe(sub.endpoint);
-        await sub.unsubscribe();
-      }
+      if (sub) { await appApi.push.unsubscribe(sub.endpoint); await sub.unsubscribe(); }
       setSubbed(false);
     } catch {}
     setLoading(false);
   };
 
-  if (status === 'unsupported') return null;
-
   return (
-    <div className="bg-white border border-zinc-100 rounded-2xl p-5 mb-6">
-      <div className="flex items-center gap-3 mb-3">
-        <span className="text-2xl">🔔</span>
-        <div>
-          <p className="font-semibold text-zinc-800 text-sm">{t('push.title')}</p>
-          <p className="text-xs text-zinc-400">{t('push.subtitle')}</p>
+    <>
+      {subbed ? (
+        <div className="flex items-center gap-2 text-xs text-emerald-600">
+          <span>✓</span>
+          <span>{t('push.active', 'Powiadomienia push aktywne w tej przeglądarce')}</span>
+          <button onClick={handleUnsubscribe}
+            className="text-zinc-400 hover:text-zinc-600 underline ml-2">{t('push.disable')}</button>
         </div>
-      </div>
-      <p className="text-xs text-zinc-500 mb-4">{t('push.description')}</p>
-
-      {status === 'denied' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 text-xs text-amber-700 mb-3">
-          {t('push.blocked_hint')}
+      ) : status === 'unsupported' ? (
+        <p className="text-xs text-zinc-400">
+          {t('push.unsupported', 'Ta przeglądarka nie obsługuje powiadomień push.')}
+        </p>
+      ) : status === 'denied' ? (
+        <p className="text-xs text-amber-600">
+          {t('push.denied_hint', 'Powiadomienia zablokowane — odblokuj w ustawieniach przeglądarki.')}
+        </p>
+      ) : (
+        <div className="flex items-center gap-3 flex-wrap">
+          <button onClick={handleSubscribe} disabled={loading}
+            className="text-xs px-4 py-2 bg-brand text-white rounded-lg font-semibold hover:bg-brand-hover disabled:opacity-50 transition-colors">
+            {loading ? '...' : t('push.enable_btn', 'Włącz powiadomienia push')}
+          </button>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <p className="text-xs text-zinc-400">{t('push.inline_hint', 'Tylko dla tej przeglądarki/urządzenia')}</p>
         </div>
       )}
-      {err && (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-xs text-red-600 mb-3">{err}</div>
-      )}
-
-      <div className="flex items-center gap-3">
-        {!subbed ? (
-          <Btn onClick={handleSubscribe} loading={loading} disabled={status === 'denied'} size="sm">
-            {t('push.enable')}
-          </Btn>
-        ) : (
-          <>
-            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" /> {t('push.active')}
-            </span>
-            <button onClick={handleUnsubscribe}
-              className="text-xs text-zinc-400 hover:text-zinc-600 underline">{t('push.disable')}</button>
-          </>
-        )}
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -346,7 +322,6 @@ export function NotificationsPage() {
 
   return (
     <div>
-      <PushOptInSection />
       <PageHeader
         title={t('pages.notifications.title')}
         subtitle={t('notifications.settings.title')}
@@ -436,6 +411,16 @@ SMTP_FROM=Reserti <noreply@reserti.pl>`
                   }</pre>
                 </div>
               )}
+              {/* Push opt-in — na dole zakładki settings */}
+              <div className="border-t border-zinc-100 pt-6">
+                <h3 className="text-sm font-semibold text-zinc-700 mb-1">
+                  {t('push.card_title', 'Powiadomienia push')}
+                </h3>
+                <p className="text-xs text-zinc-400 mb-3">
+                  {t('push.card_sub', 'Włącz powiadomienia push w tej przeglądarce aby otrzymywać alerty w czasie rzeczywistym.')}
+                </p>
+                <PushOptInSection />
+              </div>
             </>
           )}
         </div>
