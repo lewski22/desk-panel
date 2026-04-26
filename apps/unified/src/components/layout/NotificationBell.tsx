@@ -77,9 +77,29 @@ export function NotificationBell({ role, light }: { role: string; light?: boolea
 
   useEffect(() => {
     fetchCount();
-    const id = setInterval(fetchCount, 30_000);
+    const id = setInterval(fetchCount, 15_000);
     return () => clearInterval(id);
   }, [fetchCount]);
+
+  // Odśwież licznik gdy tab staje się aktywny (powrót z tła / PWA)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchCount();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchCount]);
+
+  // Odśwież listę gdy panel jest otwarty i user wraca z tła
+  useEffect(() => {
+    if (!open) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible')
+        appApi.notifications.inapp().then(setItems).catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [open]);
 
   // Zamknij klikając poza
   useEffect(() => {
