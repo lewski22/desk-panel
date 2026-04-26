@@ -7,11 +7,12 @@
  * - Legenda kolorów
  */
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useTranslation }   from 'react-i18next';
-import { DeskMapItem }       from '../../types';
-import { DeskPin }           from './DeskPin';
-import { appApi }            from '../../api/client';
-import { format }            from 'date-fns';
+import { createPortal }      from 'react-dom';
+import { useTranslation }    from 'react-i18next';
+import { DeskMapItem }        from '../../types';
+import { DeskPin }            from './DeskPin';
+import { appApi }             from '../../api/client';
+import { format }             from 'date-fns';
 
 interface Props {
   locationId:     string;
@@ -22,12 +23,18 @@ interface Props {
   onReserve?:     (desk: DeskMapItem) => void;  // otwiera ReservationModal
 }
 
-// ── Desk Info Popup ───────────────────────────────────────────
-function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
-  desk: DeskMapItem; onClose: () => void; onReserve?: () => void; userRole: string;
-  style: React.CSSProperties;
+// ── Desk Info Card — bottom sheet (mobile) / fixed popover (desktop) ──
+const POPUP_W = 240;
+
+function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect }: {
+  desk: DeskMapItem;
+  onClose: () => void;
+  onReserve?: () => void;
+  userRole: string;
+  anchorRect: DOMRect | null;
 }) {
   const { t } = useTranslation();
+  const isMobile = window.innerWidth < 640;
 
   const statusLabel = () => {
     if (!desk.isOnline) return { label: t('devices.status.offline'), color: 'text-zinc-500' };
@@ -38,24 +45,28 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
 
   const { label, color } = statusLabel();
   const canBook = desk.isOnline && !desk.isOccupied && desk.status === 'ACTIVE';
-  const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
+  const isStaff = ['SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'].includes(userRole);
 
-  return (
-    <div className="absolute z-30 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4 w-60"
-      style={style}
-      onClick={e => e.stopPropagation()}>
-
+  const content = (
+    <div onClick={e => e.stopPropagation()}>
       <div className="flex items-start justify-between mb-3">
         <div>
           <p className="font-semibold text-zinc-800">{desk.name}</p>
+          {(desk.zone || desk.floor) && (
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {[desk.zone, desk.floor && `${t('deskcard.floor')} ${desk.floor}`].filter(Boolean).join(' · ')}
+            </p>
+          )}
           <p className="text-xs text-zinc-400 font-mono">{desk.code}</p>
         </div>
-        <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 p-1">✕</button>
+        <button onClick={onClose}
+          className="text-zinc-400 hover:text-zinc-600 p-1 ml-2 shrink-0 text-lg leading-none">
+          ✕
+        </button>
       </div>
 
       <p className={`text-sm font-semibold mb-2 ${color}`}>{label}</p>
 
-      {/* Kto siedzi — tylko dla STAFF+ */}
       {isStaff && desk.isOccupied && desk.currentCheckin && (
         <div className="bg-indigo-50 rounded-lg p-2.5 mb-3">
           <p className="text-xs font-semibold text-indigo-700">
@@ -67,7 +78,6 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
         </div>
       )}
 
-      {/* Rezerwacja */}
       {desk.currentReservation && (
         <div className="bg-sky-50 rounded-lg p-2.5 mb-3">
           {isStaff && (
@@ -76,41 +86,61 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
             </p>
           )}
           <p className="text-[10px] text-sky-500">
-            {format(new Date(desk.currentReservation.startTime), 'HH:mm')}–{format(new Date(desk.currentReservation.endTime), 'HH:mm')}
+            {new Date(desk.currentReservation.startTime).toLocaleTimeString('pl-PL', {
+              hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw',
+            })}
+            –
+            {new Date(desk.currentReservation.endTime).toLocaleTimeString('pl-PL', {
+              hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw',
+            })}
           </p>
         </div>
       )}
 
-      {/* Zone/Floor */}
-      {(desk.zone || desk.floor) && (
-        <p className="text-xs text-zinc-400 mb-3">
-          {[desk.zone, desk.floor && `${t('deskcard.floor')} ${desk.floor}`].filter(Boolean).join(' · ')}
-        </p>
-      )}
-
       {canBook && onReserve && (
         <button onClick={onReserve}
-          className="w-full py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-hover transition-colors">
+          className="w-full py-2.5 rounded-xl bg-brand text-white text-sm font-semibold
+                     hover:bg-brand-hover transition-colors active:scale-[0.98]">
           + {t('deskcard.book')}
         </button>
       )}
     </div>
   );
-}
 
+  // Mobile: fixed bottom sheet via portal
+  if (isMobile) {
+    return createPortal(
+      <>
+        <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl p-5 border-t border-zinc-200"
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="w-10 h-1 bg-zinc-200 rounded-full mx-auto mb-4" />
+          {content}
+        </div>
+      </>,
+      document.body,
+    );
+  }
 
-// ── Popup position helper ─────────────────────────────────────
-function popupStyle(
-  posX: number, posY: number,
-  containerW: number, canvasW: number, canvasH: number,
-): React.CSSProperties {
-  const svgW = Math.min(canvasW, containerW);
-  const svgH = svgW * canvasH / canvasW;
-  const xPx  = (posX / 100) * svgW;
-  const yPx  = (posY / 100) * svgH;
-  return posX > 55
-    ? { top: yPx, right: containerW - xPx + 8, transform: 'translateY(-50%)' }
-    : { top: yPx, left: xPx + 8, transform: 'translateY(-50%)' };
+  // Desktop: fixed popover pozycjonowany względem viewport
+  const POPUP_H_EST = 220;
+  let left = (anchorRect?.left ?? 0) + (anchorRect?.width ?? 0) / 2 - POPUP_W / 2;
+  let top  = (anchorRect?.top  ?? 0) - POPUP_H_EST - 8;
+  left = Math.max(8, Math.min(left, window.innerWidth  - POPUP_W - 8));
+  if (top < 8) top = (anchorRect?.bottom ?? 0) + 8;
+
+  return createPortal(
+    <div
+      className="fixed z-50 bg-white rounded-2xl shadow-2xl border border-zinc-200 p-4"
+      style={{ width: POPUP_W, top, left }}
+      onClick={e => e.stopPropagation()}
+    >
+      {content}
+    </div>,
+    document.body,
+  );
 }
 
 // ── Main FloorPlanView ────────────────────────────────────────
@@ -118,7 +148,8 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
   const { t }                  = useTranslation();
   const [floorPlan, setFP]     = useState<any>(null);
   const [loading,   setL]      = useState(true);
-  const [selected,  setSel]    = useState<DeskMapItem | null>(null);
+  const [selected,     setSel]    = useState<DeskMapItem | null>(null);
+  const [selectedRect, setSelRect] = useState<DOMRect | null>(null);
   const [freeOnly,  setFO]     = useState(false);
   const [floors,    setFloors] = useState<string[]>([]);
   const [activeFloor, setActiveFloor] = useState<string>('');
@@ -133,6 +164,42 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, +(z - e.deltaY * 0.001).toFixed(2))));
+  };
+
+  // ── Pinch-to-zoom ─────────────────────────────────────────────
+  const lastTouchDist = useRef<number | null>(null);
+  const isPinching    = useRef(false);
+
+  const getTouchDist = (touches: React.TouchList) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      isPinching.current    = true;
+      lastTouchDist.current = getTouchDist(e.touches);
+      e.preventDefault();
+    } else {
+      isPinching.current    = false;
+      lastTouchDist.current = null;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDist.current !== null) {
+      e.preventDefault();
+      const newDist = getTouchDist(e.touches);
+      const scale   = newDist / lastTouchDist.current;
+      lastTouchDist.current = newDist;
+      setZoom(z => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * scale)));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    lastTouchDist.current = null;
+    isPinching.current    = false;
   };
 
   const isStaff = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
@@ -209,7 +276,7 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
                 {floors.map(f => (
                   <button
                     key={f}
-                    onClick={() => { setActiveFloor(f); setSel(null); }}
+                    onClick={() => { setActiveFloor(f); setSel(null); setSelRect(null); }}
                     className={`min-w-[26px] h-[26px] px-2 rounded-md text-[11px] font-semibold
                                 transition-all border ${
                       f === activeFloor
@@ -301,9 +368,13 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
       {/* 3. SVG canvas */}
       <div ref={containerRef}
         className="relative bg-zinc-100 rounded-xl overflow-auto border border-zinc-200"
-        style={{ maxHeight: '65vh' }}
-        onClick={() => setSel(null)}
-        onWheel={handleWheel}>
+        style={{ maxHeight: '65vh', touchAction: 'pan-x pan-y' }}
+        onClick={() => { setSel(null); setSelRect(null); }}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <svg
           width={canvasW * zoom}
           height={canvasH * zoom}
@@ -322,22 +393,19 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
               canvasH={canvasH}
               showAvatars={isStaff}
               currentUserId={currentUserId}
-              onClick={d => setSel(d)}
+              onClick={(d, rect) => { setSel(d); setSelRect(rect); }}
             />
           ))}
         </svg>
 
-        {/* Popup */}
-        {selected && containerRef.current && (
+        {/* Portal-based card — renderowana poza scrollującym kontenerem */}
+        {selected && (
           <DeskInfoCard
             desk={selected}
-            onClose={() => setSel(null)}
-            onReserve={onReserve ? () => { const d = selected; setSel(null); onReserve(d); } : undefined}
+            onClose={() => { setSel(null); setSelRect(null); }}
+            onReserve={onReserve ? () => { const d = selected; setSel(null); setSelRect(null); onReserve(d); } : undefined}
             userRole={userRole}
-            style={popupStyle(
-              selected.posX ?? 50, selected.posY ?? 50,
-              containerRef.current.clientWidth, canvasW, canvasH,
-            )}
+            anchorRect={selectedRect}
           />
         )}
       </div>

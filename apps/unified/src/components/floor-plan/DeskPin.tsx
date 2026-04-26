@@ -3,7 +3,7 @@
  * Sprint D3a
  * Mały element SVG z kolorem statusu, reaguje na kliknięcie
  */
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DeskMapItem } from '../../types';
 import { DeskPosition } from './useFloorPlanEditor';
@@ -32,12 +32,13 @@ interface Props {
   canvasH:       number;
   showAvatars:   boolean;  // STAFF+ widzi inicjały
   currentUserId?: string;
-  onClick:       (desk: DeskMapItem) => void;
+  onClick:       (desk: DeskMapItem, rect: DOMRect | null) => void;
 }
 
 export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, currentUserId, onClick }: Props) {
   const { t }     = useTranslation();
   const [hover, setHover] = useState(false);
+  const gRef = useRef<SVGGElement>(null);
   const status = deskStatus(desk, currentUserId);
   const fill   = PIN_FILL[status] ?? PIN_FILL.offline;
 
@@ -47,9 +48,10 @@ export function DeskPin({ desk, pos, canvasW, canvasH, showAvatars, currentUserI
 
   return (
     <g
+      ref={gRef}
       transform={`translate(${cx}, ${cy})`}
       style={{ cursor: 'pointer' }}
-      onClick={e => { e.stopPropagation(); onClick(desk); }}
+      onClick={e => { e.stopPropagation(); onClick(desk, gRef.current?.getBoundingClientRect() ?? null); }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
