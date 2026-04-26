@@ -10,16 +10,23 @@ export class PushService implements OnModuleInit {
   constructor(private prisma: PrismaService, private config: ConfigService) {}
 
   onModuleInit() {
-    const publicKey  = this.config.get<string>('VAPID_PUBLIC_KEY');
-    const privateKey = this.config.get<string>('VAPID_PRIVATE_KEY');
-    const subject    = this.config.get<string>('VAPID_SUBJECT') ?? 'mailto:admin@localhost';
+  const publicKey  = this.config.get<string>('VAPID_PUBLIC_KEY');
+  const privateKey = this.config.get<string>('VAPID_PRIVATE_KEY');
+  const subject    = this.config.get<string>('VAPID_SUBJECT') ?? 'mailto:admin@localhost';
 
-    if (publicKey && privateKey) {
+  if (publicKey && privateKey) {
+    try {
       webpush.setVapidDetails(subject, publicKey, privateKey);
-    } else {
-      this.logger.warn('VAPID keys not configured — push notifications disabled');
+      this.logger.log('VAPID keys configured — push notifications enabled');
+    } catch (err) {
+      this.logger.error(
+        `VAPID key validation failed — push disabled. Check VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY. ${err.message}`,
+      );
     }
+  } else {
+    this.logger.warn('VAPID keys not configured — push notifications disabled');
   }
+}
 
   get vapidPublicKey() {
     return this.config.get<string>('VAPID_PUBLIC_KEY') ?? '';
