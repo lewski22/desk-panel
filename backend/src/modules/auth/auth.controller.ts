@@ -181,6 +181,15 @@ export class AuthController {
     });
   }
 
+  @Get('invitations')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List pending (unused, non-expired) invitations for the org' })
+  getPendingInvitations(@Request() req: any) {
+    return this.auth.getPendingInvitations(req.user.organizationId);
+  }
+
   @Get('invite/:token')
   @SkipThrottle()
   @ApiOperation({ summary: 'Verify invitation token — returns email + org name (public)' })

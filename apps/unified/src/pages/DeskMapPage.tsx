@@ -169,7 +169,7 @@ export function DeskMapPage() {
       .then(fp => {
         const has = !!fp?.floorPlanUrl;
         setHasPlan(has);
-        if (!saved || isEndUser) setViewMode(has ? 'plan' : 'cards');
+        if (!saved || isEndUser || isStaff) setViewMode(has ? 'plan' : 'cards');
       })
       .catch(() => setHasPlan(false));
   }, [locationId, isEndUser]);

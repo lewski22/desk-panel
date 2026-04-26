@@ -48,8 +48,11 @@ export class UsersController {
   @Post()
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Create user account' })
-  create(@Body() dto: CreateUserDto) {
-    return this.svc.create(dto);
+  create(@Body() dto: CreateUserDto, @Request() req: any) {
+    const organizationId = req.user.role === 'OWNER'
+      ? dto.organizationId
+      : req.user.organizationId;
+    return this.svc.create({ ...dto, organizationId });
   }
 
   @Patch(':id')

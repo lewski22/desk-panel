@@ -106,6 +106,8 @@ export const appApi = {
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
     inviteUser: (body: { email: string; role?: string; expiresInDays?: number }) =>
       req<{ ok: boolean; email: string; expiresAt: string }>('/auth/invite', { method: 'POST', body: JSON.stringify(body) }),
+    pendingInvitations: () =>
+      req<{ email: string; role: string; expiresAt: string; createdAt: string }[]>('/auth/invitations'),
     getInviteInfo: (token: string) =>
       req<{ email: string; orgName: string; role: string; expired: boolean; used: boolean }>(`/auth/invite/${token}`),
     register: (body: { token: string; firstName: string; lastName: string; password: string }) =>

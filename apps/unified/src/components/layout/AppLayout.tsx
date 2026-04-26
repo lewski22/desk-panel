@@ -190,19 +190,6 @@ export function AppLayout({ user, onLogout, children }: Props) {
             </div>
           </>
         )}
-        {!mobile && (
-          <button
-            onClick={toggleCollapsed}
-            className="shrink-0 text-zinc-400 hover:text-zinc-700 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-zinc-100 transition-colors"
-            title={collapsed ? t('layout.expand') : t('layout.collapse')}
-          >
-            <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-              {collapsed
-                ? <path d="M7 4l6 6-6 6V4z" />
-                : <path d="M13 4l-6 6 6 6V4z" />}
-            </svg>
-          </button>
-        )}
         {mobile && (
           <button onClick={() => setMobileOpen(false)}
             className="ml-auto text-zinc-400 hover:text-zinc-700 p-1.5 rounded-lg hover:bg-zinc-100 transition-colors"
@@ -356,9 +343,20 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className={`hidden md:flex flex-col transition-all duration-200 shrink-0 ${collapsed ? 'w-14' : 'w-60'}`}
+        <aside className={`hidden md:flex flex-col transition-all duration-200 shrink-0 relative ${collapsed ? 'w-14' : 'w-60'}`}
                style={{ background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}>
           <SidebarContent />
+          <button
+            onClick={toggleCollapsed}
+            className="absolute -right-3 top-[52px] z-10 w-6 h-6 rounded-full bg-white border border-zinc-200 shadow-sm flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:border-zinc-300 transition-colors"
+            title={collapsed ? t('layout.expand') : t('layout.collapse')}
+          >
+            <svg viewBox="0 0 20 20" width="12" height="12" fill="currentColor">
+              {collapsed
+                ? <path d="M7 4l6 6-6 6V4z" />
+                : <path d="M13 4l-6 6 6 6V4z" />}
+            </svg>
+          </button>
         </aside>
 
         {/* Main content — pb-nav clears bottom nav + device home indicator */}

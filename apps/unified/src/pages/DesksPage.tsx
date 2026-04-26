@@ -6,6 +6,8 @@ import { appApi } from '../api/client';
 import {
   PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Spinner,
 } from '../components/ui';
+import { useDirtyGuard } from '../hooks';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 
 const STAFF_URL = window.location.origin;
 
@@ -120,20 +122,23 @@ export function DesksPage() {
 
   const anyFilterActive = !!(search || floorFilter || statusFilter);
 
+  const closeModal = () => setModal(null);
+  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } = useDirtyGuard(closeModal);
+
   const switchLoc = (id: string) => { setLocId(id); localStorage.setItem('desks_loc', id); };
-  const openEdit  = (desk: any)  => { setTarget(desk); setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '', locId }); setModal('edit'); };
+  const openEdit  = (desk: any)  => { setTarget(desk); setForm({ name: desk.name, code: desk.code, floor: desk.floor ?? '', zone: desk.zone ?? '', locId }); resetDirty(); setModal('edit'); };
   const openQr    = (desk: any)  => { setTarget(desk); setModal('qr'); };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { await appApi.desks.create(form.locId || locId, form); setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId }); await load(); }
+    try { await appApi.desks.create(form.locId || locId, form); resetDirty(); setModal(null); setForm({ name:'', code:'', floor:'', zone:'', locId }); await load(); }
     catch (e: any) { setErr(e.message); }
     setBusy(false);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { await appApi.desks.update(target.id, form); setModal(null); await load(); }
+    try { await appApi.desks.update(target.id, form); resetDirty(); setModal(null); await load(); }
     catch (e: any) { setErr(e.message); }
     setBusy(false);
   };
@@ -299,13 +304,13 @@ export function DesksPage() {
       </Table>
 
       {(modal === 'create' || modal === 'edit') && (
-        <Modal title={modal === 'create' ? t('desks.modals.create_title') : t('desks.modals.edit_title', { name: target?.name })} onClose={() => setModal(null)}>
+        <Modal title={modal === 'create' ? t('desks.modals.create_title') : t('desks.modals.edit_title', { name: target?.name })} onClose={requestClose}>
           <form onSubmit={modal === 'create' ? handleCreate : handleEdit} className="flex flex-col gap-3">
             {modal === 'create' && (
               <div>
                 <label className="block text-xs text-zinc-400 mb-1 font-medium">{t('desks.form.label.location')}</label>
                 {locations.length > 1 ? (
-                  <select value={form.locId} onChange={e => setForm(f => ({ ...f, locId: e.target.value }))}
+                  <select value={form.locId} onChange={e => { setForm(f => ({ ...f, locId: e.target.value })); markDirty(); }}
                     className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30" required>
                     <option value="">{t('desks.form.select_placeholder')}</option>
                     {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -315,20 +320,22 @@ export function DesksPage() {
                 )}
               </div>
             )}
-            <Input label={t('desks.form.label.name')} placeholder="Desk A-01" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <Input label={t('desks.form.label.code')} placeholder="A-01" required value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value }))} />
+            <Input label={t('desks.form.label.name')} placeholder="Desk A-01" required value={form.name} onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty(); }} />
+            <Input label={t('desks.form.label.code')} placeholder="A-01" required value={form.code} onChange={e => { setForm(f => ({ ...f, code: e.target.value })); markDirty(); }} />
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t('desks.form.label.floor')} placeholder="1" value={form.floor} onChange={e => setForm(f => ({ ...f, floor: e.target.value }))} />
-              <Input label={t('desks.form.label.zone')} placeholder="Open Space" value={form.zone} onChange={e => setForm(f => ({ ...f, zone: e.target.value }))} />
+              <Input label={t('desks.form.label.floor')} placeholder="1" value={form.floor} onChange={e => { setForm(f => ({ ...f, floor: e.target.value })); markDirty(); }} />
+              <Input label={t('desks.form.label.zone')} placeholder="Open Space" value={form.zone} onChange={e => { setForm(f => ({ ...f, zone: e.target.value })); markDirty(); }} />
             </div>
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{modal === 'create' ? t('btn.create') : t('btn.save')}</Btn>
-              <Btn variant="secondary" onClick={() => setModal(null)} type="button">{t('btn.cancel')}</Btn>
+              <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>
             </div>
           </form>
         </Modal>
       )}
+
+      {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
 
       {modal === 'qr' && target && <QrModal desk={target} onClose={() => setModal(null)} />}
     </div>

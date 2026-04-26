@@ -167,6 +167,19 @@ export class AuthService {
     return { ok: true, email: emailLower, expiresAt };
   }
 
+  async getPendingInvitations(organizationId: string) {
+    const invitations = await this.prisma.invitationToken.findMany({
+      where: {
+        organizationId,
+        usedAt:    null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { email: true, role: true, expiresAt: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return invitations;
+  }
+
   async getInvitationInfo(token: string) {
     const inv = await this.prisma.invitationToken.findUnique({
       where: { token },

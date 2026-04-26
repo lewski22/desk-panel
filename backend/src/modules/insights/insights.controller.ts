@@ -62,14 +62,24 @@ export class InsightsController {
 
   @Post('refresh')
   @Roles('OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN')
-  @ApiOperation({ summary: 'Ręczne odświeżenie insightów (pomija cache TTL)' })
+  @ApiOperation({ summary: 'Ręczne odświeżenie insightów — regeneruje, nie czyta cache' })
   async refresh(
     @Query('locationId') locationId: string,
     @Request()           req:        any,
   ) {
     if (!locationId) throw new ForbiddenException('locationId required');
     const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
-    const items = await this.svc.getForLocation(locationId, orgId);
-    return { locationId, insights: items, refreshed: true };
+
+    const items = await this.svc._generateForLocation(locationId, orgId ?? '');
+    if (items !== null) {
+      await this.svc.prisma.$transaction([
+        (this.svc.prisma as any).utilizationInsight.deleteMany({ where: { locationId } }),
+        (this.svc.prisma as any).utilizationInsight.create({
+          data: { locationId, orgId: orgId ?? '', periodDays: 30, insights: items as any },
+        }),
+      ]);
+    }
+    const result = await this.svc.getForLocation(locationId, orgId);
+    return { locationId, insights: result, refreshed: true };
   }
 }

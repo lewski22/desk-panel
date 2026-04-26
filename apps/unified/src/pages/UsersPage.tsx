@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { NfcCardModal } from '../components/users/NfcCardModal';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
+import { useDirtyGuard } from '../hooks';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
   SUPER_ADMIN: 'purple', OFFICE_ADMIN: 'blue', STAFF: 'zinc', END_USER: 'green',
 };
 
-const ORG_ID = import.meta.env.VITE_ORG_ID ?? '';
 type TabType = 'active' | 'deactivated';
 
 export function UsersPage() {
@@ -21,7 +22,8 @@ export function UsersPage() {
   const [target,      setTarget]     = useState<any>(null);
   const [form,     setForm]     = useState({ email:'', password:'', firstName:'', lastName:'', role:'END_USER' });
   const [inviteForm, setInviteForm] = useState({ email:'', role:'END_USER' });
-  const [inviteSent, setInviteSent] = useState(false);
+  const [inviteSent,       setInviteSent]       = useState(false);
+  const [pendingInvites,   setPendingInvites]   = useState<{ email: string; role: string; expiresAt: string }[]>([]);
   const [editForm, setEditForm] = useState({ firstName:'', lastName:'', email:'', role:'END_USER' });
   const [retDays,  setRetDays]  = useState(30);
   const [busy,     setBusy]     = useState(false);
@@ -63,11 +65,12 @@ export function UsersPage() {
 
   const load = async (silent = false) => {
     if (!silent) setLoading(true);
-    const [active, deleted] = await Promise.all([
-      appApi.users.list(ORG_ID || undefined).catch(() => [] as any[]),
-      appApi.users.listDeactivated(ORG_ID || undefined).catch(() => [] as any[]),
+    const [active, deleted, pending] = await Promise.all([
+      appApi.users.list().catch(() => [] as any[]),
+      appApi.users.listDeactivated().catch(() => [] as any[]),
+      appApi.auth.pendingInvitations().catch(() => []),
     ]);
-    setUsers(active); setDeactivated(deleted);
+    setUsers(active); setDeactivated(deleted); setPendingInvites(pending);
     if (!silent) setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -85,20 +88,23 @@ export function UsersPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
     try {
-      await appApi.users.create({ ...form, organizationId: ORG_ID || undefined });
+      await appApi.users.create({ ...form });
       setModal(null); setForm({ email:'',password:'',firstName:'',lastName:'',role:'END_USER' });
       load(true);
     } catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
 
+  const closeEditModal = () => setModal(null);
+  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } = useDirtyGuard(closeEditModal);
+
   const openEdit = (u: any) => {
-    setTarget(u); setEditForm({ firstName: u.firstName ?? '', lastName: u.lastName ?? '', email: u.email, role: u.role }); setModal('edit');
+    setTarget(u); setEditForm({ firstName: u.firstName ?? '', lastName: u.lastName ?? '', email: u.email, role: u.role }); resetDirty(); setModal('edit');
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');
-    try { await appApi.users.update(target.id, editForm); setModal(null); load(true); }
+    try { await appApi.users.update(target.id, editForm); resetDirty(); setModal(null); load(true); }
     catch(e:any) { setErr(e.message); }
     setBusy(false);
   };
@@ -195,6 +201,21 @@ export function UsersPage() {
       </div>
 
       {err && <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-600 text-sm">{err}</div>}
+
+      {tab === 'active' && pendingInvites.length > 0 && (
+        <div className="mb-4 p-3 bg-sky-50 border border-sky-200 rounded-xl text-sm text-sky-700">
+          <p className="font-semibold mb-1">
+            📬 {pendingInvites.length} {t('users.invite.pending', 'oczekujące zaproszenie(a)')}
+          </p>
+          <div className="space-y-1">
+            {pendingInvites.map(inv => (
+              <p key={inv.email} className="text-xs text-sky-600">
+                {inv.email} · {inv.role} · {t('users.invite.expires', 'wygasa')} {new Date(inv.expiresAt).toLocaleDateString()}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {tab === 'active' && (
         <Table headers={[
@@ -333,16 +354,16 @@ export function UsersPage() {
       )}
 
       {modal === 'edit' && target && (
-        <Modal title={t('users.modals.edit_title', { name: `${target.firstName} ${target.lastName}` })} onClose={() => setModal(null)}>
+        <Modal title={t('users.modals.edit_title', { name: `${target.firstName} ${target.lastName}` })} onClose={requestClose}>
           <form onSubmit={handleEdit} className="flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3">
-              <Input label={t('users.form.firstName')} value={editForm.firstName} onChange={e => setEditForm(f => ({...f,firstName:e.target.value}))} />
-              <Input label={t('users.form.lastName')} value={editForm.lastName} onChange={e => setEditForm(f => ({...f,lastName:e.target.value}))} />
+              <Input label={t('users.form.firstName')} value={editForm.firstName} onChange={e => { setEditForm(f => ({...f,firstName:e.target.value})); markDirty(); }} />
+              <Input label={t('users.form.lastName')} value={editForm.lastName} onChange={e => { setEditForm(f => ({...f,lastName:e.target.value})); markDirty(); }} />
             </div>
-            <Input label={t('users.form.email')} type="email" required value={editForm.email} onChange={e => setEditForm(f => ({...f,email:e.target.value}))} />
+            <Input label={t('users.form.email')} type="email" required value={editForm.email} onChange={e => { setEditForm(f => ({...f,email:e.target.value})); markDirty(); }} />
             <Select label={t('users.form.role')} value={editForm.role}
               disabled={target.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN'}
-              onChange={e => setEditForm(f => ({...f,role:e.target.value}))}>
+              onChange={e => { setEditForm(f => ({...f,role:e.target.value})); markDirty(); }}>
               <option value="END_USER">{t('users.roles.END_USER')}</option>
               <option value="STAFF">{t('users.roles.STAFF')}</option>
               <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
@@ -351,11 +372,13 @@ export function UsersPage() {
             {err && <p className="text-xs text-red-500">{err}</p>}
             <div className="flex gap-2 pt-1">
               <Btn type="submit" loading={busy} className="flex-1">{t('users.actions.save')}</Btn>
-              <Btn variant="secondary" onClick={() => setModal(null)} type="button">{t('btn.cancel')}</Btn>
+              <Btn variant="secondary" onClick={requestClose} type="button">{t('btn.cancel')}</Btn>
             </div>
           </form>
         </Modal>
       )}
+
+      {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
 
       {modal === 'card' && target && (
         <NfcCardModal user={target} onClose={() => { setModal(null); load(); }} />

@@ -6,7 +6,7 @@
  *
  * backend/src/modules/insights/insights.service.ts
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService }        from '../../database/prisma.service';
 
@@ -31,15 +31,23 @@ export interface InsightItem {
 }
 
 const PERIOD_DAYS    = 30;
-const MIN_CHECKINS   = 10; // min. check-inów żeby generować insighty
+const MIN_CHECKINS   = 3; // min. check-inów żeby generować insighty
 
 const DAYS_PL = ['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'];
 
 @Injectable()
-export class InsightsService {
+export class InsightsService implements OnModuleInit {
   private readonly logger = new Logger(InsightsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    const count = await (this.prisma as any).utilizationInsight.count().catch(() => 0);
+    if (count === 0) {
+      this.logger.log('[K2] Table empty — seeding insights on startup');
+      this.cronGenerateAll().catch(e => this.logger.error('[K2] Startup seed failed:', e.message));
+    }
+  }
 
   // ── Cron: 07:00 każdego dnia ─────────────────────────────────
   @Cron('0 7 * * *', { name: 'generate-insights' })
@@ -146,7 +154,7 @@ export class InsightsService {
    * _generateForLocation — oblicza 6 wzorców i zwraca listę InsightItem.
    * Zwraca null jeśli za mało danych.
    */
-  private async _generateForLocation(
+  async _generateForLocation(
     locationId: string,
     _orgId:     string,
   ): Promise<InsightItem[] | null> {

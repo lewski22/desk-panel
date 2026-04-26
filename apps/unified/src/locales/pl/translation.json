@@ -507,7 +507,9 @@
       "hint": "Link aktywacyjny zostanie wysłany na podany adres email. Ważny 7 dni.",
       "send": "Wyślij zaproszenie",
       "sent_title": "Zaproszenie wysłane!",
-      "sent_body": "Link aktywacyjny został wysłany na adres {{email}}."
+      "sent_body": "Link aktywacyjny został wysłany na adres {{email}}.",
+      "pending": "oczekujące zaproszenie(a)",
+      "expires": "wygasa"
     }
   },
   "dashboard": {

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Card, Modal, Input } from '../components/ui';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
@@ -259,6 +261,10 @@ export function OrganizationsPage() {
   const [wifiPass,        setWifiPass]        = useState('');
   const [wifiPassVisible, setWifiPassVisible] = useState(false);
 
+  const closeModal = () => setModal(null);
+  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } =
+    useDirtyGuard(closeModal);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -326,6 +332,7 @@ export function OrganizationsPage() {
           wifiPass: wifiPass,
         });
       }
+      resetDirty();
       setModal(null);
       await load();
     } catch (e: any) { setErr(e.message); }
@@ -413,7 +420,7 @@ export function OrganizationsPage() {
       <Modal
         open={modal !== null}
         title={modal === 'create' ? t('organizations_extra.new_title') : t('organizations_extra.edit_title', { name: target?.name })}
-        onClose={() => setModal(null)}
+        onClose={requestClose}
       >
         {err && <p className="mb-3 text-sm text-red-500 bg-red-50 p-2.5 rounded-lg">{err}</p>}
         <div className="flex flex-col gap-3">
@@ -426,7 +433,7 @@ export function OrganizationsPage() {
             </div>
           )}
           <Input label={t('organizations.form.name_label')} value={form.name}
-            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+            onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty(); }}
             placeholder={t('organizations.form.name_ph')} />
           <Input label={t('organizations.form.address_label')} value={form.address}
             onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
@@ -540,7 +547,7 @@ export function OrganizationsPage() {
           </div>
           <p className="text-xs text-zinc-400">{t('organizations.form.limits_hint')}</p>
           <div className="flex gap-2 mt-1 justify-end">
-            <Btn variant="secondary" onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
+            <Btn variant="secondary" onClick={requestClose}>{t('btn.cancel')}</Btn>
             <Btn onClick={save} loading={saving}
               disabled={!form.name.trim()}>
               {modal === 'create' ? t('btn.create') : t('btn.save')}
@@ -548,6 +555,8 @@ export function OrganizationsPage() {
           </div>
         </div>
       </Modal>
+
+      {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
 
       {/* Modal konfiguracji Azure SSO */}
       {azureModal && (

@@ -163,6 +163,20 @@ export function DeskToken({
         {desk.code}
       </text>
 
+      {/* Floor label — shown when token is tall enough */}
+      {desk.floor && tokenH > 28 && (
+        <text
+          y={-tokenH / 2 + 10}
+          textAnchor="middle"
+          fontSize={Math.min(8, tokenW / 4)}
+          fontFamily="sans-serif"
+          fill="#9ca3af"
+          style={{ pointerEvents: 'none' }}
+        >
+          P{desk.floor}
+        </text>
+      )}
+
       {/* Ocupant initials — editor only shows name, view shows avatar */}
       {desk.isOccupied && desk.currentCheckin?.user && (
         <text
