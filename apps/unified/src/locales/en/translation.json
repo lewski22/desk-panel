@@ -232,7 +232,10 @@
       "sub": "An admin can add them in the management panel."
     },
     "location_no_desks": "No available desks",
-    "set_default": "Set as default"
+    "set_default": "Set as default",
+    "legend": {
+      "mine": "Mine"
+    }
   },
   "dirty_guard": {
     "title": "Unsaved changes",

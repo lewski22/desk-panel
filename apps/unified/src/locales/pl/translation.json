@@ -232,7 +232,10 @@
       "sub": "Administrator może je dodać w panelu zarządzania."
     },
     "location_no_desks": "Brak dostępnych biurek",
-    "set_default": "Domyślne"
+    "set_default": "Domyślne",
+    "legend": {
+      "mine": "Moje"
+    }
   },
   "dirty_guard": {
     "title": "Niezapisane zmiany",

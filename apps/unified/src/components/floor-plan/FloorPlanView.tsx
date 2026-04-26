@@ -101,20 +101,26 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, style }: {
 // ── Legend ────────────────────────────────────────────────────
 function Legend() {
   const { t } = useTranslation();
-  const items = [
-    { color: '#10b981', label: t('dashboard.legend.free') },
-    { color: '#f59e0b', label: t('dashboard.legend.reserved') },
-    { color: '#7c3aed', label: t('dashboard.legend.mine', 'Moja rezerwacja') },
-    { color: '#ef4444', label: t('dashboard.legend.occupied') },
-    { color: '#a1a1aa', label: t('dashboard.legend.offline') },
-  ];
   return (
-    <div className="flex flex-wrap gap-4 mt-3">
-      {items.map(item => (
-        <span key={item.label} className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <span className="w-3 h-3 rounded-full" style={{ background: item.color }} />
-          {item.label}
-        </span>
+    <div className="flex items-center gap-4 mb-3 px-1 flex-wrap">
+      {[
+        { color: '#10b981', bg: '#d1fae5', label: t('desks.stats.free') },
+        { color: '#f59e0b', bg: '#fef3c7', label: t('desks.stats.reserved') },
+        { color: '#7c3aed', bg: '#ede9fe', label: t('deskmap.legend.mine', 'Moje') },
+        { color: '#ef4444', bg: '#fee2e2', label: t('desks.stats.occupied') },
+        { color: '#a1a1aa', bg: '#f4f4f5', label: t('devices.status.offline') },
+      ].map(({ color, bg, label }) => (
+        <div key={label} className="flex items-center gap-1.5">
+          <span style={{
+            display: 'inline-block',
+            width: 10, height: 10,
+            borderRadius: '50%',
+            background: bg,
+            border: `1.5px solid ${color}`,
+            flexShrink: 0,
+          }} />
+          <span className="text-xs text-zinc-500">{label}</span>
+        </div>
       ))}
     </div>
   );
@@ -233,41 +239,47 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
 
   return (
     <div>
+      {/* 1. Legenda — nad mapą */}
+      <Legend />
+
       <FloorTabs floors={floors} active={activeFloor} onChange={f => { setActiveFloor(f); setSel(null); }} />
 
-      {/* Filter */}
-      <div className="flex items-center gap-3 mb-3">
-        <button onClick={() => setFO(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
-            freeOnly
-              ? 'bg-emerald-500 text-white border-emerald-500'
-              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
-          }`}>
-          {freeOnly ? '✓' : ''} {t('floorplan.view.free_only')}
-        </button>
-        <span className="text-xs text-zinc-400">
-          {placedDesks.length} {t('floorplan.view.desks_visible')}
-        </span>
+      {/* 2. Pasek kontrolny: filtr + licznik + zoom */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFO(v => !v)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+              freeOnly
+                ? 'bg-brand text-white border-brand'
+                : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+            }`}>
+            {freeOnly ? '✓ ' : ''}{t('floorplan.view.free_only')}
+          </button>
+          <span className="text-xs text-zinc-400">
+            {placedDesks.length} {t('floorplan.view.desks_visible')}
+          </span>
+        </div>
+
+        {/* Zoom controls */}
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(1)))}
+            className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono flex items-center justify-center">
+            −
+          </button>
+          <span className="text-xs text-zinc-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(1)))}
+            className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono flex items-center justify-center">
+            +
+          </button>
+          <button onClick={() => setZoom(1.0)}
+            className="text-xs text-zinc-400 hover:text-zinc-600 px-2 py-1 rounded-lg border border-zinc-200 hover:bg-zinc-100">
+            Reset
+          </button>
+        </div>
       </div>
 
-      {/* Zoom controls */}
-      <div className="flex items-center gap-2 mb-2 justify-end">
-        <button onClick={() => setZoom(z => Math.max(ZOOM_MIN, +(z - ZOOM_STEP).toFixed(1)))}
-          className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono">
-          −
-        </button>
-        <span className="text-xs text-zinc-400 w-10 text-center">{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom(z => Math.min(ZOOM_MAX, +(z + ZOOM_STEP).toFixed(1)))}
-          className="w-7 h-7 rounded-lg border border-zinc-200 text-zinc-600 hover:bg-zinc-100 text-sm font-mono">
-          +
-        </button>
-        <button onClick={() => setZoom(1.0)}
-          className="text-xs text-zinc-400 hover:text-zinc-600 ml-1 px-2 py-1 rounded-lg border border-zinc-200 hover:bg-zinc-100">
-          Reset
-        </button>
-      </div>
-
-      {/* SVG canvas */}
+      {/* 3. SVG canvas */}
       <div ref={containerRef}
         className="relative bg-zinc-100 rounded-xl overflow-auto border border-zinc-200"
         style={{ maxHeight: '65vh' }}
@@ -310,8 +322,6 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
           />
         )}
       </div>
-
-      <Legend />
     </div>
   );
 }

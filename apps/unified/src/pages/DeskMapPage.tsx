@@ -5,7 +5,7 @@
  * - FloorPlanView lub DeskMap grid
  * - Preferencja widoku w localStorage
  */
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation }  from 'react-i18next';
 import { useNavigate }      from 'react-router-dom';
 import { useDesks }         from '../hooks';
@@ -94,6 +94,87 @@ function ViewToggle({ mode, onChange, hasPlan }: { mode: ViewMode; onChange: (m:
 
 // ── Helpers ──────────────────────────────────────────────────
 const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+
+// ── Day Slider ────────────────────────────────────────────────
+function DaySlider({ selected, onChange, maxDaysAhead = 14 }: {
+  selected: string;
+  onChange: (d: string) => void;
+  maxDaysAhead?: number;
+}) {
+  const { i18n } = useTranslation();
+  const today = todayStr();
+
+  const days = useMemo(() => {
+    const result: string[] = [];
+    const start = new Date();
+    start.setDate(start.getDate() - 3);
+    for (let i = 0; i <= Math.min(maxDaysAhead + 3, 17); i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      result.push(d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' }));
+    }
+    return result;
+  }, [maxDaysAhead]);
+
+  const fmt = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDate();
+    const mon = d.toLocaleDateString(
+      i18n.language === 'en' ? 'en-GB' : 'pl-PL',
+      { month: 'short', timeZone: 'Europe/Warsaw' }
+    );
+    const dow = d.toLocaleDateString(
+      i18n.language === 'en' ? 'en-GB' : 'pl-PL',
+      { weekday: 'short', timeZone: 'Europe/Warsaw' }
+    );
+    return { day, mon, dow };
+  };
+
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  // Scroll selected chip into view on mount/change
+  React.useEffect(() => {
+    if (!sliderRef.current) return;
+    const idx = days.indexOf(selected);
+    if (idx < 0) return;
+    const btn = sliderRef.current.children[idx] as HTMLElement | undefined;
+    btn?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+  }, [selected, days]);
+
+  return (
+    <div ref={sliderRef} className="flex items-center gap-1.5 overflow-x-auto pb-1 mb-3 scrollbar-none">
+      {days.map(dateStr => {
+        const { day, dow } = fmt(dateStr);
+        const isToday    = dateStr === today;
+        const isSelected = dateStr === selected;
+        const isPast     = dateStr < today;
+        return (
+          <button
+            key={dateStr}
+            onClick={() => onChange(dateStr)}
+            className={`flex-shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl border text-xs
+              transition-all font-medium
+              ${isSelected
+                ? 'bg-brand text-white border-brand'
+                : isPast
+                  ? 'bg-zinc-50 text-zinc-400 border-zinc-100 hover:border-zinc-200'
+                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+              }`}
+            style={{ minWidth: 44 }}
+          >
+            <span className={`text-[10px] mb-0.5 ${isSelected ? 'text-white/80' : 'text-zinc-400'}`}>
+              {dow}
+            </span>
+            <span className="leading-none">{day}</span>
+            {isToday && !isSelected && (
+              <span className="mt-0.5 w-1 h-1 rounded-full bg-brand" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Main Page ─────────────────────────────────────────────────
 export function DeskMapPage() {
@@ -258,39 +339,18 @@ export function DeskMapPage() {
         ))}
       </div>
 
-      {/* Date picker */}
+      {/* Day slider — nad DeskStats */}
       {mapTab === 'desks' && (
-        <div className="flex items-center gap-3 mb-3 flex-wrap">
-          <label className="text-xs font-medium text-zinc-500 shrink-0">
-            {t('deskmap.date_label', 'Pokaż dostępność na:')}
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            min={todayStr()}
-            max={(() => {
-              const d = new Date();
-              d.setDate(d.getDate() + (locationLimits?.maxDaysAhead ?? 14));
-              return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
-            })()}
-            onChange={e => setSelectedDate(e.target.value)}
-            className="text-sm border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-700
-                       focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand
-                       bg-white cursor-pointer"
-          />
-          {selectedDate !== todayStr() && (
-            <button
-              onClick={() => setSelectedDate(todayStr())}
-              className="text-xs text-brand hover:underline font-medium">
-              {t('deskmap.today', 'Dziś')}
-            </button>
-          )}
-        </div>
+        <DaySlider
+          selected={selectedDate}
+          onChange={setSelectedDate}
+          maxDaysAhead={locationLimits?.maxDaysAhead ?? 14}
+        />
       )}
 
-      {/* Stats — above map, for non-END_USER on desks tab */}
-      {mapTab === 'desks' && !isEndUser && desks.length > 0 && (
-        <DeskStats desks={desks} />
+      {/* Stats — above map */}
+      {desks.length > 0 && mapTab === 'desks' && (
+        <DeskStats desks={desks} currentUserId={userId} />
       )}
 
       {/* Toolbar row: View toggle + Edit floor plan link */}

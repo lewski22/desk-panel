@@ -27,24 +27,43 @@ function groupByFloor(desks: DeskMapItem[]) {
   return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
 }
 
-export function DeskStats({ desks }: { desks: DeskMapItem[] }) {
+interface DeskStatsProps {
+  desks: DeskMapItem[];
+  currentUserId?: string;
+}
+
+export function DeskStats({ desks, currentUserId }: DeskStatsProps) {
   const { t } = useTranslation();
-  const active   = desks.filter(d => d.isOnline && d.status === 'ACTIVE');
-  const free     = active.filter(d => !d.isOccupied && !d.currentReservation).length;
-  const reserved = active.filter(d => !d.isOccupied && d.currentReservation).length;
-  const occupied = active.filter(d => d.isOccupied).length;
-  const offline  = desks.filter(d => !d.isOnline).length;
+
+  const free     = desks.filter(d => d.isOnline && !d.isOccupied && !d.currentReservation && d.status === 'ACTIVE').length;
+  const reserved = desks.filter(d => d.isOnline && !d.isOccupied && !!d.currentReservation).length;
+  const mine     = currentUserId
+    ? desks.filter(d => d.currentReservation?.userId === currentUserId).length
+    : 0;
+  const occupied = desks.filter(d => d.isOccupied).length;
+  const offline  = desks.filter(d => !d.isOnline || d.status === 'MAINTENANCE').length;
+
+  const stats = [
+    { num: free,     color: '#10b981', bg: '#d1fae5', label: t('desks.stats.free') },
+    { num: reserved, color: '#f59e0b', bg: '#fef3c7', label: t('desks.stats.reserved') },
+    ...(currentUserId && mine > 0
+      ? [{ num: mine, color: '#7c3aed', bg: '#ede9fe', label: t('deskmap.legend.mine', 'Moje') }]
+      : []),
+    { num: occupied, color: '#ef4444', bg: '#fee2e2', label: t('desks.stats.occupied') },
+    { num: offline,  color: '#a1a1aa', bg: '#f4f4f5', label: t('devices.status.offline') },
+  ];
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-      {[
-        { label: t('desks.stats.free'),     count: free,     color: 'text-emerald-600', bg: 'bg-emerald-50' },
-        { label: t('desks.stats.reserved'), count: reserved, color: 'text-sky-600',     bg: 'bg-sky-50'     },
-        { label: t('desks.stats.occupied'), count: occupied, color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
-        { label: t('desks.stats.offline'),  count: offline,  color: 'text-zinc-400',    bg: 'bg-zinc-50'    },
-      ].map(({ label, count, color, bg }) => (
-        <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
-          <p className={`text-2xl font-bold font-mono ${color}`}>{count}</p>
-          <p className="text-xs text-zinc-500 mt-0.5 truncate">{label}</p>
+    <div className="grid mb-3"
+      style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)` }}>
+      {stats.map(({ num, color, bg, label }) => (
+        <div key={label}
+          className="flex flex-col items-center justify-center py-3 px-2 border-r border-zinc-100 last:border-r-0"
+          style={{ background: num > 0 ? bg + '33' : undefined }}>
+          <span className="text-xl font-medium leading-none" style={{ color: num > 0 ? color : '#a1a1aa' }}>
+            {num}
+          </span>
+          <span className="text-[10px] text-zinc-400 mt-1 text-center leading-tight">{label}</span>
         </div>
       ))}
     </div>
