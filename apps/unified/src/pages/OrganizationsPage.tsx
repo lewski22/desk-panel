@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
@@ -10,6 +10,108 @@ import { toast } from '../components/ui/Toast';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
+}
+
+// ── LedColorPicker ──────────────────────────────────────────────
+const LED_PRESETS = [
+  '#00C800','#22C55E','#10B981','#14B8A6',
+  '#0050DC','#3B82F6','#6366F1','#8B5CF6',
+  '#DC0000','#EF4444','#F97316','#FB923C',
+  '#C8A000','#EAB308','#EC4899','#FFFFFF',
+];
+
+function LedColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  const [open, setOpen]   = useState(false);
+  const [hex,  setHex]    = useState(value);
+  const rootRef           = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setHex(value); }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const apply = (color: string) => {
+    const c = color.startsWith('#') ? color.toUpperCase() : `#${color}`.toUpperCase();
+    onChange(c); setHex(c); setOpen(false);
+  };
+
+  const handleHex = (raw: string) => {
+    setHex(raw);
+    const c = (raw.startsWith('#') ? raw : `#${raw}`).toUpperCase();
+    if (/^#[0-9A-Fa-f]{6}$/.test(c)) onChange(c);
+  };
+
+  const isValid = /^#[0-9A-Fa-f]{6}$/.test(hex.startsWith('#') ? hex : `#${hex}`);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-2.5 py-2 border border-zinc-200 rounded-xl
+                   bg-white hover:border-brand/50 focus:outline-none focus:ring-2 focus:ring-brand/30
+                   transition-colors"
+      >
+        <span
+          className="w-5 h-5 rounded-md border border-zinc-200 shrink-0"
+          style={{ background: isValid ? (hex.startsWith('#') ? hex : `#${hex}`) : '#ccc' }}
+        />
+        <span className="text-xs font-mono text-zinc-500 uppercase tracking-wide flex-1 text-left">
+          {value}
+        </span>
+        <span className="text-zinc-300 text-[10px]">▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute z-50 top-full mt-1.5 left-0 bg-white border border-zinc-200
+                       rounded-2xl shadow-xl p-3 w-52"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="grid grid-cols-4 gap-1.5 mb-3">
+              {LED_PRESETS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => apply(c)}
+                  className={`w-full aspect-square rounded-lg border-2 transition-all ${
+                    value.toUpperCase() === c.toUpperCase()
+                      ? 'border-brand scale-110 shadow-sm'
+                      : 'border-transparent hover:border-zinc-300'
+                  }`}
+                  style={{ background: c }}
+                  title={c}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 border-t border-zinc-100 pt-2.5">
+              <span
+                className="w-5 h-5 rounded shrink-0 border border-zinc-200"
+                style={{ background: isValid ? (hex.startsWith('#') ? hex : `#${hex}`) : '#ccc' }}
+              />
+              <input
+                className="flex-1 text-xs font-mono border border-zinc-200 rounded-lg px-2 py-1.5
+                           focus:outline-none focus:ring-2 focus:ring-brand/30 uppercase bg-zinc-50"
+                value={hex}
+                onChange={e => handleHex(e.target.value)}
+                maxLength={7}
+                placeholder="#000000"
+                spellCheck={false}
+              />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // FEATURE P4-B3: ISO 3166-1 alpha-2 country codes for holiday-aware workday counting
@@ -342,7 +444,6 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid || undefined,
           wifiPass: wifiPass || undefined,
           parkingBookingMode: form.parkingBookingMode,
-          ledBrightness: form.ledBrightness,
           ledBrightness: form.ledBrightness,
           ledColorFree: form.ledColorFree,
           ledColorReserved: form.ledColorReserved,
@@ -856,30 +957,23 @@ export function OrganizationsPage() {
                       <label className="block text-xs text-zinc-400 mb-2 font-medium">
                         {t('organizations.form.led_colors_label')}
                       </label>
-                      <div className="grid grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {([
                           { key: 'ledColorFree',          labelKey: 'led_color_free'           },
                           { key: 'ledColorReserved',      labelKey: 'led_color_reserved'       },
                           { key: 'ledColorOccupied',      labelKey: 'led_color_occupied'       },
                           { key: 'ledColorGuestReserved', labelKey: 'led_color_guest_reserved' },
-                        ] as const).map(({ key, labelKey }) => {
-                          const label = t(`organizations.form.${labelKey}`);
-                          return (
-                            <div key={key} className="flex flex-col items-center gap-1.5">
-                              <p className="text-[10px] text-zinc-400 text-center leading-tight">{label}</p>
-                              <div className="relative w-full">
-                                <input
-                                  type="color"
-                                  value={form[key]}
-                                  onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); markDirty(); }}
-                                  className="w-full h-10 rounded-lg border border-zinc-200 cursor-pointer p-0.5 bg-white"
-                                  title={label}
-                                />
-                              </div>
-                              <p className="text-[10px] font-mono text-zinc-400 uppercase">{form[key]}</p>
-                            </div>
-                          );
-                        })}
+                        ] as const).map(({ key, labelKey }) => (
+                          <div key={key}>
+                            <p className="text-[10px] text-zinc-400 mb-1 font-medium">
+                              {t(`organizations.form.${labelKey}`)}
+                            </p>
+                            <LedColorPicker
+                              value={form[key]}
+                              onChange={c => { setForm(f => ({ ...f, [key]: c })); markDirty(); }}
+                            />
+                          </div>
+                        ))}
                       </div>
                       <p className="text-[10px] text-zinc-400 mt-1.5">
                         {t('organizations.form.led_colors_hint')}
