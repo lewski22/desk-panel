@@ -190,13 +190,13 @@ export class GatewaysService {
     const likelyRestart = prev.isOnline && gapSinceLastSeen > RESTART_GAP_MS;
 
     if (online && prev.deskId && (!prev.isOnline || likelyRestart)) {
-      this._restoreDeskLed(prev.deskId).catch(() => {});
+      this.restoreDeskLed(prev.deskId).catch(() => {});
     }
 
     return device;
   }
 
-  private async _restoreDeskLed(deskId: string): Promise<void> {
+  async restoreDeskLed(deskId: string): Promise<void> {
     const activeCheckin = await this.prisma.checkin.findFirst({
       where:  { deskId, checkedOutAt: null },
       select: { id: true },
@@ -207,20 +207,90 @@ export class GatewaysService {
     }
 
     const now = new Date();
-    const activeReservation = await this.prisma.reservation.findFirst({
+    const candidate = await this.prisma.reservation.findFirst({
       where: {
         deskId,
-        status:    { in: ['CONFIRMED', 'PENDING'] },
-        startTime: { lte: new Date(now.getTime() + 60 * 60 * 1000) },
-        endTime:   { gte: now },
+        status:  { in: ['CONFIRMED', 'PENDING'] },
+        endTime: { gte: now },
       },
-      select: { id: true },
+      select: {
+        id:        true,
+        startTime: true,
+        desk: { select: { location: { select: { openTime: true, timezone: true } } } },
+      },
+      orderBy: { startTime: 'asc' },
     });
 
-    this.ledEvents.emit(deskId, activeReservation ? 'RESERVED' : 'FREE');
-    this.logger.log(`LED restored: desk ${deskId} → ${activeReservation ? 'RESERVED' : 'FREE'}`);
+    let isReserved = false;
+    if (candidate) {
+      const tz       = candidate.desk?.location?.timezone ?? 'Europe/Warsaw';
+      const openTime = candidate.desk?.location?.openTime;
+      const fmtDate  = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
+      if (fmtDate(now) === fmtDate(candidate.startTime)) {
+        if (openTime) {
+          const toMin  = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+          const parts  = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).formatToParts(now);
+          const nowMin = toMin(`${parts.find(p => p.type === 'hour')?.value ?? '0'}:${parts.find(p => p.type === 'minute')?.value ?? '0'}`);
+          isReserved   = nowMin >= toMin(openTime);
+        } else {
+          isReserved = true;
+        }
+      }
+    }
+
+    this.ledEvents.emit(deskId, isReserved ? 'RESERVED' : 'FREE');
+    this.logger.log(`LED restored: desk ${deskId} → ${isReserved ? 'RESERVED' : 'FREE'}`);
   }
 
+  // ── Cron: co godzinę ustaw RESERVED dla biurek, których rezerwacja "dojrzała" ──
+  @Cron('0 0 * * * *')
+  async autoReservedLed() {
+    const now = new Date();
+    const candidates = await this.prisma.reservation.findMany({
+      where: {
+        status:    { in: ['CONFIRMED', 'PENDING'] },
+        endTime:   { gte: now },
+        startTime: { lte: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+      },
+      select: {
+        deskId:          true,
+        startTime:       true,
+        reservationType: true,
+        desk: { select: { location: { select: { openTime: true, timezone: true } } } },
+      },
+    });
+
+    const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+    const eligible = new Map<string, 'RESERVED' | 'GUEST_RESERVED'>();
+
+    for (const r of candidates) {
+      const tz       = r.desk?.location?.timezone ?? 'Europe/Warsaw';
+      const openTime = r.desk?.location?.openTime;
+      const fmtDate  = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
+      if (fmtDate(now) !== fmtDate(r.startTime)) continue;
+      if (openTime) {
+        const parts  = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).formatToParts(now);
+        const nowMin = toMin(`${parts.find(p => p.type === 'hour')?.value ?? '0'}:${parts.find(p => p.type === 'minute')?.value ?? '0'}`);
+        if (nowMin < toMin(openTime)) continue;
+      }
+      const state = (r.reservationType === 'GUEST' || r.reservationType === 'TEAM') ? 'GUEST_RESERVED' : 'RESERVED';
+      eligible.set(r.deskId, state);
+    }
+
+    if (eligible.size === 0) return;
+
+    const activeCheckins = await this.prisma.checkin.findMany({
+      where: { deskId: { in: [...eligible.keys()] }, checkedOutAt: null },
+      select: { deskId: true },
+    });
+    const occupied = new Set(activeCheckins.map(c => c.deskId));
+
+    let count = 0;
+    for (const [deskId, state] of eligible) {
+      if (!occupied.has(deskId)) { this.ledEvents.emit(deskId, state); count++; }
+    }
+    if (count > 0) this.logger.log(`Auto-reserved LED: ${count} desk(s) set to RESERVED`);
+  }
 
   // ── Org guard dla gateways ─────────────────────────────────
   // Weryfikuje: Gateway → Location → Organization

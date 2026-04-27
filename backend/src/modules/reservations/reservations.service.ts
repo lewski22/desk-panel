@@ -216,7 +216,14 @@ export class ReservationsService {
     const ledState = (dto.reservationType === 'GUEST' || dto.reservationType === 'TEAM')
       ? 'GUEST_RESERVED'
       : 'RESERVED';
-    this.ledEvents.emit(dto.deskId, ledState);
+    // Emit RESERVED LED only if: today is reservation day, office is open, and desk is not currently occupied
+    if (this._isReservationVisibleNow(reservation.startTime, desk.location?.openTime, desk.location?.timezone)) {
+      const activeCheckin = await this.prisma.checkin.findFirst({
+        where: { deskId: dto.deskId, checkedOutAt: null },
+        select: { id: true },
+      });
+      if (!activeCheckin) this.ledEvents.emit(dto.deskId, ledState);
+    }
 
     // ── Email notification ───────────────────────────────────────
     this.notify.notifyReservationConfirmed(reservation.id).catch(() => {});
@@ -471,5 +478,19 @@ export class ReservationsService {
       cursor.setDate(cursor.getDate() + (freq === 'DAILY' ? 1 : 1));
     }
     return results;
+  }
+
+  // Returns true when the RESERVED LED should be shown for a given reservation:
+  // only on the reservation's own calendar day, and only once the office is open.
+  private _isReservationVisibleNow(startTime: Date, openTime?: string | null, timezone?: string | null): boolean {
+    const tz  = timezone ?? 'Europe/Warsaw';
+    const now = new Date();
+    const fmtDate = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
+    if (fmtDate(now) !== fmtDate(startTime)) return false;
+    if (!openTime) return true;
+    const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+    const parts = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).formatToParts(now);
+    const nowMin = toMin(`${parts.find(p => p.type === 'hour')?.value ?? '0'}:${parts.find(p => p.type === 'minute')?.value ?? '0'}`);
+    return nowMin >= toMin(openTime);
   }
 }

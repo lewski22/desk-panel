@@ -6,6 +6,22 @@ Historia prac, naprawionych błędów i otwartych zadań.
 
 ## Zrealizowane (chronologicznie)
 
+### 2026-04-27 — Walidacje check-in przez web + logika LED RESERVED
+
+#### Zmiany
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| 1 | Web check-in zablokowany wcześniej niż 2h przed `startTime` rezerwacji — `ForbiddenException` z komunikatem po polsku | `checkins.service.ts` |
+| 2 | LED RESERVED emitowany przy tworzeniu rezerwacji tylko gdy: dziś jest dzień rezerwacji, godzina >= `openTime` lokalizacji, biurko nie jest aktualnie OCCUPIED | `reservations.service.ts` |
+| 3 | `restoreDeskLed` (reconnect beacona) stosuje tę samą logikę dnia + godziny otwarcia — poprzednio używał lookahead `startTime <= now+1h` | `gateways.service.ts` |
+| 4 | Cron co godzinę (`autoReservedLed`) — aktywuje RESERVED dla biurek, których rezerwacja "dojrzała" (przyszła rezerwacja osiągnęła swój dzień i godzinę otwarcia); pomija biurka z aktywnym check-in | `gateways.service.ts` |
+| 5 | Po checkout i auto-checkout: zamiast zawsze emitować FREE, sprawdza czy na tym samym biurku jest kolejna widoczna dziś rezerwacja i emituje RESERVED/GUEST_RESERVED jeśli tak | `checkins.service.ts` |
+| 6 | Helper `_isReservationVisibleNow(startTime, openTime, timezone)` — logika widoczności rezerwacji w strefie czasowej biura | `reservations.service.ts` |
+| 7 | Helper `_deskLedAfterFree(deskId)` — zwraca właściwy stan LED po zwolnieniu biurka (`RESERVED` / `GUEST_RESERVED` / `FREE`) | `checkins.service.ts` |
+
+---
+
 ### 2026-04-26 — Floor Plan Portal + Notifications List + Reservations Redesign
 
 #### Zmiany

@@ -289,10 +289,14 @@ export class CheckinsService {
     });
     if (!reservation) throw new ForbiddenException('Brak rezerwacji lub brak dostępu');
 
+    const now = new Date();
+    // Web check-in is only available within 2 hours before reservation start
+    if (now < new Date(reservation.startTime.getTime() - 2 * 60 * 60 * 1000)) {
+      throw new ForbiddenException('Check-in przez przeglądarkę jest dostępny najwcześniej 2 godziny przed rezerwacją');
+    }
+
     const existing = await this.prisma.checkin.findUnique({ where: { reservationId } });
     if (existing && !existing.checkedOutAt) return existing;
-
-    const now = new Date();
     const [checkin] = await this.prisma.$transaction([
       this.prisma.checkin.create({
         data: { reservationId, deskId: reservation.deskId, userId, method: CheckinMethod.WEB },
@@ -331,7 +335,8 @@ export class CheckinsService {
       }),
     ]);
 
-    this.ledEvents.emit(checkin.deskId, 'FREE');
+    const ledState = await this._deskLedAfterFree(checkin.deskId);
+    this.ledEvents.emit(checkin.deskId, ledState);
     return updated;
   }
 
@@ -366,7 +371,10 @@ export class CheckinsService {
     ]);
 
     const deskIds = [...new Set(toClose.map(c => c.deskId))];
-    for (const deskId of deskIds) this.ledEvents.emit(deskId, 'FREE');
+    for (const deskId of deskIds) {
+      const state = await this._deskLedAfterFree(deskId);
+      this.ledEvents.emit(deskId, state);
+    }
 
     this.logger.log(
       `Auto-checkout: ${expiredCheckins.length} expired + ${staleCheckins.length} stale walk-in`
@@ -374,6 +382,43 @@ export class CheckinsService {
   }
 
   // ── Helpers ──────────────────────────────────────────────────
+
+  // Returns the LED state a desk should show after becoming free.
+  // Emits RESERVED/GUEST_RESERVED if a same-day reservation is now visible; FREE otherwise.
+  private async _deskLedAfterFree(deskId: string): Promise<'RESERVED' | 'GUEST_RESERVED' | 'FREE'> {
+    const now = new Date();
+    const candidate = await this.prisma.reservation.findFirst({
+      where: {
+        deskId,
+        status:  { in: [ReservationStatus.CONFIRMED, ReservationStatus.PENDING] },
+        endTime: { gte: now },
+      },
+      select: {
+        startTime:       true,
+        reservationType: true,
+        desk: { select: { location: { select: { openTime: true, timezone: true } } } },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+    if (!candidate) return 'FREE';
+
+    const tz       = candidate.desk?.location?.timezone ?? 'Europe/Warsaw';
+    const openTime = candidate.desk?.location?.openTime;
+    const fmtDate  = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(d);
+    if (fmtDate(now) !== fmtDate(candidate.startTime)) return 'FREE';
+
+    if (openTime) {
+      const toMin  = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m; };
+      const parts  = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz }).formatToParts(now);
+      const nowMin = toMin(`${parts.find(p => p.type === 'hour')?.value ?? '0'}:${parts.find(p => p.type === 'minute')?.value ?? '0'}`);
+      if (nowMin < toMin(openTime)) return 'FREE';
+    }
+
+    return (candidate.reservationType === 'GUEST' || candidate.reservationType === 'TEAM')
+      ? 'GUEST_RESERVED'
+      : 'RESERVED';
+  }
+
   private async logEvent(type: EventType, payload: object) {
     await this.prisma.event.create({
       data: { type, entityType: 'checkin', payload },

@@ -60,9 +60,21 @@ export class MqttHandlers implements OnModuleInit {
       this._ledTimers.set(deskId, timer);
     });
   }
+  private readonly ERROR_RESTORE_MS = 3_000;
+
   private async handleCheckin(deskId: string, payload: any) {
-    try { const r=await this.checkins.checkinNfc(deskId,payload.card_uid,payload.gateway_id,payload.device_id);
-      this.ledEvents.emit(deskId,r.authorized?'OCCUPIED':'ERROR'); } catch{ this.ledEvents.emit(deskId,'ERROR'); }
+    try {
+      const r = await this.checkins.checkinNfc(deskId, payload.card_uid, payload.gateway_id, payload.device_id);
+      if (r.authorized) {
+        this.ledEvents.emit(deskId, 'OCCUPIED');
+      } else {
+        this.ledEvents.emit(deskId, 'ERROR');
+        setTimeout(() => this.gateways.restoreDeskLed(deskId).catch(() => {}), this.ERROR_RESTORE_MS);
+      }
+    } catch {
+      this.ledEvents.emit(deskId, 'ERROR');
+      setTimeout(() => this.gateways.restoreDeskLed(deskId).catch(() => {}), this.ERROR_RESTORE_MS);
+    }
   }
   private async handleStatus(deskId: string, payload: any) {
     if(payload.device_id) await this.gateways.deviceHeartbeat(payload.device_id,payload.rssi,payload.fw_version).catch(()=>{});
