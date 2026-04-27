@@ -14,18 +14,20 @@ export class MqttHandlers implements OnModuleInit {
       try {
         const gwId=await this.gateways.findGatewayForDesk(deskId); if(!gwId)return;
         const basePayload=LED_PAYLOADS[state]; if(!basePayload)return;
-        let params=basePayload.params;
-        if(state==='FREE'||state==='RESERVED'||state==='OCCUPIED'){
-          const desk=await this.prisma.desk.findUnique({
-            where:{id:deskId},
-            select:{location:{select:{ledColorFree:true,ledColorReserved:true,ledColorOccupied:true}}},
-          });
-          if(desk?.location){
-            const color=state==='FREE'?desk.location.ledColorFree:state==='RESERVED'?desk.location.ledColorReserved:desk.location.ledColorOccupied;
-            params={...params,color};
-          }
+        const desk=await this.prisma.desk.findUnique({
+          where:{id:deskId},
+          select:{location:{select:{ledBrightness:true,ledColorFree:true,ledColorReserved:true,ledColorOccupied:true,ledColorGuestReserved:true}}},
+        });
+        const loc=desk?.location;
+        const brightness=loc?.ledBrightness??100;
+        let color=basePayload.params.color;
+        if(loc){
+          if(state==='FREE')           color=loc.ledColorFree;
+          else if(state==='RESERVED')  color=loc.ledColorReserved;
+          else if(state==='OCCUPIED')  color=loc.ledColorOccupied;
+          else if(state==='GUEST_RESERVED') color=loc.ledColorGuestReserved;
         }
-        await this.gateways.sendBeaconCommand(gwId,deskId,'SET_LED',params);
+        await this.gateways.sendBeaconCommand(gwId,deskId,'SET_LED',{...basePayload.params,color,brightness});
       } catch{}
     });
   }

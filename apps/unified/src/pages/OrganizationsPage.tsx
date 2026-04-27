@@ -256,7 +256,8 @@ export function OrganizationsPage() {
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
-    ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000',
+    ledBrightness: 100,
+    ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000', ledColorGuestReserved: '#C8A000',
   });
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
@@ -290,7 +291,8 @@ export function OrganizationsPage() {
     resetDirty();
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
       organizationId: user?.organizationId ?? '',
-      ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000',
+      ledBrightness: 100,
+      ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000', ledColorGuestReserved: '#C8A000',
     });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
@@ -309,9 +311,11 @@ export function OrganizationsPage() {
       country: loc.country ?? '',
       parkingBookingMode: loc.parkingBookingMode ?? 'HOURLY',
       organizationId: loc.organizationId,
-      ledColorFree:     loc.ledColorFree     ?? '#00C800',
-      ledColorReserved: loc.ledColorReserved ?? '#0050DC',
-      ledColorOccupied: loc.ledColorOccupied ?? '#DC0000',
+      ledBrightness:         loc.ledBrightness         ?? 100,
+      ledColorFree:          loc.ledColorFree          ?? '#00C800',
+      ledColorReserved:      loc.ledColorReserved      ?? '#0050DC',
+      ledColorOccupied:      loc.ledColorOccupied      ?? '#DC0000',
+      ledColorGuestReserved: loc.ledColorGuestReserved ?? '#C8A000',
     });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
@@ -338,9 +342,12 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid || undefined,
           wifiPass: wifiPass || undefined,
           parkingBookingMode: form.parkingBookingMode,
+          ledBrightness: form.ledBrightness,
+          ledBrightness: form.ledBrightness,
           ledColorFree: form.ledColorFree,
           ledColorReserved: form.ledColorReserved,
           ledColorOccupied: form.ledColorOccupied,
+          ledColorGuestReserved: form.ledColorGuestReserved,
         });
       } else if (target) {
         await appApi.locations.update(target.id, {
@@ -352,9 +359,11 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid,
           wifiPass: wifiPass,
           parkingBookingMode: form.parkingBookingMode,
+          ledBrightness: form.ledBrightness,
           ledColorFree: form.ledColorFree,
           ledColorReserved: form.ledColorReserved,
           ledColorOccupied: form.ledColorOccupied,
+          ledColorGuestReserved: form.ledColorGuestReserved,
         });
       }
       resetDirty();
@@ -816,34 +825,64 @@ export function OrganizationsPage() {
                 {/* ── TAB: IoT i WiFi ── */}
                 {editTab === 'iot' && (
                   <div className="flex flex-col gap-3">
-                    {/* Kolory LED beacona */}
+                    {/* Jasność LED */}
                     <div>
                       <label className="block text-xs text-zinc-400 mb-2 font-medium">
-                        Kolory LED beacona
+                        {t('organizations.form.led_brightness_label')}
                       </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {([
-                          { key: 'ledColorFree',     label: 'Wolne (FREE)',         },
-                          { key: 'ledColorReserved', label: 'Zarezerwowane',        },
-                          { key: 'ledColorOccupied', label: 'Zajęte (OCCUPIED)',    },
-                        ] as const).map(({ key, label }) => (
-                          <div key={key} className="flex flex-col items-center gap-1.5">
-                            <p className="text-[10px] text-zinc-400 text-center leading-tight">{label}</p>
-                            <div className="relative w-full">
-                              <input
-                                type="color"
-                                value={form[key]}
-                                onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); markDirty(); }}
-                                className="w-full h-10 rounded-lg border border-zinc-200 cursor-pointer p-0.5 bg-white"
-                                title={label}
-                              />
-                            </div>
-                            <p className="text-[10px] font-mono text-zinc-400 uppercase">{form[key]}</p>
-                          </div>
+                      <div className="flex gap-1.5">
+                        {([10, 25, 50, 75, 100] as const).map(pct => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => { setForm(f => ({ ...f, ledBrightness: pct })); markDirty(); }}
+                            className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                              form.ledBrightness === pct
+                                ? 'border-brand bg-brand text-white'
+                                : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                            }`}
+                          >
+                            {pct}%
+                          </button>
                         ))}
                       </div>
                       <p className="text-[10px] text-zinc-400 mt-1.5">
-                        Kolory wysyłane do beaconów przez MQTT po zapisaniu.
+                        {t('organizations.form.led_brightness_hint')}
+                      </p>
+                    </div>
+
+                    {/* Kolory LED beacona */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-2 font-medium">
+                        {t('organizations.form.led_colors_label')}
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {([
+                          { key: 'ledColorFree',          labelKey: 'led_color_free'           },
+                          { key: 'ledColorReserved',      labelKey: 'led_color_reserved'       },
+                          { key: 'ledColorOccupied',      labelKey: 'led_color_occupied'       },
+                          { key: 'ledColorGuestReserved', labelKey: 'led_color_guest_reserved' },
+                        ] as const).map(({ key, labelKey }) => {
+                          const label = t(`organizations.form.${labelKey}`);
+                          return (
+                            <div key={key} className="flex flex-col items-center gap-1.5">
+                              <p className="text-[10px] text-zinc-400 text-center leading-tight">{label}</p>
+                              <div className="relative w-full">
+                                <input
+                                  type="color"
+                                  value={form[key]}
+                                  onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); markDirty(); }}
+                                  className="w-full h-10 rounded-lg border border-zinc-200 cursor-pointer p-0.5 bg-white"
+                                  title={label}
+                                />
+                              </div>
+                              <p className="text-[10px] font-mono text-zinc-400 uppercase">{form[key]}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1.5">
+                        {t('organizations.form.led_colors_hint')}
                       </p>
                     </div>
                     <hr className="border-zinc-100" />

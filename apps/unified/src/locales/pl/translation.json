@@ -753,7 +753,15 @@
       "parking_mode":   "Tryb rezerwacji parkingu",
       "parking_hourly": "Godzinowy (wybór godziny)",
       "parking_allday": "Na cały dzień (brak wyboru godziny)",
-      "parking_hint":   "Czy miejsca parkingowe są rezerwowane na konkretne godziny czy na cały dzień."
+      "parking_hint":   "Czy miejsca parkingowe są rezerwowane na konkretne godziny czy na cały dzień.",
+      "led_brightness_label":     "Jasność LED beacona",
+      "led_brightness_hint":      "Dotyczy wszystkich stanów (FREE, RESERVED, OCCUPIED, GUEST, ERROR).",
+      "led_colors_label":         "Kolory LED beacona",
+      "led_colors_hint":          "Kolory wysyłane do beaconów przez MQTT po zapisaniu.",
+      "led_color_free":           "Wolne (FREE)",
+      "led_color_reserved":       "Zarezerwowane",
+      "led_color_occupied":       "Zajęte (OCCUPIED)",
+      "led_color_guest_reserved": "Gość (GUEST)"
     }
   },
   "organizations_extra": {

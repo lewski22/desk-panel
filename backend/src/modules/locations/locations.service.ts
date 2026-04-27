@@ -15,9 +15,11 @@ export interface CreateLocationDto {
   parkingBookingMode?: string;  // "HOURLY" | "ALL_DAY" (default: "HOURLY")
   wifiSsid?: string;            // plaintext — encrypted before storing
   wifiPass?: string;            // plaintext — encrypted before storing
+  ledBrightness?: number;
   ledColorFree?: string;
   ledColorReserved?: string;
   ledColorOccupied?: string;
+  ledColorGuestReserved?: string;
 }
 
 @Injectable()

@@ -147,7 +147,7 @@ export class GatewaysService {
     // Lookup po Device.id (CUID) — beacon wysyła device_id z NVS po provisioning
     const prev = await this.prisma.device.findUnique({
       where:  { id: deviceId },
-      select: { isOnline: true, deskId: true, id: true },
+      select: { isOnline: true, deskId: true, id: true, lastSeen: true },
     });
 
     if (!prev) {
@@ -181,8 +181,15 @@ export class GatewaysService {
       this.logger.log(`OTA success confirmed by heartbeat: ${deviceId} v${firmwareVersion}`);
     }
 
-    // LED recovery: beacon wrócił online po przerwie
-    if (online && prev && !prev.isOnline && prev.deskId) {
+    // LED recovery: beacon wrócił online po przerwie lub restarcie.
+    // Warunek: (był offline) LUB (był online, ale lastSeen > 3× interwał heartbeatu — restart niewykryty przez brak LWT)
+    const RESTART_GAP_MS = 90_000; // 3× interwał 30s
+    const gapSinceLastSeen = prev.lastSeen
+      ? Date.now() - prev.lastSeen.getTime()
+      : Infinity;
+    const likelyRestart = prev.isOnline && gapSinceLastSeen > RESTART_GAP_MS;
+
+    if (online && prev.deskId && (!prev.isOnline || likelyRestart)) {
       this._restoreDeskLed(prev.deskId).catch(() => {});
     }
 
