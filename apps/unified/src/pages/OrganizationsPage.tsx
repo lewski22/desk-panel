@@ -256,6 +256,7 @@ export function OrganizationsPage() {
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
     name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
+    ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000',
   });
   const [saving,       setSaving]       = useState(false);
   const [err,          setErr]          = useState('');
@@ -288,7 +289,9 @@ export function OrganizationsPage() {
   const openCreate = () => {
     resetDirty();
     setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
-      organizationId: user?.organizationId ?? '' });
+      organizationId: user?.organizationId ?? '',
+      ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000',
+    });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
     setEditTab('basic');
@@ -306,6 +309,9 @@ export function OrganizationsPage() {
       country: loc.country ?? '',
       parkingBookingMode: loc.parkingBookingMode ?? 'HOURLY',
       organizationId: loc.organizationId,
+      ledColorFree:     loc.ledColorFree     ?? '#00C800',
+      ledColorReserved: loc.ledColorReserved ?? '#0050DC',
+      ledColorOccupied: loc.ledColorOccupied ?? '#DC0000',
     });
     setWifiSsid(''); setWifiPass(''); setWifiPassVisible(false);
     setErr('');
@@ -332,6 +338,9 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid || undefined,
           wifiPass: wifiPass || undefined,
           parkingBookingMode: form.parkingBookingMode,
+          ledColorFree: form.ledColorFree,
+          ledColorReserved: form.ledColorReserved,
+          ledColorOccupied: form.ledColorOccupied,
         });
       } else if (target) {
         await appApi.locations.update(target.id, {
@@ -343,6 +352,9 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid,
           wifiPass: wifiPass,
           parkingBookingMode: form.parkingBookingMode,
+          ledColorFree: form.ledColorFree,
+          ledColorReserved: form.ledColorReserved,
+          ledColorOccupied: form.ledColorOccupied,
         });
       }
       resetDirty();
@@ -804,6 +816,37 @@ export function OrganizationsPage() {
                 {/* ── TAB: IoT i WiFi ── */}
                 {editTab === 'iot' && (
                   <div className="flex flex-col gap-3">
+                    {/* Kolory LED beacona */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-2 font-medium">
+                        Kolory LED beacona
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {([
+                          { key: 'ledColorFree',     label: 'Wolne (FREE)',         },
+                          { key: 'ledColorReserved', label: 'Zarezerwowane',        },
+                          { key: 'ledColorOccupied', label: 'Zajęte (OCCUPIED)',    },
+                        ] as const).map(({ key, label }) => (
+                          <div key={key} className="flex flex-col items-center gap-1.5">
+                            <p className="text-[10px] text-zinc-400 text-center leading-tight">{label}</p>
+                            <div className="relative w-full">
+                              <input
+                                type="color"
+                                value={form[key]}
+                                onChange={e => { setForm(f => ({ ...f, [key]: e.target.value })); markDirty(); }}
+                                className="w-full h-10 rounded-lg border border-zinc-200 cursor-pointer p-0.5 bg-white"
+                                title={label}
+                              />
+                            </div>
+                            <p className="text-[10px] font-mono text-zinc-400 uppercase">{form[key]}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-zinc-400 mt-1.5">
+                        Kolory wysyłane do beaconów przez MQTT po zapisaniu.
+                      </p>
+                    </div>
+                    <hr className="border-zinc-100" />
                     <div>
                       <label className="block text-xs text-zinc-400 mb-1 font-medium">
                         {t('organizations.form.wifi_ssid_label')}

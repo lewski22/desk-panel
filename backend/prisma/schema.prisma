@@ -152,6 +152,10 @@ model Location {
   wifiSsidEnc    String?  // AES-256-GCM encrypted, format: hex(iv):hex(authTag):hex(ciphertext)
   wifiPassEnc    String?  // AES-256-GCM encrypted, format: hex(iv):hex(authTag):hex(ciphertext)
 
+  ledColorFree      String  @default("#00C800")
+  ledColorReserved  String  @default("#0050DC")
+  ledColorOccupied  String  @default("#DC0000")
+
   floorPlanUrl   String?
   floorPlanKey   String?  // Tech Debt #3 — R2/S3 CDN key
   floorPlanW     Int?

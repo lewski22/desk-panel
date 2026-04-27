@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Location" ADD COLUMN "ledColorFree"     TEXT NOT NULL DEFAULT '#00C800';
+ALTER TABLE "Location" ADD COLUMN "ledColorReserved" TEXT NOT NULL DEFAULT '#0050DC';
+ALTER TABLE "Location" ADD COLUMN "ledColorOccupied" TEXT NOT NULL DEFAULT '#DC0000';
