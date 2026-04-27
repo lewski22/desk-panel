@@ -12,7 +12,7 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
 }
 
-// ── LedColorPicker ──────────────────────────────────────────────
+// ── LedColorPicker — HSV wheel + presets ────────────────────────
 const LED_PRESETS = [
   '#00C800','#22C55E','#10B981','#14B8A6',
   '#0050DC','#3B82F6','#6366F1','#8B5CF6',
@@ -20,37 +20,109 @@ const LED_PRESETS = [
   '#C8A000','#EAB308','#EC4899','#FFFFFF',
 ];
 
+function _hexToRgb(hex: string): [number,number,number] {
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function _rgbToHex(r: number, g: number, b: number): string {
+  return '#'+[r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('').toUpperCase();
+}
+function _rgbToHsv(r: number, g: number, b: number): [number,number,number] {
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  let h=0;
+  if(d){
+    if(max===r) h=((g-b)/d+(g<b?6:0))/6;
+    else if(max===g) h=((b-r)/d+2)/6;
+    else h=((r-g)/d+4)/6;
+  }
+  return [h*360, max?d/max:0, max];
+}
+function _hsvToRgb(h: number, s: number, v: number): [number,number,number] {
+  const i=Math.floor(h/60)%6, f=h/60-Math.floor(h/60);
+  const p=v*(1-s), q=v*(1-f*s), t=v*(1-(1-f)*s);
+  const m=[[v,t,p],[q,v,p],[p,v,t],[p,q,v],[t,p,v],[v,p,q]][i];
+  return [m[0]*255, m[1]*255, m[2]*255];
+}
+const _clamp = (x: number, lo=0, hi=1) => Math.max(lo, Math.min(hi, x));
+
 function LedColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
-  const [open, setOpen]   = useState(false);
-  const [hex,  setHex]    = useState(value);
-  const rootRef           = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
 
-  useEffect(() => { setHex(value); }, [value]);
+  // HSV state — kept in refs for drag handlers, mirrored to state for render
+  const hRef = useRef(0); const sRef = useRef(1); const vRef = useRef(1);
+  const [h, setH] = useState(0);
+  const [s, setS] = useState(1);
+  const [v, setV] = useState(1);
+  const [hexInput, setHexInput] = useState(value);
 
+  const svRef  = useRef<HTMLDivElement>(null);
+  const hueRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<'sv'|'hue'|null>(null);
+
+  // Sync external value → HSV (on open or value change)
   useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    const c = /^#[0-9A-Fa-f]{6}$/.test(value) ? value : '#000000';
+    const [r,g,b] = _hexToRgb(c);
+    const [hn,sn,vn] = _rgbToHsv(r,g,b);
+    hRef.current=hn; sRef.current=sn; vRef.current=vn;
+    setH(hn); setS(sn); setV(vn);
+    setHexInput(c.toUpperCase());
+  }, [value]);
+
+  const commit = (hn: number, sn: number, vn: number) => {
+    hRef.current=hn; sRef.current=sn; vRef.current=vn;
+    setH(hn); setS(sn); setV(vn);
+    const hex = _rgbToHex(..._hsvToRgb(hn,sn,vn));
+    setHexInput(hex);
+    onChange(hex);
+  };
+
+  // Document-level drag listeners — uses refs so no stale closure
+  useEffect(() => {
+    const move = (e: MouseEvent|TouchEvent) => {
+      if(!dragRef.current) return;
+      if(e.cancelable) e.preventDefault();
+      const cx = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const cy = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      if(dragRef.current==='sv' && svRef.current){
+        const r=svRef.current.getBoundingClientRect();
+        commit(hRef.current, _clamp((cx-r.left)/r.width), _clamp(1-(cy-r.top)/r.height));
+      } else if(dragRef.current==='hue' && hueRef.current){
+        const r=hueRef.current.getBoundingClientRect();
+        commit(_clamp((cx-r.left)/r.width)*360, sRef.current, vRef.current);
+      }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+    const up = () => { dragRef.current=null; };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+    document.addEventListener('touchmove', move, { passive:false });
+    document.addEventListener('touchend', up);
+    return () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.removeEventListener('touchmove', move);
+      document.removeEventListener('touchend', up);
+    };
+  }, []); // empty — intentional, uses refs
 
-  const apply = (color: string) => {
-    const c = color.startsWith('#') ? color.toUpperCase() : `#${color}`.toUpperCase();
-    onChange(c); setHex(c); setOpen(false);
-  };
-
-  const handleHex = (raw: string) => {
-    setHex(raw);
+  const handleHexInput = (raw: string) => {
+    setHexInput(raw);
     const c = (raw.startsWith('#') ? raw : `#${raw}`).toUpperCase();
-    if (/^#[0-9A-Fa-f]{6}$/.test(c)) onChange(c);
+    if(/^#[0-9A-Fa-f]{6}$/.test(c)){
+      const [r,g,b]=_hexToRgb(c);
+      const [hn,sn,vn]=_rgbToHsv(r,g,b);
+      commit(hn,sn,vn);
+    }
   };
 
-  const isValid = /^#[0-9A-Fa-f]{6}$/.test(hex.startsWith('#') ? hex : `#${hex}`);
+  const hueColor = `hsl(${h},100%,50%)`;
+  const thumbColor = _rgbToHex(..._hsvToRgb(h,s,v));
+  const isValidHex = /^#[0-9A-Fa-f]{6}$/.test(hexInput.startsWith('#') ? hexInput : `#${hexInput}`);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div className="relative">
+      {/* Trigger */}
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -58,10 +130,8 @@ function LedColorPicker({ value, onChange }: { value: string; onChange: (c: stri
                    bg-white hover:border-brand/50 focus:outline-none focus:ring-2 focus:ring-brand/30
                    transition-colors"
       >
-        <span
-          className="w-5 h-5 rounded-md border border-zinc-200 shrink-0"
-          style={{ background: isValid ? (hex.startsWith('#') ? hex : `#${hex}`) : '#ccc' }}
-        />
+        <span className="w-5 h-5 rounded-md border border-zinc-200 shrink-0"
+              style={{ background: value }} />
         <span className="text-xs font-mono text-zinc-500 uppercase tracking-wide flex-1 text-left">
           {value}
         </span>
@@ -73,35 +143,75 @@ function LedColorPicker({ value, onChange }: { value: string; onChange: (c: stri
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             className="absolute z-50 top-full mt-1.5 left-0 bg-white border border-zinc-200
-                       rounded-2xl shadow-xl p-3 w-52"
+                       rounded-2xl shadow-xl p-3 w-64 select-none"
             onClick={e => e.stopPropagation()}
           >
-            <div className="grid grid-cols-4 gap-1.5 mb-3">
+            {/* SV square */}
+            <div
+              ref={svRef}
+              className="w-full rounded-xl mb-3 cursor-crosshair relative overflow-hidden"
+              style={{ height: 140,
+                background: `linear-gradient(to right, #fff, ${hueColor})` }}
+              onMouseDown={e => { dragRef.current='sv'; e.preventDefault();
+                const r=svRef.current!.getBoundingClientRect();
+                commit(hRef.current,_clamp((e.clientX-r.left)/r.width),_clamp(1-(e.clientY-r.top)/r.height)); }}
+              onTouchStart={e => { dragRef.current='sv';
+                const r=svRef.current!.getBoundingClientRect();
+                commit(hRef.current,_clamp((e.touches[0].clientX-r.left)/r.width),_clamp(1-(e.touches[0].clientY-r.top)/r.height)); }}
+            >
+              {/* black overlay top→bottom */}
+              <div className="absolute inset-0 rounded-xl"
+                   style={{ background:'linear-gradient(to bottom, transparent, #000)' }} />
+              {/* cursor */}
+              <div className="absolute w-4 h-4 rounded-full border-2 border-white shadow pointer-events-none"
+                   style={{
+                     left:`${s*100}%`, top:`${(1-v)*100}%`,
+                     transform:'translate(-50%,-50%)',
+                     background: thumbColor,
+                   }} />
+            </div>
+
+            {/* Hue slider */}
+            <div
+              ref={hueRef}
+              className="w-full h-4 rounded-full mb-3 relative cursor-pointer"
+              style={{ background:'linear-gradient(to right,hsl(0,100%,50%),hsl(60,100%,50%),hsl(120,100%,50%),hsl(180,100%,50%),hsl(240,100%,50%),hsl(300,100%,50%),hsl(360,100%,50%))' }}
+              onMouseDown={e => { dragRef.current='hue'; e.preventDefault();
+                const r=hueRef.current!.getBoundingClientRect();
+                commit(_clamp((e.clientX-r.left)/r.width)*360,sRef.current,vRef.current); }}
+              onTouchStart={e => { dragRef.current='hue';
+                const r=hueRef.current!.getBoundingClientRect();
+                commit(_clamp((e.touches[0].clientX-r.left)/r.width)*360,sRef.current,vRef.current); }}
+            >
+              <div className="absolute top-1/2 w-5 h-5 rounded-full border-2 border-white shadow pointer-events-none"
+                   style={{ left:`${(h/360)*100}%`, transform:'translate(-50%,-50%)', background:hueColor }} />
+            </div>
+
+            {/* Presets */}
+            <div className="grid grid-cols-8 gap-1 mb-3">
               {LED_PRESETS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => apply(c)}
-                  className={`w-full aspect-square rounded-lg border-2 transition-all ${
-                    value.toUpperCase() === c.toUpperCase()
+                <button key={c} type="button"
+                  onClick={() => { const [r,g,b]=_hexToRgb(c); const [hn,sn,vn]=_rgbToHsv(r,g,b); commit(hn,sn,vn); }}
+                  className={`w-full aspect-square rounded-md border-2 transition-all ${
+                    value.toUpperCase()===c.toUpperCase()
                       ? 'border-brand scale-110 shadow-sm'
                       : 'border-transparent hover:border-zinc-300'
                   }`}
-                  style={{ background: c }}
+                  style={{ background:c }}
                   title={c}
                 />
               ))}
             </div>
+
+            {/* Hex input + preview */}
             <div className="flex items-center gap-2 border-t border-zinc-100 pt-2.5">
-              <span
-                className="w-5 h-5 rounded shrink-0 border border-zinc-200"
-                style={{ background: isValid ? (hex.startsWith('#') ? hex : `#${hex}`) : '#ccc' }}
-              />
+              <span className="w-6 h-6 rounded-lg shrink-0 border border-zinc-200"
+                    style={{ background: isValidHex ? thumbColor : '#ccc' }} />
               <input
                 className="flex-1 text-xs font-mono border border-zinc-200 rounded-lg px-2 py-1.5
                            focus:outline-none focus:ring-2 focus:ring-brand/30 uppercase bg-zinc-50"
-                value={hex}
-                onChange={e => handleHex(e.target.value)}
+                value={hexInput}
+                onChange={e => handleHexInput(e.target.value)}
                 maxLength={7}
                 placeholder="#000000"
                 spellCheck={false}
