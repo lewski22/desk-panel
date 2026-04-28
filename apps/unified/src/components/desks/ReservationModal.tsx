@@ -81,7 +81,7 @@ export function ReservationModal({ desk, onClose, onSuccess, isEndUser = true, u
       if (!isEndUser && reservationType !== 'STANDARD') body.reservationType = reservationType;
 
       if (recurrence.enabled && recurrence.rule) {
-        const result = await appApi.reservations.createRecurring({ ...body, recurrenceRule: recurrence.rule });
+        const result = await appApi.reservations.createRecurring({ ...body, rule: recurrence.rule });
         if (result.conflicts?.length > 0) {
           setRecurResult(result);
           return;

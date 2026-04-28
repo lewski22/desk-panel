@@ -338,7 +338,7 @@ export class ReservationsService {
 
   // ── Cykliczne rezerwacje (Sprint G1) ──────────────────────────
   async createRecurring(actorId: string, body: any, actorOrgId?: string) {
-    const { deskId, date, startTime, endTime, notes, rule } = body;
+    const { deskId, date, startTime, endTime, notes, rule, reservationType } = body;
 
     // Parsuj RRULE — np. 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=4'
     const dates = this._expandRRule(rule, new Date(date));
@@ -363,6 +363,7 @@ export class ReservationsService {
           deskId, userId: actorId,
           date: d, startTime: startDt, endTime: endDt, notes,
           status:           ReservationStatus.CONFIRMED,
+          reservationType:  reservationType ?? 'STANDARD',
           recurrenceRule:   rule,
           recurrenceGroupId: `${actorId}-${Date.now()}`,
         },

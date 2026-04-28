@@ -1,4 +1,4 @@
-import { IsString, IsDateString, IsOptional } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsIn } from 'class-validator';
 
 export class CreateRecurringDto {
   @IsString()
@@ -19,4 +19,8 @@ export class CreateRecurringDto {
 
   @IsString()
   rule: string;
+
+  @IsOptional()
+  @IsIn(['STANDARD', 'GUEST', 'TEAM'])
+  reservationType?: 'STANDARD' | 'GUEST' | 'TEAM';
 }
