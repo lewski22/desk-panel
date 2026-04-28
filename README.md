@@ -165,21 +165,14 @@ desk-panel/
 │       └── public/               favicon.svg, icon-192.svg, icon-512.svg
 │
 ├── docs/
-│   ├── AI_CONTEXT.md             Główny kontekst dla AI (ten plik na start)
-│   ├── AI_BACKEND_CONTEXT.md     Szczegóły backendu
-│   ├── AI_OWNER_CONTEXT.md       Owner Panel + subskrypcje
-│   ├── AI_M365_CONTEXT.md        Microsoft 365 integracja
-│   ├── api.md                    REST API reference
+│   ├── ai-context.md             Główny kontekst AI — start tutaj
+│   ├── roadmap.md                Plan rozwoju + wzorce Prisma
+│   ├── BACKLOG.md                Otwarty backlog z priorytetami
+│   ├── CHANGELOG.md              Historia wersji
 │   ├── architecture.md           Architektura systemu
-│   ├── roadmap.md                Plan rozwoju
-│   ├── subscription.md           Specyfikacja modułu subskrypcji
-│   ├── changelog.md              Historia wersji
-│   ├── roles.md                  Role i uprawnienia
-│   ├── deployment.md             Wdrożenie produkcyjne
+│   ├── api.md                    REST API reference
 │   ├── hardware.md               ESP32 + RPi specyfikacja
-│   ├── mqtt.md                   Tematy i protokół MQTT
-│   ├── metrics.md                Prometheus metryki
-│   └── provisioning.md           Provisioning gateway i beaconów
+│   └── OPERATIONS.md             Wdrożenie, provisioning, monitoring, MQTT
 │
 └── docker-compose.yml            Backend + Mosquitto
 ```
@@ -231,18 +224,14 @@ cd desk-gateway-python && python3 -m unittest discover -s tests/ -v
 
 | Dokument | Zawartość |
 |----------|-----------|
-| `docs/AI_CONTEXT.md` | **Start tutaj** — pełny kontekst dla AI |
-| `docs/AI_BACKEND_CONTEXT.md` | Moduły NestJS, Prisma, wzorce |
-| `docs/AI_OWNER_CONTEXT.md` | Owner Panel, impersonacja, subskrypcje |
-| `docs/subscription.md` | Specyfikacja modułu subskrypcji (v0.12.0) |
+| `docs/ai-context.md` | **Start tutaj** — pełny kontekst AI (stack, schema, API, role, TODO) |
+| `docs/roadmap.md` | Plan rozwoju, harmonogram wydań, wzorce Prisma |
+| `docs/BACKLOG.md` | Otwarty backlog z priorytetami |
+| `docs/CHANGELOG.md` | Historia wersji (v0.6.0 → v0.17.6) |
+| `docs/architecture.md` | Architektura systemu |
 | `docs/api.md` | REST API reference |
-| `docs/roadmap.md` | Plan rozwoju + versioning |
-| `docs/roles.md` | Role i tabela uprawnień |
 | `docs/hardware.md` | ESP32, RPi, NFC, LED specyfikacja |
-| `docs/mqtt.md` | Tematy MQTT i flow komunikacji |
-| `docs/provisioning.md` | Provisioning gateway i beaconów krok po kroku |
-| `docs/metrics.md` | Prometheus metryki (backend + gateway) |
-| `docs/deployment.md` | Wdrożenie na Coolify + Cloudflare Tunnel |
+| `docs/OPERATIONS.md` | Wdrożenie (Coolify), provisioning sprzętu, Prometheus, MQTT |
 
 
 ---

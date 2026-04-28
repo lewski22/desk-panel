@@ -1,5 +1,134 @@
 # Changelog — Reserti Desk Management
 
+> Ostatnia aktualizacja: 2026-04-28
+
+---
+
+## [0.17.6] — 2026-04-27 — Walidacje check-in przez web + logika LED RESERVED
+
+### Changed
+
+- **Web check-in zablokowany wcześniej niż 2h przed `startTime`** rezerwacji — `ForbiddenException` z komunikatem (`checkins.service.ts`)
+- **LED RESERVED emitowany przy tworzeniu rezerwacji** tylko gdy: dziś jest dzień rezerwacji, godzina >= `openTime` lokalizacji, biurko nie jest aktualnie OCCUPIED (`reservations.service.ts`)
+- **`restoreDeskLed` (reconnect beacona)** stosuje tę samą logikę dnia + godziny otwarcia — poprzednio używał lookahead `startTime <= now+1h` (`gateways.service.ts`)
+- **Cron co godzinę `autoReservedLed`** — aktywuje RESERVED dla biurek, których rezerwacja "dojrzała" (przyszła rezerwacja osiągnęła swój dzień i godzinę otwarcia); pomija biurka z aktywnym check-in (`gateways.service.ts`)
+- **Po checkout i auto-checkout**: zamiast zawsze emitować FREE, sprawdza czy na tym samym biurku jest kolejna widoczna dziś rezerwacja i emituje RESERVED/GUEST_RESERVED jeśli tak (`checkins.service.ts`)
+
+### Added
+
+- Helper `_isReservationVisibleNow(startTime, openTime, timezone)` — logika widoczności rezerwacji w strefie czasowej biura (`reservations.service.ts`)
+- Helper `_deskLedAfterFree(deskId)` — zwraca właściwy stan LED po zwolnieniu biurka (`RESERVED` / `GUEST_RESERVED` / `FREE`) (`checkins.service.ts`)
+
+---
+
+## [0.17.5] — 2026-04-26 — Floor Plan Portal + Notifications List + Reservations Redesign
+
+### Added
+
+- **`DeskInfoCard` w portalu (`createPortal`)** — rozwiązuje clipping w scrollującym kontenerze (`FloorPlanView.tsx`)
+- **Mobile bottom sheet vs desktop popover** — pozycjonowanie względem viewport (DOMRect) (`FloorPlanView.tsx`, `DeskPin.tsx`)
+- **Nowa zakładka "Moje powiadomienia"** jako domyślna w `NotificationsPage` (`NotificationsPage.tsx`)
+- **Redesign karty rezerwacji** — kolorowy pasek statusu, pigułka czasu, usunięcie swipe gesture (`MyReservationsPage.tsx`)
+- **Historia rezerwacji zwijana** (toggle "Pokaż wszystkie / Zwiń") (`MyReservationsPage.tsx`)
+
+### Fixed
+
+- **Pinch-to-zoom** — natywne listenery `{ passive: false }` zamiast React props (React rejestruje passive domyślnie, `preventDefault` był ignorowany) (`FloorPlanView.tsx`)
+- **`isMobile` odświeżany przy resize okna** — poprzednio liczony raz przy renderze (`FloorPlanView.tsx`)
+- **`my-reservations` dostępne dla SUPER_ADMIN i OFFICE_ADMIN** (`AppLayout.tsx`, `BottomNav.tsx`)
+- **`unreadCount` badge** nie aktualizował się po oznaczeniu jako przeczytane — `onUnreadChange` callback do `NotificationsList` (`NotificationsPage.tsx`)
+- **Przycisk usuń powiadomienie (`×`) niewidoczny na mobile** — `sm:opacity-0 sm:group-hover:opacity-100` (`NotificationsPage.tsx`)
+- **`NotificationsList` brak stanu błędu** — silently renderował empty state przy błędzie API (`NotificationsPage.tsx`)
+- **`NotificationBell` polling** 30s → 15s + `visibilitychange` refresh przy powrocie z tła (`NotificationBell.tsx`)
+- **`isPinching` ref** — martwy kod usunięty (`FloorPlanView.tsx`)
+- **Hardcoded polskie stringi** w toggle historii → i18n keys (`MyReservationsPage.tsx`, `locales/*/translation.json`)
+
+---
+
+## [0.17.4] — 2026-04-25 — Bugfix Sprint + UX Mapy + Date Picker
+
+### Fixed (krytyczne K1–K6)
+
+| # | Opis | Plik(i) |
+|---|------|---------|
+| K1 | QR bez PWA → pętla odświeżania | `QrCheckinPage.tsx`, `LoginPage.tsx` — `sessionStorage` returnTo |
+| K2 | Web check-in niemożliwy dla rezerwacji przez web | `checkins.service.ts` — akceptuje CONFIRMED, method=WEB, dedup |
+| K3 | Walidacja godzin błędna na kolejny dzień | `reservations.service.ts` — `Intl.DateTimeFormat` + timezone |
+| K4 | Przyszłe rezerwacje widoczne jako zajęte dziś | `desks.service.ts` — filtr `date` + `startTime: { lte: now }` |
+| K5 | PWA modal pod mapą | `ReservationModal.tsx` — `createPortal(modal, document.body)` |
+| K6 | Zaproszony user nie pojawia się na liście | `UsersPage.tsx` — `load()` po invite |
+
+### Fixed (regresje)
+
+- R1 — STAFF dostęp do raportów (routing + nawigacja + `reports.controller.ts`)
+- R2 — STAFF miał brak mapy biurek (naprawione przy R1)
+
+### Added (nowe UX)
+
+- Wybór daty na mapie: `GET /locations/:id/desks/status?date=YYYY-MM-DD`, date picker w `DeskMapPage.tsx`, amber banner dla nie-dzisiejszej daty
+- N-F1: Domyślne biuro z localStorage (`user_default_location_{userId}`) + przycisk "Domyślne"
+- N-F2: Własne rezerwacje w kolorze violet (`'mine'` status) na mapie (`DeskPin.tsx`)
+- N-F3: `DeskStats` wydzielony nad mapę (niezależny od viewMode)
+- N-F4: Floor + zone w tooltipie `DeskPin`
+- N-F5: `/weekly` ukryte z nawigacji END_USER
+- N-F7: Zoom controls (−/+/Reset) + Ctrl+scroll w `FloorPlanView`
+- N-F8: `TimePicker` — dropdown godziny/minuty co 10 min (`components/ui/TimePicker.tsx`)
+- N-F9: `useDirtyGuard` hook + `DirtyGuardDialog` (infrastruktura)
+
+### Changed (zmiany wymagań)
+
+- W1: STAFF widzi raporty (backend guard + routing + nav)
+- W2: END_USER nie widzi nazw przy rezerwacjach cudzych (`desks.service.ts` `actorRole` masking)
+- W3: END_USER nie widzi statystyk (`DeskMap.tsx`)
+
+### Added (i18n)
+
+`reservations.desks`, `deskmap.set_default`, `dirty_guard.*`, `dashboard.legend.mine` (pl + en)
+
+---
+
+## [0.17.3] — 2026-04-23 — UX Fixes + Rejestracja + Demo Mode + Code Review
+
+### Fixed
+
+| # | Obszar | Opis | Plik |
+|---|--------|------|------|
+| #1 | MAP | Przycisk "Rezerwuj" nie działał | `DeskMap.tsx` — dodano `onQuickBook` |
+| #2 | MAP | Popup biurka — zła pozycja | `FloorPlanView.tsx` — `popupStyle()` w pikselach |
+| #3 | REZERWACJE | Check-in widoczny po check-inie | `MyReservationsPage.tsx` — optimistic update |
+| #4 | DASHBOARD | Brak danych mimo check-inów | `client.ts` — fix URL `/analytics/extended` |
+| #5 | SUPER ADMIN | Błąd wyboru firmy przy dodawaniu biura | `OrganizationsPage.tsx` — pre-fill własna org |
+| #6 | MOBILE | Mapa nie znika przy zmianie zakładki | `AppLayout.tsx` — scroll reset |
+| #7 | USER | Mapa jako widok domyślny | `DeskMapPage.tsx` — END_USER → `'plan'` |
+| #8 | DASHBOARD | Czytelność na telefonie | `DashboardPage.tsx` — mobile breakpoints |
+| #9 | UI | Kolory statusów pod mapą | `FloorPlanView.tsx` Legend, `DeskInfoCard` |
+| #10 | I18N | Brak klucza `layout.nav.integrations` | dodano do pl/en |
+| #11 | BIURO | Obsługa biur wielopiętrowych (frontend) | `FloorPlanEditorPage.tsx` — zakładki + "Dodaj piętro" |
+| #12 | RBAC | OFFICE_ADMIN nie mógł wejść w powiadomienia | `App.tsx` guard + backend settings endpoint |
+| #13 | PROVISIONING | Biały ekran w zakładce Provisioning | `GatewaySection` — brak `useTranslation()` |
+
+### Fixed (Code Review)
+
+| # | Problem | Plik | Zmiana |
+|---|---------|------|--------|
+| 1 | Race condition refresh tokena | `client.ts` | Singleton `_refreshPromise` |
+| 2 | `getMe()` spam na visibilitychange | `App.tsx` | Debounce 2000ms |
+| 3 | Timezone-unsafe date parsing | `MyReservationsPage.tsx` | `parseISO` z date-fns |
+| 4 | QR kody przez zewnętrzny serwis | `DesksPage.tsx` | Lokalna biblioteka `qrcode` |
+| 5 | Brakujące indeksy DB | `schema.prisma` + migracja | `@@index([deskId, date, status])`, `@@index([deskId, checkedOutAt])` |
+| 6 | Silent catch handlers (10x) | Wiele stron | `.catch((e) => console.error(...))` |
+| 7 | `scrollTo 'instant'` | `AppLayout.tsx` | → `'auto'` |
+
+Migracja: `20260423000001_add_perf_indexes`
+
+### Added
+
+- Flow rejestracji przez zaproszenie: `POST /auth/invite` + `POST /auth/register` + `RegisterPage.tsx`
+- Demo mode: `VITE_DEMO_MODE=true`, `demoData.ts`, `demoHandlers.ts`, `DemoModeBanner.tsx`
+- KioskPage: zegar 1s, kolor "zajęte" → `text-red-400`, grid `md:grid-cols-5 2xl:grid-cols-10`
+
+---
+
 ## [0.17.2] — 2026-04-22 — Lucide Icons + i18n Audit + Floor Plan Multi-floor + PWA Kiosk
 
 ### Added

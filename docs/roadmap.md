@@ -1,64 +1,8 @@
 # Roadmap — Reserti Desk Management System
 
-> Ostatnia aktualizacja: 2026-04-23 — v0.17.2+
+> Ostatnia aktualizacja: 2026-04-28
 
----
-
-## Stan aktualny (v0.17.2+)
-
-### ✅ Zrealizowane (produkcja)
-
-**Infrastruktura**
-- Deploy: Coolify na Proxmox LXC + Cloudflare Tunnel
-- PostgreSQL 15 + Mosquitto MQTT + Docker
-- Metryki: Prometheus (backend `/metrics` + gateway `:9100`) + Grafana (4 dashboardy)
-- `prisma migrate deploy` — bezpieczne migracje + auto-resolve failed state w `entrypoint.sh`
-
-**Backend (NestJS 11 + Prisma 5)**
-- JWT auth (15min access / 7d refresh) + rotacja tokenów
-- Multi-tenant: Organization → Location → Desk
-- Role: OWNER, SUPER_ADMIN, OFFICE_ADMIN, STAFF, END_USER
-- Rate limiting + Entra ID SSO + Google SSO + MQTT bridge + LED Event Bus
-- Gateway provisioning (tokeny 24h) + Device provisioning (MQTT credentials)
-- Rezerwacje: konflikty, QR, cancel + LED FREE, cykliczne (RRULE parser)
-- Check-in: NFC / QR walkin / ręczny; Checkout; Cron expireOld + autoCheckout
-- OTA firmware (4 fazy): GitHub Actions CI, status tracking, org isolation
-- Powiadomienia email (8 typów, SMTP per org AES-256-GCM) + in-app (dzwoneczek, reguły, ogłoszenia)
-- Sale/Parking/Equipment — Resource + Booking z conflict detection
-- PWA Push Notifications (VAPID)
-- Visitor Management (zaproszenia, check-in/out, QR)
-- SubscriptionsService — plany, limity, MRR, crony expiry check
-- Owner module management — enabledModules per org
-- IntegrationsModule: Slack, Teams, Azure AD, Google Workspace, Webhook
-- Microsoft Graph Calendar Sync — dwukierunkowa sync Outlook ↔ Reserti
-- AI Rekomendacje (K1) + Utilization Insights (K2, cron codziennie)
-- Flow rejestracji przez zaproszenie (invitation tokens)
-- Testy: 178 backend (P1+P2+P3) + 48 frontend (Vitest)
-- Indeksy DB: `Reservation(deskId, date, status)`, `Checkin(deskId, checkedOutAt)`
-
-**Unified Panel (React 18 + Vite)**
-- PWA (manifest, service worker, ikony, offline cache)
-- i18n PL/EN — 100% pokrycie, 0 hardkodowanych stringów
-- Floor Plan Editor — SVG drag, undo/redo, snap do siatki, multi-floor
-- Floor Plan View — readonly canvas z DeskPin + DeskInfoCard
-- Weekly View — siatka Pon-Pt × users, nawigator tygodnia
-- Zakładki Biurka | Sale | Parking z module guards
-- SubscriptionPage — PlanBadge, UsageBar, ExpiryBanner
-- VisitorsPage — invite, checkin, checkout, KPI
-- KioskPage — fullscreen tablet mode + PIN exit + PWA install button
-- BottomNav — mobile bottom navigation z badge
-- Swipe gestures — iOS Mail pattern na MyReservationsPage
-- RecurringToggle — RRULE picker + preview dat
-- OwnerPage — zakładki Firmy/Subskrypcje, module toggles
-- IntegrationsPage — konfiguracja per provider
-- Teams App — React personal tab w MS Teams, SSO przez Teams SDK
-- Demo mode — `VITE_DEMO_MODE=true` z mock handlers i fixtures
-- Lokalny QR code (biblioteka `qrcode`, bez zewnętrznych serwisów)
-- Singleton refresh token (eliminuje race condition przy równoległych 401)
-
-**Gateway Python + Firmware ESP32**
-- Cache offline, SyncService, DeviceMonitor, Prometheus exporter
-- NFC + LED + OTA_UPDATE + offline NVS queue (TTL 1h)
+Historia sprintów A-K → `docs/CHANGELOG.md`.
 
 ---
 
@@ -66,21 +10,23 @@
 
 ### Priorytet wysoki
 
-- **Multi-floor frontend editor** — zakładki pięter w FloorPlanEditorPage/FloorPlanView, zarządzanie piętrami w OrganizationsPage. Backend gotowy od v0.17.2.
-- **Tokeny w localStorage → httpOnly cookies** — duży zakres (backend Set-Cookie + frontend auth flow). Patrz `docs/security-review.md`.
+- **Tokeny w localStorage → httpOnly cookies** — duży zakres (backend `Set-Cookie` + frontend auth flow). Patrz `docs/BACKLOG.md` #1.
+- **Floor Plan CDN (R2)** — zdjęcia pięter przechowywane jako base64 w DB (~2-3 MB/rekord). Migracja do Cloudflare R2 + URL. Patrz `docs/BACKLOG.md` #2.
 
 ### Priorytet średni
 
 - **Sprint L** — Publiczny booking + Stripe Checkout
-- **M365** — Dwustronna sync kalendarza sal konferencyjnych (rozszerzenie GraphSyncModule)
-- **Playwright E2E testy**
+- **M365 calendar sync** — dwustronna sync sal konferencyjnych (rozszerzenie `GraphSyncModule`)
 - **Visitor email invite** (TODO w `visitors.service.ts`)
 - **`as any` cleanup (136x)** — generowanie typów z OpenAPI (`openapi-typescript`)
+- **Playwright E2E testy** — scenariusze golden path (rezerwacja, check-in, admin)
 
-### Priorytet niski / analiza
+### Priorytet niski
 
-- Gateway provisioning przez USB (WebSerial API) — patrz sekcja poniżej
-- Cloud MQTT (bez lokalnego Raspberry Pi) — patrz sekcja poniżej
+- Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
+- Kiosk link w UI — przycisk otwierający `/kiosk?location=` z `OrganizationsPage`
+- Demo mode fixtures — kompletne dane dla wszystkich stron (`VITE_DEMO_MODE=true`)
+- Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS bez lokalnego Pi
 - ISO 27001 przygotowanie
 
 ---
@@ -157,7 +103,10 @@ ON CONFLICT ("type") DO NOTHING;
 | 0.17.1 | ✅ 2026-04-21 | Security fixes + status colors + brand token |
 | 0.17.2 | ✅ 2026-04-22 | Lucide icons + i18n audit + FloorPlan sync fix + KioskPage PWA + multi-floor backend |
 | 0.17.3 | ✅ 2026-04-23 | UX fixes + rejestracja + demo mode + code review fixes |
-| **0.18.0** | Q2 2026 | Multi-floor frontend editor + public booking (Stripe) |
+| 0.17.4 | ✅ 2026-04-25 | Bugfix Sprint (K1–K6) + UX Mapy + Date Picker + Nowe UX (N-F1–N-F10) |
+| 0.17.5 | ✅ 2026-04-26 | Floor Plan Portal + Notifications List + Reservations Redesign |
+| 0.17.6 | ✅ 2026-04-27 | Walidacje check-in przez web + logika LED RESERVED |
+| **0.18.0** | Q2 2026 | Public booking (Stripe) + Sprint L |
 | **1.0.0** | Q1 2027 | Self-hosted + ISO 27001 |
 
 ---

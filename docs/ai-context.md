@@ -1,7 +1,7 @@
 # Reserti — AI Context (zbiorczy)
 
-> **Data:** 2026-04-23 | **Repo:** `github.com/lewski22/desk-panel`
-> Jedyne źródło prawdy dla sesji AI. Zastępuje `AI_CONTEXT.md`, `AI_BACKEND_CONTEXT.md`, `AI_M365_CONTEXT.md`, `AI_OWNER_CONTEXT.md`.
+> **Ostatnia aktualizacja:** 2026-04-28 | **Wersja:** v0.17.6 | **Repo:** `github.com/lewski22/desk-panel`
+> Jedyne źródło prawdy dla sesji AI.
 
 ---
 
@@ -357,7 +357,18 @@ node backend/generate-vapid-keys.js
 | Webhook HMAC | X-Reserti-Signature: sha256=hex |
 | Provisioning tokens | randomBytes(32).hex, jednorazowe, TTL 24h |
 | Impersonacja | JWT 30min, impersonated:true, OWNER_IMPERSONATION audit log |
-| Znane tech debt | Tokeny w localStorage (patrz `docs/security-review.md`) |
+
+**Naprawione w v0.17.3 (security review 2026-04-23):**
+- Race condition refresh tokena → Singleton `_refreshPromise` w `client.ts`
+- QR kody przez zewnętrzny serwis → lokalna biblioteka `qrcode`
+- Silent catch handlers → `.catch((e) => console.error(...))`
+- Brakujące DB indeksy → migracja `20260423000001_add_perf_indexes`
+- Timezone-unsafe date parsing → `parseISO` z date-fns
+- `getMe()` bez debounce → debounce 2000ms w `App.tsx`
+- `scrollTo 'instant'` → `'auto'`
+
+**Otwarty dług techniczny:**
+- **Tokeny w localStorage** — access + refresh token w `localStorage` podatne na XSS. Migracja do httpOnly cookies = duży zakres. Patrz `docs/BACKLOG.md` #1.
 
 ---
 
@@ -394,3 +405,77 @@ user@demo-corp.pl     User1234!     END_USER
 | Graph token wygasa co 1h | Azure: dodaj `offline_access` w API permissions + re-consent |
 | `INTEGRATION_ENCRYPTION_KEY 64 hex` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | OTA stuck in_progress | cron timeoutStaleOta() po 10min → failed |
+
+---
+
+## 13. CO ZOSTAŁO DO ZROBIENIA
+
+Pełny backlog → `docs/BACKLOG.md`.
+
+### Priorytet wysoki
+
+- **httpOnly cookies** — migracja tokenów z `localStorage` (backend `Set-Cookie` + frontend auth flow)
+- **Floor Plan CDN (R2)** — zdjęcia pięter jako base64 w DB → migracja do Cloudflare R2
+
+### Priorytet średni
+
+- **Sprint L** — Publiczny booking + Stripe Checkout (`PublicBookingModule`)
+- **M365 calendar sync** — dwustronna sync sal konferencyjnych (rozszerzenie `GraphSyncModule`)
+- **Visitor email invite** — TODO w `visitors.service.ts`, wstrzyknąć `NotificationsService`
+- **`as any` cleanup (136x)** — generowanie typów z OpenAPI (`openapi-typescript`)
+- **Playwright E2E testy** — golden path: rezerwacja, check-in, admin
+- **Dashboard STAFF KPI** — `DashboardPage.tsx`: `isAtLeastStaff = isAdmin || isStaff`
+- **Dirty guard wdrożenie** — `useDirtyGuard` podpiąć w `EditLocationModal`, `EditUserModal`, `EditOrgModal`
+
+### Priorytet niski
+
+- Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
+- Kiosk link w UI — przycisk w `OrganizationsPage` otwierający `/kiosk?location=`
+- Demo mode fixtures — kompletne dane dla wszystkich stron
+- Beacon LED desync (R3) — analiza `beacons.service.ts` + retransmit stanu po heartbeat
+- ISO 27001 przygotowanie
+
+---
+
+## 14. ROLE I UPRAWNIENIA
+
+### Hierarchia ról
+
+| Rola | Identyfikator | Kto |
+|------|---------------|-----|
+| Owner | `OWNER` | Operator platformy Reserti (jeden na całą platformę) |
+| Super Admin | `SUPER_ADMIN` | Administrator firmy-klienta |
+| Office Admin | `OFFICE_ADMIN` | Administrator konkretnego biura |
+| Staff | `STAFF` | Pracownik recepcji / helpdesk |
+| Użytkownik | `END_USER` | Zwykły pracownik korzystający z biurek |
+
+### Tabela uprawnień
+
+| Akcja | END_USER | STAFF | OFFICE_ADMIN | SUPER_ADMIN | OWNER |
+|-------|:--------:|:-----:|:------------:|:-----------:|:-----:|
+| Mapa biurek | ✅ | ✅ | ✅ | ✅ | — |
+| Rezerwacja własna | ✅ | ✅ | ✅ | ✅ | — |
+| QR / NFC check-in | ✅ | ✅ | ✅ | ✅ | — |
+| Moje rezerwacje | ✅ | ✅ | ✅ | ✅ | — |
+| Zmiana hasła | ✅ | ✅ | ✅ | ✅ | — |
+| Ręczny check-in/out (cudzy) | ❌ | ✅ | ✅ | ✅ | — |
+| Wszystkie rezerwacje (filtr) | ❌ | ✅ | ✅ | ✅ | — |
+| Raporty i analityka | ❌ | ✅ | ✅ | ✅ | — |
+| Stan urządzeń | ❌ | ✅ | ✅ | ✅ | — |
+| CRUD biurek | ❌ | ❌ | ✅ | ✅ | — |
+| CRUD użytkowników | ❌ | ❌ | ✅ | ✅ | — |
+| Provisioning beaconów / OTA | ❌ | ❌ | ✅ | ✅ | — |
+| Konfiguracja SMTP | ❌ | ❌ | ❌ | ✅ | — |
+| Konfiguracja SSO (Entra ID) | ❌ | ❌ | ❌ | ✅ | — |
+| Stan subskrypcji | ❌ | ❌ | ❌ | ✅ | — |
+| Zarządzanie org (CRUD) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Zarządzanie subskrypcjami | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Impersonacja SUPER_ADMIN | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Stats globalne platformy | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+### Zasady zmiany roli
+
+- Rolę `SUPER_ADMIN` może nadać tylko inny SUPER_ADMIN lub OWNER
+- `OFFICE_ADMIN` może zmieniać role między `END_USER`, `STAFF`, `OFFICE_ADMIN`
+- Rola `OWNER` unikalna — przypisana tylko raz w seedzie, nie zmieniana przez UI
+- Użytkownicy SSO (Entra ID) mają `passwordHash = 'AZURE_SSO_ONLY'` — nie logują się hasłem lokalnym
