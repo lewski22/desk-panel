@@ -27,6 +27,7 @@ Historia sprintów A-K → `docs/CHANGELOG.md`.
 - Kiosk link w UI — przycisk otwierający `/kiosk?location=` z `OrganizationsPage`
 - Demo mode fixtures — kompletne dane dla wszystkich stron (`VITE_DEMO_MODE=true`)
 - Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS bez lokalnego Pi
+- **Polityka haseł (ISO 27001)** — przymusowa rotacja co 365 dni; organizacja może ustawić krótszy okres (`passwordExpiryDays` per org, max 365); OWNER może wymusić globalną zmianę hasła dla wszystkich użytkowników platformy jednym kliknięciem. Patrz szczegóły poniżej.
 - ISO 27001 przygotowanie
 
 ---
@@ -56,6 +57,71 @@ Beacony łączą się bezpośrednio przez TLS do `mqtt.reserti.pl:8883` (Mosquit
 Kiedy warto: liczba biur > 10 lub klienci bez lokalnego IT.
 
 **Czas: 1-2 tygodnie**
+
+---
+
+## Polityka haseł — Specyfikacja
+
+Część przygotowań do ISO 27001. Dotyczy tylko kont z hasłem lokalnym (konta SSO są wyłączone).
+
+### Reguły
+
+| Parametr | Wartość domyślna | Konfigurowalność |
+|----------|-----------------|------------------|
+| Ważność hasła | 365 dni | Per org — SUPER_ADMIN ustawia `passwordExpiryDays` (1–365) |
+| Minimum długość | 8 znaków | Na razie stałe |
+| Wymuszony reset globalny | — | OWNER jednym przyciskiem w OwnerPage |
+
+### Schemat (migracja)
+
+```prisma
+model Organization {
+  // ... istniejące pola
+  passwordExpiryDays  Int?   // null = globalny default (365)
+}
+
+model User {
+  // ... istniejące pola
+  passwordChangedAt   DateTime?  // null = nigdy nie zmieniane → traktuj jak epoch
+  mustChangePassword  Boolean    @default(false)  // flaga wymusonego resetu
+}
+```
+
+### Flow wymuszenia (OWNER → globalne)
+
+```
+POST /owner/force-password-reset
+→ UPDATE User SET mustChangePassword = true
+  WHERE passwordHash != 'AZURE_SSO_ONLY'
+    AND role != 'OWNER'
+```
+
+### Flow rotacji (per org)
+
+```
+Cron (codziennie 08:00):
+  dla każdej org z passwordExpiryDays != null:
+    UPDATE User SET mustChangePassword = true
+    WHERE organizationId = org.id
+      AND passwordChangedAt < now() - interval org.passwordExpiryDays days
+      AND passwordHash != 'AZURE_SSO_ONLY'
+      AND mustChangePassword = false
+```
+
+### Frontend
+
+- Przy każdym `/auth/me`: jeśli `mustChangePassword = true` → redirect na `ChangePasswordPage` z blokadą nawigacji
+- `ChangePasswordPage`: po sukcesie ustawia `passwordChangedAt = now()`, `mustChangePassword = false`
+- OwnerPage → nowy przycisk "Wymuś zmianę hasła" (sekcja Bezpieczeństwo)
+- OrganizationsPage → pole `passwordExpiryDays` w ustawieniach org (SUPER_ADMIN)
+
+### Endpointy
+
+```
+POST /owner/force-password-reset                ← OWNER only
+PATCH /api/v1/owner/organizations/:id           ← dodać passwordExpiryDays
+PATCH /api/v1/auth/change-password              ← już istnieje, dodać reset flagi
+```
 
 ---
 

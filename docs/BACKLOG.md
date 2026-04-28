@@ -26,6 +26,7 @@ Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu techni
 | 13 | Hardware | R3 Beacon LED desync — analiza `beacons.service.ts` + retransmit stanu LED po heartbeat | Niski |
 | 14 | Gateway | Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS → `mqtt.reserti.pl:8883`, brak lokalnego Pi | Niski |
 | 15 | Compliance | ISO 27001 przygotowanie — audyt procesów, dokumentacja kontrolek | Niski |
+| 16 | Security | Polityka haseł — rotacja co 365 dni (lub krócej per org), `mustChangePassword` flaga, OWNER wymusza globalny reset | Niski |
 
 ---
 
