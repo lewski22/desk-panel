@@ -6,7 +6,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(npx tsc *)",
-      "Bash(node_modules/.bin/tsc --noEmit)"
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(xargs grep *)",
+      "Bash(grep -r '$queryRaw\\\\|queryRaw\\\\|sql`\\\\|.raw' /d/VSC/desk-panel/backend/src '--include=*.ts')"
     ]
   }
 }
