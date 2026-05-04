@@ -4,6 +4,7 @@ ARG VITE_API_URL=http://localhost:3000/api/v1
 ENV VITE_API_URL=$VITE_API_URL
 COPY package*.json ./
 RUN npm install --legacy-peer-deps
+ARG CACHEBUST
 COPY . .
 RUN npm run build
 FROM nginx:1.25-alpine
