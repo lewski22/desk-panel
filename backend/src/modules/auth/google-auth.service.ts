@@ -16,12 +16,8 @@ import { PrismaService }       from '../../database/prisma.service';
 import { AuthService }         from './auth.service';
 import { IntegrationsService } from '../integrations/integrations.service';
 import { GoogleProvider }      from '../integrations/providers/google.provider';
+import { NonceStoreService }   from './nonce-store.service';
 import type { GoogleWorkspaceConfig } from '../integrations/types/integration-config.types';
-
-// In-memory nonce store — TTL 10min, cleaned up after use
-// For production with multiple instances: use Redis
-interface NonceEntry { orgId: string; expiresAt: number; redirectUrl?: string; }
-const nonceStore = new Map<string, NonceEntry>();
 
 const REDIRECT_URI_PATH = '/auth/google/callback';
 
@@ -35,6 +31,7 @@ export class GoogleAuthService {
     private readonly config:        ConfigService,
     private readonly integrations:  IntegrationsService,
     private readonly googleProvider: GoogleProvider,
+    private readonly nonceStore:    NonceStoreService,
   ) {}
 
   // ── Krok 1: zbuduj URL redirect do Google ───────────────────
@@ -60,9 +57,8 @@ export class GoogleAuthService {
 
     // Generuj nonce — CSRF protection
     const nonce = randomBytes(16).toString('hex');
-    nonceStore.set(nonce, {
+    await this.nonceStore.set(nonce, {
       orgId,
-      expiresAt:   Date.now() + 10 * 60 * 1000, // 10 min
       redirectUrl: redirectUrl ?? this._frontendUrl(),
     });
 
@@ -86,11 +82,11 @@ export class GoogleAuthService {
       throw new UnauthorizedException('Nieprawidłowy state parameter');
     }
 
-    const entry = nonceStore.get(parsed.nonce);
+    const entry = await this.nonceStore.get(parsed.nonce);
     if (!entry || entry.expiresAt < Date.now() || entry.orgId !== parsed.orgId) {
       throw new UnauthorizedException('State wygasł lub jest nieprawidłowy — zacznij logowanie od nowa');
     }
-    nonceStore.delete(parsed.nonce); // jednorazowe użycie
+    await this.nonceStore.delete(parsed.nonce); // jednorazowe użycie
 
     const { orgId, redirectUrl } = entry;
 
@@ -204,11 +200,4 @@ export class GoogleAuthService {
     return this.config.get('FRONTEND_URL', 'https://staff.prohalw2026.ovh');
   }
 
-  // Cleanup nonces (run periodically in production)
-  cleanupExpiredNonces(): void {
-    const now = Date.now();
-    for (const [k, v] of nonceStore.entries()) {
-      if (v.expiresAt < now) nonceStore.delete(k);
-    }
-  }
 }

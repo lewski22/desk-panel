@@ -146,7 +146,7 @@ model Location {
   maxHoursPerDay      Int    @default(8)
   parkingBookingMode  String @default("HOURLY")
 
-  kioskPin       String?
+  kioskPinHash   String?  // bcrypt hash; plaintext PIN never stored
   country        String?  // FEATURE P4-B3: ISO 3166-1 alpha-2 code for holiday-aware workday counting
 
   wifiSsidEnc    String?  // AES-256-GCM encrypted, format: hex(iv):hex(authTag):hex(ciphertext)

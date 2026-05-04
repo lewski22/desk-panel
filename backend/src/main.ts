@@ -1,6 +1,7 @@
 import { NestFactory }                   from '@nestjs/core';
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet                            from 'helmet';
 import { AppModule }                     from './app.module';
 
 // CommonJS `require` is always available at runtime; declared here because
@@ -14,6 +15,12 @@ async function bootstrap() {
       : ['log', 'error', 'warn', 'debug'],
     bodyParser: false,
   });
+
+  // Trust proxy — poprawne IP klienta za load balancerem (Coolify/Nginx)
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
+  // Security headers — CSP disabled for Swagger UI compatibility (inline scripts)
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   // Cookie parser — wymagany przez httpOnly JWT cookies
   const cookieParser = require('cookie-parser');
@@ -65,9 +72,18 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, config));
   }
 
-  const port = process.env.PORT ?? 3000;
+  // Fail fast if required env vars are missing — prevents silent use of hardcoded fallbacks
+  const REQUIRED_ENV = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'FRONTEND_URL', 'PUBLIC_API_URL'] as const;
+  const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+  if (missing.length) {
+    console.error(`[bootstrap] Missing required env vars: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  const port    = process.env.PORT ?? 3000;
+  const apiUrl  = process.env.PUBLIC_API_URL;
   await app.listen(port);
-  console.log(`🚀  API:     https://api.prohalw2026.ovh/api/v1`);
-  console.log(`📦  Install: https://api.prohalw2026.ovh/install/gateway/:token`);
+  console.log(`🚀  API:     ${apiUrl}/api/v1`);
+  console.log(`📦  Install: ${apiUrl}/install/gateway/:token`);
 }
 bootstrap();

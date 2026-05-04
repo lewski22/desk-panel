@@ -6,6 +6,7 @@ import { AuthController }     from './auth.controller';
 import { AuthService }        from './auth.service';
 import { AzureAuthService }   from './azure-auth.service';
 import { GoogleAuthService }  from './google-auth.service';
+import { NonceStoreService }  from './nonce-store.service';
 import { JwtStrategy }        from './strategies/jwt.strategy';
 import { LocalStrategy }      from './strategies/local.strategy';
 import { UsersModule }        from '../users/users.module';
@@ -32,6 +33,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     AuthService,
     AzureAuthService,
     GoogleAuthService,   // v0.17.0 — Google Workspace SSO
+    NonceStoreService,
     JwtStrategy,
     LocalStrategy,
   ],

@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService }    from '../../database/prisma.service';
-import { WifiCryptoService } from '../crypto/wifi-crypto.service';
-import { R2Service }         from '../storage/r2.service';
+import * as bcrypt              from 'bcrypt';
+import { PrismaService }        from '../../database/prisma.service';
+import { WifiCryptoService }    from '../crypto/wifi-crypto.service';
+import { R2Service }            from '../storage/r2.service';
 
 export interface CreateLocationDto {
   organizationId: string;
@@ -61,11 +62,15 @@ export class LocationsService {
   }
 
   async create(dto: CreateLocationDto) {
-    return this.prisma.location.create({ data: dto });
+    const { kioskPin, ...rest } = dto as any;
+    const pinData = kioskPin
+      ? { kioskPinHash: await bcrypt.hash(kioskPin, 10) }
+      : {};
+    return this.prisma.location.create({ data: { ...rest, ...pinData } });
   }
 
   async update(id: string, dto: Partial<CreateLocationDto> & { isActive?: boolean; kioskPin?: string | null }) {
-    const { wifiSsid, wifiPass, ...rest } = dto as any;
+    const { wifiSsid, wifiPass, kioskPin, ...rest } = dto as any;
 
     const wifiData: Record<string, string | null> = {};
     if (wifiSsid !== undefined) {
@@ -75,7 +80,12 @@ export class LocationsService {
       wifiData.wifiPassEnc = wifiPass ? this.wifiCrypto.encrypt(wifiPass) : null;
     }
 
-    return this.prisma.location.update({ where: { id }, data: { ...rest, ...wifiData } });
+    const pinData: Record<string, string | null> = {};
+    if (kioskPin !== undefined) {
+      pinData.kioskPinHash = kioskPin ? await bcrypt.hash(kioskPin, 10) : null;
+    }
+
+    return this.prisma.location.update({ where: { id }, data: { ...rest, ...wifiData, ...pinData } });
   }
 
   async getWifiCredentials(id: string): Promise<{ wifiSsid: string | null; wifiPass: string | null }> {
@@ -94,12 +104,10 @@ export class LocationsService {
   async verifyKioskPin(locationId: string, pin: string): Promise<{ ok: boolean }> {
     const loc = await this.prisma.location.findUnique({
       where:  { id: locationId },
-      select: { kioskPin: true },
+      select: { kioskPinHash: true },
     });
-    if (!loc) return { ok: false };
-    // kioskPin null/empty → PIN not configured, reject
-    if (!loc.kioskPin) return { ok: false };
-    return { ok: loc.kioskPin === pin };
+    if (!loc || !loc.kioskPinHash) return { ok: false };
+    return { ok: await bcrypt.compare(pin, loc.kioskPinHash) };
   }
 
   async getOccupancyAnalytics(locationId: string) {
