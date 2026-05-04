@@ -11,9 +11,16 @@ const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 const KEYS = { user: 'app_user', impersonationToken: 'app_access' };
 
 let _refreshPromise: Promise<boolean> | null = null;
+const _REFRESH_TS_KEY = 'app_last_refresh_fail';
+const _REFRESH_COOLDOWN = 15_000; // ms between failed refresh attempts
 
 async function tryRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise;
+
+  // Skip if we failed recently — prevents 429 storms on rapid page reloads
+  const lastFail = Number(sessionStorage.getItem(_REFRESH_TS_KEY) ?? 0);
+  if (Date.now() - lastFail < _REFRESH_COOLDOWN) return false;
+
   _refreshPromise = (async () => {
     try {
       const res = await fetch(`${BASE}/auth/refresh`, {
@@ -21,8 +28,16 @@ async function tryRefresh(): Promise<boolean> {
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
       });
+      if (res.ok) {
+        sessionStorage.removeItem(_REFRESH_TS_KEY);
+      } else {
+        sessionStorage.setItem(_REFRESH_TS_KEY, String(Date.now()));
+      }
       return res.ok;
-    } catch { return false; }
+    } catch {
+      sessionStorage.setItem(_REFRESH_TS_KEY, String(Date.now()));
+      return false;
+    }
   })().finally(() => { _refreshPromise = null; });
   return _refreshPromise;
 }
