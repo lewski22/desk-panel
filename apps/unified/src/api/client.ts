@@ -42,6 +42,9 @@ async function tryRefresh(): Promise<boolean> {
   return _refreshPromise;
 }
 
+// Public endpoints — 401 means "bad credentials", not "session expired"
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/invite'];
+
 async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Promise<T> {
   if (DEMO_MODE) {
     const { getDemoResponse } = await import('../mocks/demoHandlers');
@@ -63,13 +66,16 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
       ...(opts.headers ?? {}),
     },
   });
-  if (res.status === 401 && _retry) {
+
+  const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p));
+
+  if (res.status === 401 && !isPublic && _retry) {
     const refreshed = await tryRefresh();
     if (refreshed) return req<T>(path, opts, false);
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
-  if (res.status === 401) { window.location.href = '/login'; throw new Error('Unauthorized'); }
+  if (res.status === 401 && !isPublic) { window.location.href = '/login'; throw new Error('Unauthorized'); }
   if (res.status === 204) return undefined as unknown as T;
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
