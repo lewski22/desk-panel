@@ -1,3 +1,18 @@
+/**
+ * ReservationsService — podstawowy moduł systemu rezerwacji biurek.
+ *
+ * Obsługuje pełny cykl życia rezerwacji:
+ * - Tworzenie jednorazowych i cyklicznych (iCalendar RRULE) rezerwacji
+ * - Walidacja konfliktów (time overlap) i limitów org (maxDaysAhead, maxHoursPerDay)
+ * - Anulowanie pojedynczych i całych serii rezerwacji cyklicznych
+ * - Synchronizacja z Microsoft Calendar przez GraphService
+ * - Emisja zdarzeń LED przy tworzeniu/anulowaniu (FREE/RESERVED)
+ * - Push notifications i emaile do użytkownika o zmianach
+ * - Dispatching do integracji (Slack/Teams/Webhook) fire-and-forget
+ * - CRON co minutę: zmiana statusu LED gdy rezerwacja się zaczyna/kończy
+ *
+ * backend/src/modules/reservations/reservations.service.ts
+ */
 import {
   Injectable,
   NotFoundException,

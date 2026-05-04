@@ -1,3 +1,17 @@
+/**
+ * DevicesService — zarządzanie beaconami BLE (urządzeniami biurek).
+ *
+ * Beacon to urządzenie IoT zamontowane na biurku, komunikujące się przez
+ * BLE → Gateway (MQTT) → Backend. Serwis obsługuje:
+ * - Provisioning: rejestracja beacona przez gateway (upsert hardwareId),
+ *   generowanie jednorazowych danych MQTT (username + hasło hashowane bcrypt)
+ * - Przypisanie biurka (SET_DESK_ID), zmianę bramki, aktualizację firmware
+ * - OTA (Over-The-Air) update: sprawdzanie dostępności nowego firmware z GitHub Releases
+ * - Odszyfrowywanie WiFi (WifiCryptoService) i przekazywanie do beacona przy provisioning
+ * - CRON: wykrywanie beaconów offline (brak heartbeat > threshold z config)
+ *
+ * backend/src/modules/devices/devices.service.ts
+ */
 import {
   Injectable, Logger, NotFoundException, BadRequestException, ConflictException, ForbiddenException,
 } from '@nestjs/common';

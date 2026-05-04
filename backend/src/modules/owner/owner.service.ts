@@ -1,3 +1,17 @@
+/**
+ * OwnerService — panel zarządzania dla roli OWNER (SaaS operator).
+ *
+ * OWNER to rola ponadorganizacyjna zarządzająca całą platformą Reserti.
+ * Serwis umożliwia:
+ * - Podgląd listy organizacji z metrykami (użytkownicy, biurka, lokalizacje)
+ * - Tworzenie i edycję organizacji oraz ich planów subskrypcji
+ * - Impersonację — generowanie jednorazowego tokenu JWT pozwalającego
+ *   zalogować się jako SUPER_ADMIN wybranej organizacji (link wysyłany emailem)
+ * - Podgląd globalnych eventów systemu (logi audytowe)
+ * - Powiadomienia o zbliżającym się wygaśnięciu planów
+ *
+ * backend/src/modules/owner/owner.service.ts
+ */
 import {
   Injectable, NotFoundException, ConflictException, Logger,
 } from '@nestjs/common';

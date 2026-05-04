@@ -1,3 +1,16 @@
+/**
+ * PushService — Web Push Notifications (VAPID).
+ *
+ * Zarządza subskrypcjami przeglądarek (endpoint + klucze p256dh/auth)
+ * i wysyła powiadomienia push do konkretnych użytkowników. Wymaga kluczy
+ * VAPID ustawionych w env (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT).
+ * Działa w trybie graceful degradation — jeśli klucze nie są skonfigurowane,
+ * powiadomienia są pomijane bez błędu.
+ *
+ * Wygeneruj klucze: npx web-push generate-vapid-keys
+ *
+ * backend/src/modules/push/push.service.ts
+ */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as webpush from 'web-push';
@@ -48,6 +61,10 @@ export class PushService implements OnModuleInit {
     return this.prisma.pushSubscription.count();
   }
 
+  /**
+   * Wysyła push do wszystkich aktywnych subskrypcji użytkownika.
+   * Automatycznie usuwa subskrypcje z odpowiedzią 404/410 (przeglądarka odwołała zgodę).
+   */
   async notifyUser(userId: string, payload: { title: string; body: string; url?: string }) {
     if (!this.vapidPublicKey) {
       this.logger.warn(`notifyUser(${userId}) skipped — VAPID keys not configured`);

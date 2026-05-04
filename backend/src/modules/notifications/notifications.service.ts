@@ -1,3 +1,18 @@
+/**
+ * NotificationsService — powiadomienia email i webpush dla adminów i użytkowników.
+ *
+ * Centralny punkt wysyłki powiadomień domenowych:
+ * - Alert: gateway offline / back online (email do OFFICE_ADMIN)
+ * - Alert: beacon offline / aktualizacja firmware
+ * - Powiadomienia subskrypcyjne: wygasający / wygasły plan
+ * - Emaile transakcyjne: check-in, checkout, rezerwacja
+ * - Konfiguracja reguł powiadamiania per org (NotificationRule)
+ * - CRUD ustawień powiadomień per użytkownik
+ *
+ * Wybór SMTP: preferuje własny serwer org (MailerService), fallback do globalnego.
+ *
+ * backend/src/modules/notifications/notifications.service.ts
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';

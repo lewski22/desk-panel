@@ -1,3 +1,19 @@
+/**
+ * CheckinsService — rejestrowanie obecności przy biurku.
+ *
+ * Obsługuje wszystkie metody meldowania:
+ * - NFC: beacon skanuje kartę → gateway → checkinNfc()
+ * - QR: użytkownik skanuje kod QR biurka → checkinQr()
+ * - QR walk-in: check-in bez uprzedniej rezerwacji → walkinQr()
+ * - Manual: pracownik melduje przez panel webowy → manual()
+ * - Checkout: wymeldowanie przez NFC/QR/manual lub auto-wylogowanie
+ *
+ * Po każdym check-in/checkout emituje zdarzenie LED (LedEventsService → MQTT).
+ * Dyspatchuje eventy do integracji (Slack/Teams/Webhook) fire-and-forget.
+ * CRON co 5 minut: autoCheckout rezerwacji które przekroczyły endTime.
+ *
+ * backend/src/modules/checkins/checkins.service.ts
+ */
 import {
   Injectable, Logger, NotFoundException,
   ConflictException, ForbiddenException,

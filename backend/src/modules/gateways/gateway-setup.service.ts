@@ -1,3 +1,17 @@
+/**
+ * GatewaySetupService — jednorazowe tokeny instalacyjne dla bramek.
+ *
+ * Przepływ instalacji nowej bramki (Raspberry Pi):
+ *   1. Admin tworzy token instalacyjny (createToken) — ważny 24h
+ *   2. Skrypt instalacyjny na Pi pobiera konfigurację (consumeToken)
+ *      i używa tokenu jednorazowo — po użyciu jest kasowany
+ *   3. Bramka rejestruje się w GatewaysService.register() używając
+ *      danych z konfiguracji (secretu MQTT + ID lokalizacji)
+ *
+ * Tokeny są bezpieczne kryptograficznie (randomBytes(32)) i TTL 24h.
+ *
+ * backend/src/modules/gateways/gateway-setup.service.ts
+ */
 import {
   Injectable, NotFoundException, ConflictException, ForbiddenException,
   BadRequestException,

@@ -1,3 +1,16 @@
+/**
+ * DesksService — zarządzanie biurkami i ich stanem operacyjnym.
+ *
+ * Odpowiada za:
+ * - CRUD biurek z weryfikacją przynależności do org aktora (assertDeskInOrg)
+ * - Obliczanie bieżącego statusu biurka (getCurrentStatus): FREE / OCCUPIED /
+ *   RESERVED / GUEST_RESERVED na podstawie aktywnych rezerwacji i check-inów
+ * - Emisję zdarzeń LED przez LedEventsService → GatewaysService → MQTT → beacon
+ * - Pozycjonowanie na planie piętra (batchUpdatePositions)
+ * - Soft-delete i hard-delete z kaskadowym usunięciem danych
+ *
+ * backend/src/modules/desks/desks.service.ts
+ */
 import {
   Injectable,
   NotFoundException,
@@ -9,7 +22,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { DeskStatus } from '@prisma/client';
 import { CreateDeskDto } from './dto/create-desk.dto';
 import { UpdateDeskDto } from './dto/update-desk.dto';
-import { LedEventsService } from '../../shared/led-events.service'; // FIX P2-4
+import { LedEventsService } from '../../shared/led-events.service';
 
 @Injectable()
 export class DesksService {

@@ -1,3 +1,13 @@
+/**
+ * MetricsService — zbieranie metryk Prometheus.
+ *
+ * Cyklicznie (co 30s) odświeża metryki eksponowane na GET /metrics
+ * dla scrapera Prometheus/Grafana. Metryki są pogrupowane na:
+ * - Metryki OWNER: globalne liczniki org, bramek i beaconów
+ * - Metryki klienta: biurka per org, zajęte biurka, rezerwacje na dziś
+ *
+ * backend/src/metrics/metrics.service.ts
+ */
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';

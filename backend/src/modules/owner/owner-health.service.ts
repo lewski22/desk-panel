@@ -1,3 +1,12 @@
+/**
+ * OwnerHealthService — globalny monitoring infrastruktury dla roli OWNER.
+ *
+ * Dostarcza agregatywny widok stanu wszystkich bramek i beaconów w systemie
+ * bez filtrowania per organizacja. Używany przez panel właściciela platformy
+ * do szybkiej oceny zdrowia całej infrastruktury IoT.
+ *
+ * backend/src/modules/owner/owner-health.service.ts
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

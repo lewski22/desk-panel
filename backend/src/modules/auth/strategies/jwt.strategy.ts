@@ -1,3 +1,13 @@
+/**
+ * JwtStrategy — weryfikacja JWT i ładowanie profilu użytkownika do request.
+ *
+ * Ekstrahuje token z ciasteczka httpOnly access_token (priorytet) lub
+ * nagłówka Authorization: Bearer. Po weryfikacji podpisu ładuje aktualny
+ * stan konta z bazy — rzuca 401 jeśli konto jest nieaktywne lub usunięte.
+ * Wynik validate() trafia do request.user i jest dostępny w każdym kontrolerze.
+ *
+ * backend/src/modules/auth/strategies/jwt.strategy.ts
+ */
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';

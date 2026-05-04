@@ -1,3 +1,12 @@
+/**
+ * VisitorsService — zarządzanie wizytami gości.
+ *
+ * Obsługuje zapraszanie gości przez email, generowanie jednorazowych tokenów
+ * QR do check-in, rejestrację wejścia/wyjścia oraz historię wizyt per lokalizacja.
+ * Org isolation — STAFF i OFFICE_ADMIN widzą tylko lokalizacje swojej org.
+ *
+ * backend/src/modules/visitors/visitors.service.ts
+ */
 import {
   Injectable, Logger, NotFoundException, ForbiddenException,
 } from '@nestjs/common';

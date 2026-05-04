@@ -1,3 +1,18 @@
+/**
+ * WifiCryptoService — szyfrowanie danych WiFi lokalizacji (AES-256-GCM).
+ *
+ * Przechowuje SSID i hasło WiFi w zaszyfrowanej formie w kolumnach
+ * wifiSsidEnc / wifiPassEnc tabeli Location. Klucz ładowany z env
+ * WIFI_ENCRYPTION_KEY (32 bajty / 64 znaki hex) przy starcie modułu.
+ *
+ * Format ciphertext: hex(iv):hex(authTag):hex(ciphertext)
+ * Algorytm: AES-256-GCM (authenticated encryption — zapobiega manipulacji danych)
+ *
+ * Generowanie klucza:
+ *   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+ *
+ * backend/src/modules/crypto/wifi-crypto.service.ts
+ */
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 
@@ -23,6 +38,7 @@ export class WifiCryptoService implements OnModuleInit {
     this.logger.log('WifiCryptoService initialized');
   }
 
+  /** Szyfruje tekst. Zwraca `iv:authTag:ciphertext` w hex. */
   encrypt(plaintext: string): string {
     const iv     = crypto.randomBytes(IV_LEN);
     const cipher = crypto.createCipheriv(ALGORITHM, this.key, iv);
@@ -31,6 +47,7 @@ export class WifiCryptoService implements OnModuleInit {
     return `${iv.toString('hex')}:${tag.toString('hex')}:${enc.toString('hex')}`;
   }
 
+  /** Deszyfruje string w formacie `iv:authTag:ciphertext`. Rzuca przy błędzie integralności. */
   decrypt(encrypted: string): string {
     const [ivHex, tagHex, dataHex] = encrypted.split(':');
     const iv      = Buffer.from(ivHex,   'hex');

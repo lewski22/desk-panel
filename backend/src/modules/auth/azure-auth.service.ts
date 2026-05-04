@@ -1,12 +1,19 @@
 /**
- * PATCH: backend/src/modules/auth/azure-auth.service.ts
+ * AzureAuthService — logowanie przez Microsoft Entra ID (Azure AD).
  *
- * Kompletna wersja z backward compat dla OrgIntegration.
- * Zmiana dotyczy TYLKO metod _resolveOrgByTenantId() i checkSsoAvailable().
- * Reszta serwisu (JIT provisioning, JWKS verification) bez zmian.
+ * Obsługuje przepływ SSO Azure dla organizacji z włączoną integracją AZURE_ENTRA:
+ *   1. Frontend wysyła id_token (z MSAL.js) do POST /auth/azure
+ *   2. Backend weryfikuje podpis RS256 przez JWKS Microsoft (z cache per tenant)
+ *   3. JIT provisioning: tworzy lub aktualizuje konto użytkownika
+ *   4. Wydaje parę JWT Reserti i zwraca profil
  *
- * SPOSÓB STOSOWANIA:
- * Podmień istniejące metody w pliku (nie zastępuj całego pliku — dodaj import + podmień 2 metody).
+ * Obsługuje dwa tryby konfiguracji:
+ *   - Globalna App Registration Reserti (wspólna dla wszystkich org)
+ *   - BYOA (Bring Your Own App): per-org Client ID/Secret z OrgIntegration
+ *
+ * Tenant/org rozpoznawany po polu `tid` w claims lub emailowej domenie użytkownika.
+ *
+ * backend/src/modules/auth/azure-auth.service.ts
  */
 import {
   Injectable, UnauthorizedException, Logger,

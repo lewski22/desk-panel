@@ -1,3 +1,18 @@
+/**
+ * InAppNotificationsService — powiadomienia w aplikacji (dzwonek w panelu).
+ *
+ * Zarządza powiadomieniami wyświetlanymi w interfejsie użytkownika dla ról
+ * STAFF i wyższych. Każde powiadomienie ma typ (InAppNotifType), wiadomość,
+ * opcjonalny link i status przeczytania per użytkownik.
+ *
+ * Mechanizm deduplikacji: klucz dedupe (np. `gateway_offline:${gatewayId}`)
+ * zapobiega tworzeniu wielu identycznych powiadomień w krótkim czasie.
+ *
+ * CRON co 6h: wysyłka emailowych alertów o nieprzeczytanych powiadomieniach
+ * (alerty krytyczne: GATEWAY_OFFLINE, BEACON_OFFLINE).
+ *
+ * backend/src/modules/inapp-notifications/inapp-notifications.service.ts
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron }                from '@nestjs/schedule';
 import { PrismaService }       from '../../database/prisma.service';

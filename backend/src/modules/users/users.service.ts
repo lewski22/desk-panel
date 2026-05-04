@@ -1,3 +1,14 @@
+/**
+ * UsersService — zarządzanie użytkownikami w obrębie organizacji.
+ *
+ * Wszystkie operacje filtrowane przez organizationId aktora (org isolation) —
+ * OFFICE_ADMIN i STAFF widzą tylko użytkowników swojej org, SUPER_ADMIN
+ * i OWNER mają nieograniczony dostęp. Obsługuje soft-delete (deletedAt),
+ * harmonogram trwałego usunięcia danych (scheduledDeleteAt + retentionDays),
+ * przypisanie karty NFC (cardUid) i zmianę ról.
+ *
+ * backend/src/modules/users/users.service.ts
+ */
 import {
   Injectable, NotFoundException, ConflictException, ForbiddenException,
 } from '@nestjs/common';

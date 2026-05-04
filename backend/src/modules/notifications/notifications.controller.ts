@@ -37,7 +37,9 @@ export class NotificationsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Pobierz ustawienia powiadomień dla organizacji' })
   async getSettings(@Request() req: any, @Query('organizationId') qOrgId?: string) {
-    const orgId = qOrgId ?? req.user.organizationId;
+    const orgId = req.user.role === UserRole.SUPER_ADMIN
+      ? (qOrgId || req.user.organizationId)
+      : req.user.organizationId;
     if (!orgId) return [];
     const saved = await this.svc.getSettings(orgId);
 
@@ -116,7 +118,7 @@ export class NotificationsController {
   // ── SMTP per org — konfiguracja własnej skrzynki ─────────────
 
   @Get('smtp')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Pobierz konfigurację SMTP organizacji (bez hasła)' })
   async getSmtp(@Request() req: any) {
     const orgId = req.user.organizationId;
@@ -127,7 +129,7 @@ export class NotificationsController {
   }
 
   @Put('smtp')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Zapisz własną konfigurację SMTP (hasło szyfrowane AES-256)' })
   async saveSmtp(
     @Body() body: SaveSmtpDto,
@@ -141,7 +143,7 @@ export class NotificationsController {
   }
 
   @Post('smtp/test')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Testuj własną skrzynkę SMTP — wyślij email weryfikacyjny' })
   async testSmtp(@Body('email') email: string, @Request() req: any) {
     const orgId = req.user.organizationId;
@@ -150,7 +152,7 @@ export class NotificationsController {
   }
 
   @Post('smtp/delete')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Usuń własną konfigurację SMTP — wróć do skrzynki globalnej' })
   async deleteSmtp(@Request() req: any) {
     const orgId = req.user.organizationId;

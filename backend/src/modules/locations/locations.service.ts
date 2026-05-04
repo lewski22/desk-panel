@@ -1,3 +1,17 @@
+/**
+ * LocationsService — zarządzanie lokalizacjami (biurowcami/piętrami).
+ *
+ * Lokalizacja to jednostka organizacyjna grupująca biurka, bramki i plany pięter.
+ * Serwis obsługuje:
+ * - CRUD lokalizacji z konfiguracją godzin pracy, limitów rezerwacji i LED
+ * - Szyfrowanie danych WiFi (wifiSsidEnc / wifiPassEnc) przez WifiCryptoService
+ * - Haszowanie kiosk PIN (bcrypt) — PIN nigdy nie jest przechowywany jawnie
+ * - Statystyki zajętości (getOccupancyAnalytics) dla dashboardu admina
+ * - Weryfikacja PIN w trybie kiosku (publiczny endpoint, bez JWT)
+ * - Plany pięter: przechowywanie w R2 lub base64 w bazie (tryb awaryjny)
+ *
+ * backend/src/modules/locations/locations.service.ts
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt              from 'bcrypt';
 import { PrismaService }        from '../../database/prisma.service';

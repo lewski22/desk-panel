@@ -1,3 +1,19 @@
+/**
+ * AuthService — uwierzytelnianie i zarządzanie sesjami.
+ *
+ * Odpowiada za:
+ * - Logowanie email+hasło (validateUser → login)
+ * - Rotację tokenów JWT (access 15 min, refresh 7 dni, httpOnly cookie)
+ * - JIT provisioning użytkowników SSO (Azure, Google) — wspólna metoda provisionSsoUser()
+ * - Przepływ zaproszeń: createInvitation → link email → completeRegistration
+ * - Zmianę hasła z unieważnieniem wszystkich aktywnych sesji
+ * - Wyliczanie statusu subskrypcji organizacji (_calcSubscriptionStatus)
+ *
+ * Refresh tokeny są przechowywane w tabeli RefreshToken i kasowane przy logout
+ * lub wygaśnięciu — brak możliwości wielokrotnego użycia.
+ *
+ * backend/src/modules/auth/auth.service.ts
+ */
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -5,6 +21,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { MailerService } from '../notifications/mailer.service';
 import { User, UserRole } from '@prisma/client';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -13,12 +30,14 @@ export class AuthService {
     private config:  ConfigService,
     private mailer:  MailerService,
   ) {}
+  /** Weryfikuje email+hasło. Zwraca null dla kont SSO-only lub nieaktywnych. */
   async validateUser(email: string, password: string): Promise<User|null> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return null;
     if (user.passwordHash === 'AZURE_SSO_ONLY' || user.passwordHash === 'GOOGLE_SSO_ONLY') return null;
     return await bcrypt.compare(password, user.passwordHash) ? user : null;
   }
+  /** Tworzy parę access+refresh token, zapisuje refresh w DB, zwraca profil użytkownika z modułami org. */
   async login(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId };
     const accessToken = this.jwt.sign(payload);
@@ -34,6 +53,7 @@ export class AuthService {
     }
     return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus } };
   }
+  /** Rotuje refresh token: sprawdza DB, kasuje stary, wydaje nową parę. Dezaktywowane konta odrzuca. */
   async refresh(refreshToken: string) {
     const record = await this.prisma.refreshToken.findUnique({ where: { token: refreshToken }, include: { user: true } });
     if (!record || record.expiresAt < new Date()) {
@@ -57,6 +77,11 @@ export class AuthService {
     return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus };
   }
 
+  /**
+   * Oblicza status subskrypcji org na podstawie daty wygaśnięcia.
+   * Zwraca: null (aktywna/bezterminowa), 'expiring_soon' (≤14 dni), 'expired'.
+   * trialEndsAt ma pierwszeństwo nad planExpiresAt.
+   */
   private _calcSubscriptionStatus(org: { planExpiresAt?: Date | null; trialEndsAt?: Date | null } | null | undefined): string | null {
     if (!org) return null;
     const now = new Date();
@@ -118,6 +143,7 @@ export class AuthService {
 
   // ── Invitation flow ──────────────────────────────────────────
 
+  /** Tworzy token zaproszenia i wysyła email z linkiem rejestracyjnym. Rzuca ConflictException jeśli email już istnieje. */
   async createInvitation(opts: {
     email:         string;
     organizationId: string;
@@ -196,6 +222,7 @@ export class AuthService {
     };
   }
 
+  /** Finalizuje rejestrację przez token zaproszenia: tworzy konto, oznacza token jako użyty, loguje użytkownika. */
   async completeRegistration(opts: {
     token:     string;
     firstName: string;
@@ -233,6 +260,7 @@ export class AuthService {
     return this.login(user);
   }
 
+  /** Zmienia hasło po weryfikacji obecnego. Unieważnia wszystkie refresh tokeny użytkownika (wylogowanie ze wszystkich urządzeń). */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');

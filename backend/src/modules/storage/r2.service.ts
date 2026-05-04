@@ -1,3 +1,17 @@
+/**
+ * R2Service — przechowywanie plików w Cloudflare R2 (S3-compatible).
+ *
+ * Używany do obrazów planów pięter (floor plans). Jeśli R2 nie jest
+ * skonfigurowany (brak R2_ACCOUNT_ID / R2_BUCKET_NAME), plany pięter
+ * są przechowywane jako base64 bezpośrednio w bazie — tryb awaryjny
+ * bez CDN, działający bez dodatkowej infrastruktury.
+ *
+ * Wymagane env (gdy R2 jest używany):
+ *   R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID,
+ *   R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL
+ *
+ * backend/src/modules/storage/r2.service.ts
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
@@ -32,6 +46,7 @@ export class R2Service {
     }
   }
 
+  /** Dekoduje data URL (base64) i przesyła do R2. Zwraca klucz obiektu i publiczny URL CDN. */
   async uploadBase64(dataUrl: string, prefix = 'floor-plans'): Promise<{ key: string; url: string }> {
     if (!this.client) throw new Error('R2 not configured');
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);

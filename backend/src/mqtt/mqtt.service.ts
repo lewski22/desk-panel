@@ -1,5 +1,20 @@
+/**
+ * MqttService — klient MQTT łączący backend z bramkami IoT.
+ *
+ * Utrzymuje trwałe połączenie z brokerem Mosquitto (auto-reconnect co 5s).
+ * Subskrybuje topiki:
+ *   desk/+/checkin    — skany NFC z beaconów → GatewaysService.handleCheckin()
+ *   desk/+/status     — heartbeat stanu biurka → GatewaysService.handleStatus()
+ *   gateway/+/hello   — rejestracja nowej bramki → GatewaysService.handleHello()
+ *
+ * Publishuje komendy LED do beaconów (temat: desk/<deskId>/led).
+ * Handlery rejestrowane lazy przez GatewaysService po jego inicjalizacji.
+ *
+ * backend/src/mqtt/mqtt.service.ts
+ */
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config'; import * as mqtt from 'mqtt';
+import { ConfigService } from '@nestjs/config';
+import * as mqtt from 'mqtt';
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MqttService.name);

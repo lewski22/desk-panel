@@ -1,3 +1,18 @@
+/**
+ * ReportsService — analityka i raporty zajętości biurek.
+ *
+ * Generuje raporty dla adminów i exporty danych:
+ * - Heatmap zajętości (dzień × godzina) — pomaga zidentyfikować szczyty
+ * - Dzienne wskaźniki zajętości per lokalizacja i biurko
+ * - Ranking najczęściej używanych biurek
+ * - Eksport do XLSX (biblioteka xlsx) z uwzględnieniem dni wolnych (date-holidays)
+ * - Filtrowanie po lokalizacji, zakresie dat i typie rezerwacji
+ *
+ * Wszystkie zapytania są org-scoped: OFFICE_ADMIN widzi tylko swoją org,
+ * SUPER_ADMIN może przekazać dowolne organizationId.
+ *
+ * backend/src/modules/reports/reports.service.ts
+ */
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService }                    from '../../database/prisma.service';
 import { ExportReportDto }                  from './dto/export-report.dto';

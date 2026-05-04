@@ -1,3 +1,16 @@
+/**
+ * MailerService — wysyłanie emaili z obsługą SMTP per organizacja.
+ *
+ * Hierarchia transporterów:
+ *   1. Własny SMTP organizacji (OrganizationSmtpConfig) — priorytet, lazy init z cache
+ *   2. Globalny SMTP z env (SMTP_HOST, SMTP_PORT, …) — fallback systemowy
+ *   3. Brak SMTP — email pomijany, log warn (graceful degradation)
+ *
+ * Hasła SMTP szyfrowane AES-256-GCM przez smtp-crypto.ts (klucz SMTP_ENCRYPTION_KEY).
+ * Metoda buildHtml() generuje responsywny szablon HTML branded Reserti.
+ *
+ * backend/src/modules/notifications/mailer.service.ts
+ */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';

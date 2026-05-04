@@ -418,7 +418,13 @@ export function NotificationsPage() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    setLoading(true); setErr('');
+    if (!orgId) {
+      setSettings([]);
+      setLog([]);
+      setLoading(false);
+      return;
+    }
     try {
       const [s, l] = await Promise.all([
         appApi.notifications.getSettings(orgId),
@@ -428,7 +434,7 @@ export function NotificationsPage() {
       setLog(Array.isArray(l) ? l : []);
     } catch (e: any) { setErr(e.message); }
     setLoading(false);
-  }, []);
+  }, [orgId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -462,7 +468,7 @@ export function NotificationsPage() {
   const handleTest = async () => {
     setTesting(true); setTestResult(null);
     try {
-      await appApi.notifications.testSmtp(orgId);
+      await appApi.notifications.testSend(orgId, 'SMTP_TEST');
       setTestResult('ok');
     } catch (e: any) { setTestResult(`Błąd: ${e.message}`); }
     setTesting(false);
@@ -525,7 +531,13 @@ export function NotificationsPage() {
       {tab === 'list' && <NotificationsList onUnreadChange={setUnreadCount} />}
 
       {/* Settings tab */}
-      {tab === 'settings' && (
+      {tab === 'settings' && !orgId && isSA && (
+        <div className="text-center py-16 text-zinc-400 text-sm">
+          {t('notifications.sa_no_org', 'Super Admin nie jest przypisany do organizacji. Przejdź do zakładki Lista, aby zobaczyć powiadomienia systemowe.')}
+        </div>
+      )}
+
+      {tab === 'settings' && (orgId || !isSA) && (
         <div className="space-y-8">
 
           {/* Baner: in-app zawsze aktywne */}

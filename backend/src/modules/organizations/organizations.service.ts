@@ -1,3 +1,12 @@
+/**
+ * OrganizationsService — zarządzanie organizacjami (multi-tenant).
+ *
+ * Dostępny wyłącznie dla roli SUPER_ADMIN i OWNER. Obsługuje CRUD
+ * organizacji — jednostek tenancy systemu. Każda organizacja ma własne
+ * lokalizacje, użytkowników, biurka i konfigurację integracji.
+ *
+ * backend/src/modules/organizations/organizations.service.ts
+ */
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

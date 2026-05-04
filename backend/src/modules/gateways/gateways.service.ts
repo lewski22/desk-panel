@@ -1,3 +1,16 @@
+/**
+ * GatewaysService — zarządzanie bramkami MQTT i komunikacja z beaconami.
+ *
+ * Gateway (Raspberry Pi) łączy się z backendem przez MQTT i przekazuje
+ * skany NFC oraz dane heartbeat z beaconów. Serwis odpowiada za:
+ * - Rejestrację bramki (secret hashowany, nigdy nie przechowywany jawnie)
+ * - Autentykację bramki przy każdym połączeniu MQTT
+ * - Odbieranie heartbeat z beaconów i aktualizację statusu online/offline
+ * - Rozsyłanie komend LED do beaconów przez MQTT (subskrypcja events$ z LedEventsService)
+ * - CRON co minutę: wykrywanie bramek offline (brak heartbeat > 90s)
+ *
+ * backend/src/modules/gateways/gateways.service.ts
+ */
 import { Injectable, Logger, NotFoundException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
