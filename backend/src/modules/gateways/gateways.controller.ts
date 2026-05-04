@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, HttpCode, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { GatewaysService }     from './gateways.service';
 import { GatewaySetupService } from './gateway-setup.service';
+import { PrismaService }       from '../../database/prisma.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
@@ -12,9 +13,47 @@ import { Roles }        from '../auth/decorators/roles.decorator';
 @Controller('gateway')
 export class GatewaysController {
   constructor(
-    private svc:   GatewaysService,
-    private setup: GatewaySetupService,
+    private svc:    GatewaysService,
+    private setup:  GatewaySetupService,
+    private prisma: PrismaService,
   ) {}
+
+  // ── Gateway config — provision key auth — called by gateway Python ──
+  @Get('config')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Return per-location LED config for gateway (x-gateway-provision-key required)' })
+  async getLocationConfig(
+    @Headers('x-gateway-id')            gwId:   string,
+    @Headers('x-gateway-provision-key') secret: string,
+  ) {
+    const expected = process.env.GATEWAY_PROVISION_KEY ?? '';
+    if (!expected || secret !== expected) throw new UnauthorizedException('Invalid provision key');
+
+    const gw = await this.prisma.gateway.findUnique({
+      where:  { id: gwId },
+      select: { locationId: true },
+    });
+    if (!gw) throw new UnauthorizedException('Gateway not found');
+
+    const location = await this.prisma.location.findUnique({
+      where:  { id: gw.locationId },
+      select: {
+        ledColorFree:          true,
+        ledColorOccupied:      true,
+        ledColorReserved:      true,
+        ledColorGuestReserved: true,
+        ledBrightness:         true,
+      },
+    });
+
+    return {
+      ledColorFree:          location?.ledColorFree          ?? '#00C800',
+      ledColorOccupied:      location?.ledColorOccupied      ?? '#DC0000',
+      ledColorReserved:      location?.ledColorReserved      ?? '#0050DC',
+      ledColorGuestReserved: location?.ledColorGuestReserved ?? '#C8A000',
+      ledBrightness:         location?.ledBrightness         ?? 100,
+    };
+  }
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -5,6 +5,8 @@ import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input, Spinner } from '../components/ui';
 import { PlanBadge } from '../components/subscription/PlanBadge';
 import { OrgInsightsWidget } from '../components/insights/InsightsWidget';
+import { useDirtyGuard } from '../hooks/useDirtyGuard';
+import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
@@ -133,6 +135,9 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
 
+  const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } =
+    useDirtyGuard(onClose);
+
   // Moduły: pusta tablica = wszystkie aktywne (legacy)
   // Jeśli enabledModules nie ma w org — inicjalizuj jako ALL (wszystkie zaznaczone)
   const [modules, setModules] = useState<string[]>(() => {
@@ -149,10 +154,12 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
     setModules(prev =>
       val ? [...prev, id] : prev.filter(m => m !== id)
     );
+    markDirty();
   };
 
   const toggleAll = () => {
     setModules(allEnabled ? [] : MODULE_DEFS.map(m => m.id));
+    markDirty();
   };
 
   const submit = async () => {
@@ -164,18 +171,20 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
       // Pusta tablica gdy wszystkie zaznaczone = backward compat
       const toSave = modules.length === MODULE_DEFS.length ? [] : modules;
       await appApi.owner.setModules(org.id, toSave);
-      onSaved(); onClose();
+      resetDirty();
+      onSaved();
+      onClose();
     } catch (e: any) { setErr(e.message); }
     setSaving(false);
   };
 
   return (
-    <Modal title={`Edytuj: ${org.name}`} onClose={onClose} wide>
+    <Modal title={`Edytuj: ${org.name}`} onClose={requestClose} wide>
       <div className="space-y-4">
-        <Input label="Nazwa firmy" value={name} onChange={e => setName(e.target.value)} />
+        <Input label="Nazwa firmy" value={name} onChange={e => { setName(e.target.value); markDirty(); }} />
         <div>
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
-          <select value={plan} onChange={e => setPlan(e.target.value)}
+          <select value={plan} onChange={e => { setPlan(e.target.value); markDirty(); }}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
             <option value="trial">Trial</option>
             <option value="starter">Starter</option>
@@ -185,7 +194,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
         </div>
         <div>
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Notatki</label>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
+          <textarea value={notes} onChange={e => { setNotes(e.target.value); markDirty(); }} rows={2}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-y focus:outline-none" />
         </div>
 
@@ -221,10 +230,11 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
 
         {err && <p className="text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
         <div className="flex gap-2 justify-end">
-          <Btn variant="secondary" onClick={onClose}>{t('btn.cancel')}</Btn>
+          <Btn variant="secondary" onClick={requestClose}>{t('btn.cancel')}</Btn>
           <Btn onClick={submit} loading={saving}>{t('btn.save')}</Btn>
         </div>
       </div>
+      {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
     </Modal>
   );
 }

@@ -1,15 +1,14 @@
 import {
   Controller, Post, Patch, Get, Body, Query, Param,
-  UseGuards, Request, HttpCode, HttpStatus, Res,
+  UseGuards, Request, HttpCode, HttpStatus, Res, UnauthorizedException,
 } from '@nestjs/common';
-import { Response }             from 'express';
+import { Response, Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard }            from '@nestjs/passport';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService }          from './auth.service';
 import { AzureAuthService }     from './azure-auth.service';
 import { GoogleAuthService }    from './google-auth.service';
-import { RefreshTokenDto }      from './dto/refresh-token.dto';
 import { AzureLoginDto }        from './dto/azure-login.dto';
 import { ChangePasswordDto }    from './dto/change-password.dto';
 import { InviteUserDto }        from './dto/invite-user.dto';
@@ -18,6 +17,19 @@ import { JwtAuthGuard }         from './guards/jwt-auth.guard';
 import { RolesGuard }           from './guards/roles.guard';
 import { Roles }                from './decorators/roles.decorator';
 import { UserRole }             from '@prisma/client';
+
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  const base = { httpOnly: true, secure: !IS_DEV, sameSite: IS_DEV ? ('lax' as const) : ('strict' as const) };
+  res.cookie('access_token',  accessToken,  { ...base, path: '/',                   maxAge: 15 * 60 * 1000 });
+  res.cookie('refresh_token', refreshToken, { ...base, path: '/api/v1/auth/refresh', maxAge: 7 * 24 * 60 * 60 * 1000 });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie('access_token',  { path: '/' });
+  res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -33,25 +45,33 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: 'Login — returns access + refresh tokens' })
-  login(@Request() req) {
-    return this.auth.login(req.user);
+  @ApiOperation({ summary: 'Login — sets httpOnly cookies, returns { user }' })
+  async login(@Request() req: any, @Res({ passthrough: true }) res: Response) {
+    const d = await this.auth.login(req.user);
+    setAuthCookies(res, d.accessToken, d.refreshToken);
+    return { user: d.user };
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @ApiOperation({ summary: 'Rotate refresh token' })
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.auth.refresh(dto.refreshToken);
+  @ApiOperation({ summary: 'Rotate refresh token — reads from cookie, sets new cookies' })
+  async refresh(@Request() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
+    const rt = (req as any).cookies?.refresh_token ?? (req.body as any)?.refreshToken;
+    if (!rt) throw new UnauthorizedException('Missing refresh token');
+    const d = await this.auth.refresh(rt);
+    setAuthCookies(res, d.accessToken, d.refreshToken);
+    return { user: d.user };
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @SkipThrottle()
-  @ApiOperation({ summary: 'Revoke refresh token' })
-  logout(@Body() dto: RefreshTokenDto) {
-    return this.auth.logout(dto.refreshToken);
+  @ApiOperation({ summary: 'Revoke refresh token and clear cookies' })
+  async logout(@Request() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
+    const rt = (req as any).cookies?.refresh_token ?? (req.body as any)?.refreshToken;
+    if (rt) await this.auth.logout(rt);
+    clearAuthCookies(res);
   }
 
   // ── Bieżący użytkownik (świeże enabledModules) ───────────────
@@ -79,9 +99,11 @@ export class AuthController {
   @Post('azure')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
-  @ApiOperation({ summary: 'Login przez Microsoft — wymiana idToken na JWT Reserti' })
-  loginAzure(@Body() dto: AzureLoginDto) {
-    return this.azure.loginWithAzureToken(dto.idToken);
+  @ApiOperation({ summary: 'Login przez Microsoft — sets httpOnly cookies, returns { user }' })
+  async loginAzure(@Body() dto: AzureLoginDto, @Res({ passthrough: true }) res: Response) {
+    const d = await this.azure.loginWithAzureToken(dto.idToken);
+    setAuthCookies(res, d.accessToken, d.refreshToken);
+    return { user: d.user };
   }
 
   @Get('azure/check')

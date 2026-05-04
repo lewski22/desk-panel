@@ -15,6 +15,10 @@ async function bootstrap() {
     bodyParser: false,
   });
 
+  // Cookie parser — wymagany przez httpOnly JWT cookies
+  const cookieParser = require('cookie-parser');
+  app.use(cookieParser());
+
   // Increase body limit to handle base64-encoded floor plan images (~2 MB file → ~2.7 MB JSON)
   const bodyParser = require('body-parser');
   app.use(bodyParser.json({ limit: '10mb' }));

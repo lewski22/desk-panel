@@ -583,11 +583,11 @@ export function DashboardPage() {
       {/* Quick Actions — tylko dla Admin+ */}
       <QuickActions locationId={locationId} onRefresh={load} />
 
-      {/* 7-day trend chart — tylko dla Admin+ */}
-      {isAdmin && <Card className="p-4 sm:p-5 mb-4 overflow-x-auto">
+      {/* 7-day trend chart — dla Staff+ */}
+      {isAtLeastStaff && <Card className="p-4 sm:p-5 mb-4 overflow-x-auto">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-semibold text-zinc-700">{t('dashboard.checkins_title')}</p>
-          {ext && (
+          {isAdmin && ext && (
             <TrendBadge pct={ext.weekTrend}
               prevLabel={ext.lastWeekCount !== undefined
                 ? `${t('dashboard.trend.prev')}: ${ext.lastWeekCount} ${t('dashboard.checkins')}`
@@ -614,7 +614,7 @@ export function DashboardPage() {
       </Card>}
 
       {/* Middle row: Hourly + Zone + Issues */}
-      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAtLeastStaff ? 'sm:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2'}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:gap-4 mb-4 ${isAdmin ? 'sm:grid-cols-2 xl:grid-cols-3' : 'sm:grid-cols-2'}`}>
         {isAdmin && <HourlyChart hourly={ext?.hourly} />}
 
         {/* Zone occupancy */}

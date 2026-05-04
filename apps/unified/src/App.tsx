@@ -68,14 +68,16 @@ function SubscriptionExpiredGate({ status, children }: { status?: string | null;
 }
 
 export default function App() {
-  const [user, setUser] = useState<any>(() => {
-    if (DEMO_MODE) return DEMO_USER;
-    return appApi.auth.user();
-  });
+  const [user, setUser] = useState<any>(DEMO_MODE ? DEMO_USER : null);
+
+  // Verify session via /auth/me on mount — replaces localStorage token check
+  useEffect(() => {
+    if (DEMO_MODE) return;
+    appApi.auth.getMe().then(setUser).catch(() => setUser(null));
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
-    appApi.auth.getMe().then(setUser).catch(() => {});
+    if (!user || DEMO_MODE) return;
 
     let timer: ReturnType<typeof setTimeout>;
     const onVisible = () => {
@@ -87,7 +89,7 @@ export default function App() {
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => { document.removeEventListener('visibilitychange', onVisible); clearTimeout(timer); };
-  }, []);
+  }, [user]);
 
   const handleLogout = () => {
     appApi.auth.logout();

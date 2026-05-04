@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService }    from '../../database/prisma.service';
 import { WifiCryptoService } from '../crypto/wifi-crypto.service';
+import { R2Service }         from '../storage/r2.service';
 
 export interface CreateLocationDto {
   organizationId: string;
@@ -27,6 +28,7 @@ export class LocationsService {
   constructor(
     private prisma:      PrismaService,
     private wifiCrypto:  WifiCryptoService,
+    private r2:          R2Service,
   ) {}
 
   async findAll(organizationId?: string) {
@@ -325,21 +327,44 @@ export class LocationsService {
     data: { floorPlanUrl: string; floorPlanW?: number; floorPlanH?: number; gridSize?: number },
     floor?: string,
   ) {
-    if (data.floorPlanUrl && data.floorPlanUrl.length > 3_000_000) {
-      throw new Error('Plik jest za duży (max 2MB)');
+    let url = data.floorPlanUrl;
+    let key: string | undefined;
+
+    if (this.r2.isConfigured && url?.startsWith('data:')) {
+      if (floor) {
+        // Usuń stary plik z R2 jeśli istnieje
+        const existing = await this.prisma.locationFloorPlan.findUnique({
+          where:  { locationId_floor: { locationId, floor } },
+          select: { floorPlanKey: true },
+        });
+        if (existing?.floorPlanKey) await this.r2.delete(existing.floorPlanKey);
+      } else {
+        const existing = await this.prisma.location.findUnique({
+          where:  { id: locationId },
+          select: { floorPlanKey: true },
+        });
+        if (existing?.floorPlanKey) await this.r2.delete(existing.floorPlanKey);
+      }
+      const uploaded = await this.r2.uploadBase64(url);
+      url = uploaded.url;
+      key = uploaded.key;
+    } else if (url && url.length > 3_000_000) {
+      throw new Error('Plik za duży (max 2MB) — skonfiguruj R2');
     }
+
     if (floor) {
       return this.prisma.locationFloorPlan.upsert({
         where:  { locationId_floor: { locationId, floor } },
-        create: { locationId, floor, floorPlanUrl: data.floorPlanUrl, floorPlanW: data.floorPlanW, floorPlanH: data.floorPlanH, gridSize: data.gridSize },
-        update: { floorPlanUrl: data.floorPlanUrl, ...(data.floorPlanW && { floorPlanW: data.floorPlanW }), ...(data.floorPlanH && { floorPlanH: data.floorPlanH }), ...(data.gridSize && { gridSize: data.gridSize }) },
+        create: { locationId, floor, floorPlanUrl: url, floorPlanKey: key, floorPlanW: data.floorPlanW, floorPlanH: data.floorPlanH, gridSize: data.gridSize },
+        update: { floorPlanUrl: url, ...(key !== undefined && { floorPlanKey: key }), ...(data.floorPlanW && { floorPlanW: data.floorPlanW }), ...(data.floorPlanH && { floorPlanH: data.floorPlanH }), ...(data.gridSize && { gridSize: data.gridSize }) },
         select: { id: true, floor: true, floorPlanUrl: true, floorPlanW: true, floorPlanH: true, gridSize: true },
       });
     }
     return this.prisma.location.update({
       where: { id: locationId },
       data: {
-        floorPlanUrl: data.floorPlanUrl,
+        floorPlanUrl: url,
+        ...(key !== undefined && { floorPlanKey: key }),
         ...(data.floorPlanW && { floorPlanW: data.floorPlanW }),
         ...(data.floorPlanH && { floorPlanH: data.floorPlanH }),
         ...(data.gridSize   && { gridSize:   data.gridSize }),
@@ -350,14 +375,22 @@ export class LocationsService {
 
   async deleteFloorPlan(locationId: string, floor?: string) {
     if (floor) {
-      await this.prisma.locationFloorPlan.deleteMany({
-        where: { locationId, floor },
+      const existing = await this.prisma.locationFloorPlan.findUnique({
+        where:  { locationId_floor: { locationId, floor } },
+        select: { floorPlanKey: true },
       });
+      if (existing?.floorPlanKey) await this.r2.delete(existing.floorPlanKey);
+      await this.prisma.locationFloorPlan.deleteMany({ where: { locationId, floor } });
       return { id: locationId, floor };
     }
+    const existing = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { floorPlanKey: true },
+    });
+    if (existing?.floorPlanKey) await this.r2.delete(existing.floorPlanKey);
     return this.prisma.location.update({
       where: { id: locationId },
-      data:  { floorPlanUrl: null, floorPlanW: null, floorPlanH: null },
+      data:  { floorPlanUrl: null, floorPlanKey: null, floorPlanW: null, floorPlanH: null },
       select: { id: true },
     });
   }

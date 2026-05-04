@@ -10,10 +10,10 @@ type Step = 'loading' | 'login-required' | 'desk-info' | 'confirming' | 'success
 function getStoredUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
 }
-function getToken(): string | null {
-  // Prefer accessToken stored in user object, fallback to separate key
-  const u = getStoredUser();
-  return u?.accessToken ?? localStorage.getItem('app_access');
+// With cookie-based auth, "authenticated" is detected by presence of app_user in localStorage.
+// Impersonation token (app_access) is also supported.
+function getImpersonationToken(): string | null {
+  return localStorage.getItem('app_access');
 }
 
 export function QrCheckinPage() {
@@ -29,6 +29,13 @@ export function QrCheckinPage() {
     ? desk.isOccupied ? 'occupied' : desk.currentReservation ? 'reserved' : 'free'
     : 'free';
 
+  const authHeaders = (): HeadersInit => {
+    const imp = getImpersonationToken();
+    return imp ? { Authorization: `Bearer ${imp}` } : {};
+  };
+
+  const isAuthenticated = () => !!getStoredUser() || !!getImpersonationToken();
+
   // 1. Fetch desk info (public endpoint)
   useEffect(() => {
     if (!token) { setStep('error'); setError(t('qr.invalid_qr')); return; }
@@ -37,31 +44,27 @@ export function QrCheckinPage() {
       .then(data => {
         if (!data) { setStep('error'); setError(t('qr.not_found')); return; }
         setDesk(data);
-        // If user just came back from login, they're now authenticated — go straight to desk-info
-        const jwt = getToken();
-        setStep(jwt ? 'desk-info' : 'login-required');
+        setStep(isAuthenticated() ? 'desk-info' : 'login-required');
       })
       .catch(() => { setStep('error'); setError(t('qr.no_connection')); });
   }, [token]);
 
   // ── Check-in: user has a reservation for this desk ───────────
   const handleCheckin = async () => {
-    const jwt = getToken();
-    if (!jwt) { setStep('login-required'); return; }
+    if (!isAuthenticated()) { setStep('login-required'); return; }
     setStep('confirming');
     try {
       const res = await fetch(`${API}/checkins/qr`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body:    JSON.stringify({ deskId: desk.id, qrToken: desk.currentReservation?.qrToken ?? token }),
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json', ...authHeaders() },
+        body:        JSON.stringify({ deskId: desk.id, qrToken: desk.currentReservation?.qrToken ?? token }),
       });
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          // Token wygasł — wyczyść i wróć do logowania
-          localStorage.removeItem('app_access');
-          localStorage.removeItem('app_refresh');
           localStorage.removeItem('app_user');
+          localStorage.removeItem('app_access');
           setStep('login-required');
           return;
         }
@@ -77,14 +80,14 @@ export function QrCheckinPage() {
 
   // ── Walk-in: desk is free, no reservation — create one + check-in
   const handleWalkin = async () => {
-    const jwt = getToken();
-    if (!jwt) { setStep('login-required'); return; }
+    if (!isAuthenticated()) { setStep('login-required'); return; }
     setStep('confirming');
     try {
       const res = await fetch(`${API}/checkins/qr/walkin`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
-        body:    JSON.stringify({ deskId: desk.id }),
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json', ...authHeaders() },
+        body:        JSON.stringify({ deskId: desk.id }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -100,12 +103,12 @@ export function QrCheckinPage() {
 
   // ── Check-out ─────────────────────────────────────────────────
   const handleCheckout = async (checkinId: string) => {
-    const jwt = getToken();
     setStep('confirming');
     try {
       await fetch(`${API}/checkins/${checkinId}/checkout`, {
-        method:  'PATCH',
-        headers: { Authorization: `Bearer ${jwt}` },
+        method:      'PATCH',
+        credentials: 'include',
+        headers:     authHeaders(),
       });
       setResult({ type: 'checkout', deskName: desk.name });
       setStep('success');

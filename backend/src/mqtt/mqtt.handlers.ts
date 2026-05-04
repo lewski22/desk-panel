@@ -51,6 +51,7 @@ export class MqttHandlers implements OnModuleInit {
             else if (state === 'RESERVED')       color = loc.ledColorReserved;
             else if (state === 'OCCUPIED')       color = loc.ledColorOccupied;
             else if (state === 'GUEST_RESERVED') color = loc.ledColorGuestReserved;
+            else if (state === 'ERROR')          color = loc.ledColorOccupied ?? '#DC0000';
           }
 
           await this.gateways.sendBeaconCommand(gwId, deskId, 'SET_LED', { ...basePayload.params, color, brightness });

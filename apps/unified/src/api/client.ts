@@ -3,36 +3,25 @@
  * GH baseline + Sprint C (reports) + Sprint F (integrations) +
  * Sprint K (recommendations, insights) + M4 (graph) + Google SSO
  */
+import type { Desk, Reservation, User, Gateway, Device } from '../types/api';
 
 const BASE      = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
-const KEYS = {
-  access:  'app_access',
-  refresh: 'app_refresh',
-  user:    'app_user',
-};
-
-const getToken = () => localStorage.getItem(KEYS.access);
+const KEYS = { user: 'app_user', impersonationToken: 'app_access' };
 
 let _refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
   if (_refreshPromise) return _refreshPromise;
   _refreshPromise = (async () => {
-    const rt = localStorage.getItem(KEYS.refresh);
-    if (!rt) return false;
     try {
       const res = await fetch(`${BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt }),
+        method:      'POST',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
       });
-      if (!res.ok) return false;
-      const d = await res.json();
-      localStorage.setItem(KEYS.access,  d.accessToken);
-      localStorage.setItem(KEYS.refresh, d.refreshToken);
-      return true;
+      return res.ok;
     } catch { return false; }
   })().finally(() => { _refreshPromise = null; });
   return _refreshPromise;
@@ -48,12 +37,14 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
     }
   }
 
-  const tok = getToken();
+  // Impersonation token stored by ImpersonatePage — takes precedence over cookies
+  const impersonationToken = localStorage.getItem(KEYS.impersonationToken);
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(tok ? { Authorization: `Bearer ${tok}` } : {}),
+      ...(impersonationToken ? { Authorization: `Bearer ${impersonationToken}` } : {}),
       ...(opts.headers ?? {}),
     },
   });
@@ -76,31 +67,22 @@ export const appApi = {
   // ── Auth ────────────────────────────────────────────────────
   auth: {
     async login(email: string, password: string) {
-      const d = await req<any>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-      localStorage.setItem(KEYS.access,  d.accessToken);
-      localStorage.setItem(KEYS.refresh, d.refreshToken);
-      localStorage.setItem(KEYS.user,    JSON.stringify({ ...d.user, accessToken: d.accessToken }));
-      return { ...d.user, accessToken: d.accessToken };
+      const d = await req<{ user: any }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
+      return d?.user ?? d;
     },
     async loginAzure(idToken: string) {
-      const d = await req<any>('/auth/azure', { method: 'POST', body: JSON.stringify({ idToken }) });
-      localStorage.setItem(KEYS.access,  d.accessToken);
-      localStorage.setItem(KEYS.refresh, d.refreshToken);
-      localStorage.setItem(KEYS.user,    JSON.stringify({ ...d.user, accessToken: d.accessToken }));
-      return { ...d.user, accessToken: d.accessToken };
+      const d = await req<{ user: any }>('/auth/azure', { method: 'POST', body: JSON.stringify({ idToken }) });
+      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
+      return d?.user ?? d;
     },
     async checkSso(email: string): Promise<{ available: boolean; tenantId?: string }> {
       return req('/auth/azure/check?email=' + encodeURIComponent(email));
     },
     logout() {
-      const rt = localStorage.getItem(KEYS.refresh);
-      if (rt) req('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: rt }) }).catch((e) => console.error('[client] logout', e));
-      localStorage.removeItem(KEYS.access);
-      localStorage.removeItem(KEYS.refresh);
+      req('/auth/logout', { method: 'POST' }).catch((e) => console.error('[client] logout', e));
       localStorage.removeItem(KEYS.user);
-    },
-    user() {
-      try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
+      localStorage.removeItem(KEYS.impersonationToken);
     },
     changePassword: (currentPassword: string, newPassword: string) =>
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
@@ -156,34 +138,34 @@ export const appApi = {
 
   // ── Desks ────────────────────────────────────────────────────
   desks: {
-    list:         (locId: string)            => req<any[]>(`/locations/${locId}/desks`),
+    list:         (locId: string)            => req<Desk[]>(`/locations/${locId}/desks`),
     status:       (locId: string, date?: string) => req<any>(`/locations/${locId}/desks/status${date ? `?date=${date}` : ''}`),
-    create:       (locId: string, d: any)    => req<any>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
-    update:       (id: string, d: any)       => req<any>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    batchPositions: (updates: any[])          => req<any>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
-    remove:        (id: string)              => req<any>(`/desks/${id}`, { method: 'DELETE' }),
-    permanentDelete: (id: string)            => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
-    unpair:        (id: string)              => req<any>(`/desks/${id}/unpair`, { method: 'PATCH' }),
+    create:       (locId: string, d: any)    => req<Desk>(`/locations/${locId}/desks`, { method: 'POST', body: JSON.stringify(d) }),
+    update:       (id: string, d: any)       => req<Desk>(`/desks/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    batchPositions: (updates: any[])          => req<void>('/desks/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
+    remove:        (id: string)              => req<void>(`/desks/${id}`, { method: 'DELETE' }),
+    permanentDelete: (id: string)            => req<void>(`/desks/${id}/permanent`, { method: 'DELETE' }),
+    unpair:        (id: string)              => req<Desk>(`/desks/${id}/unpair`, { method: 'PATCH' }),
     getAvailable:  (locId: string, start: string, end: string) =>
-      req<any[]>(`/desks/available?locationId=${locId}&startTime=${start}&endTime=${end}`),
-    getByQr:       (token: string)           => req<any>(`/desks/qr/${token}`),
+      req<Desk[]>(`/desks/available?locationId=${locId}&startTime=${start}&endTime=${end}`),
+    getByQr:       (token: string)           => req<Desk>(`/desks/qr/${token}`),
     availability:  (id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
     // Sprint K1 — AI recommendation
     getRecommended: (params: { locationId: string; date: string; start?: string; end?: string }) =>
       req<any>(`/desks/recommended?${new URLSearchParams(params as Record<string,string>).toString()}`),
     // Aliases used by GH DesksPage
-    activate:   (id: string)   => req<any>(`/desks/${id}/activate`, { method: 'POST', body: '{}' }),
-    hardDelete: (id: string)   => req<any>(`/desks/${id}/permanent`, { method: 'DELETE' }),
+    activate:   (id: string)   => req<Desk>(`/desks/${id}/activate`, { method: 'POST', body: '{}' }),
+    hardDelete: (id: string)   => req<void>(`/desks/${id}/permanent`, { method: 'DELETE' }),
   },
 
   // ── Devices ─────────────────────────────────────────────────
   devices: {
-    list:           (gwId?: string)                     => req<any[]>(`/devices${gwId ? `?gatewayId=${gwId}` : ''}`),
-    provision:      (d: any)                            => req<any>('/devices/provision', { method: 'POST', body: JSON.stringify(d) }),
-    assign:         (id: string, deskId: string)        => req<any>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
+    list:           (gwId?: string)                     => req<Device[]>(`/devices${gwId ? `?gatewayId=${gwId}` : ''}`),
+    provision:      (d: any)                            => req<Device>('/devices/provision', { method: 'POST', body: JSON.stringify(d) }),
+    assign:         (id: string, deskId: string)        => req<Device>(`/devices/${id}/assign`, { method: 'PATCH', body: JSON.stringify({ deskId }) }),
     command:        (id: string, cmd: string, params?: any) =>
       req<any>(`/devices/${id}/command`, { method: 'POST', body: JSON.stringify({ command: cmd, params }) }),
-    remove:         (id: string)                        => req<any>(`/devices/${id}`, { method: 'DELETE' }),
+    remove:         (id: string)                        => req<void>(`/devices/${id}`, { method: 'DELETE' }),
     firmwareLatest: ()                                  => req<any>('/devices/firmware/latest'),
     triggerOta:     (id: string)                        => req<any>(`/devices/${id}/ota`, { method: 'POST' }),
     otaAll:         (locationId?: string)               => req<any>('/devices/ota-all', { method: 'POST', body: JSON.stringify({ locationId }) }),
@@ -191,51 +173,51 @@ export const appApi = {
 
   // ── Gateways ────────────────────────────────────────────────
   gateways: {
-    list:             (locId?: string)               => req<any[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
-    register:         (locId: string, name: string)  => req<any>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
-    remove:           (id: string)                   => req<any>(`/gateway/${id}`, { method: 'DELETE' }),
+    list:             (locId?: string)               => req<Gateway[]>(`/gateway${locId ? `?locationId=${locId}` : ''}`),
+    register:         (locId: string, name: string)  => req<{ gateway: Gateway; secret: string }>('/gateway/register', { method: 'POST', body: JSON.stringify({ locationId: locId, name }) }),
+    remove:           (id: string)                   => req<void>(`/gateway/${id}`, { method: 'DELETE' }),
     regenerateSecret: (id: string)                   => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
     rotateSecret:     (id: string)                   => req<any>(`/gateway/${id}/rotate-secret`, { method: 'POST' }),
     triggerUpdate:    (id: string, channel = 'main') => req<any>(`/gateway/${id}/update`, { method: 'POST', body: JSON.stringify({ channel }) }),
     createSetupToken: (locationId: string)           => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
     listSetupTokens:  (locationId: string)           => req<any[]>(`/gateway/setup-tokens/${locationId}`),
-    revokeSetupToken: (tokenId: string)              => req<any>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
+    revokeSetupToken: (tokenId: string)              => req<void>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
   },
 
   // ── Users ────────────────────────────────────────────────────
   users: {
-    list:            (orgId?: string)                    => req<any[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
-    listDeactivated: (orgId?: string)                    => req<any[]>(`/users/deactivated${orgId ? `?organizationId=${orgId}` : ''}`),
-    create:          (d: any)                            => req<any>('/users', { method: 'POST', body: JSON.stringify(d) }),
-    update:          (id: string, d: any)                => req<any>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
-    assignCard:      (id: string, uid: string)           => req<any>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
+    list:            (orgId?: string)                    => req<User[]>(`/users${orgId ? `?organizationId=${orgId}` : ''}`),
+    listDeactivated: (orgId?: string)                    => req<User[]>(`/users/deactivated${orgId ? `?organizationId=${orgId}` : ''}`),
+    create:          (d: any)                            => req<User>('/users', { method: 'POST', body: JSON.stringify(d) }),
+    update:          (id: string, d: any)                => req<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    assignCard:      (id: string, uid: string)           => req<User>(`/users/${id}/card`, { method: 'PATCH', body: JSON.stringify({ cardUid: uid }) }),
     nfcScanStart:    (id: string)                        => req<any>(`/users/${id}/nfc-scan-start`, { method: 'POST' }),
     nfcScanStatus:   (id: string)                        => req<{ status: string; cardUid?: string; secondsLeft?: number }>(`/users/${id}/nfc-scan-status`),
-    deactivate:      (id: string, retentionDays?: number) => req<any>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
-    restore:         (id: string)                        => req<any>(`/users/${id}/restore`, { method: 'PATCH' }),
-    hardDelete:      (id: string)                        => req<any>(`/users/${id}/permanent`, { method: 'DELETE' }),
+    deactivate:      (id: string, retentionDays?: number) => req<void>(`/users/${id}`, { method: 'DELETE', body: JSON.stringify({ retentionDays: retentionDays ?? 30 }) }),
+    restore:         (id: string)                        => req<User>(`/users/${id}/restore`, { method: 'PATCH' }),
+    hardDelete:      (id: string)                        => req<void>(`/users/${id}/permanent`, { method: 'DELETE' }),
   },
 
   // ── Reservations ─────────────────────────────────────────────
   reservations: {
-    list:            (filters: Record<string, string>) => req<any[]>('/reservations?' + new URLSearchParams(filters).toString()),
+    list:            (filters: Record<string, string>) => req<Reservation[]>('/reservations?' + new URLSearchParams(filters).toString()),
     getToday:        (locationId: string, userId?: string) => {
       const today = new Date().toISOString().slice(0, 10);
       const p = new URLSearchParams({ locationId, date: today });
       if (userId) p.set('userId', userId);
-      return req<any[]>(`/reservations?${p}`);
+      return req<Reservation[]>(`/reservations?${p}`);
     },
     getMy:           (date?: string, limit?: number) => {
       const p = new URLSearchParams();
       if (date)  p.set('date',  date);
       if (limit) p.set('limit', String(limit));
-      return req<any[]>(`/reservations/my?${p}`);
+      return req<Reservation[]>(`/reservations/my?${p}`);
     },
-    create:          (d: any)                          => req<any>('/reservations', { method: 'POST', body: JSON.stringify(d) }),
-    cancel:          (id: string)                      => req<any>(`/reservations/${id}`, { method: 'DELETE' }),
-    createRecurring: (body: any)                       => req<any>('/reservations/recurring', { method: 'POST', body: JSON.stringify(body) }),
+    create:          (d: any)                          => req<Reservation>('/reservations', { method: 'POST', body: JSON.stringify(d) }),
+    cancel:          (id: string)                      => req<void>(`/reservations/${id}`, { method: 'DELETE' }),
+    createRecurring: (body: any)                       => req<Reservation[]>('/reservations/recurring', { method: 'POST', body: JSON.stringify(body) }),
     cancelRecurring: (id: string, scope: 'single' | 'following' | 'all') =>
-      req<any>(`/reservations/${id}/cancel-recurring`, { method: 'POST', body: JSON.stringify({ scope }) }),
+      req<void>(`/reservations/${id}/cancel-recurring`, { method: 'POST', body: JSON.stringify({ scope }) }),
     getQr:           (id: string)                      => req<any>(`/reservations/${id}/qr`),
   },
 
@@ -352,7 +334,7 @@ export const appApi = {
       req<any>('/reports/heatmap?' + new URLSearchParams(params).toString()),
     export: (params: Record<string, string>): Promise<Blob> =>
       fetch(`${BASE}/reports/export?${new URLSearchParams(params)}`, {
-        headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+        credentials: 'include',
       }).then(r => r.blob()),
     // Generic — used by ReportsPage
     get: (endpoint: string, params?: Record<string, string>): Promise<any> => {
