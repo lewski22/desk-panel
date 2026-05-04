@@ -102,7 +102,7 @@ export class GraphController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const frontendUrl = this.config.get('FRONTEND_URL', 'https://staff.prohalw2026.ovh');
+    const frontendUrl = this.config.get('FRONTEND_URL', 'https://app.prohalw2026.ovh');
 
     if (error || !code || !state) {
       res.redirect(`${frontendUrl}/settings/integrations?graph_error=${encodeURIComponent(error ?? 'cancelled')}`);

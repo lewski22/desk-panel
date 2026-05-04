@@ -122,6 +122,9 @@ export const appApi = {
       localStorage.setItem(KEYS.user, JSON.stringify(updated));
       return updated;
     },
+    user: (): any | null => {
+      try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
+    },
   },
 
   // ── Organizations ────────────────────────────────────────────

@@ -197,7 +197,7 @@ export class GoogleAuthService {
   }
 
   private _frontendUrl(): string {
-    return this.config.get('FRONTEND_URL', 'https://staff.prohalw2026.ovh');
+    return this.config.get('FRONTEND_URL', 'https://app.prohalw2026.ovh');
   }
 
 }

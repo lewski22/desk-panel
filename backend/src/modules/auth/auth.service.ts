@@ -174,7 +174,7 @@ export class AuthService {
       },
     });
 
-    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'https://staff.prohalw2026.ovh');
+    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'https://app.prohalw2026.ovh');
     const link = `${frontendUrl}/register/${invitation.token}`;
 
     await this.mailer.send({

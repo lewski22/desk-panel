@@ -14,7 +14,7 @@
 - React Unified Panel (rezerwacje, mapa biurek, admin)
 - Microsoft Teams App (rezerwacje z Teams)
 
-**Produkcja:** `api.prohalw2026.ovh/api/v1`, `staff.prohalw2026.ovh`, `teams.prohalw2026.ovh`
+**Produkcja:** `api.prohalw2026.ovh/api/v1`, `app.prohalw2026.ovh`, `teams.prohalw2026.ovh`
 **Deploy:** Coolify na Proxmox LXC + Cloudflare Tunnel (HTTPS automatycznie)
 **Stack:** NestJS 11 + Prisma 5 + PostgreSQL 15 + React 18/Vite + ESP32 PlatformIO
 **Repo:** monorepo `desk-panel` (backend + apps/unified + apps/teams)
@@ -330,7 +330,7 @@ INTEGRATION_ENCRYPTION_KEY          # 64 hex — OrgIntegration + GraphToken
 VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
 R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME, R2_PUBLIC_URL
 PUBLIC_API_URL, FRONTEND_URL
-CORS_ORIGINS=https://staff.prohalw2026.ovh,https://teams.prohalw2026.ovh
+CORS_ORIGINS=https://app.prohalw2026.ovh,https://teams.prohalw2026.ovh
 METRICS_ALLOWED_IPS=127.0.0.1
 GATEWAY_INSTALL_SCRIPT_URL
 ```
