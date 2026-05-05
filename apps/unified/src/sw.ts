@@ -8,7 +8,7 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>;
 };
 
-const CACHE_VERSION = 'reserti-v1';
+const CACHE_VERSION = 'reserti-v2';
 
 // ── Precache ──────────────────────────────────────────────────
 const PRECACHE_URLS = (self.__WB_MANIFEST ?? []).map(e =>
@@ -49,15 +49,17 @@ self.addEventListener('fetch', (event: FetchEvent) => {
   }
 
   if (url.pathname.includes('/api/')) {
-    // Network-first with 5s timeout
+    // Network-first with 5s timeout — only cache successful responses
     event.respondWith(
       Promise.race([
         fetch(request.clone()),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
       ])
         .then(res => {
-          const clone = res.clone();
-          caches.open(CACHE_VERSION).then(c => c.put(request, clone)).catch(() => {});
+          if (res.ok) {
+            const clone = res.clone();
+            caches.open(CACHE_VERSION).then(c => c.put(request, clone)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match(request).then(cached => cached ?? Response.error())),
