@@ -498,6 +498,16 @@ export class GatewaysService {
       throw new NotFoundException(`Gateway ${gatewayId} nie ma zapisanego adresu IP — wymagany heartbeat`);
     }
 
+    // Pobierz oczekiwany SHA-256 z repo przed wysłaniem do gateway.
+    // Gateway odrzuci aktualizację jeśli hash nie zgadza się z pobranym plikiem.
+    const sha256 = await this._fetchGatewaySha256(channel);
+    if (!sha256) {
+      throw new Error(
+        `Nie można pobrać sha256sums.txt z repozytorium (branch: ${channel}). ` +
+        'OTA anulowane — nie można zweryfikować integralności pliku.'
+      );
+    }
+
     const url = `http://${gw.ipAddress}:3001/update`;
     const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
 
@@ -505,8 +515,8 @@ export class GatewaysService {
       const resp = await fetch(url, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        body:    JSON.stringify({ channel }),
-        signal:  AbortSignal.timeout(20_000),  // update może chwilę trwać
+        body:    JSON.stringify({ channel, sha256 }),
+        signal:  AbortSignal.timeout(20_000),
       });
 
       if (!resp.ok) {
@@ -515,11 +525,42 @@ export class GatewaysService {
       }
 
       const result = await resp.json();
-      this.logger.log(`OTA update triggered: ${gw.name} ${gw.version} → ${result.newVersion}`);
+      this.logger.log(`OTA update triggered: ${gw.name} ${gw.version} → ${result.newVersion} (sha256: ${sha256.slice(0, 12)}…)`);
       return result;
     } catch (err: any) {
       this.logger.warn(`OTA update failed for ${gatewayId}: ${err.message}`);
       throw err;
+    }
+  }
+
+  /**
+   * Pobiera SHA-256 pliku gateway.py z sha256sums.txt w repozytorium GitHub.
+   * Zwraca null gdy plik jest niedostępny lub nie zawiera wpisu dla gateway.py.
+   */
+  private async _fetchGatewaySha256(channel: string): Promise<string | null> {
+    const repo = this.config.get<string>('GATEWAY_REPO', 'lewski22/desk-gateway-python');
+    const url  = `https://raw.githubusercontent.com/${repo}/${channel}/sha256sums.txt`;
+    try {
+      const resp = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+      if (!resp.ok) {
+        this.logger.warn(`sha256sums.txt fetch failed: HTTP ${resp.status} (${url})`);
+        return null;
+      }
+      const text = await resp.text();
+      for (const line of text.split('\n')) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && parts[1] === 'gateway.py') {
+          const hash = parts[0];
+          if (/^[0-9a-f]{64}$/.test(hash)) return hash;
+          this.logger.warn(`sha256sums.txt: invalid hash format: ${hash}`);
+          return null;
+        }
+      }
+      this.logger.warn(`sha256sums.txt: brak wpisu dla gateway.py`);
+      return null;
+    } catch (err: any) {
+      this.logger.warn(`sha256sums.txt fetch error: ${err.message}`);
+      return null;
     }
   }
 

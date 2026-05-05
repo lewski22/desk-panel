@@ -17,16 +17,40 @@ import {
 } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService }   from '@nestjs/config';
+import { IsString, IsOptional, Matches, MaxLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional }         from '@nestjs/swagger';
+import { randomBytes }     from 'crypto';
 import { PrismaService }   from '../../database/prisma.service';
 import { GatewaysService } from '../gateways/gateways.service';
 import { InAppNotificationsService, InAppNotifType } from '../inapp-notifications/inapp-notifications.service';
 import { WifiCryptoService } from '../crypto/wifi-crypto.service';
 import * as bcrypt from 'bcrypt';
 
-export interface ProvisionDeviceDto {
+// Dozwolone znaki spójne z _SAFE_MQTT_ID w gateway.py.
+// hardwareId może zawierać dwukropki (format MAC: AA:BB:CC:DD:EE:FF).
+const HARDWARE_ID_REGEX = /^[a-zA-Z0-9:_\-\.]{1,64}$/;
+// gatewayId i deskId to CUIDs/UUIDs — bez dwukropków.
+const CUID_SAFE_REGEX    = /^[a-zA-Z0-9_\-]{1,128}$/;
+
+export class ProvisionDeviceDto {
+  @ApiProperty({ example: 'AABBCCDDEEFF', description: 'Hardware ID beacona (MAC lub hex)' })
+  @IsString()
+  @Matches(HARDWARE_ID_REGEX, {
+    message: 'hardwareId może zawierać tylko litery, cyfry, dwukropek, podkreślnik, myślnik i kropkę (max 64 znaki)',
+  })
   hardwareId: string;
-  gatewayId:  string;
-  deskId?:    string;
+
+  @ApiProperty({ description: 'CUID gateway' })
+  @IsString()
+  @Matches(CUID_SAFE_REGEX, { message: 'gatewayId zawiera niedozwolone znaki' })
+  gatewayId: string;
+
+  @ApiPropertyOptional({ description: 'CUID biurka (opcjonalne przy provisioning)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  @Matches(CUID_SAFE_REGEX, { message: 'deskId zawiera niedozwolone znaki' })
+  deskId?: string;
 }
 
 @Injectable()
@@ -44,7 +68,7 @@ export class DevicesService {
   // ── Provisioning ──────────────────────────────────────────────
   async provision(dto: ProvisionDeviceDto) {
     const mqttUsername    = `beacon_${dto.hardwareId}`;
-    const mqttPassword    = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    const mqttPassword    = randomBytes(24).toString('hex');
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);
 
     const device = await this.prisma.device.upsert({
