@@ -262,6 +262,7 @@ model Gateway {
   locationId             String
   name                   String
   secretHash             String
+  secretRaw              String?   // plain-text secret for HMAC auth; set on register/rotate
   secretHashPending      String?
   secretPendingExpiresAt DateTime?
   ipAddress              String?

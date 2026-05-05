@@ -1,22 +1,34 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, HttpCode, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { GatewaysService }     from './gateways.service';
 import { GatewaySetupService } from './gateway-setup.service';
+import { GatewayAuthService }  from './gateway-auth.service';
 import { PrismaService }       from '../../database/prisma.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard }   from '../auth/guards/roles.guard';
-import { Roles }        from '../auth/decorators/roles.decorator';
+import { JwtAuthGuard }        from '../auth/guards/jwt-auth.guard';
+import { RolesGuard }          from '../auth/guards/roles.guard';
+import { Roles }               from '../auth/decorators/roles.decorator';
+import { GatewayAuthDto }      from './dto/gateway-auth.dto';
 
 @ApiTags('gateways')
 @ApiBearerAuth()
 @Controller('gateway')
 export class GatewaysController {
   constructor(
-    private svc:    GatewaysService,
-    private setup:  GatewaySetupService,
-    private prisma: PrismaService,
+    private svc:         GatewaysService,
+    private setup:       GatewaySetupService,
+    private gatewayAuth: GatewayAuthService,
+    private prisma:      PrismaService,
   ) {}
+
+  // ── HMAC → JWT exchange — called by gateway at startup and every 50 min ──
+  @Post('auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Exchange HMAC-SHA256 challenge for a short-lived gateway JWT' })
+  async auth(@Body() dto: GatewayAuthDto) {
+    const accessToken = await this.gatewayAuth.exchange(dto.gatewayId, dto.ts, dto.sig);
+    return { accessToken, expiresIn: 3600 };
+  }
 
   // ── Gateway config — provision key auth — called by gateway Python ──
   @Get('config')

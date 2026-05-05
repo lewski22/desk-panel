@@ -37,7 +37,7 @@ export class GatewaysService {
     const secretHash = await bcrypt.hash(secret, 10);
 
     const gateway = await this.prisma.gateway.create({
-      data: { locationId, name, secretHash },
+      data: { locationId, name, secretHash, secretRaw: secret },
     });
 
     await this.prisma.event.create({
@@ -416,6 +416,7 @@ export class GatewaysService {
       where: { id },
       data: {
         secretHash:             newSecretHash,
+        secretRaw:              newSecret,
         secretHashPending:      gw.secretHash,
         secretPendingExpiresAt: expiresAt,
       },
