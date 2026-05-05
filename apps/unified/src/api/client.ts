@@ -72,10 +72,13 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
   if (res.status === 401 && !isPublic && _retry) {
     const refreshed = await tryRefresh();
     if (refreshed) return req<T>(path, opts, false);
-    window.location.href = '/login';
+    if (window.location.pathname !== '/login') window.location.href = '/login';
     throw new Error('Unauthorized');
   }
-  if (res.status === 401 && !isPublic) { window.location.href = '/login'; throw new Error('Unauthorized'); }
+  if (res.status === 401 && !isPublic) {
+    if (window.location.pathname !== '/login') window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
   if (res.status === 204) return undefined as unknown as T;
   if (!res.ok) {
     const e = await res.json().catch(() => ({}));
