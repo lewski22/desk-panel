@@ -98,6 +98,7 @@ export class GatewaySetupService {
         locationId: record.locationId,
         name:       gatewayName || `Gateway — ${record.location.name}`,
         secretHash,
+        secretRaw: secret,   // required by GatewayAuthService.exchange() for HMAC verification
       },
     });
 
