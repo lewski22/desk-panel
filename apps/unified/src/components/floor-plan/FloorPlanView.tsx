@@ -20,18 +20,20 @@ interface Props {
   userRole:       string;
   selectedDate?:  string;
   currentUserId?: string;
+  timezone?:      string;
   onReserve?:     (desk: DeskMapItem) => void;  // otwiera ReservationModal
 }
 
 // ── Desk Info Card — bottom sheet (mobile) / fixed popover (desktop) ──
 const POPUP_W = 240;
 
-function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect }: {
+function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect, timezone }: {
   desk: DeskMapItem;
   onClose: () => void;
   onReserve?: () => void;
   userRole: string;
   anchorRect: DOMRect | null;
+  timezone?: string;
 }) {
   const { t } = useTranslation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -92,11 +94,11 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect }: {
           )}
           <p className="text-[10px] text-sky-500">
             {new Date(desk.currentReservation.startTime).toLocaleTimeString('pl-PL', {
-              hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw',
+              hour: '2-digit', minute: '2-digit', timeZone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
             })}
             –
             {new Date(desk.currentReservation.endTime).toLocaleTimeString('pl-PL', {
-              hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Warsaw',
+              hour: '2-digit', minute: '2-digit', timeZone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
             })}
           </p>
         </div>
@@ -149,7 +151,7 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect }: {
 }
 
 // ── Main FloorPlanView ────────────────────────────────────────
-export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, onReserve }: Props) {
+export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, timezone, onReserve }: Props) {
   const { t }                  = useTranslation();
   const [floorPlan, setFP]     = useState<any>(null);
   const [loading,   setL]      = useState(true);
@@ -416,6 +418,7 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
             onReserve={onReserve ? () => { const d = selected; setSel(null); setSelRect(null); onReserve(d); } : undefined}
             userRole={userRole}
             anchorRect={selectedRect}
+            timezone={timezone}
           />
         )}
       </div>

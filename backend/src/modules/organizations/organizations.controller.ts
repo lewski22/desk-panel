@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                           from '@nestjs/swagger';
 import { UserRole }                                                       from '@prisma/client';
-import { IsString, IsBoolean, IsOptional, IsArray }                       from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsArray, IsNotEmpty }            from 'class-validator';
 import { OrganizationsService, CreateOrganizationDto, UpdateOrganizationDto } from './organizations.service';
 import { AzureAuthService } from '../auth/azure-auth.service';
 import { JwtAuthGuard }     from '../auth/guards/jwt-auth.guard';
@@ -14,7 +14,7 @@ class UpdateAzureConfigDto {
 }
 
 class UpdateAmenitiesDto {
-  @IsArray() @IsString({ each: true })
+  @IsArray() @IsString({ each: true }) @IsNotEmpty({ each: true })
   amenities: string[];
 }
 

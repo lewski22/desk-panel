@@ -67,15 +67,20 @@ new Date().getHours()
 
 ### Frontend (React)
 
-Daty z API są w ISO 8601 UTC. Do wyświetlenia używaj `toLocaleTimeString`/`toLocaleDateString` z `timeZone: 'Europe/Warsaw'` jeśli lokalizacja jest znana, albo z timezone pobranym z kontekstu użytkownika.
+Daty z API są w ISO 8601 UTC. Do wyświetlenia używaj `toLocaleTimeString`/`toLocaleDateString` z `timezone` pobranym z danych lokalizacji lub timezone przeglądarki jako fallback.
 
 ```typescript
-const TZ = 'Europe/Warsaw'; // TODO: pobierać z profilu lokalizacji użytkownika
+// timezone z danych lokalizacji (preferowane)
+const TZ = location.timezone;
+
+// lub timezone przeglądarki jako fallback dla widoków bez kontekstu lokalizacji
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 const fmtTime = (iso: string) =>
   new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
 ```
 
-> **Znane ograniczenie (v0.17.8):** frontend hardkoduje `Europe/Warsaw` w `MyReservationsPage`, `BookingModal` i kilku innych komponentach. Docelowo `timezone` powinien być przekazywany z danych lokalizacji lub kontekstu sesji użytkownika.
+**Reguła:** nigdy nie hardkoduj `'Europe/Warsaw'` w komponentach frontendowych. Jeśli nie ma kontekstu lokalizacji (np. widok admina z wieloma lokalizacjami), użyj `Intl.DateTimeFormat().resolvedOptions().timeZone` (timezone przeglądarki użytkownika).
 
 ---
 
@@ -91,9 +96,39 @@ Pobiera `location.timezone` **przed** głównym zapytaniem, używa go do:
 
 ### `resources.service.ts` — `getAvailability`
 
-Pobiera `location.openTime`, `location.closeTime` i `location.timezone` do budowania siatki slotów. Sloty są generowane w minutach lokalnych; porównanie z bookingami UTC odbywa się przez `toLocaleTimeString`.
+Pobiera `location.timezone` (oraz `openTime`, `closeTime`) i buduje siatkę slotów w minutach lokalnych. Zapytanie DB używa okna ±14h UTC, a następnie filtruje bookings w pamięci przez `toLocaleDateString(tz)`. Sloty porównywane są przez `toLocalMin()` — analogicznie do `findAll`.
 
-> **Uwaga:** zapytanie DB dla slotów dziennych używa okna ±14h UTC — patrz sekcja wyżej.
+### `desks.service.ts` — `getCurrentStatus`
+
+Pobiera `location.timezone` (wraz z pozostałymi limitami) z `location.findUnique` przed głównym `findMany` — jedno wstępne zapytanie zamiast includowania lokalizacji per-desk.
+
+### `notifications.service.ts`
+
+Formatuje czas powiadomień email (`notifyReservationConfirmed`, `notifyReservationCancelled`) używając `desk.location?.timezone` pobranego z pełnego `include` lokalizacji.
+
+### `graph.service.ts` — `createCalendarEvent` / `updateCalendarEvent`
+
+`CalendarEventInput` ma opcjonalne pole `timezone?`. Caller (`reservations.service.ts`) przekazuje `desk.location?.timezone`. Fallback: `'Europe/Warsaw'`.
+
+### Frontend — `FloorPlanView`
+
+Przyjmuje opcjonalny prop `timezone?: string` (przekazywany przez `DeskMapPage` z `locations` state). Używany w `DeskInfoCard` do formatowania godzin rezerwacji na mapie.
+
+### Frontend — `DeskMapPage` / `DaySlider`
+
+`DeskMapPage` oblicza `activeLocationTz` z `locations.find(l => l.id === locationId)?.timezone` i przekazuje do lokalnego `DaySlider` i `FloorPlanView`. Lokalny `DaySlider` i `todayStr()` akceptują opcjonalny `tz` — fallback: `Intl.DateTimeFormat().resolvedOptions().timeZone`.
+
+### Frontend — `components/ui/DaySlider`
+
+Standalone komponent z opcjonalnym prop `timezone?`. Fallback: timezone przeglądarki.
+
+### Frontend — `ReservationsAdminPage`
+
+Widok admina obejmuje wiele lokalizacji — używa `Intl.DateTimeFormat().resolvedOptions().timeZone` (timezone przeglądarki).
+
+### Frontend — `MyReservationsPage`
+
+`ReservationCard` pobiera `TZ` z `r.desk?.location?.timezone` (zwracanego przez `reservations.service.ts` `findAll`). `bookings` sal pobierają timezone z `b.resource?.location?.timezone` (zwracanego przez `resources.service.ts` `myBookings`).
 
 ### Cron jobs (`reservations.service.ts`)
 

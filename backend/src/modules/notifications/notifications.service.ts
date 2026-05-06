@@ -165,8 +165,9 @@ export class NotificationsService {
     const enabled = await this._isEnabled(org.id, NotificationType.RESERVATION_CONFIRMED);
     if (!enabled) return;
 
-    const start = new Date(res.startTime).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
-    const end   = new Date(res.endTime).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit' });
+    const tz    = res.desk.location?.timezone ?? 'Europe/Warsaw';
+    const start = new Date(res.startTime).toLocaleString('pl-PL', { timeZone: tz });
+    const end   = new Date(res.endTime).toLocaleString('pl-PL', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
 
     await this._send({
       type:           NotificationType.RESERVATION_CONFIRMED,
@@ -209,7 +210,8 @@ export class NotificationsService {
     if (!org) return;
     if (!await this._isEnabled(org.id, NotificationType.RESERVATION_CANCELLED)) return;
 
-    const start = new Date(res.startTime).toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+    const tz    = res.desk.location?.timezone ?? 'Europe/Warsaw';
+    const start = new Date(res.startTime).toLocaleString('pl-PL', { timeZone: tz });
 
     await this._send({
       type:           NotificationType.RESERVATION_CANCELLED,

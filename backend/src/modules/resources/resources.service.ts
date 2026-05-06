@@ -205,26 +205,32 @@ export class ResourcesService {
 
     const resource = await this.prisma.resource.findUnique({
       where:   { id: resourceId },
-      include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true, parkingBookingMode: true } } },
+      include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true, parkingBookingMode: true, timezone: true } } },
     });
     if (!resource) throw new NotFoundException('Resource not found');
 
-    const dayStart = new Date(`${date}T00:00:00.000Z`);
-    const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+    const loc = resource.location as any;
+    const tz  = loc?.timezone ?? 'Europe/Warsaw';
+
+    // Use ±14h UTC window to cover any timezone, then filter in-memory by local date
+    const windowStart = new Date(`${date}T00:00:00Z`);
+    windowStart.setUTCHours(windowStart.getUTCHours() - 14);
+    const windowEnd = new Date(`${date}T23:59:59Z`);
+    windowEnd.setUTCHours(windowEnd.getUTCHours() + 14);
 
     const bookings = await this.prisma.booking.findMany({
       where: {
         resourceId,
         status:    'CONFIRMED',
-        startTime: { gte: dayStart, lte: dayEnd },
+        startTime: { lte: windowEnd },
+        endTime:   { gte: windowStart },
       },
       select: { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
       orderBy: { startTime: 'asc' },
     });
 
     // ALL_DAY mode — jeden slot "cały dzień" dla parkingu
-    const isAllDay = resource.type === 'PARKING'
-      && (resource.location as any)?.parkingBookingMode === 'ALL_DAY';
+    const isAllDay = resource.type === 'PARKING' && loc?.parkingBookingMode === 'ALL_DAY';
 
     if (isAllDay) {
       const conflict = bookings[0] ?? null;
@@ -234,33 +240,44 @@ export class ResourcesService {
         available:  !conflict,
         currentBooking: conflict,
         slots: [],
-        openTime:  (resource.location as any)?.openTime  ?? null,
-        closeTime: (resource.location as any)?.closeTime ?? null,
+        openTime:  loc?.openTime  ?? null,
+        closeTime: loc?.closeTime ?? null,
       };
     }
 
-    // HOURLY — standardowe sloty 30-minutowe
-    const [openH,  openM]  = ((resource.location as any)?.openTime  ?? '08:00').split(':').map(Number);
-    const [closeH, closeM] = ((resource.location as any)?.closeTime ?? '20:00').split(':').map(Number);
+    // HOURLY — standardowe sloty 30-minutowe w czasie lokalnym lokalizacji
+    const [openH,  openM]  = (loc?.openTime  ?? '08:00').split(':').map(Number);
+    const [closeH, closeM] = (loc?.closeTime ?? '20:00').split(':').map(Number);
     const openTotal  = openH  * 60 + openM;
     const closeTotal = closeH * 60 + closeM;
 
+    // Convert booking times to local minutes for comparison
+    const toLocalMin = (d: Date) => {
+      const t = d.toLocaleTimeString('sv-SE', { timeZone: tz });
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+    const bookingSlots = bookings
+      .filter(b => {
+        const bDate = b.startTime.toLocaleDateString('sv-SE', { timeZone: tz });
+        const eDate = b.endTime.toLocaleDateString('sv-SE',   { timeZone: tz });
+        return bDate === date || eDate === date;
+      })
+      .map(b => ({ id: b.id, startMin: toLocalMin(b.startTime), endMin: toLocalMin(b.endTime), raw: b }));
+
     const slots: { time: string; available: boolean; bookingId?: string }[] = [];
     for (let totalMin = openTotal; totalMin + 30 <= closeTotal; totalMin += 30) {
-      const h = Math.floor(totalMin / 60);
-      const m = totalMin % 60;
-      const hh = String(h).padStart(2, '0');
-      const mm = String(m).padStart(2, '0');
-      const slotStart = new Date(`${date}T${hh}:${mm}:00.000Z`);
-      const slotEnd   = new Date(slotStart.getTime() + 30 * 60_000);
-      const conflict  = bookings.find(b => b.startTime < slotEnd && b.endTime > slotStart);
+      const slotEnd  = totalMin + 30;
+      const conflict = bookingSlots.find(b => b.startMin < slotEnd && b.endMin > totalMin);
+      const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+      const mm = String(totalMin % 60).padStart(2, '0');
       slots.push({ time: `${hh}:${mm}`, available: !conflict, bookingId: conflict?.id });
     }
 
     return {
       resource, date, bookings, allDayMode: false, slots,
-      openTime:  (resource.location as any)?.openTime  ?? null,
-      closeTime: (resource.location as any)?.closeTime ?? null,
+      openTime:  loc?.openTime  ?? null,
+      closeTime: loc?.closeTime ?? null,
     };
   }
 
@@ -348,7 +365,7 @@ export class ResourcesService {
     const from = fromDate ? new Date(fromDate) : new Date();
     return this.prisma.booking.findMany({
       where:   { userId, status: 'CONFIRMED', endTime: { gte: from } },
-      include: { resource: { select: { id: true, name: true, type: true, location: { select: { name: true } } } } },
+      include: { resource: { select: { id: true, name: true, type: true, location: { select: { name: true, timezone: true } } } } },
       orderBy: { startTime: 'asc' },
       take:    20,
     });

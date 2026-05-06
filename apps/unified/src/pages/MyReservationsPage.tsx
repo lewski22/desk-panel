@@ -33,7 +33,7 @@ function ReservationCard({
 }) {
   const { t } = useTranslation();
 
-  const TZ = 'Europe/Warsaw';
+  const TZ = (r.desk?.location?.timezone as string | undefined) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: TZ });
   const fmtTime = (iso: string) =>
@@ -267,7 +267,8 @@ export function MyReservationsPage() {
                         <p className="text-sm font-medium text-zinc-600 truncate">{r.desk?.name ?? '—'}</p>
                         <p className="text-[11px] text-zinc-400 mt-0.5">
                           {new Date(r.startTime).toLocaleDateString('pl-PL', {
-                            weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'Europe/Warsaw',
+                            weekday: 'short', day: 'numeric', month: 'numeric',
+                            timeZone: (r.desk?.location?.timezone as string | undefined) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
                           })}
                         </p>
                       </div>
@@ -288,7 +289,7 @@ export function MyReservationsPage() {
               <div className="space-y-3">
                 {bookings.map(b => {
                   const isPast = new Date(b.endTime) < new Date();
-                  const TZ = 'Europe/Warsaw';
+                  const TZ = (b.resource?.location?.timezone as string | undefined) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
                   const fmtTime = (iso: string) =>
                     new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
                   const fmtDate = (iso: string) =>

@@ -127,16 +127,18 @@ function ViewToggle({ mode, onChange, hasPlan }: { mode: ViewMode; onChange: (m:
 }
 
 // ── Helpers ──────────────────────────────────────────────────
-const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
+const todayStr = (tz?: string) => new Date().toLocaleDateString('sv-SE', { timeZone: tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone });
 
 // ── Day Slider ────────────────────────────────────────────────
-function DaySlider({ selected, onChange, maxDaysAhead = 14 }: {
+function DaySlider({ selected, onChange, maxDaysAhead = 14, timezone }: {
   selected: string;
   onChange: (d: string) => void;
   maxDaysAhead?: number;
+  timezone?: string;
 }) {
   const { i18n } = useTranslation();
-  const today = todayStr();
+  const tz    = timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const today = todayStr(tz);
 
   const days = useMemo(() => {
     const result: string[] = [];
@@ -145,23 +147,17 @@ function DaySlider({ selected, onChange, maxDaysAhead = 14 }: {
     for (let i = 0; i <= Math.min(maxDaysAhead + 3, 17); i++) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
-      result.push(d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' }));
+      result.push(d.toLocaleDateString('sv-SE', { timeZone: tz }));
     }
     return result;
-  }, [maxDaysAhead]);
+  }, [maxDaysAhead, tz]);
 
   const fmt = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    const day = d.getDate();
-    const mon = d.toLocaleDateString(
-      i18n.language === 'en' ? 'en-GB' : 'pl-PL',
-      { month: 'short', timeZone: 'Europe/Warsaw' }
-    );
-    const dow = d.toLocaleDateString(
-      i18n.language === 'en' ? 'en-GB' : 'pl-PL',
-      { weekday: 'short', timeZone: 'Europe/Warsaw' }
-    );
-    return { day, mon, dow };
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return {
+      day: d.toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', timeZone: tz }),
+      dow: d.toLocaleDateString(i18n.language === 'en' ? 'en-GB' : 'pl-PL', { weekday: 'short', timeZone: tz }),
+    };
   };
 
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -263,6 +259,10 @@ export function DeskMapPage() {
   const isStaff   = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
   const isEndUser = userRole === 'END_USER';
   const { isEnabled } = useOrgModules();
+  const activeLocationTz = useMemo(
+    () => locations.find(l => l.id === locationId)?.timezone as string | undefined,
+    [locations, locationId],
+  );
 
   useEffect(() => {
     if (!isEndUser) {
@@ -389,6 +389,7 @@ export function DeskMapPage() {
         selected={selectedDate}
         onChange={setSelectedDate}
         maxDaysAhead={locationLimits?.maxDaysAhead ?? 14}
+        timezone={activeLocationTz}
       />
 
       {/* Stats — above map */}
@@ -461,6 +462,7 @@ export function DeskMapPage() {
           userRole={userRole}
           selectedDate={selectedDate}
           currentUserId={userId}
+          timezone={activeLocationTz}
           onReserve={desk => setReservationTarget(desk)}
         />
       )}
@@ -475,6 +477,7 @@ export function DeskMapPage() {
           showAvatars={isStaff}
           users={reservationUsers}
           selectedDate={selectedDate}
+          timezone={activeLocationTz}
         />
       )}
 

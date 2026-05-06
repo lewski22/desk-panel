@@ -14,7 +14,7 @@ import { pl, enUS } from 'date-fns/locale';
 import { useSortable } from '../hooks/useSortable';
 import { STATUS_CFG } from '../utils/reservationStatus';
 
-const TZ = 'Europe/Warsaw';
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function todayLocal() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });

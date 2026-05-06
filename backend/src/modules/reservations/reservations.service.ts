@@ -113,7 +113,7 @@ export class ReservationsService {
         })()),
       },
       include: {
-        desk: { select: { name: true, code: true, floor: true, zone: true, location: { select: { name: true } } } },
+        desk: { select: { name: true, code: true, floor: true, zone: true, location: { select: { name: true, timezone: true } } } },
         checkin: { select: { id: true, method: true, checkedInAt: true, checkedOutAt: true } },
       },
       orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
@@ -272,6 +272,7 @@ export class ReservationsService {
       end:           new Date(dto.endTime),
       location:      reservation.desk?.name,
       bodyText:      `Rezerwacja biurka zarządzana przez Reserti.`,
+      timezone:      desk.location?.timezone ?? undefined,
     }).then(graphEventId => {
       if (graphEventId) {
         this.prisma.reservation.update({

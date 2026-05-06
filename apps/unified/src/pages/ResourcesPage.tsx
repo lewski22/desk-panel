@@ -231,7 +231,9 @@ export function ResourcesPage() {
     setCustomAmenities(prev => {
       if (prev.includes(tag)) return prev;
       const next = [...prev, tag];
-      appApi.organizations.updateAmenities(next).catch(() => {});
+      appApi.organizations.updateAmenities(next).catch(() => {
+        setCustomAmenities(rollback => rollback.filter(a => a !== tag));
+      });
       return next;
     });
   }, []);

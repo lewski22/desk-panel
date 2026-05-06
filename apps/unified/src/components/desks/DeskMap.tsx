@@ -5,8 +5,6 @@ import { DeskCard } from './DeskCard';
 import { appApi as api } from '../../api/client';
 import { ReservationModal } from './ReservationModal';
 
-const todayStr = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
-
 interface Props {
   desks: DeskMapItem[];
   lastUpdated: Date | null;
@@ -15,6 +13,7 @@ interface Props {
   locationLimits?: LocationLimits | null;
   users?: any[];
   selectedDate?: string;
+  timezone?: string;
 }
 
 function groupByFloor(desks: DeskMapItem[]) {
@@ -71,7 +70,7 @@ export function DeskStats({ desks, currentUserId }: DeskStatsProps) {
 }
 
 
-export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits, showAvatars = false, users = [], selectedDate }: Props & { showAvatars?: boolean }) {
+export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimits, showAvatars = false, users = [], selectedDate, timezone }: Props & { showAvatars?: boolean }) {
   const { t } = useTranslation();
   const [reservationTarget, setReservationTarget] = useState<DeskMapItem | null>(null);
   const [reservedMsg,       setReservedMsg]       = useState('');
@@ -155,7 +154,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
         </div>
       )}
 
-      {selectedDate && selectedDate !== todayStr() && (
+      {selectedDate && selectedDate !== new Date().toLocaleDateString('sv-SE', { timeZone: timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone }) && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 mb-4 text-center">
           📅 {t('deskmap.showing_for', 'Dostępność na dzień')}{' '}
           <strong>{new Date(selectedDate + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</strong>

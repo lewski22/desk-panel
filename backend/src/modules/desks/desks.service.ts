@@ -160,21 +160,27 @@ export class DesksService {
   async getCurrentStatus(locationId: string, actorRole?: string, date?: string) {
     const isEndUser = actorRole === 'END_USER';
     const now = new Date();
-    const tz = 'Europe/Warsaw';
+
+    // Phase 1: resolve timezone from location (needed to compute dayStr before main query)
+    const locRow = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { timezone: true, openTime: true, closeTime: true, maxDaysAhead: true, maxHoursPerDay: true },
+    });
+    const tz = locRow?.timezone ?? 'Europe/Warsaw';
 
     // Determine target day string (YYYY-MM-DD) in the location's timezone
-    const dayStr = date ?? now.toLocaleDateString('sv-SE', { timeZone: tz });
+    const dayStr  = date ?? now.toLocaleDateString('sv-SE', { timeZone: tz });
     const isToday = dayStr === now.toLocaleDateString('sv-SE', { timeZone: tz });
 
     // Day boundaries in UTC (wall-clock convention: 00:00–23:59:59 local)
     const dayStart = new Date(`${dayStr}T00:00:00.000Z`);
     const dayEnd   = new Date(`${dayStr}T23:59:59.999Z`);
 
+    // Phase 2: fetch desks — location fields already resolved from locRow, skip re-include
     const desks = await this.prisma.desk.findMany({
       where: { locationId, status: DeskStatus.ACTIVE },
       include: {
         device:   { select: { isOnline: true } },
-        location: { select: { openTime: true, closeTime: true, maxDaysAhead: true, maxHoursPerDay: true, timezone: true } },
         checkins: {
           where: isToday
             ? {
@@ -214,15 +220,13 @@ export class DesksService {
       },
     });
 
-    // Limity z lokalizacji — takie same dla wszystkich biurek w tej lokalizacji
-    // Zwracamy je raz na poziomie odpowiedzi żeby frontend nie musiał robić osobnego zapytania
-    const firstDesk = desks[0];
-    const locationLimits = firstDesk ? {
-      openTime:       firstDesk.location?.openTime       ?? '08:00',
-      closeTime:      firstDesk.location?.closeTime      ?? '17:00',
-      maxDaysAhead:   firstDesk.location?.maxDaysAhead   ?? 14,
-      maxHoursPerDay: firstDesk.location?.maxHoursPerDay ?? 8,
-      timezone:       firstDesk.location?.timezone       ?? 'Europe/Warsaw',
+    // Limity z lokalizacji — pobrane z locRow w Phase 1 (jeden wspólny zestaw dla całej lokalizacji)
+    const locationLimits = locRow ? {
+      openTime:       locRow.openTime       ?? '08:00',
+      closeTime:      locRow.closeTime      ?? '17:00',
+      maxDaysAhead:   locRow.maxDaysAhead   ?? 14,
+      maxHoursPerDay: locRow.maxHoursPerDay ?? 8,
+      timezone:       locRow.timezone       ?? 'Europe/Warsaw',
     } : null;
 
     const mapped = desks.map((d) => {

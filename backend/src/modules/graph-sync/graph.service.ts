@@ -35,6 +35,7 @@ export interface CalendarEventInput {
   location?:     string;
   bodyText?:     string;
   organizerId?:  string;
+  timezone?:     string;
 }
 
 @Injectable()
@@ -154,11 +155,11 @@ export class GraphService {
       },
       start: {
         dateTime: input.start.toISOString(),
-        timeZone: 'Europe/Warsaw',
+        timeZone: input.timezone ?? 'Europe/Warsaw',
       },
       end: {
         dateTime: input.end.toISOString(),
-        timeZone: 'Europe/Warsaw',
+        timeZone: input.timezone ?? 'Europe/Warsaw',
       },
       location: input.location ? { displayName: input.location } : undefined,
       // Oznacz że event pochodzi z Reserti
@@ -192,8 +193,8 @@ export class GraphService {
 
     const patch: any = {};
     if (input.subject)   patch.subject = input.subject;
-    if (input.start)     patch.start   = { dateTime: input.start.toISOString(), timeZone: 'Europe/Warsaw' };
-    if (input.end)       patch.end     = { dateTime: input.end.toISOString(),   timeZone: 'Europe/Warsaw' };
+    if (input.start)     patch.start   = { dateTime: input.start.toISOString(), timeZone: input.timezone ?? 'Europe/Warsaw' };
+    if (input.end)       patch.end     = { dateTime: input.end.toISOString(),   timeZone: input.timezone ?? 'Europe/Warsaw' };
     if (input.location)  patch.location = { displayName: input.location };
 
     try {

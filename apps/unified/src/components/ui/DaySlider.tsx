@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const TZ = 'Europe/Warsaw';
+const browserTZ = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-export function todayLocal() {
-  return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });
+export function todayLocal(tz?: string) {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: tz ?? browserTZ() });
 }
 
 interface Props {
@@ -13,11 +13,13 @@ interface Props {
   pastDays?:   number;
   futureDays?: number;
   minDate?:    string;
+  timezone?:   string;
 }
 
-export function DaySlider({ selected, onChange, pastDays = 3, futureDays = 14, minDate }: Props) {
+export function DaySlider({ selected, onChange, pastDays = 3, futureDays = 14, minDate, timezone }: Props) {
   const { i18n } = useTranslation();
-  const today    = todayLocal();
+  const tz       = timezone ?? browserTZ();
+  const today    = todayLocal(tz);
   const lang     = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
   const days = useMemo(() => {
@@ -27,16 +29,16 @@ export function DaySlider({ selected, onChange, pastDays = 3, futureDays = 14, m
     for (let i = 0; i <= pastDays + futureDays; i++) {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
-      result.push(d.toLocaleDateString('sv-SE', { timeZone: TZ }));
+      result.push(d.toLocaleDateString('sv-SE', { timeZone: tz }));
     }
     return result;
-  }, [pastDays, futureDays]);
+  }, [pastDays, futureDays, tz]);
 
   const fmt = (dateStr: string) => {
     const d = new Date(dateStr + 'T12:00:00Z');
     return {
-      day: d.toLocaleDateString(lang, { day: 'numeric',  timeZone: TZ }),
-      dow: d.toLocaleDateString(lang, { weekday: 'short', timeZone: TZ }),
+      day: d.toLocaleDateString(lang, { day: 'numeric',  timeZone: tz }),
+      dow: d.toLocaleDateString(lang, { weekday: 'short', timeZone: tz }),
     };
   };
 
