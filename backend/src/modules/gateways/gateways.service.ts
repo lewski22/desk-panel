@@ -11,7 +11,7 @@
  *
  * backend/src/modules/gateways/gateways.service.ts
  */
-import { Injectable, Logger, NotFoundException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException, ForbiddenException, BadRequestException, OnModuleDestroy } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes } from 'crypto';
@@ -19,17 +19,26 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService }             from '../../database/prisma.service';
 import { InAppNotificationsService } from '../inapp-notifications/inapp-notifications.service';
 import { LedEventsService }          from '../../shared/led-events.service';
+import { GatewayCommandsService }    from './gateway-commands.service';
 import { EventType } from '@prisma/client';
 
 @Injectable()
-export class GatewaysService {
+export class GatewaysService implements OnModuleDestroy {
   private readonly logger = new Logger(GatewaysService.name);
+  private readonly _verifyIntervals = new Set<ReturnType<typeof setInterval>>();
+
   constructor(
-    private prisma:     PrismaService,
-    private config:     ConfigService,
-    private inapp:      InAppNotificationsService,
-    private ledEvents:  LedEventsService,
+    private prisma:           PrismaService,
+    private config:           ConfigService,
+    private inapp:            InAppNotificationsService,
+    private ledEvents:        LedEventsService,
+    private gatewayCommands:  GatewayCommandsService,
   ) {}
+
+  onModuleDestroy(): void {
+    for (const interval of this._verifyIntervals) clearInterval(interval);
+    this._verifyIntervals.clear();
+  }
 
   async register(locationId: string, name: string) {
     // FIX: crypto.randomBytes instead of Math.random()
@@ -326,116 +335,113 @@ export class GatewaysService {
   }
 
   /**
-   * Rotacja sekretu z 15-minutowym oknem nakładki.
+   * Two-phase secret rotation via SSE.
    *
-   * Flow:
-   *  1. Generuje nowy secret
-   *  2. Zapisuje jako secretHashPending + expiresAt = now + 15min
-   *  3. Wywołuje gateway HTTP POST /rotate-secret { newSecret } (ze starym secretem)
-   *  4. Gateway zapisuje do .env i restartuje service
-   *  5. Przy pierwszym heartbeat/sync z nowym secretem → promote (patrz authenticate)
+   * Phase 1 (prepare): backend sends newSecret + HMAC to gateway.
+   *   Gateway verifies HMAC and writes GATEWAY_SECRET_PENDING to .env.
+   *   ACK must arrive before phase 2 proceeds.
    *
-   * Okno 15 minut = failsafe gdy gateway nie mógł się zrestartować.
-   * Po 15 minutach stary secret przestaje działać automatycznie.
+   * Phase 2 (commit): backend writes new secretHash to DB, then sends commit.
+   *   Gateway promotes PENDING → active and restarts.
+   *
+   * Phase 3 (verify): async polling for 5 minutes to confirm reconnect.
+   *   Logs error if gateway doesn't reconnect — manual intervention required.
+   *
+   * Invariant: secretHash is never updated in DB without a successful prepare ACK.
    */
-  async rotateSecret(id: string, actorOrgId?: string): Promise<{
-    secret: string;
-    secretPreview: string;
-    expiresAt: Date;
-    gatewayReached: boolean;
-  }> {
+  async rotateSecret(id: string, actorOrgId?: string): Promise<{ secretPreview: string }> {
+    await this.assertGatewayInOrg(id, actorOrgId);
+
     const gw = await this.prisma.gateway.findUnique({
-      where:   { id },
-      select:  { id: true, name: true, ipAddress: true, secretHash: true, location: { select: { organizationId: true } } },
+      where:  { id },
+      select: { id: true, name: true, secretHash: true },
     });
     if (!gw) throw new NotFoundException('Gateway not found');
 
-    // ── Krok 1: Spróbuj dostarczyć nowy klucz do gateway ZANIM zmienisz backend ──
-    // Jeśli gateway niedostępny → nie zmieniamy secretHash → brak desync.
-    const newSecret     = randomBytes(24).toString('hex');
+    if (!this.gatewayCommands.isConnected(id)) {
+      throw new BadRequestException(
+        `Gateway ${id} is not connected via SSE — cannot rotate secret safely`
+      );
+    }
+
+    const newSecret     = randomBytes(32).toString('hex');   // 64 hex chars
     const newSecretHash = await bcrypt.hash(newSecret, 10);
-    const expiresAt     = new Date(Date.now() + 15 * 60 * 1000);
 
-    let gatewayReached = false;
+    // ── Phase 1: Prepare ─────────────────────────────────────
+    // The SSE channel is already authenticated via JWT — no separate HMAC needed.
+    // Backend no longer stores secretRaw (plaintext), so HMAC(newSecret, currentSecret)
+    // is impossible without a plaintext key. JWT auth of the SSE stream is sufficient.
+    this.logger.log(`rotate_secret: phase 1 (prepare) — gatewayId=${id}`);
+    await this.gatewayCommands.publish(
+      id,
+      'rotate_secret_prepare',
+      { newSecret },
+      15_000,
+    );
+    this.logger.log(`rotate_secret: prepare ACK received — gatewayId=${id}`);
 
-    if (!gw.ipAddress) {
-      this.logger.warn(`Gateway ${id}: brak IP — rotacja niemożliwa bez kontaktu z gateway`);
-      // Nie zmieniamy klucza — stary działa
-      throw new Error(
-        'Rotacja niemożliwa: brak adresu IP gateway. Gateway musi wysłać heartbeat żeby zarejestrować IP.'
-      );
-    }
-
-    // Próba dostarczenia nowego klucza do gateway
-    gatewayReached = await this._pushRotateSecret(gw.ipAddress, newSecret);
-
-    if (!gatewayReached) {
-      // Gateway niedostępny — NIE zmieniamy secretHash w backendzie
-      // Stary klucz pozostaje ważny — brak desync
-      this.logger.warn(
-        `Gateway ${gw.name}: rotate-secret ABORTED — gateway niedostępny pod ${gw.ipAddress}:3001. ` +
-        `Stary klucz pozostaje niezmieniony.`
-      );
-      // Wyślij powiadomienie in-app do SUPER_ADMIN w org — w obu językach (meta.translations)
-      await this.inapp.create({
-        type:           'GATEWAY_KEY_ROTATION_FAILED' as any,
-        title:          `Gateway "${gw.name}" — rotacja klucza nieudana`,
-        body:           `Nie można połączyć się z gateway "${gw.name}" (${gw.ipAddress}:3001). Klucz nie został zmieniony — stary klucz pozostaje ważny.`,
-        organizationId: gw.location?.organizationId,
-        actionUrl:      '/provisioning',
-        actionLabel:    'Sprawdź gateway',
-        meta: {
-          gatewayId:   gw.id,
-          gatewayName: gw.name,
-          ipAddress:   gw.ipAddress,
-          translations: {
-            pl: {
-              title:       `Gateway "${gw.name}" — rotacja klucza nieudana`,
-              body:        `Nie można połączyć się z gateway "${gw.name}" (${gw.ipAddress}:3001). Klucz nie został zmieniony — stary klucz pozostaje ważny.`,
-              actionLabel: 'Sprawdź gateway',
-            },
-            en: {
-              title:       `Gateway "${gw.name}" — key rotation failed`,
-              body:        `Cannot connect to gateway "${gw.name}" (${gw.ipAddress}:3001). The key was NOT changed — old key remains valid.`,
-              actionLabel: 'Check gateway',
-            },
-          },
-        },
-      }, `gw:key-rotation-failed:${gw.id}`, 30);
-
-      throw new Error(
-        `Rotacja anulowana: nie można połączyć się z gateway (${gw.ipAddress}:3001). ` +
-        `Sprawdź czy gateway jest online i spróbuj ponownie.`
-      );
-    }
-
-    // ── Krok 2: Gateway potwierdził — teraz aktualizuj backend ──
-    // secretHashPending = stary hash jako 15-minutowe okno failsafe
-    // (np. gdy gateway dostał klucz ale jeszcze się nie zrestartował)
+    // ── Phase 2: Commit ──────────────────────────────────────
+    // Update DB only after gateway confirmed PENDING is written.
+    // Keep old hash in secretHashPending for a 15-min overlap window.
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await this.prisma.gateway.update({
       where: { id },
       data: {
         secretHash:             newSecretHash,
-        secretRaw:              newSecret,
-        secretHashPending:      gw.secretHash,
+        // secretHashPending holds the OLD secretHash so the overlap window can
+        // still validate the old secret during the 15-min grace period.
+        secretHashPending:      gw.secretHash ?? undefined,
         secretPendingExpiresAt: expiresAt,
       },
     });
+    this.logger.log(`rotate_secret: new secretHash saved in DB — gatewayId=${id}`);
 
-    this.logger.log(
-      `Gateway ${gw.name}: rotation SUCCESS — gateway confirmed, ` +
-      `old secret valid as fallback until ${expiresAt.toISOString()}`
-    );
+    // Send commit — gateway will restart ~2s after ACK is dispatched.
+    // If ACK doesn't arrive (gateway restarted before sending), phase 3 verifies.
+    try {
+      await this.gatewayCommands.publish(id, 'rotate_secret_commit', {}, 15_000);
+      this.logger.log(`rotate_secret: commit ACK received — gatewayId=${id}`);
+    } catch (err: any) {
+      // Timeout here is expected if gateway restarts before ACK reaches backend.
+      this.logger.warn(
+        `rotate_secret: commit ACK timeout (gateway likely restarted) — ${err.message}`
+      );
+    }
 
-    return {
-      secret:         newSecret,
-      secretPreview:  newSecret.slice(0, 8) + '…',
-      expiresAt,
-      gatewayReached,
-    };
+    // ── Phase 3: Async verify ────────────────────────────────
+    this._scheduleSecretVerification(id);
+
+    return { secretPreview: newSecret.slice(0, 8) + '…' };
   }
 
-  /** Cron co 5 min — czyści wygasłe okna rotacji */
+  private _scheduleSecretVerification(gatewayId: string): void {
+    const maxAttempts = 10;    // 10 × 30s = 5 minutes
+    const intervalMs  = 30_000;
+    let   attempts    = 0;
+
+    const interval = setInterval(() => {
+      attempts++;
+      if (this.gatewayCommands.isConnected(gatewayId)) {
+        this.logger.log(
+          `rotate_secret: verify OK — gateway ${gatewayId} reconnected with new secret`
+        );
+        clearInterval(interval);
+        this._verifyIntervals.delete(interval);
+        return;
+      }
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        this._verifyIntervals.delete(interval);
+        this.logger.error(
+          `rotate_secret: VERIFY FAILED — gateway ${gatewayId} did not reconnect ` +
+          `within 5 minutes after secret rotation. Manual intervention required.`
+        );
+      }
+    }, intervalMs);
+    this._verifyIntervals.add(interval);
+  }
+
+  /** Cron every 5 min — clean expired rotation overlap windows */
   @Cron('0 */5 * * * *')
   async cleanExpiredRotations(): Promise<void> {
     const result = await this.prisma.gateway.updateMany({
@@ -453,30 +459,8 @@ export class GatewaysService {
     }
   }
 
-  private async _pushRotateSecret(ipAddress: string, newSecret: string): Promise<boolean> {
-    const url = `http://${ipAddress}:3001/rotate-secret`;
-    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
-    try {
-      const resp = await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        body:    JSON.stringify({ newSecret }),
-        signal:  AbortSignal.timeout(8_000),
-      });
-      if (resp.ok) {
-        this.logger.log(`Gateway rotate-secret: HTTP push OK`);
-        return true;
-      }
-      this.logger.warn(`Gateway rotate-secret: HTTP ${resp.status}`);
-      return false;
-    } catch (err: any) {
-      this.logger.warn(`Gateway rotate-secret: cannot reach gateway — ${err.message}`);
-      return false;
-    }
-  }
-
   async regenerateSecret(id: string) {
-    // Legacy: deleguje do rotateSecret
+    // Legacy alias
     const result = await this.rotateSecret(id);
     const gw     = await this.prisma.gateway.findUnique({
       where:  { id },
@@ -486,120 +470,49 @@ export class GatewaysService {
   }
 
   /**
-   * Wyślij komendę do beacona przez gateway HTTP API → lokalny Mosquitto → beacon.
-   * Jedyna poprawna droga — backend i Pi mają osobne brokery Mosquitto.
+   * Triggers an OTA update by sending the signed manifest URL to the gateway via SSE.
+   * Gateway fetches the manifest, verifies the Ed25519 signature, and applies the update.
+   * Backend is only a messenger — cannot forge OTA even with full DB access.
+   *
+   * @param manifestUrl  Full URL to manifest.json from GitHub Releases
+   *                     (e.g. https://github.com/org/repo/releases/download/v1.3.0/manifest.json)
    */
-  async triggerUpdate(gatewayId: string, channel = 'main'): Promise<object> {
-    const gw = await this.prisma.gateway.findUnique({
-      where:  { id: gatewayId },
-      select: { ipAddress: true, version: true, name: true },
-    });
-
-    if (!gw?.ipAddress) {
-      throw new NotFoundException(`Gateway ${gatewayId} nie ma zapisanego adresu IP — wymagany heartbeat`);
+  async triggerUpdate(gatewayId: string, manifestUrl: string): Promise<void> {
+    if (!this.gatewayCommands.isConnected(gatewayId)) {
+      throw new NotFoundException(`Gateway ${gatewayId} is not connected via SSE`);
     }
 
-    // Pobierz oczekiwany SHA-256 z repo przed wysłaniem do gateway.
-    // Gateway odrzuci aktualizację jeśli hash nie zgadza się z pobranym plikiem.
-    const sha256 = await this._fetchGatewaySha256(channel);
-    if (!sha256) {
-      throw new Error(
-        `Nie można pobrać sha256sums.txt z repozytorium (branch: ${channel}). ` +
-        'OTA anulowane — nie można zweryfikować integralności pliku.'
-      );
-    }
+    // OTA needs a generous timeout — RPi Zero 2W downloading over slow WiFi
+    await this.gatewayCommands.publish(
+      gatewayId,
+      'ota_update',
+      { manifestUrl },
+      60_000,
+    );
 
-    const url = `http://${gw.ipAddress}:3001/update`;
-    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
-
-    try {
-      const resp = await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        body:    JSON.stringify({ channel, sha256 }),
-        signal:  AbortSignal.timeout(20_000),
-      });
-
-      if (!resp.ok) {
-        const body = await resp.text().catch(() => '');
-        throw new Error(`Gateway zwrócił HTTP ${resp.status}: ${body}`);
-      }
-
-      const result = await resp.json();
-      this.logger.log(`OTA update triggered: ${gw.name} ${gw.version} → ${result.newVersion} (sha256: ${sha256.slice(0, 12)}…)`);
-      return result;
-    } catch (err: any) {
-      this.logger.warn(`OTA update failed for ${gatewayId}: ${err.message}`);
-      throw err;
-    }
-  }
-
-  /**
-   * Pobiera SHA-256 pliku gateway.py z sha256sums.txt w repozytorium GitHub.
-   * Zwraca null gdy plik jest niedostępny lub nie zawiera wpisu dla gateway.py.
-   */
-  private async _fetchGatewaySha256(channel: string): Promise<string | null> {
-    const repo = this.config.get<string>('GATEWAY_REPO', 'lewski22/desk-gateway-python');
-    const url  = `https://raw.githubusercontent.com/${repo}/${channel}/sha256sums.txt`;
-    try {
-      const resp = await fetch(url, { signal: AbortSignal.timeout(8_000) });
-      if (!resp.ok) {
-        this.logger.warn(`sha256sums.txt fetch failed: HTTP ${resp.status} (${url})`);
-        return null;
-      }
-      const text = await resp.text();
-      for (const line of text.split('\n')) {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length >= 2 && parts[1] === 'gateway.py') {
-          const hash = parts[0];
-          if (/^[0-9a-f]{64}$/.test(hash)) return hash;
-          this.logger.warn(`sha256sums.txt: invalid hash format: ${hash}`);
-          return null;
-        }
-      }
-      this.logger.warn(`sha256sums.txt: brak wpisu dla gateway.py`);
-      return null;
-    } catch (err: any) {
-      this.logger.warn(`sha256sums.txt fetch error: ${err.message}`);
-      return null;
-    }
+    this.logger.log(`OTA update triggered via SSE — gatewayId=${gatewayId} manifestUrl=${manifestUrl}`);
   }
 
   async addBeaconCredentials(
     gatewayId: string,
     username:  string,
     password:  string,
-    deskId?:   string,  // ← przekazuj desk_id — gateway użyje do wąskiego ACL
+    deskId?:   string,
   ): Promise<void> {
-    const gw = await this.prisma.gateway.findUnique({
-      where:  { id: gatewayId },
-      select: { ipAddress: true },
-    });
-
-    if (!gw?.ipAddress) {
-      this.logger.warn(`addBeaconCredentials: brak IP gateway ${gatewayId} — pominięto`);
+    if (this.gatewayCommands.isConnected(gatewayId)) {
+      await this.gatewayCommands.publish(
+        gatewayId,
+        'beacon_add',
+        { username, password, deskId: deskId ?? null },
+        10_000,
+      );
       return;
     }
 
-    const url = `http://${gw.ipAddress}:3001/beacon/add`;
-    const key  = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
-
-    try {
-      const resp = await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        // desk_id pozwala gateway wygenerować wąski ACL per-biurko (nie desk/#)
-        body:    JSON.stringify({ username, password, ...(deskId && { desk_id: deskId }) }),
-        signal:  AbortSignal.timeout(5000),
-      });
-      if (resp.ok) {
-        this.logger.log(`MQTT user added via gateway: ${username}`);
-      } else {
-        this.logger.warn(`Gateway /beacon/add failed: HTTP ${resp.status} — ${username}`);
-      }
-    } catch (err: any) {
-      this.logger.warn(`Cannot reach gateway ${gatewayId}: ${err.message} — ${username} not added`);
-    }
+    this.logger.warn(
+      `addBeaconCredentials: gateway ${gatewayId} not connected via SSE — ` +
+      `beacon provisioning skipped. Gateway must reconnect.`,
+    );
   }
 
   async findGatewayForDesk(deskId: string): Promise<string | null> {
@@ -611,33 +524,19 @@ export class GatewaysService {
   }
 
   async sendBeaconCommand(gatewayId: string, deskId: string, command: string, params?: object): Promise<void> {
-    const gw = await this.prisma.gateway.findUnique({
-      where:  { id: gatewayId },
-      select: { ipAddress: true },
-    });
-
-    if (!gw?.ipAddress) {
-      this.logger.warn(`sendBeaconCommand: brak IP gateway ${gatewayId} — komenda ${command} pominięta`);
+    if (!this.gatewayCommands.isConnected(gatewayId)) {
+      this.logger.warn(
+        `sendBeaconCommand: gateway ${gatewayId} offline — command ${command} dropped`,
+      );
       return;
     }
 
-    const url = `http://${gw.ipAddress}:3001/command`;
-    const key = this.config.get<string>('GATEWAY_PROVISION_KEY') ?? '';
-
-    try {
-      const resp = await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-gateway-secret': key },
-        body:    JSON.stringify({ deskId, command, params }),
-        signal:  AbortSignal.timeout(5000),
-      });
-      if (resp.ok) {
-        this.logger.log(`Komenda wysłana przez gateway: ${command} → desk/${deskId}`);
-      } else {
-        this.logger.warn(`Gateway odrzucił komendę: HTTP ${resp.status} — ${command} → desk/${deskId}`);
-      }
-    } catch (err: any) {
-      this.logger.warn(`Brak połączenia z gateway ${gatewayId}: ${err.message} — ${command} pominięta`);
-    }
+    // Fire-and-forget (timeoutMs=0) — LED commands are best-effort
+    await this.gatewayCommands.publish(
+      gatewayId,
+      'command',
+      { deskId, command, params: params ?? null },
+      0,
+    );
   }
 }

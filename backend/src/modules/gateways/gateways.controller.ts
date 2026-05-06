@@ -1,24 +1,29 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Headers, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Req, Res, Headers, HttpCode, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { GatewaysService }     from './gateways.service';
-import { GatewaySetupService } from './gateway-setup.service';
-import { GatewayAuthService }  from './gateway-auth.service';
-import { PrismaService }       from '../../database/prisma.service';
-import { JwtAuthGuard }        from '../auth/guards/jwt-auth.guard';
-import { RolesGuard }          from '../auth/guards/roles.guard';
-import { Roles }               from '../auth/decorators/roles.decorator';
-import { GatewayAuthDto }      from './dto/gateway-auth.dto';
+import { Request as ExpressRequest, Response } from 'express';
+import { GatewaysService }          from './gateways.service';
+import { GatewaySetupService }       from './gateway-setup.service';
+import { GatewayAuthService }        from './gateway-auth.service';
+import { GatewayCommandsService }    from './gateway-commands.service';
+import { PrismaService }             from '../../database/prisma.service';
+import { JwtAuthGuard }              from '../auth/guards/jwt-auth.guard';
+import { RolesGuard }                from '../auth/guards/roles.guard';
+import { Roles }                     from '../auth/decorators/roles.decorator';
+import { GatewayJwtGuard }           from './guards/gateway-jwt.guard';
+import { GatewayAuthDto }            from './dto/gateway-auth.dto';
+import { GatewayAckDto }             from './dto/gateway-ack.dto';
 
 @ApiTags('gateways')
 @ApiBearerAuth()
 @Controller('gateway')
 export class GatewaysController {
   constructor(
-    private svc:         GatewaysService,
-    private setup:       GatewaySetupService,
-    private gatewayAuth: GatewayAuthService,
-    private prisma:      PrismaService,
+    private svc:             GatewaysService,
+    private setup:           GatewaySetupService,
+    private gatewayAuth:     GatewayAuthService,
+    private gatewayCommands: GatewayCommandsService,
+    private prisma:          PrismaService,
   ) {}
 
   // ── HMAC → JWT exchange — called by gateway at startup and every 50 min ──
@@ -28,6 +33,59 @@ export class GatewaysController {
   async auth(@Body() dto: GatewayAuthDto) {
     const accessToken = await this.gatewayAuth.exchange(dto.gatewayId, dto.ts, dto.sig);
     return { accessToken, expiresIn: 3600 };
+  }
+
+  // ── SSE command channel — gateway connects here at startup ──────────
+  @Get(':id/commands')
+  @UseGuards(GatewayJwtGuard)
+  @ApiOperation({ summary: 'SSE command stream — gateway connects here and listens for commands' })
+  sseCommands(
+    @Param('id')                              gatewayId: string,
+    @Req()                                    req: ExpressRequest & { gatewayId: string },
+    @Res({ passthrough: false })              res: Response,
+  ): void {
+    if (req.gatewayId !== gatewayId) {
+      res.status(403).json({ error: 'forbidden: token does not match gateway id' });
+      return;
+    }
+
+    res.setHeader('Content-Type',       'text/event-stream');
+    res.setHeader('Cache-Control',      'no-cache');
+    res.setHeader('Connection',         'keep-alive');
+    res.setHeader('X-Accel-Buffering',  'no');
+    res.flushHeaders();
+
+    // Ping every 30s to prevent Cloudflare Tunnel idle timeout (~100s)
+    const ping = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(': ping\n\n');
+        if (typeof (res as any).flush === 'function') (res as any).flush();
+      }
+    }, 30_000);
+
+    this.gatewayCommands.registerConnection(gatewayId, res);
+
+    req.on('close', () => {
+      clearInterval(ping);
+      this.gatewayCommands.removeConnection(gatewayId);
+    });
+  }
+
+  // ── ACK — gateway confirms command execution ─────────────────
+  @Post(':id/ack')
+  @UseGuards(GatewayJwtGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Gateway ACK for a previously received SSE command' })
+  ack(
+    @Param('id') gatewayId: string,
+    @Req()       req: ExpressRequest & { gatewayId: string },
+    @Body()      dto: GatewayAckDto,
+  ): { received: boolean } {
+    if (req.gatewayId !== gatewayId) {
+      throw new ForbiddenException('token does not match gateway id');
+    }
+    this.gatewayCommands.handleAck(dto.nonce, dto.ok, dto.error);
+    return { received: true };
   }
 
   // ── Gateway config — provision key auth — called by gateway Python ──
@@ -175,12 +233,12 @@ export class GatewaysController {
   @Post(':id/update')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Trigger OTA update of gateway software' })
+  @ApiOperation({ summary: 'Trigger OTA update — pass signed manifest URL from GitHub Releases' })
   update(
-    @Param('id') id: string,
-    @Body('channel') channel?: string,
+    @Param('id')          id:          string,
+    @Body('manifestUrl')  manifestUrl: string,
   ) {
-    return this.svc.triggerUpdate(id, channel ?? 'main');
+    return this.svc.triggerUpdate(id, manifestUrl);
   }
 
   // ── Device heartbeat (x-gateway-provision-key required) ───────

@@ -4,6 +4,7 @@ import { GatewaysController }       from './gateways.controller';
 import { GatewaysService }          from './gateways.service';
 import { GatewaySetupService }      from './gateway-setup.service';
 import { GatewayAuthService }       from './gateway-auth.service';
+import { GatewayCommandsService }   from './gateway-commands.service';
 import { GatewayJwtGuard }          from './guards/gateway-jwt.guard';
 import { InstallController }        from './install.controller';
 import { DatabaseModule }           from '../../database/db.module';
@@ -16,7 +17,7 @@ import { InAppNotificationsModule } from '../inapp-notifications/inapp-notificat
     JwtModule.register({}),   // secret injected per-call via ConfigService
   ],
   controllers: [GatewaysController, InstallController],
-  providers:   [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayJwtGuard],
-  exports:     [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayJwtGuard],
+  providers:   [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayCommandsService, GatewayJwtGuard],
+  exports:     [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayCommandsService, GatewayJwtGuard],
 })
 export class GatewaysModule {}
