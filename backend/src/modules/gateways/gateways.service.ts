@@ -354,7 +354,7 @@ export class GatewaysService implements OnModuleDestroy {
 
     const gw = await this.prisma.gateway.findUnique({
       where:  { id },
-      select: { id: true, name: true, secretHash: true },
+      select: { id: true, name: true, secretHash: true, secretRaw: true },
     });
     if (!gw) throw new NotFoundException('Gateway not found');
 
@@ -368,9 +368,6 @@ export class GatewaysService implements OnModuleDestroy {
     const newSecretHash = await bcrypt.hash(newSecret, 10);
 
     // ── Phase 1: Prepare ─────────────────────────────────────
-    // The SSE channel is already authenticated via JWT — no separate HMAC needed.
-    // Backend no longer stores secretRaw (plaintext), so HMAC(newSecret, currentSecret)
-    // is impossible without a plaintext key. JWT auth of the SSE stream is sufficient.
     this.logger.log(`rotate_secret: phase 1 (prepare) — gatewayId=${id}`);
     await this.gatewayCommands.publish(
       id,
@@ -382,14 +379,15 @@ export class GatewaysService implements OnModuleDestroy {
 
     // ── Phase 2: Commit ──────────────────────────────────────
     // Update DB only after gateway confirmed PENDING is written.
-    // Keep old hash in secretHashPending for a 15-min overlap window.
+    // secretRaw is required by GatewayAuthService.exchange() as the HMAC key.
+    // secretHashPending = OLD secretHash → bcrypt.compare() still works during
+    // the 15-min overlap window while the gateway restarts with the new secret.
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     await this.prisma.gateway.update({
       where: { id },
       data: {
         secretHash:             newSecretHash,
-        // secretHashPending holds the OLD secretHash so the overlap window can
-        // still validate the old secret during the 15-min grace period.
+        secretRaw:              newSecret,
         secretHashPending:      gw.secretHash ?? undefined,
         secretPendingExpiresAt: expiresAt,
       },

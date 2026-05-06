@@ -26,6 +26,8 @@ export class GatewayAuthService {
       select: { id: true, secretRaw: true, isOnline: true },
     });
 
+    // secretRaw is the HMAC key — gateway computes HMAC(gatewayId:ts, GATEWAY_SECRET)
+    // and backend must possess the same plaintext to verify. It is not a user password.
     if (!gateway?.secretRaw) {
       this.logger.warn(`Gateway auth: not found or secretRaw missing — gatewayId=${gatewayId}`);
       throw new UnauthorizedException('invalid credentials');
