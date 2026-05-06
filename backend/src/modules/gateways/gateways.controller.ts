@@ -182,26 +182,26 @@ export class GatewaysController {
   // ── Standard endpoints ───────────────────────────────────────
 
   @Post(':id/sync')
-  @ApiOperation({ summary: 'Sync reservations — called by gateway (x-gateway-secret required)' })
+  @UseGuards(GatewayJwtGuard)
+  @ApiOperation({ summary: 'Sync reservations — called by gateway (JWT Bearer required)' })
   async sync(
     @Param('id') id: string,
-    @Headers('x-gateway-secret') secret?: string,
+    @Req() req: ExpressRequest & { gatewayId: string },
   ) {
-    if (!secret) throw new UnauthorizedException('Missing x-gateway-secret');
-    await this.svc.authenticate(id, secret);
+    if (req.gatewayId !== id) throw new ForbiddenException('token does not match gateway id');
     return this.svc.getSync(id);
   }
 
   @Post(':id/heartbeat')
-  @ApiOperation({ summary: 'Gateway heartbeat (x-gateway-secret required)' })
+  @UseGuards(GatewayJwtGuard)
+  @ApiOperation({ summary: 'Gateway heartbeat (JWT Bearer required)' })
   async heartbeat(
     @Param('id') id: string,
-    @Headers('x-gateway-secret') secret?: string,
+    @Req()       req: ExpressRequest & { gatewayId: string },
     @Body('ipAddress') ipAddress?: string,
     @Body('version')   version?:   string,
   ) {
-    if (!secret) throw new UnauthorizedException('Missing x-gateway-secret');
-    await this.svc.authenticate(id, secret);
+    if (req.gatewayId !== id) throw new ForbiddenException('token does not match gateway id');
     return this.svc.heartbeat(id, ipAddress, version);
   }
 
