@@ -1,274 +1,307 @@
 # Roadmap komunikacji backend ↔ gateway — Reserti (desk-panel)
 
 > Główny dokument: `desk-gateway-python/docs/mqtt_roadmap.md`
-> Ten plik zawiera sekcje specyficzne dla backendu NestJS.
-> Ostatnia aktualizacja: 2026-05-05
-> Status: planowanie → implementacja
+> Ten plik zawiera sekcje specyficzne dla backendu NestJS oraz plan wdrożenia.
+> Ostatnia aktualizacja: 2026-05-06
+> Status: **implementacja zakończona (firmware + backend) — gotowe do wdrożenia**
 
 ---
 
-## Poprzedni plan (cloud MQTT) — odrzucony
+## Stan implementacji (desk-panel)
 
-Poprzedni roadmap zakładał cloud Mosquitto broker i MQTT publish/subscribe.
-Odrzucony z powodu braku skalowalności przy 20+ gateway w różnych LAN,
-dodatkowego SPOF i kosztów zarządzania certyfikatami.
-Szczegóły: `desk-gateway-python/docs/mqtt_roadmap.md`.
+Wszystkie moduły SSE zostały zaimplementowane. Poniżej stan faktyczny kodu:
 
----
+| Plik | Status | Opis |
+|------|--------|------|
+| `gateway-auth.service.ts` | ✅ | HMAC-SHA256 verify + JWT issue (TTL 60min) |
+| `gateway-commands.service.ts` | ✅ | SSE per-gateway, pending ACK map, timeout |
+| `gateway-commands.service.spec.ts` | ✅ | 15 testów jednostkowych |
+| `guards/gateway-jwt.guard.ts` | ✅ | JWT verify + scope: 'gateway' check |
+| `dto/gateway-auth.dto.ts` | ✅ | gatewayId, ts, sig |
+| `dto/gateway-ack.dto.ts` | ✅ | nonce, ok, ts, error? |
+| `gateways.controller.ts` | ✅ | POST /auth, GET /:id/commands, POST /:id/ack |
+| `gateways.service.ts` | ✅ | rotateSecret() dwufazowy, triggerUpdate() SSE |
 
-## Nowa architektura — SSE + HTTPS przez Cloudflare Tunnel
-
-Gateway inicjuje outbound HTTPS do backendu i utrzymuje trwałe połączenie SSE.
-Backend nigdy nie łączy się bezpośrednio do RPi — żaden port nie jest wystawiony
-do internetu. Cloudflare Tunnel obsługuje long-lived connections bez dodatkowej
-konfiguracji ($0 dodatkowego kosztu).
-
----
-
-## Nowe pliki do stworzenia
-
-### `gateway-auth.service.ts`
-
-Weryfikacja HMAC i wydawanie JWT dla gateway.
-
-```typescript
-// backend/src/modules/gateways/gateway-auth.service.ts
-@Injectable()
-export class GatewayAuthService {
-  constructor(
-    private prisma:  PrismaService,
-    private jwt:     JwtService,
-    private config:  ConfigService,
-  ) {}
-
-  async exchange(gatewayId: string, ts: number, sig: string): Promise<string> {
-    if (Math.abs(Date.now() / 1000 - ts) > 30) {
-      throw new UnauthorizedException('timestamp out of window');
-    }
-    const gw = await this.prisma.gateway.findUnique({ where: { id: gatewayId } });
-    if (!gw) throw new UnauthorizedException();
-
-    const expected = createHmac('sha256', gw.secretRaw)
-      .update(`${gatewayId}:${ts}`)
-      .digest();
-    const actual = Buffer.from(sig, 'hex');
-
-    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-      throw new UnauthorizedException();
-    }
-
-    return this.jwt.sign(
-      { sub: gatewayId, scope: 'gateway' },
-      { expiresIn: '60m', secret: this.config.get('JWT_GATEWAY_SECRET') },
-    );
-  }
-}
-```
-
-**Uwaga dot. `secretRaw`:** HMAC wymaga dostępu do plain-text sekretu (nie bcrypt hash).
-Opcje:
-- Przechowywać sekret w postaci zaszyfrowanej (AES-256-GCM kluczem z env), nie bcrypt.
-- Lub przechowywać zarówno `secretHash` (bcrypt, do obecnego flow) jak i `secretEncrypted`
-  (AES, do HMAC). Należy podjąć decyzję architektoniczną przed implementacją.
-
----
-
-### `gateway-commands.service.ts`
-
-SSE stream per gateway + store pending commands.
-
-```typescript
-// backend/src/modules/gateways/gateway-commands.service.ts
-@Injectable()
-export class GatewayCommandsService {
-  // Map: gatewayId → Subject<SseEvent>
-  private streams = new Map<string, Subject<SseCommandEvent>>();
-  // Map: nonce → { resolve, reject, timer }
-  private pending = new Map<string, PendingAck>();
-
-  /** Subskrybuj stream zdarzeń dla danego gateway (wywoływane przez SSE endpoint). */
-  getStream(gatewayId: string): Observable<SseCommandEvent> {
-    if (!this.streams.has(gatewayId)) {
-      this.streams.set(gatewayId, new Subject());
-    }
-    return this.streams.get(gatewayId)!.asObservable();
-  }
-
-  /**
-   * Wyślij komendę do gateway przez SSE i opcjonalnie czekaj na ACK.
-   * timeoutMs = 0 → fire-and-forget.
-   */
-  async send(
-    gatewayId: string,
-    event:     string,
-    data:      object,
-    timeoutMs  = 10_000,
-  ): Promise<any> {
-    const nonce     = randomBytes(16).toString('hex');
-    const expiresAt = Math.floor(Date.now() / 1000) + Math.max(timeoutMs / 1000 * 2, 60);
-
-    const subject = this.streams.get(gatewayId);
-    if (!subject) {
-      throw new Error(`Gateway ${gatewayId} nie jest podłączony (brak SSE stream)`);
-    }
-    subject.next({ event, data: { ...data, nonce, expiresAt } });
-
-    if (timeoutMs === 0) return { nonce, sent: true };
-
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(nonce);
-        reject(new Error(`Gateway ${gatewayId} ack timeout — event: ${event}`));
-      }, timeoutMs);
-      this.pending.set(nonce, { resolve, reject, timer });
-    });
-  }
-
-  /** Wywoływane przez POST /gateway/:id/ack */
-  resolveAck(nonce: string, ok: boolean, data: object) {
-    const p = this.pending.get(nonce);
-    if (!p) return;
-    clearTimeout(p.timer);
-    this.pending.delete(nonce);
-    if (ok) p.resolve(data);
-    else    p.reject(new Error((data as any).error ?? 'gateway ack error'));
-  }
-
-  isConnected(gatewayId: string): boolean {
-    return this.streams.has(gatewayId);
-  }
-
-  disconnect(gatewayId: string) {
-    this.streams.get(gatewayId)?.complete();
-    this.streams.delete(gatewayId);
-  }
-}
-```
-
----
-
-## Zmiany w istniejących plikach
-
-### `gateways.controller.ts` — nowe endpointy
-
-```typescript
-// GET /gateway/:id/commands — SSE stream
-@Sse(':id/commands')
-@UseGuards(GatewayJwtGuard)   // weryfikuje scope: 'gateway'
-commands(@Param('id') id: string): Observable<SseCommandEvent> {
-  return this.commands.getStream(id).pipe(
-    finalize(() => this.commands.disconnect(id)),
-  );
-}
-
-// POST /gateway/:id/ack — potwierdzenie komendy
-@Post(':id/ack')
-@UseGuards(GatewayJwtGuard)
-ack(@Param('id') id: string, @Body() body: AckDto) {
-  this.commands.resolveAck(body.nonce, body.ok, body);
-  return { ok: true };
-}
-
-// POST /gateway/auth — wymiana HMAC na JWT
-@Post('auth')
-@HttpCode(200)
-auth(@Body() body: GatewayAuthDto) {
-  return this.gatewayAuth.exchange(body.gatewayId, body.ts, body.sig);
-}
-```
-
-### `gateways.service.ts` — refaktor 4 metod
-
-| Metoda | Przed | Po |
-|---|---|---|
-| `addBeaconCredentials()` | `POST http://{ip}:3001/beacon/add` | `commands.send(id, 'beacon_add', {...}, 10_000)` |
-| `sendBeaconCommand()` | `POST http://{ip}:3001/command` | `commands.send(id, 'command', {...}, 0)` fire-and-forget |
-| `triggerUpdate()` | `POST http://{ip}:3001/update` | `commands.send(id, 'ota_update', {manifestUrl, ...}, 30_000)` |
-| `rotateSecret()` | `_pushRotateSecret()` HTTP | `commands.send(id, 'rotate_secret_prepare', {...}, 15_000)` + commit |
-
-Metody `_pushRotateSecret()` i `addBeaconCredentials()` zostają usunięte.
-`ipAddress` przestaje być wymagane dla operacji komendowych — tylko heartbeat
-i provisioning informacyjny je używają.
-
----
-
-## Nowe zmienne środowiskowe
+### Zmienne środowiskowe (wymagane w Coolify)
 
 ```env
-# JWT dla gateway (osobny secret od użytkowników aplikacji)
-JWT_GATEWAY_SECRET=<64-char-hex>
-
-# TTL oczekiwania na ACK od gateway (ms)
-SSE_COMMAND_TIMEOUT_MS=10000
-
-# Klucz do szyfrowania GATEWAY_SECRET w DB (AES-256-GCM) — patrz uwaga o secretRaw
-GATEWAY_SECRET_ENCRYPTION_KEY=<32-byte-hex>
+JWT_GATEWAY_SECRET=<openssl rand -hex 48>   # NOWE — wymagane
+GATEWAY_PROVISION_KEY=<hex>                 # istniejące — sprawdź czy ustawione
 ```
 
-Usunąć (nie będą potrzebne):
+---
+
+## Wyniki code review firmware + stan po poprawkach (2026-05-06)
+
+### Status po implementacji poprawek
+
+| # | Problem | Status |
+|---|---------|--------|
+| F1 | OTA bez weryfikacji SHA256 | ✅ Naprawione — `mbedTLS` SHA-256 + `manifest.json` z GitHub Release |
+| F3 | `/config` topic ignorowany | ✅ Naprawione — `ConfigCallback` + `applyConfig()` w LedService |
+| — | Brak hardware watchdog | ✅ Naprawione — `esp_task_wdt_init(30)` + reset w loop() |
+| — | Provisioning bez timeoutu | ✅ Naprawione — 10 min timeout |
+| — | MQTT reconnect bez jitter | ✅ Naprawione — `esp_random() % 3000` per backoff interval |
+| — | OTA timeout 60s za krótki | ✅ Naprawione — 300s |
+| — | Offline queue: brak walidacji JSON | ✅ Naprawione — `deserializeJson` przed wysłaniem |
+| — | `SET_RESERVATION`: brak walidacji expiry | ✅ Naprawione |
+| F4 | TLS dla MQTT | 🟡 Otwarte — nie blokuje wdrożenia |
+
+### Niespójności gateway ↔ firmware (aktualne)
+
+#### ✅ QR Scan — wyjaśnione (nie dotyczy firmware)
+
+QR scan w systemie Reserti działa przez aplikację mobilną (telefon → backend API).
+Beacon nie jest zaangażowany — ACL Mosquitto dla `desk/{deskId}/qr_scan` dotyczy
+potencjalnych przyszłych urządzeń z wbudowanym skanerem, nie obecnego beacona ESP32.
+
+#### ⚠️ Pole `brightness` w SET_LED
+
+Firmware odczytuje `params["brightness"]` (default 100), ale gateway nigdy
+tego pola nie wysyła. Beacon zawsze działa z brightness=100. Nie jest to błąd —
+brakująca funkcjonalność, jeśli będzie potrzebna.
+
+#### ✅ Spójność protokołu
+
+| Przepływ | Status |
+|----------|--------|
+| SSE `beacon_add` → gateway → `add_beacon()` | ✅ pola username/password/deskId zgodne |
+| SSE `command` → gateway → MQTT publish | ✅ deskId/command/params zgodne |
+| Firmware checkin payload → gateway `_handle_checkin()` | ✅ 100% |
+| Firmware status payload → gateway `_handle_status()` | ✅ 100% |
+| Gateway ACK → backend `GatewayAckDto` | ✅ nonce/ok/ts/error zgodne |
+| OTA_UPDATE params (`url`, `version`, `sha256`) | ✅ backend wysyła sha256 z manifest.json |
+| `/config` (`ledColorFree`, `ledColorOccupied`, `ledColorReserved`) | ✅ firmware obsługuje |
+
+---
+
+## Plan wdrożenia
+
+### Założenia
+
+- Środowisko produkcyjne: Coolify na Proxmox, Cloudflare Tunnel
+- Gateway: RPi (różne modele) w sieciach biurowych za NATem, **bez publicznego IP, bez SSH z zewnątrz**
+- Jedyna droga aktualizacji gateway: OTA przez SSE (`ota_update` command z panelu Admin)
+- Liczba gateway: 1–2 per biuro
+- Rollback: przez OTA do poprzedniej wersji (stary `gateway.py.bak` tworzony automatycznie)
+
+### Krok 1 — Przygotowanie infrastruktury (jednorazowo)
+
+**1.1 Wygeneruj klucze Ed25519 dla OTA gateway**
+
+```bash
+python3 -c "
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.serialization import (
+    Encoding, PublicFormat, PrivateFormat, NoEncryption
+)
+priv = Ed25519PrivateKey.generate()
+pub  = priv.public_key()
+print('=== KLUCZ PRYWATNY → GitHub Secret OTA_SIGNING_KEY ===')
+print(priv.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode())
+print('=== KLUCZ PUBLICZNY → gateway.py OTA_PUBLIC_KEY_PEM ===')
+print(pub.public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo).decode())
+"
+```
+
+- Klucz prywatny → `desk-gateway-python` repo → Settings → Secrets → `OTA_SIGNING_KEY`
+- Klucz publiczny → wklej do `OTA_PUBLIC_KEY_PEM` w `gateway.py` i zrób commit
+
+**1.2 Wygeneruj klucze Ed25519 dla OTA firmware (osobna para)**
+
+Analogicznie dla `desk-firmware` — inny keypair, bo to oddzielny mechanizm:
+- Klucz prywatny → `desk-firmware` repo → Settings → Secrets → `OTA_SIGNING_KEY`
+- SHA256 jest obliczane przez `release.yml` automatycznie — klucz publiczny **nie jest potrzebny** w firmware (weryfikacja SHA256, nie podpisu Ed25519)
+
+**1.3 `GATEWAY_PROVISION_KEY` — weryfikacja spójności**
+
+`GATEWAY_PROVISION_KEY` to jeden wspólny sekret używany przez **wszystkie** gateway do:
+- `GET /gateway/config` — pobieranie LED config per lokalizacja
+- `PATCH /gateway/device/:id/heartbeat` — heartbeat beaconów
+
+**Musi być identyczny** w Coolify i w `.env` na każdym RPi. Nie jest rotowany per-gateway.
+
+```bash
+# Sprawdź wartość w Coolify → desk-panel → Environment Variables
+# Sprawdź wartość na RPi:
+cat /opt/reserti-gateway/.env | grep GATEWAY_PROVISION_KEY
+```
+
+Jeśli nie istnieje w Coolify — wygeneruj i ustaw na wszystkich RPi jednocześnie:
 ```env
-# CLOUD_MQTT_URL         — odrzucone
-# CLOUD_MQTT_USERNAME    — odrzucone
-# CLOUD_MQTT_PASSWORD    — odrzucone
+GATEWAY_PROVISION_KEY=<openssl rand -hex 32>
+```
+
+**1.4 `JWT_GATEWAY_SECRET` w Coolify** ✅ (już ustawione)
+
+**1.5 Utwórz tag `v*` w `desk-gateway-python` żeby wyzwolić `release.yml`**
+
+```bash
+git tag v$(python3 -c "import re; v=re.search(r\"GATEWAY_VERSION\s*=\s*'([^']+)'\", open('gateway.py').read()); print(v.group(1))")
+git push origin --tags
+```
+
+Workflow stworzy `manifest.json` z podpisem Ed25519 i GitHub Release.
+
+**1.6 Utwórz tag `v1.0.1` w `desk-firmware`**
+
+```bash
+git tag v1.0.1
+git push origin --tags
+```
+
+Workflow stworzy `manifest.json` z SHA256 i GitHub Release z binarką firmware.
+
+**1.7 Zrób redeploy backendu** po upewnieniu się że wszystkie env vars są ustawione.
+
+---
+
+### Krok 2 — Wdrożenie gateway pilotażowego (1 biuro)
+
+> **Uwaga:** RPi nie mają SSH z zewnątrz. Jedyna droga wdrożenia to OTA przez SSE
+> z panelu Admin lub przez stary mechanizm `/update` (port 3001, dostępny lokalnie w biurze).
+
+**2.1 Wyślij OTA update do gateway pilotażowego**
+
+Panel Admin → Gateways → wybierz gateway → Aktualizuj → wpisz URL manifestu z GitHub Release.
+
+Gateway pobierze nowy `gateway.py`, zweryfikuje podpis Ed25519 i zrestartuje się.
+
+Alternatywnie — jeśli ktoś jest fizycznie w biurze, może przez laptop w sieci lokalnej:
+```bash
+curl -X POST http://GATEWAY_LOCAL_IP:3001/update \
+  -H "x-gateway-secret: <aktualny sekret>" \
+  -d '{"url": "<URL do release asset>"}'
+```
+
+**2.2 Weryfikacja — logi backendu** (przez Coolify log viewer)
+
+```
+Gateway auth: token issued — gatewayId=<id>
+CommandListener: SSE connected — gatewayId=<id>
+```
+
+**2.3 Test provisioning beacona**
+
+Sprowisionuj beacon przez panel Admin. Sprawdź w logach gateway (przez Coolify):
+```
+CommandListener: dispatching beacon_add nonce=<...>
+Provisioning add OK: username=beacon-<hwid>
+```
+
+**2.4 Monitoring przez 24-48h**
+
+Obserwuj w logach backendu:
+- Czy SSE reconnectuje się po restarcie backendu?
+- Czy heartbeaty beaconów docierają normalnie?
+- Czy `410 Gone` pojawia się (oznacza że coś wciąż woła stary endpoint)?
+
+---
+
+### Krok 3 — Rolling update pozostałych gateway
+
+Po potwierdzeniu działania pilotażowego — zaktualizuj pozostałe przez OTA:
+
+Panel Admin → Gateways → dla każdego gateway → Aktualizuj → URL manifestu.
+
+Weryfikacja po każdym:
+```
+Gateway auth: token issued — gatewayId=<id>
 ```
 
 ---
 
-## Kwestia `secretRaw` — decyzja architektoniczna
+### Krok 4 — Weryfikacja końcowa
 
-Obecny model przechowuje `secretHash` (bcrypt) — nie można z niego odtworzyć sekretu
-do obliczenia HMAC. Dwie opcje:
+**4.1 Sprawdź że żaden gateway nie woła starych endpointów**
 
-**Opcja A — dwa pola w `Gateway`:**
-- `secretHash` (bcrypt) — do istniejącego legacy auth przez nagłówek
-- `secretEncrypted` (AES-256-GCM) — do HMAC exchange
-
-**Opcja B — tylko AES-256-GCM:**
-- Usunąć bcrypt entirely; cały auth przez HMAC→JWT
-- Wymaga migracji Prisma + usunięcia starego flow
-
-Rekomendacja: **Opcja A** w kroku 1 (niedestrukcyjna), migracja do Opcji B
-po potwierdzeniu stabilności nowego auth.
-
----
-
-## `GatewayJwtGuard` — nowy guard
-
-```typescript
-// backend/src/common/guards/gateway-jwt.guard.ts
-@Injectable()
-export class GatewayJwtGuard implements CanActivate {
-  constructor(private jwt: JwtService, private config: ConfigService) {}
-
-  canActivate(ctx: ExecutionContext): boolean {
-    const req = ctx.switchToHttp().getRequest();
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw new UnauthorizedException();
-    try {
-      const payload = this.jwt.verify(token, {
-        secret: this.config.get('JWT_GATEWAY_SECRET'),
-      });
-      if (payload.scope !== 'gateway') throw new UnauthorizedException();
-      req.gatewayId = payload.sub;
-      return true;
-    } catch {
-      throw new UnauthorizedException();
-    }
-  }
-}
+```bash
+# W logach backendu lub gateway szukaj 410
+grep "410" /var/log/... # lub przez Coolify log viewer
 ```
 
+Jeśli 410 się pojawia — ten gateway jeszcze nie został zaktualizowany.
+
+**4.2 Sprawdź rotację sekretu na jednym gateway**
+
+Panel Admin → gateway → Rotuj sekret. Obserwuj logi:
+```
+rotate_secret: phase 1 (prepare) — gatewayId=<id>
+rotate_secret: prepare ACK received
+rotate_secret: new secretHash saved in DB
+rotate_secret: verify OK — gateway reconnected with new secret
+```
+
+**4.3 Sprawdź OTA na jednym gateway** (po skonfigurowaniu kluczy Ed25519)
+
+Panel Admin → gateway → Aktualizuj → wpisz URL manifestu.
+Sprawdź że gateway pobrał, zweryfikował podpis i zrestartował się do nowej wersji.
+
 ---
 
-## Harmonogram (backend)
+### Krok 5 — Po zakończeniu rollout
 
-| Krok | Zadanie | Szacunek |
-|---|---|---|
-| 1a | `GatewayAuthService` + `POST /gateway/auth` | 0.5 dnia |
-| 1b | Decyzja i migracja `secretRaw` (Prisma schema) | 0.5 dnia |
-| 2 | `GatewayCommandsService` + SSE endpoint + `GatewayJwtGuard` | 1 dzień |
-| 3 | Refaktor `GatewaysService` (4 metody) | 0.5 dnia |
-| 4 | `rotate-secret` dwufazowy commit (Prepare + Commit + Verify) | 1 dzień |
-| 5 | Testy jednostkowe + integracyjne | 0.5 dnia |
+**5.1 Decyzja: kiedy usunąć `do_POST()` 410 Gone**
 
-Szczegóły po stronie gateway: `desk-gateway-python/docs/mqtt_roadmap.md`.
+Gdy wszystkie gateway zwracają logi z SSE (brak 410 w logach przez 7 dni)
+— usuń logikę `do_POST()` z `GatewayApiHandler` i zwolnij kod.
+
+**5.2 Decyzje biznesowe — podjęte**
+
+| # | Decyzja | Decyzja |
+|---|---------|---------|
+| D1 | Polityka VERIFY FAILED przy rotacji sekretu | ✅ Alert + ręczna interwencja |
+| D2 | RBAC dla OTA trigger beaconów | ✅ SUPER_ADMIN + OFFICE_ADMIN |
+| D3 | Stack monitoringu | ✅ Grafana, metryki z rozróżnieniem na organizacje |
+| D4 | Polityka retencji offline_events | ✅ 4h filtr w `_flush_queue()` |
+| D5 | Trigger usunięcia 410 Gone | ✅ Brak 410 przez 7 dni w logach |
+| D6 | TLS dla MQTT (beacon ↔ Mosquitto) | 🟡 Długoterminowo, nie blokuje wdrożenia |
+
+---
+
+### Harmonogram wdrożenia (szacunkowy)
+
+| Dzień | Zadanie | Odpowiedzialny |
+|-------|---------|----------------|
+| D0 | Generowanie kluczy Ed25519, konfiguracja Coolify, redeploy backendu | DevOps |
+| D0 | GitHub Release z podpisanym manifestem (tag v*) | DevOps |
+| D1 | Wdrożenie na biuro pilotażowe, weryfikacja 24h | DevOps |
+| D2 | Analiza logów pilotażu, ewentualne poprawki | Dev |
+| D3–D5 | Rolling update pozostałych biur (po 2-3 dziennie) | DevOps |
+| D6 | Weryfikacja końcowa — brak 410 w logach | DevOps |
+| D7 | Test rotacji sekretu na produkcji | Dev + DevOps |
+| D7+ | Decyzje biznesowe D1–D6, firmware roadmap | Produkt + Dev |
+
+---
+
+### Rollback plan
+
+Jeśli gateway po aktualizacji nie łączy się przez SSE:
+
+**Opcja A — OTA powrót do poprzedniej wersji** (zalecana):
+
+Panel Admin → gateway → Aktualizuj → URL poprzedniego GitHub Release asset.
+
+Gateway wykonuje OTA do starej wersji (backup `gateway.py.bak` tworzony automatycznie,
+ale OTA do konkretnego tagu jest czystsze).
+
+**Opcja B — lokalnie w biurze** (jeśli ktoś jest na miejscu):
+
+```bash
+# Z laptopa podłączonego do sieci biurowej
+curl -X POST http://GATEWAY_LOCAL_IP:3001/update \
+  -H "x-gateway-secret: <sekret>" \
+  -d '{"url": "<URL poprzedniej wersji>"}'
+```
+
+Backend nadal akceptuje stary sekret przez `secretHashPending` (15-min okno).
+
+---
+
+## Firmware roadmap (pozostałe)
+
+### F4 — TLS dla MQTT 🟡 Niski priorytet
+
+Self-signed cert na Mosquitto + CA cert zakompilowany w firmware.
+Nie blokuje wdrożenia — lokalna sieć biurowa jest akceptowalnym kompromisem
+na start. Warunek konieczny: WPA2-Enterprise lub izolacja klientów na WiFi biurowym.

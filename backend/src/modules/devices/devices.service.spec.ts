@@ -128,6 +128,7 @@ describe('DevicesService', () => {
       jest.spyOn(service, 'getLatestFirmware').mockResolvedValue({
         version:     '1.2.0',
         url:         'https://github.com/releases/v1.2.0/firmware.bin',
+        sha256:      'aabbccdd1122334455667788990011223344556677889900aabbccdd11223344',
         size:        512000,
         publishedAt: '2025-06-01T00:00:00Z',
       });
