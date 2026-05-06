@@ -7,7 +7,7 @@
  *
  * backend/src/modules/organizations/organizations.service.ts
  */
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface CreateOrganizationDto {
@@ -58,6 +58,34 @@ export class OrganizationsService {
   async update(id: string, dto: UpdateOrganizationDto) {
     await this.findOne(id);
     return this.prisma.organization.update({ where: { id }, data: dto });
+  }
+
+  async getCustomAmenities(orgId: string): Promise<string[]> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId },
+      select: { customAmenities: true },
+    });
+    if (!org) throw new NotFoundException(`Organization ${orgId} not found`);
+    return org.customAmenities;
+  }
+
+  async updateCustomAmenities(orgId: string, amenities: string[]): Promise<string[]> {
+    const cleaned = [...new Set(
+      amenities.map(a => a.trim().toLowerCase()).filter(a => a.length > 0),
+    )];
+    if (cleaned.length > 50) {
+      throw new BadRequestException('Maximum 50 custom amenities allowed');
+    }
+    const invalid = cleaned.find(a => a.length > 40);
+    if (invalid) {
+      throw new BadRequestException(`Amenity tag too long (max 40 chars): "${invalid}"`);
+    }
+    const org = await this.prisma.organization.update({
+      where: { id: orgId },
+      data:  { customAmenities: cleaned },
+      select: { customAmenities: true },
+    });
+    return org.customAmenities;
   }
 
   async getStats(id: string) {

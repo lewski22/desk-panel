@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                           from '@nestjs/swagger';
 import { UserRole }                                                       from '@prisma/client';
-import { IsString, IsBoolean, IsOptional }                                from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsArray }                       from 'class-validator';
 import { OrganizationsService, CreateOrganizationDto, UpdateOrganizationDto } from './organizations.service';
 import { AzureAuthService } from '../auth/azure-auth.service';
 import { JwtAuthGuard }     from '../auth/guards/jwt-auth.guard';
@@ -11,6 +11,11 @@ import { Roles }            from '../auth/decorators/roles.decorator';
 class UpdateAzureConfigDto {
   @IsOptional() @IsString()   azureTenantId?: string;
   @IsOptional() @IsBoolean()  azureEnabled?:  boolean;
+}
+
+class UpdateAmenitiesDto {
+  @IsArray() @IsString({ each: true })
+  amenities: string[];
 }
 
 @ApiTags('organizations')
@@ -27,6 +32,23 @@ export class OrganizationsController {
   @Get()
   @ApiOperation({ summary: 'List all organizations (Super Admin)' })
   findAll() { return this.svc.findAll(); }
+
+  // ── Custom Amenities ───────────────────────────────────────
+  // Static "me" routes must come before :id to avoid param capture
+
+  @Get('me/amenities')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Get custom amenities for own organization' })
+  getAmenities(@Request() req: any) {
+    return this.svc.getCustomAmenities(req.user.organizationId);
+  }
+
+  @Put('me/amenities')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Replace custom amenities list for own organization' })
+  updateAmenities(@Body() dto: UpdateAmenitiesDto, @Request() req: any) {
+    return this.svc.updateCustomAmenities(req.user.organizationId, dto.amenities);
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) { return this.svc.findOne(id); }

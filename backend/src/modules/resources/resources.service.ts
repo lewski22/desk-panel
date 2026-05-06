@@ -27,8 +27,16 @@ export class ResourcesService {
   // ── Lista zasobów per lokalizacja ─────────────────────────────
   async findAll(locationId: string, type?: string, date?: string, actorOrgId?: string) {
     const now = new Date();
-    const todayWaw = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
-    const isToday  = !date || date === todayWaw;
+
+    // Pobierz timezone lokalizacji przed głównym zapytaniem
+    const loc = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { timezone: true },
+    });
+    const tz = loc?.timezone ?? 'Europe/Warsaw';
+
+    const todayLocal = now.toLocaleDateString('sv-SE', { timeZone: tz });
+    const isToday    = !date || date === todayLocal;
 
     let bookingWhere: any;
     if (isToday) {
@@ -38,12 +46,16 @@ export class ResourcesService {
         endTime:   { gt:  now },
       };
     } else {
-      const dayStart = new Date(`${date}T00:00:00.000Z`);
-      const dayEnd   = new Date(`${date}T23:59:59.999Z`);
+      // Bookings overlapping the requested date in location-local time.
+      // Use UTC ±14h window to cover any timezone, then filter precisely in-memory.
+      const windowStart = new Date(`${date}T00:00:00Z`);
+      windowStart.setUTCHours(windowStart.getUTCHours() - 14);
+      const windowEnd = new Date(`${date}T23:59:59Z`);
+      windowEnd.setUTCHours(windowEnd.getUTCHours() + 14);
       bookingWhere = {
         status:    'CONFIRMED',
-        startTime: { gte: dayStart },
-        endTime:   { lte: dayEnd  },
+        startTime: { lte: windowEnd },
+        endTime:   { gte: windowStart },
       };
     }
 
@@ -56,7 +68,7 @@ export class ResourcesService {
       },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
       include: {
-        location: { select: { openTime: true, closeTime: true } },
+        location: { select: { openTime: true, closeTime: true, timezone: true } },
         bookings: {
           where:   bookingWhere,
           select:  { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
@@ -66,24 +78,43 @@ export class ResourcesService {
       },
     });
 
-    // Compute nextAvailableSlot for ROOM resources on today
-    let todayBookingsByResource: Record<string, { startTime: Date; endTime: Date }[]> = {};
+    // Compute nextAvailableSlot for ROOM resources on today.
+    // All slot comparisons are done in location-local-time minutes.
+    // `tz`, `todayLocal`, `isToday` are already resolved above from location.timezone.
+    const toLocalMin = (d: Date) => {
+      const t = d.toLocaleTimeString('sv-SE', { timeZone: tz });
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    let todayBookingsByResource: Record<string, { startMin: number; endMin: number }[]> = {};
     if (isToday) {
       const roomIds = resources.filter(r => r.type === 'ROOM').map(r => r.id);
       if (roomIds.length > 0) {
-        const todayStart = new Date(`${todayWaw}T00:00:00.000Z`);
-        const todayEnd   = new Date(`${todayWaw}T23:59:59.999Z`);
+        // Conservative UTC window: today-in-local-tz spans at most UTC-14..UTC+14
+        const windowStart = new Date(`${todayLocal}T00:00:00Z`);
+        windowStart.setUTCHours(windowStart.getUTCHours() - 14);
+        const windowEnd = new Date(`${todayLocal}T23:59:59Z`);
+        windowEnd.setUTCHours(windowEnd.getUTCHours() + 14);
         const todayBookings = await this.prisma.booking.findMany({
           where: {
             resourceId: { in: roomIds },
             status:    'CONFIRMED',
-            startTime: { gte: todayStart, lte: todayEnd },
+            startTime: { lte: windowEnd },
+            endTime:   { gte: windowStart },
           },
           select: { resourceId: true, startTime: true, endTime: true },
         });
         for (const b of todayBookings) {
+          // Keep only bookings that actually touch today in location-local time
+          const bDateLocal = b.startTime.toLocaleDateString('sv-SE', { timeZone: tz });
+          const eeDateLocal = b.endTime.toLocaleDateString('sv-SE',   { timeZone: tz });
+          if (bDateLocal !== todayLocal && eeDateLocal !== todayLocal) continue;
           if (!todayBookingsByResource[b.resourceId]) todayBookingsByResource[b.resourceId] = [];
-          todayBookingsByResource[b.resourceId].push({ startTime: b.startTime, endTime: b.endTime });
+          todayBookingsByResource[b.resourceId].push({
+            startMin: toLocalMin(b.startTime),
+            endMin:   toLocalMin(b.endTime),
+          });
         }
       }
     }
@@ -93,12 +124,13 @@ export class ResourcesService {
       let nextAvailableSlot: string | null = null;
 
       if (r.type === 'ROOM' && isToday) {
-        const [openH,  openM]  = ((location as any)?.openTime  ?? '08:00').split(':').map(Number);
-        const [closeH, closeM] = ((location as any)?.closeTime ?? '20:00').split(':').map(Number);
+        const loc = location as any;
+        const [openH,  openM]  = (loc?.openTime  ?? '08:00').split(':').map(Number);
+        const [closeH, closeM] = (loc?.closeTime ?? '20:00').split(':').map(Number);
         const openTotal  = openH  * 60 + openM;
         const closeTotal = closeH * 60 + closeM;
-        const nowWawStr = now.toLocaleTimeString('sv-SE', { timeZone: 'Europe/Warsaw' });
-        const [nowH, nowM] = nowWawStr.split(':').map(Number);
+        const nowLocalStr = now.toLocaleTimeString('sv-SE', { timeZone: tz });
+        const [nowH, nowM] = nowLocalStr.split(':').map(Number);
         const nowMin = nowH * 60 + nowM;
         const startMin = Math.max(openTotal, nowMin);
         // Round up to next 30-min boundary
@@ -106,12 +138,12 @@ export class ResourcesService {
         const rBookings = todayBookingsByResource[r.id] ?? [];
 
         for (let m = roundedStart; m + 30 <= closeTotal; m += 30) {
-          const slotH = String(Math.floor(m / 60)).padStart(2, '0');
-          const slotM = String(m % 60).padStart(2, '0');
-          const slotStart = new Date(`${todayWaw}T${slotH}:${slotM}:00.000Z`);
-          const slotEnd   = new Date(slotStart.getTime() + 30 * 60_000);
-          const conflict  = rBookings.find(b => b.startTime < slotEnd && b.endTime > slotStart);
+          const slotEnd = m + 30;
+          // Conflict if any booking overlaps [m, slotEnd) in location-local minutes
+          const conflict = rBookings.find(b => b.startMin < slotEnd && b.endMin > m);
           if (!conflict) {
+            const slotH = String(Math.floor(m / 60)).padStart(2, '0');
+            const slotM = String(m % 60).padStart(2, '0');
             nextAvailableSlot = `${slotH}:${slotM}`;
             break;
           }

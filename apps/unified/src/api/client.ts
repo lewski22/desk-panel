@@ -205,7 +205,7 @@ export const appApi = {
     remove:           (id: string)                   => req<void>(`/gateway/${id}`, { method: 'DELETE' }),
     regenerateSecret: (id: string)                   => req<any>(`/gateway/${id}/regenerate-secret`, { method: 'POST' }),
     rotateSecret:     (id: string)                   => req<any>(`/gateway/${id}/rotate-secret`, { method: 'POST' }),
-    triggerUpdate:    (id: string, channel = 'main') => req<any>(`/gateway/${id}/update`, { method: 'POST', body: JSON.stringify({ channel }) }),
+    triggerUpdate:    (id: string) => req<any>(`/gateway/${id}/update`, { method: 'POST', body: '{}' }),
     createSetupToken: (locationId: string)           => req<any>('/gateway/setup-tokens', { method: 'POST', body: JSON.stringify({ locationId }) }),
     listSetupTokens:  (locationId: string)           => req<any[]>(`/gateway/setup-tokens/${locationId}`),
     revokeSetupToken: (tokenId: string)              => req<void>(`/gateway/setup-tokens/${tokenId}`, { method: 'DELETE' }),
@@ -350,6 +350,9 @@ export const appApi = {
   organizations: {
     getAzureConfig:    (id: string)         => req<any>(`/organizations/${id}/azure`),
     updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
+    getAmenities:      ()                   => req<string[]>('/organizations/me/amenities'),
+    updateAmenities:   (amenities: string[]) =>
+      req<string[]>('/organizations/me/amenities', { method: 'PUT', body: JSON.stringify({ amenities }) }),
   },
 
   // ── Push Notifications ────────────────────────────────────────

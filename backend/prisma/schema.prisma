@@ -114,7 +114,8 @@ model Organization {
   mrr            Int?
   nextInvoiceAt  DateTime?
 
-  enabledModules String[]  @default([])
+  enabledModules  String[]  @default([])
+  customAmenities String[]  @default([])
 
   // Azure SSO — DEPRECATED in favour of OrgIntegration (kept for backward compat)
   azureTenantId  String?

@@ -1,6 +1,7 @@
 # Architektura systemu — Reserti Desk Management
 
-> Aktualizacja: 2026-04-15 — v0.11.0
+> Aktualizacja: 2026-05-07 — v0.17.8  
+> Strefy czasowe per lokalizacja → `timezones.md`
 
 ---
 

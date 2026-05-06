@@ -455,6 +455,90 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
   );
 }
 
+// ── Custom Amenities Section ─────────────────────────────────
+function AmenitiesSection() {
+  const { t }       = useTranslation();
+  const [amenities, setAmenities] = useState<string[]>([]);
+  const [input,     setInput]     = useState('');
+  const [saving,    setSaving]    = useState(false);
+
+  useEffect(() => {
+    appApi.organizations.getAmenities().then(setAmenities).catch(() => {});
+  }, []);
+
+  const save = async (next: string[], rollback: string[]) => {
+    setSaving(true);
+    setAmenities(next); // optimistic update
+    try {
+      const saved = await appApi.organizations.updateAmenities(next);
+      setAmenities(saved);
+    } catch {
+      setAmenities(rollback); // restore on error
+    }
+    setSaving(false);
+  };
+
+  const add = () => {
+    const tag = input.trim().toLowerCase();
+    if (!tag || amenities.includes(tag)) { setInput(''); return; }
+    const prev = amenities;
+    const next = [...amenities, tag];
+    setInput('');
+    save(next, prev);
+  };
+
+  const remove = (tag: string) => {
+    const prev = amenities;
+    save(amenities.filter(a => a !== tag), prev);
+  };
+
+  return (
+    <section className="mt-8 border border-zinc-200 rounded-2xl p-5 bg-white">
+      <h2 className="text-sm font-semibold text-zinc-700 mb-1">
+        {t('org.amenities.title', 'Słownik wyposażenia sal')}
+      </h2>
+      <p className="text-xs text-zinc-400 mb-4">
+        {t('org.amenities.description', 'Tagi wyposażenia dostępne przy tworzeniu sal konferencyjnych.')}
+      </p>
+
+      {amenities.length === 0 && (
+        <p className="text-xs text-zinc-400 mb-3 italic">
+          {t('org.amenities.empty', 'Brak własnych tagów wyposażenia.')}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {amenities.map(a => (
+          <span key={a}
+            className="inline-flex items-center gap-1.5 bg-violet-50 border border-violet-200 text-violet-700 text-xs font-medium px-2.5 py-1 rounded-full">
+            {a}
+            <button
+              onClick={() => remove(a)}
+              disabled={saving}
+              className="text-violet-400 hover:text-red-500 transition-colors leading-none disabled:opacity-40"
+              title="Usuń"
+            >×</button>
+          </span>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
+          placeholder={t('org.amenities.placeholder', 'np. hamak, foosball…')}
+          className="flex-1 border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400"
+        />
+        <Btn onClick={add} loading={saving} variant="secondary">
+          {t('resource.form.amenity_add', '+ Dodaj')}
+        </Btn>
+      </div>
+    </section>
+  );
+}
+
 export function OrganizationsPage() {
   const user = getUser();
   const { t } = useTranslation();
@@ -782,6 +866,9 @@ export function OrganizationsPage() {
           </div>
         </>
       )}
+
+      {/* ── Custom Amenities dictionary ──────────────────────── */}
+      {!isSuperAdmin && <AmenitiesSection />}
 
       {/* Create / Edit modal */}
       {(() => {

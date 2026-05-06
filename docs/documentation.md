@@ -2,7 +2,7 @@
 
 > **Wersja:** v0.17.0 | **Stack:** NestJS 11 + Prisma 5 + PostgreSQL 15  
 > Przewodnik dla deweloperów — gdzie szukać konkretnej logiki i jak moduły współpracują.  
-> Szczegóły architektury IoT → `architecture.md` | API + wzorce kodu → `ai-context.md`
+> Szczegóły architektury IoT → `architecture.md` | API + wzorce kodu → `ai-context.md` | Strefy czasowe → `timezones.md`
 
 ---
 

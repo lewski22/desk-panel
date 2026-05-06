@@ -3,7 +3,7 @@
  * CRUD sal konferencyjnych, miejsc parkingowych i sprzętu
  * Dostępna dla OFFICE_ADMIN+
  */
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate }     from 'react-router-dom';
 import { useOrgModules }   from '../hooks/useOrgModules';
 import { useTranslation } from 'react-i18next';
@@ -21,11 +21,13 @@ const TYPE_ICONS: Record<string, string> = {
   ROOM: '🏛', PARKING: '🅿️', EQUIPMENT: '🔧',
 };
 
-const AMENITIES_OPTIONS = ['TV','whiteboard','videoconf','projector','phone','ac'];
+const PRESET_AMENITIES = ['TV','whiteboard','videoconf','projector','phone','ac'];
 
 // ── Form Modal ────────────────────────────────────────────────
-function ResourceModal({ resource, locationId, onClose, onSaved }: {
-  resource?: any; locationId: string; onClose: () => void; onSaved: () => void;
+function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, onAddAmenity }: {
+  resource?: any; locationId: string; allAmenities: string[];
+  onClose: () => void; onSaved: () => void;
+  onAddAmenity: (tag: string) => void;
 }) {
   const { t }   = useTranslation();
   const isEdit  = !!resource;
@@ -41,10 +43,11 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
     zone:        resource?.zone        ?? '',
     amenities:   resource?.amenities   ?? [] as string[],
   });
-  const [saving,    setSaving]    = useState(false);
-  const [err,       setErr]       = useState<string | null>(null);
-  const [isDirty,   setIsDirty]   = useState(false);
-  const [showGuard, setShowGuard] = useState(false);
+  const [saving,      setSaving]      = useState(false);
+  const [err,         setErr]         = useState<string | null>(null);
+  const [isDirty,     setIsDirty]     = useState(false);
+  const [showGuard,   setShowGuard]   = useState(false);
+  const [customInput, setCustomInput] = useState('');
 
   const set = (k: string, v: any) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -59,6 +62,17 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
         ? f.amenities.filter((x: string) => x !== a)
         : [...f.amenities, a],
     }));
+  };
+
+  const handleAddCustom = () => {
+    const tag = customInput.trim().toLowerCase();
+    if (!tag) return;
+    onAddAmenity(tag);
+    if (!form.amenities.includes(tag)) {
+      setForm(f => ({ ...f, amenities: [...f.amenities, tag] }));
+      setIsDirty(true);
+    }
+    setCustomInput('');
   };
 
   const requestClose = () => {
@@ -114,7 +128,7 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
               onChange={e => set('capacity', e.target.value)} placeholder="10" />
             <FormField label={t('resource.form.amenities')}>
               <div className="flex flex-wrap gap-2 mt-1">
-                {AMENITIES_OPTIONS.map(a => (
+                {allAmenities.map(a => (
                   <button key={a} type="button"
                     onClick={() => toggleAmenity(a)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
@@ -125,6 +139,20 @@ function ResourceModal({ resource, locationId, onClose, onSaved }: {
                     {a}
                   </button>
                 ))}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <input
+                  type="text"
+                  value={customInput}
+                  onChange={e => setCustomInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddCustom())}
+                  placeholder={t('resource.form.amenity_placeholder', 'Dodaj własne…')}
+                  className="flex-1 border border-zinc-200 rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-violet-400"
+                />
+                <button type="button" onClick={handleAddCustom}
+                  className="text-xs px-3 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium transition-colors">
+                  {t('resource.form.amenity_add', '+ Dodaj')}
+                </button>
               </div>
             </FormField>
           </>
@@ -186,14 +214,32 @@ export function ResourcesPage() {
     return true; // EQUIPMENT zawsze dostępne gdy jest ResourcesPage
   });
 
-  const [locations, setLocations] = useState<any[]>([]);
-  const [locationId, setLocId]    = useState('');
-  const [resources, setResources] = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [modal, setModal]         = useState<'create' | any | null>(null);
-  const [typeFilter, setType]     = useState('');
+  const [locations, setLocations]     = useState<any[]>([]);
+  const [locationId, setLocId]        = useState('');
+  const [resources, setResources]     = useState<any[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [modal, setModal]             = useState<'create' | any | null>(null);
+  const [typeFilter, setType]         = useState('');
+  const [customAmenities, setCustomAmenities] = useState<string[]>([]);
+
+  const allAmenities = useMemo(
+    () => [...new Set([...PRESET_AMENITIES, ...customAmenities])],
+    [customAmenities],
+  );
+
+  const addCustomAmenity = useCallback((tag: string) => {
+    setCustomAmenities(prev => {
+      if (prev.includes(tag)) return prev;
+      const next = [...prev, tag];
+      appApi.organizations.updateAmenities(next).catch(() => {});
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
+    appApi.organizations.getAmenities()
+      .then(setCustomAmenities)
+      .catch(() => {});
     appApi.locations.listAll()
       .then(locs => { setLocations(locs); if (locs.length > 0) setLocId(locs[0].id); })
       .catch(() => {});
@@ -320,8 +366,10 @@ export function ResourcesPage() {
         <ResourceModal
           resource={modal === 'create' ? undefined : modal}
           locationId={locationId}
+          allAmenities={allAmenities}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); toast(t('toast.resource_saved', 'Zasób zapisano')); load(); }}
+          onAddAmenity={addCustomAmenity}
         />
       )}
     </div>

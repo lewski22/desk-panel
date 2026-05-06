@@ -1192,7 +1192,18 @@
       "capacity": "Capacity (people)",
       "amenities": "Amenities",
       "vehicle_type": "Vehicle type",
-      "required": "Fill in required fields"
+      "required": "Fill in required fields",
+      "amenity_placeholder": "Add custom amenity…",
+      "amenity_add": "+ Add",
+      "amenity_custom": "Custom"
+    }
+  },
+  "org": {
+    "amenities": {
+      "title": "Room amenities dictionary",
+      "description": "Amenity tags available when creating conference rooms in your organization.",
+      "empty": "No custom amenity tags yet.",
+      "placeholder": "e.g. hammock, foosball…"
     }
   },
   "kiosk": {

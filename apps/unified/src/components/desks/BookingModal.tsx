@@ -32,7 +32,7 @@ export function BookingModal({ resource, onClose, onBooked, initialDate, presetN
   const [avail, setAvail]         = useState<any>(null);
   const [loading, setLoading]     = useState(false);
   const [startTime, setStartTime] = useState<string | null>(() => presetNow ? roundToNext30(new Date()) : null);
-  const presetDate = initialDate ?? localDateStr();
+  const presetDate = useMemo(() => initialDate ?? localDateStr(), [initialDate]);
   const [endTime,   setEndTime]   = useState<string | null>(null);
   const [notes,     setNotes]     = useState('');
   const [saving,    setSaving]    = useState(false);

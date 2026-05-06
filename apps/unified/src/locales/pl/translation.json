@@ -1192,7 +1192,18 @@
       "capacity": "Pojemność (osób)",
       "amenities": "Wyposażenie",
       "vehicle_type": "Typ pojazdu",
-      "required": "Wypełnij wymagane pola"
+      "required": "Wypełnij wymagane pola",
+      "amenity_placeholder": "Dodaj własne wyposażenie…",
+      "amenity_add": "+ Dodaj",
+      "amenity_custom": "Własne"
+    }
+  },
+  "org": {
+    "amenities": {
+      "title": "Słownik wyposażenia sal",
+      "description": "Tagi wyposażenia dostępne przy tworzeniu sal konferencyjnych w Twojej organizacji.",
+      "empty": "Brak własnych tagów wyposażenia.",
+      "placeholder": "np. hamak, foosball…"
     }
   },
   "kiosk": {

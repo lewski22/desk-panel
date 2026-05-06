@@ -1,6 +1,19 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-06
+> Ostatnia aktualizacja: 2026-05-07
+
+---
+
+## [0.17.8] — 2026-05-07 — Custom Amenities per Organization
+
+### Added
+- **`customAmenities` field on Organization model** — `String[] @default([])` przechowuje słownik tagów wyposażenia per tenant; idempotentna migracja (`schema.prisma`, `migration.sql`)
+- **`GET /organizations/me/amenities`** — zwraca listę własnych tagów (OFFICE_ADMIN + własna org); **`PUT /organizations/me/amenities`** — zastępuje listę, walidacja: max 50 tagów, max 40 znaków, dedup + trim + lowercase (`organizations.service.ts`, `organizations.controller.ts`)
+- **Dynamiczne amenities w `ResourceModal`** — zamiast hardkodowanej listy `PRESET_AMENITIES` + custom tagi org; pole tekstowe + "Enter" pozwala dodać nowy tag (fire-and-forget persist do org dictionary) (`ResourcesPage.tsx`)
+- **Sekcja zarządzania słownikiem wyposażenia** w `OrganizationsPage` — widoczna dla OFFICE_ADMIN; lista tagów z możliwością usunięcia, input do dodawania (`OrganizationsPage.tsx`)
+- **Rozszerzone `AMENITY_ICONS`** w `ResourceCard` — nowe ikony: coffee ☕, espresso ☕, piano 🎹, xbox 🎮, standing 🧍, sofa 🛋️, outdoor 🌿, printer 🖨️, scanner 🖷, ethernet 🔌 (`ResourceCard.tsx`)
+- **API client** — `organizations.getAmenities()` i `organizations.updateAmenities()` (`client.ts`)
+- **i18n klucze** `resource.form.amenity_placeholder/add/custom` i `org.amenities.title/description/empty/placeholder` w `pl` i `en` (`translation.json`)
 
 ---
 

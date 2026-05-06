@@ -14,6 +14,10 @@ const TYPE_META: Record<string, { icon: string; color: string }> = {
 const AMENITY_ICONS: Record<string, string> = {
   TV:         '📺', whiteboard: '📋', videoconf: '📹',
   projector:  '📽', phone:      '📞', ac:        '❄️',
+  coffee:     '☕', espresso:   '☕', piano:      '🎹',
+  xbox:       '🎮', standing:   '🧍', sofa:       '🛋️',
+  outdoor:    '🌿', printer:    '🖨️', scanner:    '🖷',
+  ethernet:   '🔌',
 };
 
 function formatSlotEnd(isoTime: string): string {
