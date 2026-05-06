@@ -72,9 +72,9 @@ function GatewaySection({ locations, activeLocId }: { locations: any[]; activeLo
   const handleUpdate = async (id: string, name: string) => {
     if (!confirm(t('provisioning.gateway.confirm_update', { name }))) return;
     try {
-      const r = await appApi.gateways.triggerUpdate(id);
-      setGwErr(`✓ ${r.oldVersion} → ${r.newVersion}`);
-      setTimeout(load, 18_000);  // odśwież po restarcie
+      await appApi.gateways.triggerUpdate(id);
+      setGwErr(`✓ OTA wysłane — gateway zrestartuje się za ~15s`);
+      setTimeout(load, 18_000);
     } catch (e: any) {
       setGwErr(`${t('common.error')}: ${e.message ?? e}`);
     }

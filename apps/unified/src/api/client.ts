@@ -267,12 +267,16 @@ export const appApi = {
       const qs = params.toString();
       return req<any[]>(`/locations/${locId}/resources${qs ? `?${qs}` : ''}`);
     },
-    create:       (locId: string, body: any)      => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
-    update:       (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-    remove:       (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),
-    availability: (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
-    book:         (id: string, body: any)         => req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
+    create:         (locId: string, body: any)      => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
+    update:         (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove:         (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),
+    availability:   (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
+    book:           (id: string, body: { date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean; targetUserId?: string }) =>
+      req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
+    myBookings:     (from?: string)                 => req<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`),
+    cancelBooking:  (bookingId: string)             => req<void>(`/bookings/${bookingId}/cancel`, { method: 'POST', body: '{}' }),
   },
+  /** @deprecated Use appApi.resources.cancelBooking / appApi.resources.myBookings instead */
   bookings: {
     cancel: (id: string)    => req<any>(`/bookings/${id}/cancel`, { method: 'POST', body: '{}' }),
     myList: (from?: string) => req<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`),

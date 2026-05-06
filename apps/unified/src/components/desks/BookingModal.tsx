@@ -1,5 +1,5 @@
 /**
- * BookingModal — Sprint E2 + FIX
+ * BookingModal — Sprint E2 + ROOM-FIX (0.17.7)
  * Modal rezerwacji sali konferencyjnej / parkingu
  * - HOURLY: sloty 30-min z siatką wyboru
  * - ALL_DAY: jeden slot "cały dzień" dla parkingów
@@ -9,29 +9,54 @@ import { useTranslation } from 'react-i18next';
 import { appApi }          from '../../api/client';
 import { Modal, Btn }      from '../ui';
 import { CharCount }       from '../ui/CharCount';
-import { localDateStr }    from '../../utils/date';
+import { localDateStr, localDateTimeISO } from '../../utils/date';
 
 interface Props {
   resource:     any;
   onClose:      () => void;
   onBooked:     () => void;
   initialDate?: string;
+  presetNow?:   boolean;
 }
 
-export function BookingModal({ resource, onClose, onBooked, initialDate }: Props) {
+function roundToNext30(date: Date): string | null {
+  const totalMin = date.getHours() * 60 + date.getMinutes();
+  const rounded  = Math.ceil(totalMin / 30) * 30;
+  if (rounded >= 24 * 60) return null; // past midnight — no valid slot today
+  return `${String(Math.floor(rounded / 60)).padStart(2, '0')}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+export function BookingModal({ resource, onClose, onBooked, initialDate, presetNow }: Props) {
   const { t }                     = useTranslation();
   const [date, setDate]           = useState(initialDate ?? localDateStr());
   const [avail, setAvail]         = useState<any>(null);
   const [loading, setLoading]     = useState(false);
-  const [startTime, setStartTime] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<string | null>(() => presetNow ? roundToNext30(new Date()) : null);
+  const presetDate = initialDate ?? localDateStr();
   const [endTime,   setEndTime]   = useState<string | null>(null);
   const [notes,     setNotes]     = useState('');
   const [saving,    setSaving]    = useState(false);
   const [err,       setErr]       = useState<string | null>(null);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
+  const [usersList, setUsersList]       = useState<any[]>([]);
+
+  const userRole = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
+  }, []);
+  const isAdmin = ['OFFICE_ADMIN', 'SUPER_ADMIN'].includes(userRole);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    appApi.users.list().then(setUsersList).catch(() => {});
+  }, [isAdmin]);
 
   useEffect(() => {
     setLoading(true);
-    setStartTime(null); setEndTime(null);
+    // Reset selection on date change; preserve presetNow only on the initial date
+    if (!presetNow || date !== presetDate) {
+      setStartTime(null);
+      setEndTime(null);
+    }
     appApi.resources.availability(resource.id, date)
       .then(setAvail)
       .catch(() => {})
@@ -62,16 +87,24 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
     return s;
   }, [startTime, endTime, avail?.slots]);
 
+  const endTimeDisplay = useMemo(() => {
+    if (!endTime) return null;
+    const [eh, em] = endTime.split(':').map(Number);
+    const total = eh * 60 + em + 30;
+    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+  }, [endTime]);
+
   const handleBook = async () => {
     setSaving(true); setErr(null);
     try {
       if (avail?.allDayMode) {
         await appApi.resources.book(resource.id, {
           date,
-          startTime: `${date}T00:00:00.000Z`,
-          endTime:   `${date}T23:59:59.000Z`,
+          startTime: localDateTimeISO(date, '00:00'),
+          endTime:   localDateTimeISO(date, '23:59'),
           allDay:    true,
           notes,
+          ...(targetUserId ? { targetUserId } : {}),
         });
       } else {
         if (!startTime || !endTime) { setSaving(false); return; }
@@ -81,9 +114,10 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
         const endM = String(endMinutes % 60).padStart(2, '0');
         await appApi.resources.book(resource.id, {
           date,
-          startTime: `${date}T${startTime}:00.000Z`,
-          endTime:   `${date}T${endH}:${endM}:00.000Z`,
+          startTime: localDateTimeISO(date, startTime),
+          endTime:   localDateTimeISO(date, `${endH}:${endM}`),
           notes,
+          ...(targetUserId ? { targetUserId } : {}),
         });
       }
       onBooked();
@@ -125,6 +159,13 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
                 </p>
               )}
             </div>
+          )}
+
+          {/* Working hours info */}
+          {avail && !avail.allDayMode && (avail.openTime || avail.closeTime) && (
+            <p className="text-xs text-zinc-400 text-center mb-2">
+              {t('resource.working_hours', 'Godziny pracy')}: {avail.openTime ?? '08:00'} – {avail.closeTime ?? '18:00'}
+            </p>
           )}
 
           {loading ? (
@@ -182,6 +223,16 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
                 <span className="inline-block w-3 h-3 rounded bg-zinc-50 border border-zinc-200 mr-1" />{t('resource.legend.free')}
                 <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-100 ml-3 mr-1" />{t('resource.legend.taken')}
               </p>
+
+              {/* Visual range label */}
+              {startTime && (
+                <p className="text-sm text-zinc-600 text-center py-2">
+                  {endTime
+                    ? `📅 ${startTime} → ${endTimeDisplay}`
+                    : `⏱ ${t('resource.select_end_hint', 'Wybierz koniec: od')} ${startTime}…`
+                  }
+                </p>
+              )}
             </>
           )}
         </div>
@@ -196,6 +247,27 @@ export function BookingModal({ resource, onClose, onBooked, initialDate }: Props
             placeholder={t('resource.notes_placeholder')}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand/30" />
         </div>
+
+        {/* Book on behalf of (admin only) */}
+        {isAdmin && usersList.length > 0 && (
+          <div>
+            <label className="block text-xs text-zinc-500 font-medium mb-1">
+              {t('rooms.book_for', 'Rezerwuj dla:')}
+            </label>
+            <select
+              value={targetUserId ?? ''}
+              onChange={e => setTargetUserId(e.target.value || null)}
+              className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+            >
+              <option value="">{t('rooms.book_for_self', 'Siebie (domyślnie)')}</option>
+              {usersList.map((u: any) => (
+                <option key={u.id} value={u.id}>
+                  {u.firstName} {u.lastName} — {u.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
 

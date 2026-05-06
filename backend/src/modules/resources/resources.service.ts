@@ -1,9 +1,12 @@
 /**
- * ResourcesService — Sprint E2
+ * ResourcesService — Sprint E2 + ROOM-FIX (0.17.7)
  * Sale konferencyjne, parking, equipment
  * CRUD zasobów + bookings z walidacją konfliktów
  */
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable, NotFoundException, ConflictException,
+  BadRequestException, ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -11,8 +14,18 @@ import { Prisma } from '@prisma/client';
 export class ResourcesService {
   constructor(private prisma: PrismaService) {}
 
+  // ── Cross-tenant guard ────────────────────────────────────────
+  private async assertResourceInOrg(resourceId: string, actorOrgId: string): Promise<void> {
+    const r = await this.prisma.resource.findUnique({
+      where: { id: resourceId },
+      select: { location: { select: { organizationId: true } } },
+    });
+    if (!r) throw new NotFoundException('Resource not found');
+    if (r.location.organizationId !== actorOrgId) throw new ForbiddenException('Access denied');
+  }
+
   // ── Lista zasobów per lokalizacja ─────────────────────────────
-  async findAll(locationId: string, type?: string, date?: string) {
+  async findAll(locationId: string, type?: string, date?: string, actorOrgId?: string) {
     const now = new Date();
     const todayWaw = now.toLocaleDateString('sv-SE', { timeZone: 'Europe/Warsaw' });
     const isToday  = !date || date === todayWaw;
@@ -39,9 +52,11 @@ export class ResourcesService {
         locationId,
         status: 'ACTIVE',
         ...(type && { type: type as any }),
+        ...(actorOrgId && { location: { organizationId: actorOrgId } }),
       },
       orderBy: [{ type: 'asc' }, { name: 'asc' }],
       include: {
+        location: { select: { openTime: true, closeTime: true } },
         bookings: {
           where:   bookingWhere,
           select:  { id: true, startTime: true, endTime: true, user: { select: { firstName: true, lastName: true } } },
@@ -51,18 +66,71 @@ export class ResourcesService {
       },
     });
 
+    // Compute nextAvailableSlot for ROOM resources on today
+    let todayBookingsByResource: Record<string, { startTime: Date; endTime: Date }[]> = {};
+    if (isToday) {
+      const roomIds = resources.filter(r => r.type === 'ROOM').map(r => r.id);
+      if (roomIds.length > 0) {
+        const todayStart = new Date(`${todayWaw}T00:00:00.000Z`);
+        const todayEnd   = new Date(`${todayWaw}T23:59:59.999Z`);
+        const todayBookings = await this.prisma.booking.findMany({
+          where: {
+            resourceId: { in: roomIds },
+            status:    'CONFIRMED',
+            startTime: { gte: todayStart, lte: todayEnd },
+          },
+          select: { resourceId: true, startTime: true, endTime: true },
+        });
+        for (const b of todayBookings) {
+          if (!todayBookingsByResource[b.resourceId]) todayBookingsByResource[b.resourceId] = [];
+          todayBookingsByResource[b.resourceId].push({ startTime: b.startTime, endTime: b.endTime });
+        }
+      }
+    }
+
     return resources.map(r => {
-      const { bookings, ...rest } = r;
-      return { ...rest, currentBooking: bookings[0] ?? null };
+      const { bookings, location, ...rest } = r;
+      let nextAvailableSlot: string | null = null;
+
+      if (r.type === 'ROOM' && isToday) {
+        const [openH,  openM]  = ((location as any)?.openTime  ?? '08:00').split(':').map(Number);
+        const [closeH, closeM] = ((location as any)?.closeTime ?? '20:00').split(':').map(Number);
+        const openTotal  = openH  * 60 + openM;
+        const closeTotal = closeH * 60 + closeM;
+        const nowWawStr = now.toLocaleTimeString('sv-SE', { timeZone: 'Europe/Warsaw' });
+        const [nowH, nowM] = nowWawStr.split(':').map(Number);
+        const nowMin = nowH * 60 + nowM;
+        const startMin = Math.max(openTotal, nowMin);
+        // Round up to next 30-min boundary
+        const roundedStart = Math.ceil(startMin / 30) * 30;
+        const rBookings = todayBookingsByResource[r.id] ?? [];
+
+        for (let m = roundedStart; m + 30 <= closeTotal; m += 30) {
+          const slotH = String(Math.floor(m / 60)).padStart(2, '0');
+          const slotM = String(m % 60).padStart(2, '0');
+          const slotStart = new Date(`${todayWaw}T${slotH}:${slotM}:00.000Z`);
+          const slotEnd   = new Date(slotStart.getTime() + 30 * 60_000);
+          const conflict  = rBookings.find(b => b.startTime < slotEnd && b.endTime > slotStart);
+          if (!conflict) {
+            nextAvailableSlot = `${slotH}:${slotM}`;
+            break;
+          }
+        }
+      }
+
+      return { ...rest, currentBooking: bookings[0] ?? null, nextAvailableSlot };
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorOrgId?: string) {
     const r = await this.prisma.resource.findUnique({
       where:   { id },
       include: { location: { select: { name: true, organizationId: true } } },
     });
     if (!r) throw new NotFoundException('Resource not found');
+    if (actorOrgId && (r.location as any).organizationId !== actorOrgId) {
+      throw new ForbiddenException('Access denied');
+    }
     return r;
   }
 
@@ -100,7 +168,9 @@ export class ResourcesService {
   }
 
   // ── Dostępność zasobu na dany dzień ───────────────────────────
-  async getAvailability(resourceId: string, date: string) {
+  async getAvailability(resourceId: string, date: string, actorOrgId?: string) {
+    if (actorOrgId) await this.assertResourceInOrg(resourceId, actorOrgId);
+
     const resource = await this.prisma.resource.findUnique({
       where:   { id: resourceId },
       include: { location: { select: { name: true, organizationId: true, openTime: true, closeTime: true, parkingBookingMode: true } } },
@@ -132,6 +202,8 @@ export class ResourcesService {
         available:  !conflict,
         currentBooking: conflict,
         slots: [],
+        openTime:  (resource.location as any)?.openTime  ?? null,
+        closeTime: (resource.location as any)?.closeTime ?? null,
       };
     }
 
@@ -153,13 +225,44 @@ export class ResourcesService {
       slots.push({ time: `${hh}:${mm}`, available: !conflict, bookingId: conflict?.id });
     }
 
-    return { resource, date, bookings, allDayMode: false, slots };
+    return {
+      resource, date, bookings, allDayMode: false, slots,
+      openTime:  (resource.location as any)?.openTime  ?? null,
+      closeTime: (resource.location as any)?.closeTime ?? null,
+    };
   }
 
   // ── Utwórz booking z walidacją konfliktów ─────────────────────
-  async createBooking(resourceId: string, userId: string, dto: {
-    date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean;
-  }) {
+  async createBooking(
+    resourceId: string,
+    actorId: string,
+    actorRole: string,
+    dto: {
+      date: string; startTime: string; endTime: string;
+      notes?: string; allDay?: boolean; targetUserId?: string;
+    },
+    actorOrgId?: string,
+  ) {
+    if (actorOrgId) await this.assertResourceInOrg(resourceId, actorOrgId);
+
+    // targetUserId validation
+    let userId = actorId;
+    if (dto.targetUserId) {
+      if (!['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(actorRole)) {
+        throw new ForbiddenException('Only admins can book on behalf of others');
+      }
+      if (actorOrgId) {
+        const targetUser = await this.prisma.user.findUnique({
+          where:  { id: dto.targetUserId },
+          select: { organizationId: true },
+        });
+        if (!targetUser || targetUser.organizationId !== actorOrgId) {
+          throw new ForbiddenException('Target user not found in your organization');
+        }
+      }
+      userId = dto.targetUserId;
+    }
+
     let start = new Date(dto.startTime);
     let end   = new Date(dto.endTime);
 
@@ -194,9 +297,13 @@ export class ResourcesService {
     });
   }
 
-  async cancelBooking(bookingId: string, userId: string, role: string) {
+  async cancelBooking(bookingId: string, userId: string, role: string, actorOrgId?: string) {
     const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException('Booking not found');
+    // Cross-tenant check via resourceId (avoids null-crash when resource is soft-deleted)
+    if (actorOrgId && booking.resourceId) {
+      await this.assertResourceInOrg(booking.resourceId, actorOrgId);
+    }
     // Własna rezerwacja lub Admin+
     if (booking.userId !== userId && !['SUPER_ADMIN','OFFICE_ADMIN'].includes(role)) {
       throw new ConflictException('Brak uprawnień do anulowania tej rezerwacji');

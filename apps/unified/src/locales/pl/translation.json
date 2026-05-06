@@ -1155,6 +1155,8 @@
     "confirm_remove": "Usunąć zasób \"{{name}}\"?",
     "select_time": "Wybierz godziny",
     "select_end": "Kliknij koniec przedziału",
+    "select_end_hint": "Wybierz koniec: od",
+    "working_hours": "Godziny pracy",
     "notes": "Notatka (opcjonalnie)",
     "notes_placeholder": "Cel spotkania, informacje...",
     "capacity": "{{count}} osób",
@@ -1536,5 +1538,23 @@
       "users": "Zaproś użytkowników",
       "beacon": "Podłącz beacon"
     }
+  },
+  "rooms": {
+    "my_bookings": {
+      "empty": "Nie masz nadchodzących rezerwacji sal",
+      "title": "Moje rezerwacje sal",
+      "cancel_confirm": "Czy na pewno chcesz anulować rezerwację sali?",
+      "cancelled": "Rezerwacja sali anulowana"
+    },
+    "filter": {
+      "capacity": "Pojemność",
+      "amenities": "Udogodnienia",
+      "any_capacity": "Dowolna pojemność"
+    },
+    "next_free": "Wolna od:",
+    "booked_until": "Zarezerwowana do:",
+    "quick_book": "Teraz",
+    "book_for": "Rezerwuj dla:",
+    "book_for_self": "Siebie (domyślnie)"
   }
 }

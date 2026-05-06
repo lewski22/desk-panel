@@ -233,12 +233,9 @@ export class GatewaysController {
   @Post(':id/update')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Trigger OTA update — pass signed manifest URL from GitHub Releases' })
-  update(
-    @Param('id')          id:          string,
-    @Body('manifestUrl')  manifestUrl: string,
-  ) {
-    return this.svc.triggerUpdate(id, manifestUrl);
+  @ApiOperation({ summary: 'Trigger OTA update to latest release (manifest URL hardcoded in backend)' })
+  update(@Param('id') id: string) {
+    return this.svc.triggerUpdate(id);
   }
 
   // ── Device heartbeat (x-gateway-provision-key required) ───────

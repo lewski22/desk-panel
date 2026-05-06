@@ -22,6 +22,11 @@ import { RecommendationBanner } from '../components/recommendations/Recommendati
 import { localDateStr }         from '../utils/date';
 import { format }               from 'date-fns';
 
+// ── Constants ─────────────────────────────────────────────────
+const AMENITY_ICONS: Record<string, string> = {
+  TV: '📺', videoconf: '📹', whiteboard: '📋', projector: '📽',
+};
+
 // ── Helpers ──────────────────────────────────────────────────
 // FIX P1-2: occupied = free desks count, total = active+online desks — invert thresholds
 function occupancyColor(occupied: number, total: number) {
@@ -241,8 +246,12 @@ export function DeskMapPage() {
   const [mapTab, setMapTab]           = useState<MapTab>('desks');
   const [resources,  setResources]    = useState<any[]>([]);
   const [resLoading, setResLoading]   = useState(false);
-  const [bookTarget, setBookTarget]   = useState<any>(null);
+  const [bookTarget, setBookTarget]   = useState<{ resource: any; mode?: 'now' } | null>(null);
   const [resViewMode, setResViewMode] = useState<ViewMode>('plan');
+
+  // Room filters
+  const [minCapacity,   setMinCapacity]   = useState<number | null>(null);
+  const [amenityFilter, setAmenityFilter] = useState<string[]>([]);
 
   const userRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
@@ -301,6 +310,13 @@ export function DeskMapPage() {
   }, [mapTab, locationId, selectedDate]);
 
   useEffect(() => { loadResources(); }, [loadResources]);
+
+  const filteredResources = useMemo(() => {
+    return resources
+      .filter(r => !minCapacity || (r.capacity ?? 0) >= minCapacity)
+      .filter(r => amenityFilter.every(a => r.amenities?.includes(a)))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [resources, minCapacity, amenityFilter]);
 
   const { desks, locationLimits, loading, error, lastUpdated, refetch } = useDesks(locationId, selectedDate);
 
@@ -465,6 +481,35 @@ export function DeskMapPage() {
       {/* Resources — Sale i Parking */}
       {mapTab !== 'desks' && (
         <div>
+          {/* Room filters (only for rooms tab) */}
+          {mapTab === 'rooms' && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              <select
+                value={minCapacity ?? ''}
+                onChange={e => setMinCapacity(e.target.value ? Number(e.target.value) : null)}
+                className="text-xs border rounded-lg px-2 py-1.5 text-zinc-600 bg-white border-zinc-200"
+              >
+                <option value="">{t('rooms.filter.any_capacity', 'Dowolna pojemność')}</option>
+                <option value="4">≥ 4 os.</option>
+                <option value="8">≥ 8 os.</option>
+                <option value="12">≥ 12 os.</option>
+                <option value="20">≥ 20 os.</option>
+              </select>
+              {(['TV', 'videoconf', 'whiteboard', 'projector'] as const).map(a => (
+                <button key={a}
+                  onClick={() => setAmenityFilter(f => f.includes(a) ? f.filter(x => x !== a) : [...f, a])}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
+                    amenityFilter.includes(a)
+                      ? 'bg-brand text-white border-brand'
+                      : 'bg-white text-zinc-600 border-zinc-200'
+                  }`}
+                >
+                  {AMENITY_ICONS[a]} {a}
+                </button>
+              ))}
+            </div>
+          )}
+
           {resLoading ? (
             <div className="flex justify-center py-12">
               <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
@@ -486,13 +531,13 @@ export function DeskMapPage() {
               {resViewMode === 'plan' && resources.some(r => r.posX != null) ? (
                 <ResourceFloorPlanView
                   locationId={locationId}
-                  resources={resources}
-                  onBook={setBookTarget}
+                  resources={filteredResources}
+                  onBook={r => setBookTarget({ resource: r })}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {resources.map(r => (
-                    <ResourceCard key={r.id} resource={r} onBook={setBookTarget} />
+                  {filteredResources.map(r => (
+                    <ResourceCard key={r.id} resource={r} onBook={(res, mode) => setBookTarget({ resource: res, mode })} />
                   ))}
                 </div>
               )}
@@ -504,8 +549,9 @@ export function DeskMapPage() {
       {/* Booking Modal — Sale / Parking */}
       {bookTarget && (
         <BookingModal
-          resource={bookTarget}
+          resource={bookTarget.resource}
           initialDate={selectedDate}
+          presetNow={bookTarget.mode === 'now'}
           onClose={() => setBookTarget(null)}
           onBooked={() => { setBookTarget(null); loadResources(); }}
         />

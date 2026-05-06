@@ -1,8 +1,8 @@
 /**
- * ResourceCard — Sprint E2
+ * ResourceCard — Sprint E2 + ROOM-FIX (0.17.7)
  * Karta sali konferencyjnej, miejsca parkingowego lub sprzętu
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 const TYPE_META: Record<string, { icon: string; color: string }> = {
@@ -16,17 +16,22 @@ const AMENITY_ICONS: Record<string, string> = {
   projector:  '📽', phone:      '📞', ac:        '❄️',
 };
 
+function formatSlotEnd(isoTime: string): string {
+  return new Date(isoTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 interface Props {
   resource: any;
-  onBook?:  (resource: any) => void;
+  onBook?:  (resource: any, mode?: 'now') => void;
   compact?: boolean;
 }
 
 export function ResourceCard({ resource, onBook, compact = false }: Props) {
   const { t } = useTranslation();
   const meta = TYPE_META[resource.type] ?? TYPE_META.ROOM;
-  const isActive  = resource.status === 'ACTIVE';
+  const isActive   = resource.status === 'ACTIVE';
   const isOccupied = isActive && !!resource.currentBooking;
+  const canBook    = onBook && isActive;
 
   const statusBadge = !isActive
     ? { cls: 'bg-zinc-100 text-zinc-500',      label: t('resource.status.inactive') }
@@ -63,6 +68,18 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
         </div>
       )}
 
+      {/* Next available / booked-until */}
+      {isOccupied && resource.nextAvailableSlot && (
+        <p className="text-[11px] text-amber-600 mt-1">
+          {t('rooms.next_free', 'Wolna od:')} {resource.nextAvailableSlot}
+        </p>
+      )}
+      {!isOccupied && resource.currentBooking && (
+        <p className="text-[11px] text-zinc-400 mt-1">
+          {t('rooms.booked_until', 'Zarezerwowana do:')} {formatSlotEnd(resource.currentBooking.endTime)}
+        </p>
+      )}
+
       {/* Type-specific details */}
       {resource.type === 'ROOM' && resource.capacity && (
         <div className="flex items-center gap-1.5 text-xs text-zinc-600">
@@ -96,13 +113,22 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
         </p>
       )}
 
-      {/* Book button */}
-      {onBook && isActive && (
-        <button
-          onClick={() => onBook(resource)}
-          className="mt-auto w-full py-2 rounded-xl bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600 transition-colors">
-          + {t('resource.book')}
-        </button>
+      {/* Book buttons */}
+      {canBook && (
+        <div className="flex gap-2 mt-auto">
+          <button
+            onClick={() => onBook(resource)}
+            className="flex-1 py-2 rounded-xl bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600 transition-colors">
+            + {t('resource.book')}
+          </button>
+          {isActive && !resource.currentBooking && (
+            <button
+              onClick={() => onBook(resource, 'now')}
+              className="py-2 px-3 rounded-xl bg-white border border-violet-300 text-violet-600 text-xs font-semibold hover:bg-violet-50 transition-colors">
+              ⚡ {t('rooms.quick_book', 'Teraz')}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

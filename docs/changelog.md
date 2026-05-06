@@ -1,6 +1,27 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-04-28
+> Ostatnia aktualizacja: 2026-05-06
+
+---
+
+## [0.17.7] — 2026-05-06 — ROOM Module: Security & UX Improvements
+
+### Security
+- **`assertResourceInOrg` guard** — wszystkie endpointy zasobów (`getAvailability`, `createBooking`, `cancelBooking`, `findOne`) weryfikują teraz przynależność zasobu do organizacji aktora; eliminuje cross-tenant access (`resources.service.ts`)
+- **`findAll` z filtrem org** — zapytanie list zasobów ograniczone do zasobów org aktora (`resources.service.ts`)
+
+### Fixed
+- **UTC bug w `BookingModal`** — czas rezerwacji sali budowany przez `localDateTimeISO()` zamiast ręcznego stringa `${date}T${h}:${m}:00.000Z`; rezerwacje w strefach CET/CEST nie były przesunięte (`BookingModal.tsx`)
+
+### Added
+- **"Moje rezerwacje sal" w `MyReservationsPage`** — nowa sekcja z listą `Booking[]`, możliwość anulowania; `GET /users/me/bookings` już istniał, brakowało UI (`MyReservationsPage.tsx`, `client.ts`)
+- **`nextAvailableSlot`** w odpowiedzi `findAll` — dla sal ACTIVE oblicza pierwszy wolny 30-min slot od teraz; widoczny na `ResourceCard` (`resources.service.ts`, `ResourceCard.tsx`)
+- **Filtry sal** w `DeskMapPage` — filtr pojemności (≥4/8/12/20 os.) i amenities (TV, videoconf, whiteboard, projector) + sortowanie alfabetyczne (`DeskMapPage.tsx`)
+- **Wizualny label zakresu** podczas wyboru slotów w `BookingModal` — "⏱ Wybierz koniec: od 09:00…" / "📅 09:00 → 10:30" (`BookingModal.tsx`)
+- **Informacja o godzinach pracy** lokalizacji w `BookingModal` (`BookingModal.tsx`, `resources.service.ts`)
+- **"Rezerwuj dla kogoś"** w `BookingModal` — OFFICE_ADMIN/SUPER_ADMIN mogą wskazać `targetUserId` (`BookingModal.tsx`, `resources.service.ts`, `CreateBookingDto`)
+- **Quick Book "⚡ Teraz"** na `ResourceCard` — pre-wypełnia czas start = teraz (zaokrąglony do 30 min) (`ResourceCard.tsx`, `DeskMapPage.tsx`, `BookingModal.tsx`)
+- **i18n klucze** dla nowych funkcji w `pl` i `en` (`translation.json`)
 
 ---
 

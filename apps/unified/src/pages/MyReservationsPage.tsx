@@ -136,7 +136,7 @@ export function MyReservationsPage() {
     try {
       const [res, bk] = await Promise.all([
         appApi.reservations.getMy(),
-        appApi.bookings.myList(),
+        appApi.resources.myBookings(),
       ]);
       setReservations(res);
       setBookings(bk);
@@ -156,9 +156,9 @@ export function MyReservationsPage() {
   };
 
   const cancelBooking = async (id: string) => {
-    if (!confirm(t('reservations.confirm_cancel_simple'))) return;
+    if (!confirm(t('rooms.my_bookings.cancel_confirm', 'Czy na pewno chcesz anulować rezerwację sali?'))) return;
     setCancellingB(id);
-    try { await appApi.bookings.cancel(id); await load(); }
+    try { await appApi.resources.cancelBooking(id); await load(); }
     catch (e: any) { setErr(e.message); }
     setCancellingB(null);
   };
@@ -214,10 +214,11 @@ export function MyReservationsPage() {
 
       {err && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{err}</div>}
 
-      {reservations.length === 0 && bookings.length === 0 ? (
+      {reservations.length === 0 && bookings.length === 0 && (
         <EmptyState icon="📅" title={t('reservations.none')} sub={t('reservations.none_hint')} />
-      ) : (
-        <div className="space-y-6">
+      )}
+
+      {(reservations.length > 0 || bookings.length > 0) && <div className="space-y-6">
           {active.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -278,12 +279,12 @@ export function MyReservationsPage() {
             </div>
           )}
 
-          {/* Rezerwacje sal konferencyjnych i parkingów */}
-          {bookings.length > 0 && (
-            <div>
-              <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-                🏛 {t('reservations.rooms_section')}
-              </h2>
+          {/* Sale konferencyjne i parkingi */}
+          <section>
+            <h3 className="font-semibold text-zinc-700 mb-3">🏛 {t('rooms.my_bookings.title', 'Moje rezerwacje sal')}</h3>
+            {bookings.length === 0 ? (
+              <EmptyState icon="🏛" title={t('rooms.my_bookings.empty', 'Nie masz nadchodzących rezerwacji sal')} />
+            ) : (
               <div className="space-y-3">
                 {bookings.map(b => {
                   const isPast = new Date(b.endTime) < new Date();
@@ -299,6 +300,7 @@ export function MyReservationsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
+                        <p className="text-xs text-zinc-400 font-mono text-[10px]">{b.resource?.code}</p>
                         <p className="text-xs text-zinc-500 mt-0.5">
                           {fmtDate(b.startTime)}
                           {' · '}
@@ -325,10 +327,9 @@ export function MyReservationsPage() {
                   );
                 })}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </section>
+        </div>}
     </div>
   );
 }

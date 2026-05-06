@@ -1,5 +1,5 @@
 /**
- * ResourcesController — Sprint E2
+ * ResourcesController — Sprint E2 + ROOM-FIX (0.17.7)
  */
 import {
   Controller, Get, Post, Patch, Delete,
@@ -32,8 +32,9 @@ export class ResourcesController {
     @Param('locationId') locationId: string,
     @Query('type')       type?:      string,
     @Query('date')       date?:      string,
+    @Request()           req?:       any,
   ) {
-    return this.svc.findAll(locationId, type, date);
+    return this.svc.findAll(locationId, type, date, req?.user?.organizationId);
   }
 
   @Post('locations/:locationId/resources')
@@ -67,8 +68,9 @@ export class ResourcesController {
   availability(
     @Param('id')     id:   string,
     @Query('date')   date: string,
+    @Request()       req:  any,
   ) {
-    return this.svc.getAvailability(id, date);
+    return this.svc.getAvailability(id, date, req.user.organizationId);
   }
 
   // ── Bookings ───────────────────────────────────────────────
@@ -76,7 +78,7 @@ export class ResourcesController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'Book a resource' })
   book(@Param('id') id: string, @Body() body: CreateBookingDto, @Request() req: any) {
-    return this.svc.createBooking(id, req.user.id, body);
+    return this.svc.createBooking(id, req.user.id, req.user.role, body, req.user.organizationId);
   }
 
   @Post('bookings/:id/cancel')
@@ -84,7 +86,7 @@ export class ResourcesController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Cancel a booking' })
   cancel(@Param('id') id: string, @Request() req: any) {
-    return this.svc.cancelBooking(id, req.user.id, req.user.role);
+    return this.svc.cancelBooking(id, req.user.id, req.user.role, req.user.organizationId);
   }
 
   @Get('users/me/bookings')

@@ -467,18 +467,23 @@ export class GatewaysService implements OnModuleDestroy {
     return { gateway: gw, ...result };
   }
 
+  // Hardcoded — changing the update source requires a code change + deploy, not just config.
+  // This makes it harder to redirect OTA to a malicious source via env injection or DB tampering.
+  private static readonly GATEWAY_MANIFEST_URL =
+    'https://github.com/lewski22/desk-gateway-python/releases/latest/download/manifest.json';
+
   /**
    * Triggers an OTA update by sending the signed manifest URL to the gateway via SSE.
    * Gateway fetches the manifest, verifies the Ed25519 signature, and applies the update.
    * Backend is only a messenger — cannot forge OTA even with full DB access.
-   *
-   * @param manifestUrl  Full URL to manifest.json from GitHub Releases
-   *                     (e.g. https://github.com/org/repo/releases/download/v1.3.0/manifest.json)
+   * Manifest URL is hardcoded — admins trigger update without knowing or specifying the source.
    */
-  async triggerUpdate(gatewayId: string, manifestUrl: string): Promise<void> {
+  async triggerUpdate(gatewayId: string): Promise<void> {
     if (!this.gatewayCommands.isConnected(gatewayId)) {
       throw new NotFoundException(`Gateway ${gatewayId} is not connected via SSE`);
     }
+
+    const manifestUrl = GatewaysService.GATEWAY_MANIFEST_URL;
 
     // OTA needs a generous timeout — RPi Zero 2W downloading over slow WiFi
     await this.gatewayCommands.publish(

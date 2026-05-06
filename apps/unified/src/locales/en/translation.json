@@ -1155,6 +1155,8 @@
     "confirm_remove": "Remove resource \"{{name}}\"?",
     "select_time": "Select time slot",
     "select_end": "Click end of range",
+    "select_end_hint": "Select end: from",
+    "working_hours": "Working hours",
     "notes": "Notes (optional)",
     "notes_placeholder": "Meeting purpose, details...",
     "capacity": "{{count}} people",
@@ -1536,5 +1538,23 @@
       "users": "Invite users",
       "beacon": "Connect beacon"
     }
+  },
+  "rooms": {
+    "my_bookings": {
+      "empty": "You have no upcoming room bookings",
+      "title": "My room bookings",
+      "cancel_confirm": "Are you sure you want to cancel this room booking?",
+      "cancelled": "Room booking cancelled"
+    },
+    "filter": {
+      "capacity": "Capacity",
+      "amenities": "Amenities",
+      "any_capacity": "Any capacity"
+    },
+    "next_free": "Free from:",
+    "booked_until": "Booked until:",
+    "quick_book": "Now",
+    "book_for": "Book for:",
+    "book_for_self": "Myself (default)"
   }
 }
