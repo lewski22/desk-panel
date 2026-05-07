@@ -1,6 +1,15 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-07
+> Ostatnia aktualizacja: 2026-05-08
+
+---
+
+## [0.17.10] — 2026-05-08 — Code Review Cleanup
+
+### Fixed
+
+- **`ResourceModal` prop** (`ResourcesPage.tsx`) — `resource?: any` → `resource?: Resource`; TS type narrowing teraz poprawnie w całym modal flow
+- **`modal` state** (`ResourcesPage.tsx`) — `useState<'create' | any | null>` → `useState<'create' | Resource | null>`; `| any` pochłaniało union, efektywnie wyłączając typowanie
 
 ---
 

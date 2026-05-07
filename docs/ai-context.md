@@ -1,6 +1,6 @@
 # Reserti — AI Context (zbiorczy)
 
-> **Ostatnia aktualizacja:** 2026-05-07 | **Wersja:** v0.17.9 | **Repo:** `github.com/lewski22/desk-panel`
+> **Ostatnia aktualizacja:** 2026-05-08 | **Wersja:** v0.17.10 | **Repo:** `github.com/lewski22/desk-panel`
 > Jedyne źródło prawdy dla sesji AI.
 
 ---

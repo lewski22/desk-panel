@@ -1,6 +1,6 @@
 # Roadmap — Reserti Desk Management System
 
-> Ostatnia aktualizacja: 2026-05-07
+> Ostatnia aktualizacja: 2026-05-08
 
 Historia sprintów A-K → `docs/CHANGELOG.md`.
 
@@ -145,6 +145,8 @@ ON CONFLICT ("type") DO NOTHING;
 | 0.17.4 | ✅ 2026-04-25 | Bugfix Sprint (K1–K6) + UX Mapy + Date Picker + Nowe UX (N-F1–N-F10) |
 | 0.17.5 | ✅ 2026-04-26 | Floor Plan Portal + Notifications List + Reservations Redesign |
 | 0.17.6 | ✅ 2026-04-27 | Walidacje check-in przez web + logika LED RESERVED |
+| 0.17.9 | ✅ 2026-05-07 | Polityka haseł + KioskLinkButton + Demo fixtures + code review |
+| 0.17.10 | ✅ 2026-05-08 | Code review cleanup — ResourcesPage typy |
 | **0.18.0** | Q2 2026 | Public booking (Stripe) + Sprint L |
 | **1.0.0** | Q1 2027 | Self-hosted + ISO 27001 |
 

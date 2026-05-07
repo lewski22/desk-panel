@@ -1,6 +1,6 @@
 # Backlog — Reserti Desk Panel
 
-> Ostatnia aktualizacja: 2026-05-07 (v0.17.9 — zamknięto #11, #12, #16)
+> Ostatnia aktualizacja: 2026-05-08 (v0.17.10 — code review cleanup ResourcesPage)
 
 Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu technicznego i planowanych funkcji).
 Źródła: `roadmap.md`, `dev-log.md`.
