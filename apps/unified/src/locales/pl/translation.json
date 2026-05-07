@@ -1212,7 +1212,12 @@
       "placeholder": "np. 90 (zostaw puste = brak rotacji)",
       "hint_active": "Hasła wygasną po {{days}} dniach od ostatniej zmiany. Cron sprawdza codziennie o 07:00.",
       "hint_disabled": "Rotacja wyłączona — hasła nie wygasają automatycznie.",
-      "error_range": "Podaj liczbę od 1 do 365 lub zostaw puste (brak rotacji)."
+      "error_range": "Podaj liczbę od 1 do 365 lub zostaw puste (brak rotacji).",
+      "force_reset_label": "Natychmiastowy reset haseł",
+      "force_reset_description": "Wszyscy aktywni użytkownicy zostaną poproszeni o zmianę hasła przy następnym logowaniu.",
+      "force_reset_btn": "Wymuś zmianę hasła teraz",
+      "reset_confirm": "Wymusić natychmiastową zmianę hasła dla wszystkich użytkowników tej organizacji?",
+      "reset_success": "Gotowe — {{count}} użytkownik(ów) zostanie poproszonych o zmianę hasła."
     }
   },
   "kiosk": {

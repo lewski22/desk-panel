@@ -1212,7 +1212,12 @@
       "placeholder": "e.g. 90 (leave empty = no rotation)",
       "hint_active": "Passwords expire after {{days}} days since last change. Checked daily at 07:00.",
       "hint_disabled": "Rotation disabled — passwords do not expire automatically.",
-      "error_range": "Enter a number between 1 and 365, or leave empty (no rotation)."
+      "error_range": "Enter a number between 1 and 365, or leave empty (no rotation).",
+      "force_reset_label": "Immediate password reset",
+      "force_reset_description": "All active users will be prompted to change their password on next login.",
+      "force_reset_btn": "Force password change now",
+      "reset_confirm": "Force an immediate password change for all users in this organization?",
+      "reset_success": "Done — {{count}} user(s) will be prompted to change their password."
     }
   },
   "kiosk": {

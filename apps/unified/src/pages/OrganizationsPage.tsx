@@ -459,10 +459,11 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 // ── Password Policy Section (SUPER_ADMIN) ────────────────────
 function PasswordPolicySection({ org }: { org: any }) {
   const { t } = useTranslation();
-  const [days,    setDays]    = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
-  const [err,     setErr]     = useState('');
+  const [days,         setDays]         = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
+  const [saving,       setSaving]       = useState(false);
+  const [saved,        setSaved]        = useState(false);
+  const [resetting,    setResetting]    = useState(false);
+  const [err,          setErr]          = useState('');
 
   const orgId = org?.id;
 
@@ -482,6 +483,19 @@ function PasswordPolicySection({ org }: { org: any }) {
       setErr(e.message ?? t('errors.unknown', 'Błąd zapisu'));
     }
     setSaving(false);
+  };
+
+  const forceReset = async () => {
+    if (!orgId) return;
+    if (!window.confirm(t('org.password_policy.reset_confirm', 'Wymusić natychmiastową zmianę hasła dla wszystkich użytkowników tej organizacji?'))) return;
+    setResetting(true); setErr('');
+    try {
+      const r = await appApi.organizations.forcePasswordReset(orgId);
+      toast(t('org.password_policy.reset_success', 'Gotowe — {{count}} użytkownik(ów) zostanie poproszonych o zmianę hasła.', { count: r.affected }));
+    } catch (e: any) {
+      setErr(e.message ?? t('errors.unknown', 'Błąd'));
+    }
+    setResetting(false);
   };
 
   return (
@@ -526,6 +540,18 @@ function PasswordPolicySection({ org }: { org: any }) {
           ? t('org.password_policy.hint_active', 'Hasła wygasną po {{days}} dniach od ostatniej zmiany. Cron sprawdza codziennie o 07:00.', { days })
           : t('org.password_policy.hint_disabled', 'Rotacja wyłączona — hasła nie wygasają automatycznie.')}
       </p>
+
+      <div className="mt-5 pt-4 border-t border-zinc-100">
+        <p className="text-xs text-zinc-500 font-medium mb-2">
+          {t('org.password_policy.force_reset_label', 'Natychmiastowy reset haseł')}
+        </p>
+        <p className="text-xs text-zinc-400 mb-3">
+          {t('org.password_policy.force_reset_description', 'Wszyscy aktywni użytkownicy zostaną poproszeni o zmianę hasła przy następnym logowaniu.')}
+        </p>
+        <Btn onClick={forceReset} loading={resetting} variant="danger" size="sm">
+          🔑 {t('org.password_policy.force_reset_btn', 'Wymuś zmianę hasła teraz')}
+        </Btn>
+      </div>
     </section>
   );
 }
