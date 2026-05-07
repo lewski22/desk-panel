@@ -20,6 +20,7 @@ import { InsightsWidget } from '../components/insights/InsightsWidget';
 import { OnboardingChecklist } from '../components/onboarding/OnboardingChecklist';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
+import type { ExtendedStats } from '../types/api';
 
 // ── Stałe kolorów ────────────────────────────────────────────
 const ACCENT     = 'var(--brand)';
@@ -417,7 +418,7 @@ export function DashboardPage() {
   const isAtLeastStaff  = isAdmin || role === 'STAFF';
   const locale       = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
-  const [ext,          setExt]          = useState<any>(null);
+  const [ext,          setExt]          = useState<ExtendedStats | null>(null);
   const [desks,        setDesks]        = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [refreshing,   setRefreshing]   = useState(false);

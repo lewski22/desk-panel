@@ -14,6 +14,7 @@ import {
 } from '../components/ui';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { toast } from '../components/ui/Toast';
+import type { Resource } from '../types/api';
 
 const RESOURCE_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'] as const;
 
@@ -25,7 +26,7 @@ const PRESET_AMENITIES = ['TV','whiteboard','videoconf','projector','phone','ac'
 
 // ── Form Modal ────────────────────────────────────────────────
 function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, onAddAmenity }: {
-  resource?: any; locationId: string; allAmenities: string[];
+  resource?: Resource; locationId: string; allAmenities: string[];
   onClose: () => void; onSaved: () => void;
   onAddAmenity: (tag: string) => void;
 }) {
@@ -216,9 +217,9 @@ export function ResourcesPage() {
 
   const [locations, setLocations]     = useState<any[]>([]);
   const [locationId, setLocId]        = useState('');
-  const [resources, setResources]     = useState<any[]>([]);
+  const [resources, setResources]     = useState<Resource[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [modal, setModal]             = useState<'create' | any | null>(null);
+  const [modal, setModal]             = useState<'create' | Resource | null>(null);
   const [typeFilter, setType]         = useState('');
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
 

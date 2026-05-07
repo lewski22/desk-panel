@@ -55,7 +55,7 @@ export class MqttHandlers implements OnModuleInit {
           }
 
           await this.gateways.sendBeaconCommand(gwId, deskId, 'SET_LED', { ...basePayload.params, color, brightness });
-        } catch {}
+        } catch (e) { this.logger.error(`LED send failed for desk ${deskId}: ${e}`); }
       }, this.LED_DEBOUNCE_MS);
 
       this._ledTimers.set(deskId, timer);
@@ -78,7 +78,19 @@ export class MqttHandlers implements OnModuleInit {
     }
   }
   private async handleStatus(deskId: string, payload: any) {
-    if(payload.device_id) await this.gateways.deviceHeartbeat(payload.device_id,payload.rssi,payload.fw_version).catch(()=>{});
+    if (payload.device_id) {
+      await this.gateways.deviceHeartbeat(
+        payload.device_id,
+        payload.rssi,
+        payload.fw_version,
+      ).catch(() => {});
+    }
+
+    // Beacon po restarcie prosi o retransmit stanu LED (request_sync=true).
+    // Backend jest source of truth — wysyła aktualny stan z bazy.
+    if (payload.request_sync && deskId) {
+      await this.gateways.restoreDeskLed(deskId).catch(() => {});
+    }
   }
   private async handleGatewayHello(gwId: string, payload: any) {
     await this.gateways.heartbeat(gwId,payload.ip_address,payload.version).catch(()=>{});

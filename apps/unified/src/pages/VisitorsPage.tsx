@@ -13,6 +13,7 @@ import { toast } from '../components/ui/Toast';
 import { DaySlider, todayLocal } from '../components/ui/DaySlider';
 import { format }          from 'date-fns';
 import { pl, enUS }        from 'date-fns/locale';
+import type { Visitor }    from '../types/api';
 
 const STATUS_CFG: Record<string, { label: string; cls: string; icon: string }> = {
   INVITED:     { label: 'Zaproszony',    cls: 'bg-sky-100 text-sky-700',     icon: '✉️' },
@@ -157,7 +158,7 @@ export function VisitorsPage() {
   const [locations, setLocations]   = useState<any[]>([]);
   const [locationId, setLocId]      = useState('');
   const [date, setDate]             = useState(todayLocal());
-  const [visitors, setVisitors]     = useState<any[]>([]);
+  const [visitors, setVisitors]     = useState<Visitor[]>([]);
   const [loading, setLoading]       = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
 

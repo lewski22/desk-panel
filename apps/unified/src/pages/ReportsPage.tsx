@@ -7,6 +7,9 @@ import {
 import { appApi }            from '../api/client';
 import { Card, EmptyState, Spinner } from '../components/ui';
 import { InsightsWidget }            from '../components/insights/InsightsWidget';
+import type {
+  SnapshotRow, UtilizationRow,
+} from '../types/api';
 
 // ── Constants ─────────────────────────────────────────────────────
 const ACCENT   = 'var(--brand)';
@@ -59,13 +62,6 @@ function downloadCsv(rows: string[][], filename: string) {
 interface Filters { from: string; to: string; locationId: string }
 
 // ── Snapshot Tab — KPI bieżącego dnia (dane na żywo z dashboardu) ─
-interface SnapshotRow {
-  locationId: string; locationName: string;
-  totalDesks: number; occupiedNow: number; occupancyPct: number;
-  checkinsToday: number; reservationsToday: number;
-  zones: { zone: string; total: number; occupied: number }[];
-}
-
 function SnapshotTab({ filters }: { filters: Filters }) {
   const { t } = useTranslation();
   const [data, setData]       = useState<SnapshotRow[]>([]);
@@ -602,13 +598,6 @@ function ByDeskTab({ filters }: { filters: Filters }) {
 }
 
 // ── Utilization Tab (P4-B2) ────────────────────────────────────────
-interface UtilizationRow {
-  deskId: string; deskName: string; deskCode: string;
-  floor: string | null; zone: string | null;
-  locationId: string; locationName: string;
-  reservations: number; workdays: number; utilizationPct: number;
-}
-
 function UtilizationTab({ filters }: { filters: Filters }) {
   const { t } = useTranslation();
   const [data, setData]       = useState<UtilizationRow[]>([]);
