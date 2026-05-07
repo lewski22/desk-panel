@@ -457,13 +457,18 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 }
 
 // ── Password Policy Section (SUPER_ADMIN) ────────────────────
-function PasswordPolicySection({ org }: { org: any }) {
+function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => void }) {
   const { t } = useTranslation();
   const [days,         setDays]         = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
   const [saving,       setSaving]       = useState(false);
   const [saved,        setSaved]        = useState(false);
   const [resetting,    setResetting]    = useState(false);
   const [err,          setErr]          = useState('');
+
+  // Sync gdy parent odświeży org po zapisie
+  useEffect(() => {
+    setDays(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
+  }, [org?.passwordExpiryDays]);
 
   const orgId = org?.id;
 
@@ -479,6 +484,7 @@ function PasswordPolicySection({ org }: { org: any }) {
       await appApi.orgs.update(orgId, { passwordExpiryDays: parsed });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+      onSaved?.();
     } catch (e: any) {
       setErr(e.message ?? t('errors.unknown', 'Błąd zapisu'));
     }
@@ -976,6 +982,7 @@ export function OrganizationsPage() {
       {isSuperAdmin && (
         <PasswordPolicySection
           org={orgs.find(o => o.id === user?.organizationId) ?? (user?.organizationId ? { id: user.organizationId } : undefined)}
+          onSaved={load}
         />
       )}
 
