@@ -15,7 +15,8 @@ export const DEMO_USER = {
   role:           'SUPER_ADMIN',
   organizationId: ORG_ID,
   enabledModules: ['reports', 'integrations', 'insights', 'graph'],
-  subscriptionStatus: null,
+  subscriptionStatus:  null,
+  mustChangePassword:  false,
   accessToken:    'demo-token',
 };
 
@@ -84,4 +85,44 @@ export const DEMO_ORG = {
   id: ORG_ID, name: 'Reserti Demo', slug: 'reserti-demo',
   plan: 'enterprise', isActive: true, enabledModules: ['reports','insights','integrations','graph'],
   limitDesks: null, limitUsers: null, limitGateways: null, limitLocations: null,
+};
+
+export const DEMO_RESOURCES = [
+  { id: 'r1', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Alpha', code: 'RM-A01', capacity: 8, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['whiteboard', 'projector'] },
+  { id: 'r2', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Beta',  code: 'RM-A02', capacity: 4, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['tv'] },
+  { id: 'r3', locationId: LOC2_ID, type: 'PARKING', name: 'Parking P1', code: 'P-K01',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+];
+
+export const DEMO_VISITORS = [
+  { id: 'v1', locationId: LOC1_ID, hostUserId: DEMO_USER.id,
+    firstName: 'Jan', lastName: 'Nowak', email: 'jan.nowak@external.com',
+    company: 'Acme Ltd', visitDate: new Date().toISOString(),
+    purpose: 'Spotkanie biznesowe', status: 'INVITED', qrToken: 'visitor-qr-1',
+    checkedInAt: null, checkedOutAt: null },
+];
+
+export const DEMO_REPORT_CHECKINS_BY_DAY = {
+  data: Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return { date: d.toISOString().slice(0, 10), count: [8, 12, 6, 15, 10, 9, 11][i] };
+  }),
+};
+
+export const DEMO_REPORT_PER_DESK = {
+  data: DEMO_DESKS.slice(0, 5).map((desk, i) => ({
+    deskId: desk.id, deskCode: desk.code, deskName: desk.name, checkins: [14, 11, 9, 7, 5][i],
+  })),
+};
+
+export const DEMO_REPORT_PER_USER = {
+  data: [
+    { userId: DEMO_USER.id, firstName: 'Demo', lastName: 'Admin', email: 'demo@reserti.demo', checkins: 12 },
+  ],
+};
+
+export const DEMO_REPORT_METHODS = {
+  data: [
+    { method: 'WEB', count: 14 }, { method: 'QR', count: 6 },
+    { method: 'NFC', count: 3  }, { method: 'MANUAL', count: 2 },
+  ],
 };

@@ -1,0 +1,6 @@
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "mustChangePassword" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "passwordChangedAt"  TIMESTAMP(3);
+
+ALTER TABLE "Organization"
+  ADD COLUMN IF NOT EXISTS "passwordExpiryDays" INTEGER;

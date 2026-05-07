@@ -151,8 +151,9 @@ export class OwnerService {
         ...(dto.notes          !== undefined && { notes:          dto.notes }),
         ...(dto.contactEmail   !== undefined && { contactEmail:   dto.contactEmail }),
         ...(dto.enabledModules !== undefined && { enabledModules: dto.enabledModules }),
-        ...(dto.planExpiresAt  && { planExpiresAt: new Date(dto.planExpiresAt) }),
-        ...(dto.trialEndsAt    && { trialEndsAt:   new Date(dto.trialEndsAt) }),
+        ...(dto.planExpiresAt       && { planExpiresAt:       new Date(dto.planExpiresAt) }),
+        ...(dto.trialEndsAt         && { trialEndsAt:         new Date(dto.trialEndsAt) }),
+        ...('passwordExpiryDays' in dto && { passwordExpiryDays: dto.passwordExpiryDays ?? null }),
       },
     });
   }
@@ -285,5 +286,36 @@ export class OwnerService {
         online: beacons.filter((d: any) => d.isOnline).length,
       },
     };
+  }
+
+  // Wymusza zmianę hasła dla jednej organizacji (delegacja do OrganizationsService)
+  async forcePasswordReset(orgId: string): Promise<{ affected: number }> {
+    await this.prisma.organization.findUniqueOrThrow({ where: { id: orgId } });
+    const result = await this.prisma.user.updateMany({
+      where: {
+        organizationId: orgId,
+        isActive:       true,
+        deletedAt:      null,
+        passwordHash:   { notIn: ['AZURE_SSO_ONLY', 'GOOGLE_SSO_ONLY'] },
+        role:           { in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] },
+      },
+      data: { mustChangePassword: true },
+    });
+    return { affected: result.count };
+  }
+
+  // Wymusza zmianę hasła dla WSZYSTKICH organizacji (tylko OWNER platformy)
+  // Zakres: END_USER, STAFF, OFFICE_ADMIN, SUPER_ADMIN — wyklucza OWNER i konta SSO
+  async forcePasswordResetAll(): Promise<{ affected: number }> {
+    const result = await this.prisma.user.updateMany({
+      where: {
+        isActive:     true,
+        deletedAt:    null,
+        passwordHash: { notIn: ['AZURE_SSO_ONLY', 'GOOGLE_SSO_ONLY'] },
+        role:         { in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] },
+      },
+      data: { mustChangePassword: true },
+    });
+    return { affected: result.count };
   }
 }

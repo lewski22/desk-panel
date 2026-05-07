@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Request, ForbiddenException, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation }                           from '@nestjs/swagger';
 import { UserRole }                                                       from '@prisma/client';
 import { IsString, IsBoolean, IsOptional, IsArray, IsNotEmpty }            from 'class-validator';
@@ -65,6 +65,19 @@ export class OrganizationsController {
     return this.svc.update(id, dto);
   }
 
+  // ── Password policy ───────────────────────────────────────
+  // SUPER_ADMIN może resetować hasła wyłącznie własnej organizacji.
+  // OWNER ma dostęp do dowolnej org (via RolesGuard hierarchy).
+
+  @Post(':id/force-password-reset')
+  @Roles(UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Wymuś zmianę hasła dla użytkowników organizacji' })
+  forcePasswordReset(@Param('id') id: string, @Request() req: any) {
+    this._assertSameOrg(id, req);
+    return this.svc.forcePasswordReset(id);
+  }
+
   // ── M365 / Entra ID SSO ────────────────────────────────────
   // Zmianę konfiguracji M365 może wykonać:
   //   - SUPER_ADMIN: dla dowolnej organizacji
@@ -90,12 +103,20 @@ export class OrganizationsController {
     return this.azure.updateOrgAzureConfig(id, dto);
   }
 
-  // OFFICE_ADMIN może operować wyłącznie na własnej organizacji
+  // OFFICE_ADMIN może operować wyłącznie na własnej organizacji (SUPER_ADMIN — na wszystkich)
   private _assertOrgAccess(orgId: string, req: any) {
     if (
       req.user.role === UserRole.OFFICE_ADMIN &&
       req.user.organizationId !== orgId
     ) {
+      throw new ForbiddenException('Brak dostępu do tej organizacji');
+    }
+  }
+
+  // SUPER_ADMIN i OFFICE_ADMIN mogą operować wyłącznie na własnej organizacji; OWNER — bez ograniczeń
+  private _assertSameOrg(orgId: string, req: any) {
+    if (req.user.role === 'OWNER') return;
+    if (req.user.organizationId !== orgId) {
       throw new ForbiddenException('Brak dostępu do tej organizacji');
     }
   }

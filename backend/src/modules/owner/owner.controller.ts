@@ -82,6 +82,20 @@ export class OwnerController {
     return this.svc.impersonate(id, req.user.id, ip);
   }
 
+  @Post('organizations/:id/force-password-reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Wymuś zmianę hasła dla wszystkich użytkowników wybranej org (OWNER)' })
+  forcePasswordReset(@Param('id') id: string) {
+    return this.svc.forcePasswordReset(id);
+  }
+
+  @Post('force-password-reset')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Wymuś zmianę hasła dla WSZYSTKICH użytkowników na platformie (OWNER)' })
+  forcePasswordResetAll() {
+    return this.svc.forcePasswordResetAll();
+  }
+
   // ── Health / monitoring ───────────────────────────────────────
 
   @Get('health')

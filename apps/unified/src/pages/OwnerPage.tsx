@@ -129,9 +129,10 @@ function ModuleToggle({
 
 function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
   const { t } = useTranslation();
-  const [name,  setName]  = useState(org.name);
-  const [plan,  setPlan]  = useState(org.plan ?? 'starter');
-  const [notes, setNotes] = useState(org.notes ?? '');
+  const [name,               setName]               = useState(org.name);
+  const [plan,               setPlan]               = useState(org.plan ?? 'starter');
+  const [notes,              setNotes]              = useState(org.notes ?? '');
+  const [passwordExpiryDays, setPasswordExpiryDays] = useState<string>(org.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
 
@@ -165,8 +166,9 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   const submit = async () => {
     setSaving(true); setErr('');
     try {
-      // Zapisz nazwę, plan, notatki
-      await appApi.owner.updateOrg(org.id, { name, plan, notes });
+      // Zapisz nazwę, plan, notatki i politykę haseł
+      const expiryDays = passwordExpiryDays ? parseInt(passwordExpiryDays, 10) : null;
+      await appApi.owner.updateOrg(org.id, { name, plan, notes, passwordExpiryDays: expiryDays });
       // Zapisz moduły osobno (whitelist po stronie backendu)
       // Pusta tablica gdy wszystkie zaznaczone = backward compat
       const toSave = modules.length === MODULE_DEFS.length ? [] : modules;
@@ -196,6 +198,17 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Notatki</label>
           <textarea value={notes} onChange={e => { setNotes(e.target.value); markDirty(); }} rows={2}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm resize-y focus:outline-none" />
+        </div>
+        <div>
+          <label className="block text-xs text-zinc-500 mb-1 font-medium">Wygaśnięcie hasła (dni)</label>
+          <input
+            type="number" min={1} max={365}
+            placeholder="np. 90 (puste = bez rotacji)"
+            value={passwordExpiryDays}
+            onChange={e => { setPasswordExpiryDays(e.target.value); markDirty(); }}
+            className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
+          />
+          <p className="text-[10px] text-zinc-400 mt-1">Użytkownicy będą proszeni o zmianę hasła po upływie podanej liczby dni. Puste = brak rotacji.</p>
         </div>
 
         {/* Sekcja modułów */}
@@ -735,6 +748,22 @@ export function OwnerPage() {
     catch (e: any) { setErr(e.message); }
   };
 
+  const handleForcePasswordReset = async (org: any) => {
+    if (!confirm(`Wymusić zmianę hasła dla wszystkich użytkowników "${org.name}"?`)) return;
+    try {
+      const r = await appApi.owner.forcePasswordReset(org.id);
+      alert(`Gotowe — ${r.affected} użytkownik(ów) zostanie poproszonych o zmianę hasła przy następnym logowaniu.`);
+    } catch (e: any) { setErr(e.message); }
+  };
+
+  const handleForcePasswordResetAll = async () => {
+    if (!confirm('Wymusić zmianę hasła dla WSZYSTKICH użytkowników na całej platformie?')) return;
+    try {
+      const r = await appApi.owner.forcePasswordResetAll();
+      alert(`Gotowe — ${r.affected} użytkownik(ów) na całej platformie zostanie poproszonych o zmianę hasła.`);
+    } catch (e: any) { setErr(e.message); }
+  };
+
   // stats z API: { orgsTotal, orgsActive, orgsInactive, gatewaysTotal, gatewaysOnline, beaconsTotal, beaconsOnline, checkinsToday, checkinsWeek }
   const statCards = stats ? [
     { label: t('pages.organizations.title'),   val: stats.orgsActive,     sub: `${stats.orgsTotal}`,              icon: '🏢' },
@@ -809,6 +838,9 @@ export function OwnerPage() {
               ↺
             </button>
             <span className="text-xs text-zinc-400 shrink-0">{filtered.length} firm</span>
+            <Btn size="sm" variant="danger" onClick={handleForcePasswordResetAll}>
+              🔐 Reset haseł (wszystkie)
+            </Btn>
           </div>
         )}
       </div>
@@ -867,6 +899,9 @@ export function OwnerPage() {
                           ? <Btn size="sm" variant="danger" onClick={() => handleDeactivate(org)}>Dezaktywuj</Btn>
                           : <Btn size="sm" variant="secondary" onClick={() => handleActivate(org)}>Aktywuj</Btn>
                         }
+                        <Btn size="sm" variant="secondary" onClick={() => handleForcePasswordReset(org)}>
+                          🔐 Reset haseł
+                        </Btn>
                       </div>
                     </td>
                   </tr>

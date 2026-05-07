@@ -46,12 +46,19 @@ export class AuthService {
     await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
+    let mustChangePassword = !!(user as any).mustChangePassword;
     if ((user as any).organizationId) {
-      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true } });
+      const org = await this.prisma.organization.findUnique({
+        where: { id: (user as any).organizationId },
+        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true },
+      });
       enabledModules = org?.enabledModules ?? [];
       subscriptionStatus = this._calcSubscriptionStatus(org);
+      if (!mustChangePassword) {
+        mustChangePassword = await this._checkPasswordExpiry(user, org?.passwordExpiryDays ?? null);
+      }
     }
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus } };
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword } };
   }
   /** Rotuje refresh token: sprawdza DB, kasuje stary, wydaje nową parę. Dezaktywowane konta odrzuca. */
   async refresh(refreshToken: string) {
@@ -69,12 +76,34 @@ export class AuthService {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
+    let mustChangePassword = !!(user as any).mustChangePassword;
     if ((user as any).organizationId) {
-      const org = await this.prisma.organization.findUnique({ where: { id: (user as any).organizationId }, select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true } });
+      const org = await this.prisma.organization.findUnique({
+        where: { id: (user as any).organizationId },
+        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true },
+      });
       enabledModules = org?.enabledModules ?? [];
       subscriptionStatus = this._calcSubscriptionStatus(org);
+      if (!mustChangePassword) {
+        mustChangePassword = await this._checkPasswordExpiry(user, org?.passwordExpiryDays ?? null);
+      }
     }
-    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus };
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword };
+  }
+
+  /**
+   * Sprawdza czy hasło użytkownika wygasło wg polityki org.
+   * Jeśli tak — ustawia mustChangePassword=true w DB i zwraca true.
+   * Bezpieczne przy null/undefined createdAt — fallback do now() = 0 dni.
+   */
+  private async _checkPasswordExpiry(user: User, passwordExpiryDays: number | null): Promise<boolean> {
+    if (!passwordExpiryDays) return false;
+    if ((user as any).passwordHash === 'AZURE_SSO_ONLY' || (user as any).passwordHash === 'GOOGLE_SSO_ONLY') return false;
+    const lastChange: Date = (user as any).passwordChangedAt ?? (user as any).createdAt ?? new Date();
+    const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86_400_000);
+    if (daysSince < passwordExpiryDays) return false;
+    await this.prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: true } });
+    return true;
   }
 
   /**
@@ -266,7 +295,7 @@ export class AuthService {
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');
     if (await bcrypt.compare(newPassword, user.passwordHash)) throw new BadRequestException('New password must differ from current');
     const hash = await bcrypt.hash(newPassword, 12);
-    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash, mustChangePassword: false, passwordChangedAt: new Date() } });
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
   }
 }

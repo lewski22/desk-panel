@@ -411,4 +411,31 @@ export class SubscriptionsService {
       }
     }
   }
+
+  @Cron('0 7 * * *', { name: 'check-password-expiry' })
+  async checkPasswordExpiry() {
+    const orgs = await this.prisma.organization.findMany({
+      where: { isActive: true, passwordExpiryDays: { not: null } },
+      select: { id: true, passwordExpiryDays: true },
+    });
+    for (const org of orgs) {
+      if (!org.passwordExpiryDays) continue;
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - org.passwordExpiryDays);
+      await this.prisma.user.updateMany({
+        where: {
+          organizationId:     org.id,
+          isActive:           true,
+          deletedAt:          null,
+          mustChangePassword: false,
+          passwordHash:       { notIn: ['AZURE_SSO_ONLY', 'GOOGLE_SSO_ONLY'] },
+          OR: [
+            { passwordChangedAt: null },
+            { passwordChangedAt: { lt: cutoff } },
+          ],
+        },
+        data: { mustChangePassword: true },
+      });
+    }
+  }
 }

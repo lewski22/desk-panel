@@ -1222,7 +1222,9 @@
       "reserved": "Zarezerwowane",
       "occupied": "Zajęte",
       "offline": "Offline"
-    }
+    },
+    "open_btn":       "Otwórz tryb kiosk (nowa karta)",
+    "open_btn_short": "Kiosk"
   },
   "push": {
     "title":       "Reserti",

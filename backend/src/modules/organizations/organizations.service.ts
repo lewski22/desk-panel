@@ -57,7 +57,14 @@ export class OrganizationsService {
 
   async update(id: string, dto: UpdateOrganizationDto) {
     await this.findOne(id);
-    return this.prisma.organization.update({ where: { id }, data: dto });
+    return this.prisma.organization.update({
+      where: { id },
+      data: {
+        ...(dto.name     !== undefined && { name:     dto.name }),
+        ...(dto.plan     !== undefined && { plan:     dto.plan }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      },
+    });
   }
 
   async getCustomAmenities(orgId: string): Promise<string[]> {
@@ -100,5 +107,20 @@ export class OrganizationsService {
       }),
     ]);
     return { organizationId: id, totalDesks: desks, totalReservations: reservations, totalCheckins: checkins };
+  }
+
+  async forcePasswordReset(orgId: string): Promise<{ affected: number }> {
+    await this.findOne(orgId);
+    const result = await this.prisma.user.updateMany({
+      where: {
+        organizationId: orgId,
+        isActive:       true,
+        deletedAt:      null,
+        passwordHash:   { notIn: ['AZURE_SSO_ONLY', 'GOOGLE_SSO_ONLY'] },
+        role:           { in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] },
+      },
+      data: { mustChangePassword: true },
+    });
+    return { affected: result.count };
   }
 }

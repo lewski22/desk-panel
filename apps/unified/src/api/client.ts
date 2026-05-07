@@ -132,10 +132,13 @@ export const appApi = {
 
   // ── Organizations ────────────────────────────────────────────
   orgs: {
-    list:              ()                       => req<any[]>('/organizations'),
-    getAzureConfig:    (orgId: string)          => req<any>(`/organizations/${orgId}/azure`),
+    list:              ()                         => req<any[]>('/organizations'),
+    update:            (orgId: string, d: any)    => req<any>(`/organizations/${orgId}`, { method: 'PATCH', body: JSON.stringify(d) }),
+    getAzureConfig:    (orgId: string)            => req<any>(`/organizations/${orgId}/azure`),
     updateAzureConfig: (orgId: string, body: any) =>
       req<any>(`/organizations/${orgId}/azure`, { method: 'PATCH', body: JSON.stringify(body) }),
+    forcePasswordReset: (orgId: string) =>
+      req<{ affected: number }>(`/organizations/${orgId}/force-password-reset`, { method: 'POST', body: '{}' }),
   },
 
   // ── Locations ────────────────────────────────────────────────
@@ -344,15 +347,21 @@ export const appApi = {
     getStats:       ()                         => req<any>('/owner/stats'),
     setModules:     (id: string, modules: string[]) =>
       req<any>(`/owner/organizations/${id}/modules`, { method: 'PATCH', body: JSON.stringify({ enabledModules: modules }) }),
+    forcePasswordReset:    (id: string) =>
+      req<{ affected: number }>(`/owner/organizations/${id}/force-password-reset`, { method: 'POST', body: '{}' }),
+    forcePasswordResetAll: () =>
+      req<{ affected: number }>('/owner/force-password-reset', { method: 'POST', body: '{}' }),
   },
 
   // ── Organizations ─────────────────────────────────────────────
   organizations: {
-    getAzureConfig:    (id: string)         => req<any>(`/organizations/${id}/azure`),
-    updateAzureConfig: (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
-    getAmenities:      ()                   => req<string[]>('/organizations/me/amenities'),
-    updateAmenities:   (amenities: string[]) =>
+    getAzureConfig:      (id: string)         => req<any>(`/organizations/${id}/azure`),
+    updateAzureConfig:   (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
+    getAmenities:        ()                   => req<string[]>('/organizations/me/amenities'),
+    updateAmenities:     (amenities: string[]) =>
       req<string[]>('/organizations/me/amenities', { method: 'PUT', body: JSON.stringify({ amenities }) }),
+    forcePasswordReset:  (id: string)         =>
+      req<{ affected: number }>(`/organizations/${id}/force-password-reset`, { method: 'POST', body: '{}' }),
   },
 
   // ── Push Notifications ────────────────────────────────────────

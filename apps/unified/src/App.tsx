@@ -67,6 +67,16 @@ function SubscriptionExpiredGate({ status, children }: { status?: string | null;
   return <>{children}</>;
 }
 
+// MustChangePasswordGate — wymusza zmianę hasła przy następnym logowaniu
+const ALLOWED_WHEN_MUST_CHANGE = ['/change-password', '/login'];
+function MustChangePasswordGate({ user, children }: { user: any; children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  if (user?.mustChangePassword && !ALLOWED_WHEN_MUST_CHANGE.some(p => pathname.startsWith(p))) {
+    return <Navigate to="/change-password" replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   const [user, setUser] = useState<any>(DEMO_MODE ? DEMO_USER : null);
 
@@ -117,6 +127,7 @@ export default function App() {
             : (
               <AppLayout user={user} onLogout={handleLogout}>
                 <SubscriptionExpiredGate status={user.subscriptionStatus}>
+                <MustChangePasswordGate user={user}>
                 <Routes>
                   {/* Redirect root → home per rola */}
                   <Route path="/" element={<Navigate to={homeFor(user.role)} replace />} />
@@ -189,6 +200,7 @@ export default function App() {
                   {/* Fallback */}
                   <Route path="*" element={<Navigate to={homeFor(user.role)} replace />} />
                 </Routes>
+                </MustChangePasswordGate>
                 </SubscriptionExpiredGate>
               </AppLayout>
             )

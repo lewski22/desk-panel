@@ -7,6 +7,7 @@ import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
 import { toast } from '../components/ui/Toast';
+import { KioskLinkButton } from '../components/KioskLinkButton';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
@@ -834,6 +835,7 @@ export function OrganizationsPage() {
                     >
                       M365
                     </button>
+                    <KioskLinkButton locationId={loc.id} kioskPin={(loc as any).kioskPin} />
                   </div>
                 </div>
               );
