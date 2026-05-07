@@ -726,6 +726,7 @@ CheckinsService.manual():
 | Co 24 godziny | `GraphSyncModule` | `renewSubscriptions()` | Odnawia webhook subskrypcje MS Graph |
 | Co 30 sekund | `MetricsModule` | `updateMetrics()` | Odświeża liczniki Prometheus |
 | Codziennie 08:00 | `SubscriptionsModule` | `checkExpiringPlans()` | Alerty o wygasających planach |
+| Codziennie 07:00 | `SubscriptionsModule` | `checkPasswordExpiry()` | Ustawia `mustChangePassword=true` dla użytkowników z wygasłym hasłem (per `org.passwordExpiryDays`) |
 | Co 6 godzin | `InAppNotificationsModule` | `sendCriticalAlertEmails()` | Email o nieprzeczytanych alertach |
 
 ---

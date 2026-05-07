@@ -4,6 +4,33 @@
 
 ---
 
+## [0.17.9] — 2026-05-07 — Password Policy, KioskLinkButton, Demo Fixtures
+
+### Added
+- **Polityka haseł (Zadanie 6 / #16)** — pełna implementacja:
+  - Nowe pola DB: `User.mustChangePassword Boolean @default(false)`, `User.passwordChangedAt DateTime?`, `Organization.passwordExpiryDays Int?`; migracja `20260507000002_password_policy`
+  - `_checkPasswordExpiry()` wywołana w `login()` i `getMe()` — automatycznie ustawia `mustChangePassword=true` gdy minęło `passwordExpiryDays` dni od ostatniej zmiany hasła (z wykluczeniem kont SSO)
+  - `changePassword()` zapisuje `passwordChangedAt = now()` i zeruje `mustChangePassword`
+  - Cron `@Cron('0 7 * * *', { name: 'check-password-expiry' })` w `subscriptions.service.ts` — codziennie o 07:00 bulk-aktualizuje użytkowników z wygasłym hasłem
+  - **Trzy endpointy force-reset:**
+    - `POST /api/v1/organizations/:id/force-password-reset` — SUPER_ADMIN własnej org + OWNER
+    - `POST /api/v1/owner/organizations/:id/force-password-reset` — OWNER, per org
+    - `POST /api/v1/owner/force-password-reset` — OWNER, cała platforma
+  - `MustChangePasswordGate` w `App.tsx` — redirect na `/change-password` jeśli `mustChangePassword=true`, z wyjątkami dla `/change-password` i `/login`
+  - `OwnerPage`: przycisk "🔐 Reset haseł" per org + "🔐 Reset haseł (wszystkie)" w toolbarze
+  - `EditOrgModal` w `OwnerPage`: pole `passwordExpiryDays` (1–365 dni lub brak rotacji)
+  - Walidacja DTO: `@ValidateIf(o => o.passwordExpiryDays !== null)` + `@IsInt() @Min(1) @Max(365)` — poprawna obsługa `null` przez `@IsOptional()`
+- **KioskLinkButton w OrganizationsPage (Zadanie 4 / #11)** — import `KioskLinkButton`, przycisk w sekcji Actions lokalizacji, nowe klucze i18n `kiosk.open_btn` / `kiosk.open_btn_short` w `pl` i `en`
+- **Demo fixtures (Zadanie 5 / #12)** — `demoData.ts`: `DEMO_RESOURCES`, `DEMO_VISITORS`, `DEMO_REPORT_CHECKINS_BY_DAY`, `DEMO_REPORT_PER_DESK`, `DEMO_REPORT_PER_USER`, `DEMO_REPORT_METHODS`; `demoHandlers.ts`: stubs dla zasobów, odwiedzających, raportów szczegółowych, floor-plan (null), SMTP, provisioning, beacons + stubs dla 3 endpointów force-password-reset
+- **`organizations.update()` whitelist pól** — zmiana z `data: dto` na jawną listę pól (`name`, `plan`, `isActive`) — eliminacja potencjalnego mass-assignment
+
+### Security
+- `_assertSameOrg()` w `OrganizationsController` — SUPER_ADMIN i OFFICE_ADMIN ograniczeni do własnej org w endpoincie force-password-reset (OWNER przechodzi bez filtra); osobna od `_assertOrgAccess()` która pozostaje szersza (SSO endpoints)
+- Wykluczenie roli `OWNER` z force-reset przez jawny whitelist `role: { in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] }` we wszystkich trzech serwisach
+- `_checkPasswordExpiry()` w `getMe()` — gate nie do ominięcia przez odświeżenie strony (poprzednio sprawdzał tylko flagę DB, nie przeliczał dat)
+
+---
+
 ## [0.17.8] — 2026-05-07 — Custom Amenities per Organization
 
 ### Added

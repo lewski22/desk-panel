@@ -1,6 +1,6 @@
 # Roadmap — Reserti Desk Management System
 
-> Ostatnia aktualizacja: 2026-04-28
+> Ostatnia aktualizacja: 2026-05-07
 
 Historia sprintów A-K → `docs/CHANGELOG.md`.
 
@@ -24,10 +24,10 @@ Historia sprintów A-K → `docs/CHANGELOG.md`.
 ### Priorytet niski
 
 - Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
-- Kiosk link w UI — przycisk otwierający `/kiosk?location=` z `OrganizationsPage`
-- Demo mode fixtures — kompletne dane dla wszystkich stron (`VITE_DEMO_MODE=true`)
+- ~~Kiosk link w UI~~ **✅ DONE v0.17.9** — `KioskLinkButton` zintegrowany w `OrganizationsPage`
+- ~~Demo mode fixtures~~ **✅ DONE v0.17.9** — kompletne stubs dla resources, visitors, reports
 - Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS bez lokalnego Pi
-- **Polityka haseł (ISO 27001)** — przymusowa rotacja co 365 dni; organizacja może ustawić krótszy okres (`passwordExpiryDays` per org, max 365); OWNER może wymusić globalną zmianę hasła dla wszystkich użytkowników platformy jednym kliknięciem. Patrz szczegóły poniżej.
+- ~~**Polityka haseł (ISO 27001)**~~ **✅ DONE v0.17.9** — `mustChangePassword`, `passwordExpiryDays`, `MustChangePasswordGate`, 3 endpointy force-reset, cron `check-password-expiry`
 - ISO 27001 przygotowanie
 
 ---
@@ -60,68 +60,41 @@ Kiedy warto: liczba biur > 10 lub klienci bez lokalnego IT.
 
 ---
 
-## Polityka haseł — Specyfikacja
+## ✅ Polityka haseł — ZAIMPLEMENTOWANE (v0.17.9, 2026-05-07)
 
 Część przygotowań do ISO 27001. Dotyczy tylko kont z hasłem lokalnym (konta SSO są wyłączone).
 
-### Reguły
-
-| Parametr | Wartość domyślna | Konfigurowalność |
-|----------|-----------------|------------------|
-| Ważność hasła | 365 dni | Per org — SUPER_ADMIN ustawia `passwordExpiryDays` (1–365) |
-| Minimum długość | 8 znaków | Na razie stałe |
-| Wymuszony reset globalny | — | OWNER jednym przyciskiem w OwnerPage |
-
-### Schemat (migracja)
+### Schemat (migracja `20260507000002_password_policy`)
 
 ```prisma
 model Organization {
-  // ... istniejące pola
-  passwordExpiryDays  Int?   // null = globalny default (365)
+  passwordExpiryDays  Int?   // null = brak rotacji; 1-365 = dni do wygaśnięcia
 }
-
 model User {
-  // ... istniejące pola
-  passwordChangedAt   DateTime?  // null = nigdy nie zmieniane → traktuj jak epoch
-  mustChangePassword  Boolean    @default(false)  // flaga wymusonego resetu
+  mustChangePassword  Boolean   @default(false)
+  passwordChangedAt   DateTime? // null = używaj createdAt jako fallback
 }
 ```
 
-### Flow wymuszenia (OWNER → globalne)
+### Endpointy (zaimplementowane)
 
 ```
-POST /owner/force-password-reset
-→ UPDATE User SET mustChangePassword = true
-  WHERE passwordHash != 'AZURE_SSO_ONLY'
-    AND role != 'OWNER'
+POST /api/v1/organizations/:id/force-password-reset   ← SUPER_ADMIN (własna org) + OWNER
+POST /api/v1/owner/organizations/:id/force-password-reset  ← OWNER — per org
+POST /api/v1/owner/force-password-reset               ← OWNER — cała platforma
+PATCH /api/v1/owner/organizations/:id                 ← passwordExpiryDays w UpdateOrgDto
+PATCH /api/v1/auth/change-password                    ← zeruje flagę, zapisuje passwordChangedAt
 ```
 
-### Flow rotacji (per org)
+### Flow (zaimplementowany)
 
-```
-Cron (codziennie 08:00):
-  dla każdej org z passwordExpiryDays != null:
-    UPDATE User SET mustChangePassword = true
-    WHERE organizationId = org.id
-      AND passwordChangedAt < now() - interval org.passwordExpiryDays days
-      AND passwordHash != 'AZURE_SSO_ONLY'
-      AND mustChangePassword = false
-```
-
-### Frontend
-
-- Przy każdym `/auth/me`: jeśli `mustChangePassword = true` → redirect na `ChangePasswordPage` z blokadą nawigacji
-- `ChangePasswordPage`: po sukcesie ustawia `passwordChangedAt = now()`, `mustChangePassword = false`
-- OwnerPage → nowy przycisk "Wymuś zmianę hasła" (sekcja Bezpieczeństwo)
-- OrganizationsPage → pole `passwordExpiryDays` w ustawieniach org (SUPER_ADMIN)
-
-### Endpointy
-
-```
-POST /owner/force-password-reset                ← OWNER only
-PATCH /api/v1/owner/organizations/:id           ← dodać passwordExpiryDays
-PATCH /api/v1/auth/change-password              ← już istnieje, dodać reset flagi
-```
+- `login()` i `getMe()` wywołują `_checkPasswordExpiry()` — automatyczny reset flagi gdy minęło `passwordExpiryDays` dni
+- `MustChangePasswordGate` w `App.tsx` — redirect `/change-password` gdy `mustChangePassword=true`
+- Cron `0 7 * * *` w `SubscriptionsModule.checkPasswordExpiry()` — bulk-update wygasłych haseł
+- Jawny whitelist ról: `{ in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] }` — OWNER i konta SSO wykluczone
+- `_assertSameOrg()` — SUPER_ADMIN ograniczony do własnej org
+- OwnerPage: przycisk "🔐 Reset haseł" per org + "🔐 Reset haseł (wszystkie)" w toolbarze
+- `EditOrgModal`: pole `passwordExpiryDays` (1–365 lub brak)
 
 ---
 

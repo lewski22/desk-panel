@@ -1,6 +1,6 @@
 # Reserti — AI Context (zbiorczy)
 
-> **Ostatnia aktualizacja:** 2026-04-28 | **Wersja:** v0.17.6 | **Repo:** `github.com/lewski22/desk-panel`
+> **Ostatnia aktualizacja:** 2026-05-07 | **Wersja:** v0.17.9 | **Repo:** `github.com/lewski22/desk-panel`
 > Jedyne źródło prawdy dla sesji AI.
 
 ---
@@ -93,6 +93,8 @@ model Organization {
   id, name, slug @unique, isActive, plan, planExpiresAt, trialEndsAt
   limitDesks?, limitUsers?, limitGateways?, limitLocations?
   billingEmail?, mrr?, notes?, enabledModules String[] @default([])
+  customAmenities String[] @default([])
+  passwordExpiryDays Int?   // null = brak rotacji; 1-365 = dni do wygaśnięcia hasła
   azureTenantId?, azureEnabled  // DEPRECATED
   integrations OrgIntegration[]
 }
@@ -142,7 +144,10 @@ model LocationFloorPlan {
   @@unique([locationId, floor])
 }
 
-// + Gateway, GatewaySetupToken, User, Resource, Booking, Visitor
+// User (kluczowe pola bezpieczeństwa):
+//   passwordHash, mustChangePassword Boolean @default(false)
+//   passwordChangedAt DateTime?, createdAt, updatedAt
+// + Gateway, GatewaySetupToken, Resource, Booking, Visitor
 // + PushSubscription, SubscriptionEvent, OrganizationSmtpConfig
 // + UtilizationInsight, GraphToken, GraphSubscription, InvitationToken
 ```
@@ -164,6 +169,8 @@ model LocationFloorPlan {
 20260421000001_location_floor_plans
 20260422000001_invitation_tokens
 20260423000001_add_perf_indexes           ← indeksy wydajnościowe
+20260507000001_custom_amenities           ← Organization.customAmenities
+20260507000002_password_policy            ← User.mustChangePassword + passwordChangedAt, Org.passwordExpiryDays
 ```
 
 ---
@@ -204,7 +211,12 @@ GET/POST/PATCH/DELETE  /api/v1/visitors/:id
 GET/PUT/PATCH/DELETE   /api/v1/integrations/:provider (+ toggle, test)
 GET    /api/v1/insights?locationId=
 GET    /api/v1/reports/heatmap | export
+GET    /api/v1/organizations/me/amenities               SUPER_ADMIN własna org
+PUT    /api/v1/organizations/me/amenities               SUPER_ADMIN własna org
+POST   /api/v1/organizations/:id/force-password-reset   SUPER_ADMIN (własna org) + OWNER
 GET/POST/PATCH/DELETE  /api/v1/owner/organizations/:id (+ subscription, modules, impersonate)
+POST   /api/v1/owner/organizations/:id/force-password-reset  OWNER — per org
+POST   /api/v1/owner/force-password-reset               OWNER — cała platforma
 GET    /api/v1/subscription/status
 GET    /install/gateway/:token             POZA /api/v1 — bash script
 GET    /metrics | /health                  POZA /api/v1
@@ -367,6 +379,25 @@ node backend/generate-vapid-keys.js
 - `getMe()` bez debounce → debounce 2000ms w `App.tsx`
 - `scrollTo 'instant'` → `'auto'`
 
+**Naprawione w v0.17.9 (security review 2026-05-07 — polityka haseł):**
+- `_assertSameOrg()` — SUPER_ADMIN ograniczony do własnej org w force-password-reset (oddzielne od `_assertOrgAccess()` która obejmuje SSO endpoints)
+- Jawny whitelist ról `{ in: ['END_USER', 'STAFF', 'OFFICE_ADMIN', 'SUPER_ADMIN'] }` we wszystkich 3 serwisach force-reset — OWNER nie może zresetować własnego hasła przez te endpointy
+- `_checkPasswordExpiry()` wywołana w `getMe()` — gate niemożliwy do ominięcia przez odświeżenie strony
+- `@ValidateIf(o => o.passwordExpiryDays !== null)` w DTO — `null` poprawnie przechodzi przez `@IsInt()`
+- `organizations.service.ts update()` — jawna lista pól zamiast `data: dto` (eliminacja mass-assignment)
+- Demo stubs dla 3 endpointów force-password-reset — brak JS error w trybie demo
+
+**Polityka haseł — flow:**
+```
+login() / getMe() → _checkPasswordExpiry(user, org.passwordExpiryDays)
+  → jeśli daysSince >= limit: UPDATE User SET mustChangePassword=true → return true
+  → user.mustChangePassword=true → MustChangePasswordGate → redirect /change-password
+changePassword() → UPDATE User SET mustChangePassword=false, passwordChangedAt=now()
+
+Cron 07:00: checkPasswordExpiry() w SubscriptionsService
+  → dla każdej org z passwordExpiryDays!=null: bulk UPDATE expired users
+```
+
 **Otwarty dług techniczny:**
 - **Tokeny w localStorage** — access + refresh token w `localStorage` podatne na XSS. Migracja do httpOnly cookies = duży zakres. Patrz `docs/BACKLOG.md` #1.
 
@@ -430,8 +461,9 @@ Pełny backlog → `docs/BACKLOG.md`.
 ### Priorytet niski
 
 - Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
-- Kiosk link w UI — przycisk w `OrganizationsPage` otwierający `/kiosk?location=`
-- Demo mode fixtures — kompletne dane dla wszystkich stron
+- ~~Kiosk link w UI~~ **✅ DONE v0.17.9**
+- ~~Demo mode fixtures~~ **✅ DONE v0.17.9**
+- ~~Polityka haseł~~ **✅ DONE v0.17.9**
 - Beacon LED desync (R3) — analiza `beacons.service.ts` + retransmit stanu po heartbeat
 - ISO 27001 przygotowanie
 
@@ -469,6 +501,9 @@ Pełny backlog → `docs/BACKLOG.md`.
 | Konfiguracja SSO (Entra ID) | ❌ | ❌ | ❌ | ✅ | — |
 | Stan subskrypcji | ❌ | ❌ | ❌ | ✅ | — |
 | Zarządzanie org (CRUD) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Wymuś reset hasła (własna org) | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Wymuś reset hasła (per org) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Wymuś reset hasła (cała platforma) | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Zarządzanie subskrypcjami | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Impersonacja SUPER_ADMIN | ❌ | ❌ | ❌ | ❌ | ✅ |
 | Stats globalne platformy | ❌ | ❌ | ❌ | ❌ | ✅ |
