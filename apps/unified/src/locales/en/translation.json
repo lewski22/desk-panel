@@ -1204,6 +1204,15 @@
       "description": "Amenity tags available when creating conference rooms in your organization.",
       "empty": "No custom amenity tags yet.",
       "placeholder": "e.g. hammock, foosball…"
+    },
+    "password_policy": {
+      "title": "Password policy",
+      "description": "Enforce regular password rotation for all local accounts (SSO excluded). Leave empty to disable rotation.",
+      "label": "Password expiry (days)",
+      "placeholder": "e.g. 90 (leave empty = no rotation)",
+      "hint_active": "Passwords expire after {{days}} days since last change. Checked daily at 07:00.",
+      "hint_disabled": "Rotation disabled — passwords do not expire automatically.",
+      "error_range": "Enter a number between 1 and 365, or leave empty (no rotation)."
     }
   },
   "kiosk": {

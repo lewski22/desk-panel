@@ -61,7 +61,9 @@ export class OrganizationsController {
   create(@Body() dto: CreateOrganizationDto) { return this.svc.create(dto); }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
+  @ApiOperation({ summary: 'Aktualizuj organizację (tylko własna org dla SUPER_ADMIN)' })
+  update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto, @Request() req: any) {
+    this._assertSameOrg(id, req);
     return this.svc.update(id, dto);
   }
 

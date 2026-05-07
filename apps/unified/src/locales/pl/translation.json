@@ -1204,6 +1204,15 @@
       "description": "Tagi wyposażenia dostępne przy tworzeniu sal konferencyjnych w Twojej organizacji.",
       "empty": "Brak własnych tagów wyposażenia.",
       "placeholder": "np. hamak, foosball…"
+    },
+    "password_policy": {
+      "title": "Polityka haseł",
+      "description": "Wymuś regularną zmianę haseł dla wszystkich kont lokalnych (SSO wykluczone). Zostaw puste, aby wyłączyć rotację.",
+      "label": "Ważność hasła (dni)",
+      "placeholder": "np. 90 (zostaw puste = brak rotacji)",
+      "hint_active": "Hasła wygasną po {{days}} dniach od ostatniej zmiany. Cron sprawdza codziennie o 07:00.",
+      "hint_disabled": "Rotacja wyłączona — hasła nie wygasają automatycznie.",
+      "error_range": "Podaj liczbę od 1 do 365 lub zostaw puste (brak rotacji)."
     }
   },
   "kiosk": {

@@ -52,7 +52,8 @@ const ROUTES: Array<{ test: RegExp | string; method?: string; handler: Handler }
   { test: '/integrations', handler: () => ({}) },
   { test: '/insights',     handler: () => ({ insights: [] }) },
 
-  // Password policy — force reset stubs
+  // Password policy — update org (PATCH) + force reset stubs
+  { test: /\/organizations\/[^/]+/, method: 'PATCH', handler: () => DEMO_ORG },
   { test: /\/organizations\/[^/]+\/force-password-reset/, method: 'POST', handler: () => ({ affected: 3 }) },
   { test: /\/owner\/organizations\/[^/]+\/force-password-reset/, method: 'POST', handler: () => ({ affected: 3 }) },
   { test: '/owner/force-password-reset', method: 'POST', handler: () => ({ affected: 12 }) },

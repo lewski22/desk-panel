@@ -20,6 +20,7 @@ export interface UpdateOrganizationDto {
   name?: string;
   plan?: string;
   isActive?: boolean;
+  passwordExpiryDays?: number | null;
 }
 
 @Injectable()
@@ -63,6 +64,7 @@ export class OrganizationsService {
         ...(dto.name     !== undefined && { name:     dto.name }),
         ...(dto.plan     !== undefined && { plan:     dto.plan }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...('passwordExpiryDays' in dto && { passwordExpiryDays: dto.passwordExpiryDays ?? null }),
       },
     });
   }

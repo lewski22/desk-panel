@@ -456,6 +456,80 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
   );
 }
 
+// ── Password Policy Section (SUPER_ADMIN) ────────────────────
+function PasswordPolicySection({ org }: { org: any }) {
+  const { t } = useTranslation();
+  const [days,    setDays]    = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
+  const [err,     setErr]     = useState('');
+
+  const orgId = org?.id;
+
+  const save = async () => {
+    if (!orgId) return;
+    const parsed = days.trim() === '' ? null : parseInt(days, 10);
+    if (parsed !== null && (isNaN(parsed) || parsed < 1 || parsed > 365)) {
+      setErr(t('org.password_policy.error_range', 'Podaj liczbę od 1 do 365 lub zostaw puste (brak rotacji).'));
+      return;
+    }
+    setSaving(true); setErr('');
+    try {
+      await appApi.orgs.update(orgId, { passwordExpiryDays: parsed });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e: any) {
+      setErr(e.message ?? t('errors.unknown', 'Błąd zapisu'));
+    }
+    setSaving(false);
+  };
+
+  return (
+    <section className="mt-6 border border-zinc-200 rounded-2xl p-5 bg-white">
+      <h2 className="text-sm font-semibold text-zinc-700 mb-1">
+        🔐 {t('org.password_policy.title', 'Polityka haseł')}
+      </h2>
+      <p className="text-xs text-zinc-400 mb-4">
+        {t('org.password_policy.description', 'Wymuś regularną zmianę haseł dla wszystkich kont lokalnych (SSO wykluczone). Zostaw puste, aby wyłączyć rotację.')}
+      </p>
+
+      <div className="flex items-end gap-3 flex-wrap">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-zinc-500 font-medium">
+            {t('org.password_policy.label', 'Ważność hasła (dni)')}
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={days}
+            onChange={e => { setDays(e.target.value); setErr(''); setSaved(false); }}
+            placeholder={t('org.password_policy.placeholder', 'np. 90 (zostaw puste = brak rotacji)')}
+            className="w-64 border border-zinc-200 rounded-xl px-3 py-2 text-sm
+                       focus:outline-none focus:border-violet-400"
+          />
+        </div>
+        <Btn onClick={save} loading={saving} variant="secondary">
+          {t('btn.save', 'Zapisz')}
+        </Btn>
+        {saved && (
+          <span className="text-xs text-emerald-600 font-medium">
+            ✓ {t('toast.saved', 'Zapisano')}
+          </span>
+        )}
+      </div>
+
+      {err && <p className="text-xs text-red-500 mt-2">{err}</p>}
+
+      <p className="text-xs text-zinc-400 mt-3">
+        {days.trim()
+          ? t('org.password_policy.hint_active', 'Hasła wygasną po {{days}} dniach od ostatniej zmiany. Cron sprawdza codziennie o 07:00.', { days })
+          : t('org.password_policy.hint_disabled', 'Rotacja wyłączona — hasła nie wygasają automatycznie.')}
+      </p>
+    </section>
+  );
+}
+
 // ── Custom Amenities Section ─────────────────────────────────
 function AmenitiesSection() {
   const { t }       = useTranslation();
@@ -871,6 +945,9 @@ export function OrganizationsPage() {
 
       {/* ── Custom Amenities dictionary ──────────────────────── */}
       {!isSuperAdmin && <AmenitiesSection />}
+
+      {/* ── Password policy (SUPER_ADMIN) ───────────────────── */}
+      {isSuperAdmin && <PasswordPolicySection org={orgs[0]} />}
 
       {/* Create / Edit modal */}
       {(() => {
