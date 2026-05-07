@@ -973,7 +973,11 @@ export function OrganizationsPage() {
       {!isSuperAdmin && <AmenitiesSection />}
 
       {/* ── Password policy (SUPER_ADMIN) ───────────────────── */}
-      {isSuperAdmin && <PasswordPolicySection org={orgs[0]} />}
+      {isSuperAdmin && (
+        <PasswordPolicySection
+          org={orgs.find(o => o.id === user?.organizationId) ?? (user?.organizationId ? { id: user.organizationId } : undefined)}
+        />
+      )}
 
       {/* Create / Edit modal */}
       {(() => {
