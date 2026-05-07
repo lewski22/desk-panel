@@ -1,6 +1,6 @@
 # Backlog — Reserti Desk Panel
 
-> Ostatnia aktualizacja: 2026-04-28
+> Ostatnia aktualizacja: 2026-05-07
 
 Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu technicznego i planowanych funkcji).
 Źródła: `roadmap.md`, `dev-log.md`.
@@ -11,15 +11,12 @@ Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu techni
 
 | # | Obszar | Opis | Priorytet |
 |---|--------|------|-----------|
-| 1 | Security | Tokeny localStorage → httpOnly cookies — backend `Set-Cookie` + frontend auth flow. Patrz `docs/security-review.md` | Wysoki |
-| 2 | Floor Plan | Floor Plan CDN (R2) — przechowywanie obrazów pięter w Cloudflare R2 zamiast lokalnie | Wysoki |
+| 1 | Security | Tokeny JWT (access/refresh) już są w httpOnly cookies (backend gotowy). Pozostaje: usunięcie user profile object z localStorage — app_user klucz używany przez useRole(), useOrgModules() i inne hooki do odczytu roli i modułów. Dotyczy: client.ts (login/loginAzure), useOrgModules.ts, DashboardPage.tsx, DeskMapPage.tsx. | Średni |
 | 3 | Rezerwacje | Sprint L — Publiczny booking + Stripe Checkout (stripe.com API, checkout session) | Średni |
 | 4 | Integracje | M365 calendar sync — dwustronna synchronizacja kalendarza sal konferencyjnych (rozszerzenie `GraphSyncModule`) | Średni |
-| 5 | Visitor | Visitor email invite — wysyłka zaproszenia emailem (TODO w `visitors.service.ts`) | Średni |
 | 6 | Tech debt | `as any` cleanup (136x) — generowanie typów z OpenAPI (`openapi-typescript`) | Średni |
 | 7 | Testy | Playwright E2E testy — scenariusze golden path dla rezerwacji, check-in, admin | Średni |
-| 8 | Dashboard | R1 pełny — `DashboardPage.tsx`: STAFF widzi KPI/wykresy (`isAtLeastStaff = isAdmin \|\| isStaff`) | Średni |
-| 9 | UX | N-F9 wdrożenie — `useDirtyGuard` podpiąć w `EditLocationModal`, `EditUserModal`, `EditOrgModal` | Średni |
+| 9 | UX | useDirtyGuard podpiąć w EditLocationModal (OrganizationsPage.tsx). Pozostałe modale (EditOrgModal, UsersPage, DesksPage, ResourcesPage, VisitorsPage) mają już ochronę. | Niski |
 | 10 | Gateway | Gateway auto-setup.sh (Faza 1) — skrypt `@reboot` na Raspberry Pi odpytujący `/install/gateway/:token` | Niski |
 | 11 | UI | Kiosk link w UI — przycisk/link otwierający KioskPage z poziomu panelu admina | Niski |
 | 12 | Demo | Demo mode kompletne fixtures — `VITE_DEMO_MODE=true` istnieje, brakuje fixtures dla wszystkich stron | Niski |
@@ -27,16 +24,22 @@ Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu techni
 | 14 | Gateway | Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS → `mqtt.reserti.pl:8883`, brak lokalnego Pi | Niski |
 | 15 | Compliance | ISO 27001 przygotowanie — audyt procesów, dokumentacja kontrolek | Niski |
 | 16 | Security | Polityka haseł — rotacja co 365 dni (lub krócej per org), `mustChangePassword` flaga, OWNER wymusza globalny reset | Niski |
+| 17 | Deploy | Floor Plan R2 — skonfigurować env vars w Coolify: R2_ACCOUNT_ID, R2_BUCKET_NAME, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL. Kod gotowy w r2.service.ts. | Wysoki |
 
 ---
 
 ## Notatki do wybranych pozycji
 
-### #1 — httpOnly cookies
-Duży zakres zmian:
-- Backend: middleware `Set-Cookie` (access + refresh), endpoint `POST /auth/refresh` jako cookie-only
-- Frontend: usunięcie `localStorage` tokenów, axios interceptor oparty na cookies
-- Dotyczy: `auth.controller.ts`, `client.ts`, `useAuth.ts`
+### #1 — localStorage user profile
+Tokeny JWT są chronione (httpOnly cookies). Pozostał obiekt profilu użytkownika przechowywany jako JSON w localStorage pod kluczem `app_user`.
+
+Dotyczy plików:
+- `apps/unified/src/api/client.ts` — `login()` i `loginAzure()` robią `localStorage.setItem(KEYS.user, ...)`
+- `apps/unified/src/hooks/useOrgModules.ts` — czyta `localStorage.getItem('app_user')`
+- `apps/unified/src/pages/DashboardPage.tsx` — `useRole()` hook czyta localStorage
+- `apps/unified/src/pages/DeskMapPage.tsx` — inline `JSON.parse(localStorage.getItem('app_user'))`
+
+Rozwiązanie: endpoint `GET /auth/me` już istnieje — przechować profil w React Context zamiast localStorage. Impersonation token (`app_access`) zostawić w localStorage jako wyjątek.
 
 ### #3 — Sprint L (Stripe)
 - Biurko/sala z flagą `isPublic: true` dostępne przez publiczny link
@@ -54,3 +57,18 @@ Duży zakres zmian:
 curl -s https://api.reserti.pl/install/gateway/$TOKEN | bash
 ```
 Token pobierany z QR kodu wygenerowanego w panelu (`POST /gateway/setup-tokens`).
+
+### #17 — Floor Plan R2 deploy checklist
+Kod w `r2.service.ts` jest gotowy. Wymagana konfiguracja w Coolify:
+
+1. Utwórz bucket w Cloudflare R2 Dashboard
+2. Wygeneruj API token z uprawnieniami do bucketu
+3. Ustaw zmienne środowiskowe dla serwisu `desk-backend`:
+```env
+R2_ACCOUNT_ID=<Cloudflare Account ID>
+R2_BUCKET_NAME=<nazwa bucketu>
+R2_ACCESS_KEY_ID=<klucz dostępu>
+R2_SECRET_ACCESS_KEY=<sekret>
+R2_PUBLIC_URL=https://<bucket>.r2.dev  # lub własna domena
+```
+4. Zrestartuj backend — `R2Service` zaloguje `"R2 configured"`
