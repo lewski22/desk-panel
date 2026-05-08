@@ -20,7 +20,11 @@ export interface UpdateOrganizationDto {
   name?: string;
   plan?: string;
   isActive?: boolean;
-  passwordExpiryDays?: number | null;
+  passwordExpiryDays?:       number | null;
+  passwordMinLength?:        number | null;
+  passwordRequireUppercase?: boolean;
+  passwordRequireNumbers?:   boolean;
+  passwordRequireSpecial?:   boolean;
 }
 
 @Injectable()
@@ -64,7 +68,11 @@ export class OrganizationsService {
         ...(dto.name     !== undefined && { name:     dto.name }),
         ...(dto.plan     !== undefined && { plan:     dto.plan }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
-        ...('passwordExpiryDays' in dto && { passwordExpiryDays: dto.passwordExpiryDays ?? null }),
+        ...('passwordExpiryDays'       in dto && { passwordExpiryDays:       dto.passwordExpiryDays ?? null }),
+        ...('passwordMinLength'        in dto && { passwordMinLength:        dto.passwordMinLength ?? null }),
+        ...('passwordRequireUppercase' in dto && { passwordRequireUppercase: dto.passwordRequireUppercase }),
+        ...('passwordRequireNumbers'   in dto && { passwordRequireNumbers:   dto.passwordRequireNumbers }),
+        ...('passwordRequireSpecial'   in dto && { passwordRequireSpecial:   dto.passwordRequireSpecial }),
       },
     });
   }

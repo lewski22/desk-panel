@@ -3,7 +3,7 @@
  * Sidebar z grupami nawigacyjnymi + collapsible Ustawienia + GlobalSearch (Cmd+K)
  */
 import React, { useEffect, useState, useRef } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { GlobalSearch } from './GlobalSearch';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
@@ -140,7 +140,9 @@ function NavItem({ to, icon: Icon, label, collapsed, onClick }: {
 export function AppLayout({ user, onLogout, children }: Props) {
   const { t }    = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const mainRef  = useRef<HTMLElement>(null);
+  const mustChange = !!(user as any).mustChangePassword;
   const [collapsed,   setCollapsed]   = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) return saved === 'true';
@@ -334,6 +336,22 @@ export function AppLayout({ user, onLogout, children }: Props) {
       {/* Change Password Modal — rendered at top level */}
       {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
 
+      {/* Must-change-password banner */}
+      {mustChange && (
+        <div className="bg-rose-600 text-white text-xs px-4 py-2.5 flex items-center justify-between shrink-0 z-40 gap-3">
+          <span className="flex items-center gap-2 truncate">
+            <span className="text-base shrink-0">🔑</span>
+            {t('org.password_policy.must_change_banner')}
+          </span>
+          <button
+            onClick={() => navigate('/change-password')}
+            className="shrink-0 font-semibold underline hover:no-underline whitespace-nowrap"
+          >
+            {t('org.password_policy.must_change_action')}
+          </button>
+        </div>
+      )}
+
       {/* Subscription expiry banner */}
       {user.subscriptionStatus === 'expired' && (
         <div className="bg-red-600 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
@@ -398,8 +416,10 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
-        <aside className={`hidden md:flex flex-col transition-all duration-200 shrink-0 relative ${collapsed ? 'w-14' : 'w-60'}`}
-               style={{ background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}>
+        <aside
+          className={`hidden md:flex flex-col transition-all duration-200 shrink-0 relative ${collapsed ? 'w-14' : 'w-60'} ${mustChange ? 'blur-sm pointer-events-none select-none' : ''}`}
+          style={{ background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}
+        >
           <SidebarContent />
           <button
             onClick={toggleCollapsed}
@@ -415,13 +435,18 @@ export function AppLayout({ user, onLogout, children }: Props) {
         </aside>
 
         {/* Main content — pb-nav clears bottom nav + device home indicator */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6">
+        <main
+          ref={mainRef}
+          className={`flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6 ${mustChange ? 'blur-sm pointer-events-none select-none' : ''}`}
+        >
           {children}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <BottomNav userRole={user.role} enabledModules={enabledModules} />
+      <div className={mustChange ? 'blur-sm pointer-events-none select-none' : ''}>
+        <BottomNav userRole={user.role} enabledModules={enabledModules} />
+      </div>
 
       {/* Global toast notifications */}
       <Toaster />

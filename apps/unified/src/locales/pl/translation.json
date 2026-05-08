@@ -148,10 +148,13 @@
     "saving": "Zapisywanie…",
     "errors": {
       "required_current": "Podaj aktualne hasło.",
-      "min_length": "Nowe hasło musi mieć co najmniej 8 znaków.",
+      "min_length": "Nowe hasło musi mieć co najmniej {{min}} znaków.",
       "different": "Nowe hasło musi być inne niż aktualne.",
       "mismatch": "Nowe hasło i potwierdzenie nie są identyczne.",
       "not_identical": "Hasła nie są identyczne.",
+      "require_uppercase": "Hasło musi zawierać co najmniej jedną dużą literę (A–Z).",
+      "require_numbers": "Hasło musi zawierać co najmniej jedną cyfrę (0–9).",
+      "require_special": "Hasło musi zawierać co najmniej jeden znak specjalny (!@#$…).",
       "generic": "Błąd zmiany hasła."
     },
     "strength": {
@@ -1217,7 +1220,17 @@
       "force_reset_description": "Wszyscy aktywni użytkownicy zostaną poproszeni o zmianę hasła przy następnym logowaniu.",
       "force_reset_btn": "Wymuś zmianę hasła teraz",
       "reset_confirm": "Wymusić natychmiastową zmianę hasła dla wszystkich użytkowników tej organizacji?",
-      "reset_success": "Gotowe — {{count}} użytkownik(ów) zostanie poproszonych o zmianę hasła."
+      "reset_success": "Gotowe — {{count}} użytkownik(ów) zostanie poproszonych o zmianę hasła.",
+      "complexity_title": "Wymagania złożoności hasła",
+      "complexity_description": "Zdefiniuj minimalne wymagania dla nowych haseł w tej organizacji.",
+      "min_length_label": "Minimalna długość hasła",
+      "min_length_placeholder": "np. 12 (domyślnie: 8)",
+      "min_length_hint": "Minimum 8 znaków. ISO 27001 zaleca co najmniej 12.",
+      "require_uppercase": "Wymagaj dużej litery (A–Z)",
+      "require_numbers": "Wymagaj cyfry (0–9)",
+      "require_special": "Wymagaj znaku specjalnego (!@#$…)",
+      "must_change_banner": "Twoje hasło wymaga zmiany, aby kontynuować pracę.",
+      "must_change_action": "Zmień hasło teraz"
     }
   },
   "kiosk": {

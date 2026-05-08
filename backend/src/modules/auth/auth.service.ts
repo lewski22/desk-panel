@@ -47,18 +47,27 @@ export class AuthService {
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
     let mustChangePassword = !!(user as any).mustChangePassword;
+    let passwordPolicy: { minLength: number; requireUppercase: boolean; requireNumbers: boolean; requireSpecial: boolean } | undefined;
     if ((user as any).organizationId) {
       const org = await this.prisma.organization.findUnique({
         where: { id: (user as any).organizationId },
-        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true },
+        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true, passwordMinLength: true, passwordRequireUppercase: true, passwordRequireNumbers: true, passwordRequireSpecial: true },
       });
       enabledModules = org?.enabledModules ?? [];
       subscriptionStatus = this._calcSubscriptionStatus(org);
       if (!mustChangePassword) {
         mustChangePassword = await this._checkPasswordExpiry(user, org?.passwordExpiryDays ?? null);
       }
+      if (org) {
+        passwordPolicy = {
+          minLength:        org.passwordMinLength        ?? 8,
+          requireUppercase: org.passwordRequireUppercase ?? false,
+          requireNumbers:   org.passwordRequireNumbers   ?? false,
+          requireSpecial:   org.passwordRequireSpecial   ?? false,
+        };
+      }
     }
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword } };
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy } };
   }
   /** Rotuje refresh token: sprawdza DB, kasuje stary, wydaje nową parę. Dezaktywowane konta odrzuca. */
   async refresh(refreshToken: string) {
@@ -77,18 +86,27 @@ export class AuthService {
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
     let mustChangePassword = !!(user as any).mustChangePassword;
+    let passwordPolicy: { minLength: number; requireUppercase: boolean; requireNumbers: boolean; requireSpecial: boolean } | undefined;
     if ((user as any).organizationId) {
       const org = await this.prisma.organization.findUnique({
         where: { id: (user as any).organizationId },
-        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true },
+        select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true, passwordMinLength: true, passwordRequireUppercase: true, passwordRequireNumbers: true, passwordRequireSpecial: true },
       });
       enabledModules = org?.enabledModules ?? [];
       subscriptionStatus = this._calcSubscriptionStatus(org);
       if (!mustChangePassword) {
         mustChangePassword = await this._checkPasswordExpiry(user, org?.passwordExpiryDays ?? null);
       }
+      if (org) {
+        passwordPolicy = {
+          minLength:        org.passwordMinLength        ?? 8,
+          requireUppercase: org.passwordRequireUppercase ?? false,
+          requireNumbers:   org.passwordRequireNumbers   ?? false,
+          requireSpecial:   org.passwordRequireSpecial   ?? false,
+        };
+      }
     }
-    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword };
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy };
   }
 
   /**
@@ -289,13 +307,42 @@ export class AuthService {
     return this.login(user);
   }
 
-  /** Zmienia hasło po weryfikacji obecnego. Unieważnia wszystkie refresh tokeny użytkownika (wylogowanie ze wszystkich urządzeń). */
+  /** Zmienia hasło po weryfikacji obecnego. Waliduje złożoność wg polityki org. Unieważnia wszystkie refresh tokeny (wylogowanie ze wszystkich urządzeń). */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');
     if (await bcrypt.compare(newPassword, user.passwordHash)) throw new BadRequestException('New password must differ from current');
+
+    const orgId = (user as any).organizationId;
+    if (orgId) {
+      const org = await this.prisma.organization.findUnique({
+        where:  { id: orgId },
+        select: { passwordMinLength: true, passwordRequireUppercase: true, passwordRequireNumbers: true, passwordRequireSpecial: true },
+      });
+      if (org) this._validatePasswordComplexity(newPassword, org);
+    }
+
     const hash = await bcrypt.hash(newPassword, 12);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: hash, mustChangePassword: false, passwordChangedAt: new Date() } });
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
+  }
+
+  /**
+   * Sprawdza złożoność hasła wg polityki organizacji.
+   * Rzuca BadRequestException z kodem maszynowym (do i18n na frontendzie).
+   */
+  private _validatePasswordComplexity(
+    password: string,
+    policy: { passwordMinLength?: number | null; passwordRequireUppercase?: boolean; passwordRequireNumbers?: boolean; passwordRequireSpecial?: boolean },
+  ) {
+    const minLen = policy.passwordMinLength ?? 8;
+    if (password.length < minLen)
+      throw new BadRequestException(`PASSWORD_TOO_SHORT:${minLen}`);
+    if (policy.passwordRequireUppercase && !/[A-Z]/.test(password))
+      throw new BadRequestException('PASSWORD_REQUIRE_UPPERCASE');
+    if (policy.passwordRequireNumbers && !/[0-9]/.test(password))
+      throw new BadRequestException('PASSWORD_REQUIRE_NUMBERS');
+    if (policy.passwordRequireSpecial && !/[^A-Za-z0-9]/.test(password))
+      throw new BadRequestException('PASSWORD_REQUIRE_SPECIAL');
   }
 }

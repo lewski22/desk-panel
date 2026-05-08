@@ -459,29 +459,52 @@ function InstallTokenModal({ location, onClose }: { location: any; onClose: () =
 // ── Password Policy Section (SUPER_ADMIN) ────────────────────
 function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => void }) {
   const { t } = useTranslation();
-  const [days,         setDays]         = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
-  const [saving,       setSaving]       = useState(false);
-  const [saved,        setSaved]        = useState(false);
-  const [resetting,    setResetting]    = useState(false);
-  const [err,          setErr]          = useState('');
+
+  // Rotacja
+  const [days,      setDays]      = useState<string>(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
+  // Złożoność
+  const [minLen,    setMinLen]    = useState<string>(org?.passwordMinLength != null ? String(org.passwordMinLength) : '');
+  const [reqUpper,  setReqUpper]  = useState<boolean>(org?.passwordRequireUppercase ?? false);
+  const [reqNum,    setReqNum]    = useState<boolean>(org?.passwordRequireNumbers   ?? false);
+  const [reqSpec,   setReqSpec]   = useState<boolean>(org?.passwordRequireSpecial   ?? false);
+
+  const [saving,    setSaving]    = useState(false);
+  const [saved,     setSaved]     = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [err,       setErr]       = useState('');
 
   // Sync gdy parent odświeży org po zapisie
   useEffect(() => {
     setDays(org?.passwordExpiryDays != null ? String(org.passwordExpiryDays) : '');
-  }, [org?.passwordExpiryDays]);
+    setMinLen(org?.passwordMinLength != null ? String(org.passwordMinLength) : '');
+    setReqUpper(org?.passwordRequireUppercase ?? false);
+    setReqNum(org?.passwordRequireNumbers     ?? false);
+    setReqSpec(org?.passwordRequireSpecial    ?? false);
+  }, [org?.id, org?.passwordExpiryDays, org?.passwordMinLength, org?.passwordRequireUppercase, org?.passwordRequireNumbers, org?.passwordRequireSpecial]);
 
   const orgId = org?.id;
 
   const save = async () => {
     if (!orgId) return;
-    const parsed = days.trim() === '' ? null : parseInt(days, 10);
-    if (parsed !== null && (isNaN(parsed) || parsed < 1 || parsed > 365)) {
-      setErr(t('org.password_policy.error_range', 'Podaj liczbę od 1 do 365 lub zostaw puste (brak rotacji).'));
+    const parsedDays = days.trim() === '' ? null : parseInt(days, 10);
+    if (parsedDays !== null && (isNaN(parsedDays) || parsedDays < 1 || parsedDays > 365)) {
+      setErr(t('org.password_policy.error_range'));
+      return;
+    }
+    const parsedMinLen = minLen.trim() === '' ? null : parseInt(minLen, 10);
+    if (parsedMinLen !== null && (isNaN(parsedMinLen) || parsedMinLen < 8 || parsedMinLen > 128)) {
+      setErr(t('org.password_policy.min_length_hint'));
       return;
     }
     setSaving(true); setErr('');
     try {
-      await appApi.orgs.update(orgId, { passwordExpiryDays: parsed });
+      await appApi.orgs.update(orgId, {
+        passwordExpiryDays:       parsedDays,
+        passwordMinLength:        parsedMinLen,
+        passwordRequireUppercase: reqUpper,
+        passwordRequireNumbers:   reqNum,
+        passwordRequireSpecial:   reqSpec,
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
       onSaved?.();
@@ -493,11 +516,11 @@ function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => voi
 
   const forceReset = async () => {
     if (!orgId) return;
-    if (!window.confirm(t('org.password_policy.reset_confirm', 'Wymusić natychmiastową zmianę hasła dla wszystkich użytkowników tej organizacji?'))) return;
+    if (!window.confirm(t('org.password_policy.reset_confirm'))) return;
     setResetting(true); setErr('');
     try {
       const r = await appApi.organizations.forcePasswordReset(orgId);
-      toast(t('org.password_policy.reset_success', 'Gotowe — {{count}} użytkownik(ów) zostanie poproszonych o zmianę hasła.', { count: r.affected }));
+      toast(t('org.password_policy.reset_success', { count: r.affected }));
     } catch (e: any) {
       setErr(e.message ?? t('errors.unknown', 'Błąd'));
     }
@@ -507,28 +530,82 @@ function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => voi
   return (
     <section className="mt-6 border border-zinc-200 rounded-2xl p-5 bg-white">
       <h2 className="text-sm font-semibold text-zinc-700 mb-1">
-        🔐 {t('org.password_policy.title', 'Polityka haseł')}
+        🔐 {t('org.password_policy.title')}
       </h2>
-      <p className="text-xs text-zinc-400 mb-4">
-        {t('org.password_policy.description', 'Wymuś regularną zmianę haseł dla wszystkich kont lokalnych (SSO wykluczone). Zostaw puste, aby wyłączyć rotację.')}
+      <p className="text-xs text-zinc-400 mb-5">
+        {t('org.password_policy.description')}
       </p>
 
-      <div className="flex items-end gap-3 flex-wrap">
+      {/* ── Rotacja ── */}
+      <div className="flex items-end gap-3 flex-wrap mb-1">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-zinc-500 font-medium">
-            {t('org.password_policy.label', 'Ważność hasła (dni)')}
+            {t('org.password_policy.label')}
           </label>
           <input
-            type="number"
-            min={1}
-            max={365}
+            type="number" min={1} max={365}
             value={days}
             onChange={e => { setDays(e.target.value); setErr(''); setSaved(false); }}
-            placeholder={t('org.password_policy.placeholder', 'np. 90 (zostaw puste = brak rotacji)')}
-            className="w-64 border border-zinc-200 rounded-xl px-3 py-2 text-sm
-                       focus:outline-none focus:border-violet-400"
+            placeholder={t('org.password_policy.placeholder')}
+            className="w-56 border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400"
           />
         </div>
+      </div>
+      <p className="text-xs text-zinc-400 mb-5">
+        {days.trim()
+          ? t('org.password_policy.hint_active', { days })
+          : t('org.password_policy.hint_disabled')}
+      </p>
+
+      {/* ── Złożoność ── */}
+      <div className="pt-4 border-t border-zinc-100">
+        <p className="text-xs text-zinc-500 font-semibold mb-1">
+          {t('org.password_policy.complexity_title')}
+        </p>
+        <p className="text-xs text-zinc-400 mb-4">
+          {t('org.password_policy.complexity_description')}
+        </p>
+
+        <div className="flex flex-col gap-1 mb-4">
+          <label className="text-xs text-zinc-500 font-medium">
+            {t('org.password_policy.min_length_label')}
+          </label>
+          <input
+            type="number" min={8} max={128}
+            value={minLen}
+            onChange={e => { setMinLen(e.target.value); setErr(''); setSaved(false); }}
+            placeholder={t('org.password_policy.min_length_placeholder')}
+            className="w-56 border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-violet-400"
+          />
+          <p className="text-xs text-zinc-400 mt-0.5">{t('org.password_policy.min_length_hint')}</p>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          {([
+            ['reqUpper', reqUpper, setReqUpper, 'require_uppercase'],
+            ['reqNum',   reqNum,   setReqNum,   'require_numbers'],
+            ['reqSpec',  reqSpec,  setReqSpec,  'require_special'],
+          ] as [string, boolean, (v: boolean) => void, string][]).map(([id, val, setter, key]) => (
+            <label key={id} className="flex items-center gap-3 cursor-pointer select-none group">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={val}
+                onClick={() => { setter(!val); setSaved(false); }}
+                className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${val ? 'bg-violet-500' : 'bg-zinc-200'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${val ? 'translate-x-4' : 'translate-x-0'}`} />
+              </button>
+              <span className="text-xs text-zinc-600 group-hover:text-zinc-800 transition-colors">
+                {t(`org.password_policy.${key}`)}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Zapisz ── */}
+      <div className="flex items-center gap-3 mt-5 pt-4 border-t border-zinc-100">
         <Btn onClick={save} loading={saving} variant="secondary">
           {t('btn.save', 'Zapisz')}
         </Btn>
@@ -541,21 +618,16 @@ function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => voi
 
       {err && <p className="text-xs text-red-500 mt-2">{err}</p>}
 
-      <p className="text-xs text-zinc-400 mt-3">
-        {days.trim()
-          ? t('org.password_policy.hint_active', 'Hasła wygasną po {{days}} dniach od ostatniej zmiany. Cron sprawdza codziennie o 07:00.', { days })
-          : t('org.password_policy.hint_disabled', 'Rotacja wyłączona — hasła nie wygasają automatycznie.')}
-      </p>
-
+      {/* ── Force reset ── */}
       <div className="mt-5 pt-4 border-t border-zinc-100">
-        <p className="text-xs text-zinc-500 font-medium mb-2">
-          {t('org.password_policy.force_reset_label', 'Natychmiastowy reset haseł')}
+        <p className="text-xs text-zinc-500 font-medium mb-1">
+          {t('org.password_policy.force_reset_label')}
         </p>
         <p className="text-xs text-zinc-400 mb-3">
-          {t('org.password_policy.force_reset_description', 'Wszyscy aktywni użytkownicy zostaną poproszeni o zmianę hasła przy następnym logowaniu.')}
+          {t('org.password_policy.force_reset_description')}
         </p>
         <Btn onClick={forceReset} loading={resetting} variant="danger" size="sm">
-          🔑 {t('org.password_policy.force_reset_btn', 'Wymuś zmianę hasła teraz')}
+          🔑 {t('org.password_policy.force_reset_btn')}
         </Btn>
       </div>
     </section>

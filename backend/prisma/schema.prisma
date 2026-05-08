@@ -117,7 +117,11 @@ model Organization {
   enabledModules  String[]  @default([])
   customAmenities String[]  @default([])
 
-  passwordExpiryDays  Int?
+  passwordExpiryDays       Int?
+  passwordMinLength        Int?      // null = system default (8)
+  passwordRequireUppercase Boolean   @default(false)
+  passwordRequireNumbers   Boolean   @default(false)
+  passwordRequireSpecial   Boolean   @default(false)
 
   // Azure SSO — DEPRECATED in favour of OrgIntegration (kept for backward compat)
   azureTenantId  String?

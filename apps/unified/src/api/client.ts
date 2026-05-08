@@ -120,10 +120,8 @@ export const appApi = {
       req<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
     async getMe() {
       const u = await req<any>('/auth/me');
-      const existing = JSON.parse(localStorage.getItem(KEYS.user) ?? '{}');
-      const updated = { ...existing, ...u };
-      localStorage.setItem(KEYS.user, JSON.stringify(updated));
-      return updated;
+      localStorage.setItem(KEYS.user, JSON.stringify(u));
+      return u;
     },
     user: (): any | null => {
       try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
