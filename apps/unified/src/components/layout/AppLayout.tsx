@@ -142,7 +142,8 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef  = useRef<HTMLElement>(null);
-  const mustChange = !!(user as any).mustChangePassword && location.pathname !== '/change-password';
+  const mustChange        = !!(user as any).mustChangePassword;
+  const mustChangeOnForm  = mustChange && location.pathname === '/change-password';
   const [collapsed,   setCollapsed]   = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) return saved === 'true';
@@ -437,14 +438,14 @@ export function AppLayout({ user, onLogout, children }: Props) {
         {/* Main content — pb-nav clears bottom nav + device home indicator */}
         <main
           ref={mainRef}
-          className={`flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6 ${mustChange ? 'blur-sm pointer-events-none select-none' : ''}`}
+          className={`flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6 ${mustChange && !mustChangeOnForm ? 'blur-sm pointer-events-none select-none' : ''}`}
         >
           {children}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <div className={mustChange ? 'blur-sm pointer-events-none select-none' : ''}>
+      <div className={mustChange && !mustChangeOnForm ? 'blur-sm pointer-events-none select-none' : ''}>
         <BottomNav userRole={user.role} enabledModules={enabledModules} />
       </div>
 
