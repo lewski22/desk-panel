@@ -418,7 +418,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Desktop sidebar */}
         <aside
-          className={`hidden md:flex flex-col transition-all duration-200 shrink-0 relative ${collapsed ? 'w-14' : 'w-60'} ${mustChange ? 'blur-sm pointer-events-none select-none' : ''}`}
+          className={`hidden md:flex flex-col transition-all duration-200 shrink-0 relative ${collapsed ? 'w-14' : 'w-60'}`}
           style={{ background: '#F4F0FB', borderRight: '1px solid #DDD6F5' }}
         >
           <SidebarContent />
@@ -433,19 +433,26 @@ export function AppLayout({ user, onLogout, children }: Props) {
                 : <path d="M13 4l-6 6 6 6V4z" />}
             </svg>
           </button>
+          {/* Overlay blokujący sidebar gdy wymagana zmiana hasła */}
+          {mustChange && (
+            <div className="absolute inset-0 z-20 pointer-events-auto select-none"
+                 style={{ backdropFilter: 'blur(4px)', background: 'rgba(244,240,251,0.7)' }} />
+          )}
         </aside>
 
         {/* Main content — pb-nav clears bottom nav + device home indicator */}
         <main
           ref={mainRef}
-          className={`flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6 ${mustChange && !mustChangeOnForm ? 'blur-sm pointer-events-none select-none' : ''}`}
+          className={`flex-1 overflow-y-auto bg-zinc-50 p-4 sm:p-6 pb-nav md:pb-6 ${mustChange && !mustChangeOnForm ? 'pointer-events-none select-none' : ''}`}
+          style={mustChange && !mustChangeOnForm ? { filter: 'blur(4px)' } : undefined}
         >
           {children}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <div className={mustChange && !mustChangeOnForm ? 'blur-sm pointer-events-none select-none' : ''}>
+      <div className={mustChange && !mustChangeOnForm ? 'pointer-events-none select-none' : ''}
+           style={mustChange && !mustChangeOnForm ? { filter: 'blur(4px)' } : undefined}>
         <BottomNav userRole={user.role} enabledModules={enabledModules} />
       </div>
 
