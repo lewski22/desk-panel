@@ -30,9 +30,10 @@ export function ChangePasswordPage() {
   const [err,     setErr]     = useState('');
   const [success, setSuccess] = useState(false);
 
-  const user   = appApi.auth.user();
-  const isSso  = (user as any)?.azureObjectId;
-  const policy = (user as any)?.passwordPolicy as PasswordPolicy | undefined;
+  const user        = appApi.auth.user();
+  const isSso       = (user as any)?.azureObjectId;
+  const mustChange  = !!(user as any)?.mustChangePassword;
+  const policy      = (user as any)?.passwordPolicy as PasswordPolicy | undefined;
   const minLen = policy?.minLength ?? 8;
 
   const set = (k: string, v: string) => { setForm(f => ({ ...f, [k]: v })); setErr(''); };
@@ -168,9 +169,9 @@ export function ChangePasswordPage() {
             )}
           </div>
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button type="button" onClick={() => navigate(-1)}
+            <button type="button" onClick={() => { if (mustChange) { appApi.auth.logout(); window.location.href = '/login'; } else { navigate(-1); } }}
               className="flex-1 py-2.5 rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 text-sm font-medium transition-colors">
-              {t('changePassword.cancel')}
+              {mustChange ? t('layout.logout') : t('changePassword.cancel')}
             </button>
             <button type="submit" disabled={busy}
               className="flex-1 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-50">

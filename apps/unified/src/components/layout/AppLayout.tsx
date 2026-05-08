@@ -142,7 +142,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef  = useRef<HTMLElement>(null);
-  const mustChange = !!(user as any).mustChangePassword;
+  const mustChange = !!(user as any).mustChangePassword && location.pathname !== '/change-password';
   const [collapsed,   setCollapsed]   = useState(() => {
     const saved = localStorage.getItem('sidebar_collapsed');
     if (saved !== null) return saved === 'true';
