@@ -85,14 +85,15 @@ function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, o
     if (!form.name.trim() || !form.code.trim()) { setErr(t('resource.form.required')); return; }
     setSaving(true); setErr(null);
     try {
-      const payload = {
-        ...form,
-        capacity: form.capacity ? Number(form.capacity) : undefined,
+      const { type, code, ...rest } = form;
+      const shared = {
+        ...rest,
+        capacity:    form.capacity ? Number(form.capacity) : undefined,
         vehicleType: form.type === 'PARKING' ? form.vehicleType : undefined,
-        amenities: form.type === 'ROOM' ? form.amenities : [],
+        amenities:   form.type === 'ROOM'    ? form.amenities   : [],
       };
-      if (isEdit) await appApi.resources.update(resource.id, payload);
-      else        await appApi.resources.create(locationId, payload);
+      if (isEdit) await appApi.resources.update(resource.id, shared);
+      else        await appApi.resources.create(locationId, { type, code, ...shared });
       setIsDirty(false);
       onSaved();
     } catch (e: any) {
