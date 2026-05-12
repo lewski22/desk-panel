@@ -18,6 +18,6 @@ import { InAppNotificationsModule } from '../inapp-notifications/inapp-notificat
   ],
   controllers: [GatewaysController, InstallController],
   providers:   [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayCommandsService, GatewayJwtGuard],
-  exports:     [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayCommandsService, GatewayJwtGuard],
+  exports:     [GatewaysService, GatewaySetupService, GatewayAuthService, GatewayCommandsService, GatewayJwtGuard, JwtModule],
 })
 export class GatewaysModule {}
