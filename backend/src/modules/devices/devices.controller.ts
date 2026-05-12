@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete, Body, Param, Query, Request,
-  UseGuards, Logger,
+  UseGuards, Logger, BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsIn, IsOptional } from 'class-validator';
@@ -63,9 +63,11 @@ export class DevicesController {
     if (actorOrgId) await this.svc.assertBelongsToOrg(id, actorOrgId);
     const device = await this.svc.findOne(id);  // zawiera desk i gateway
     const deskId = (device as any).desk?.id ?? device.deskId ?? '';
+    if (!deskId) throw new BadRequestException('Beacon nie jest przypisany do biurka — najpierw przypisz biurko');
+    if (!device.gatewayId) throw new BadRequestException('Beacon nie ma przypisanego gateway');
 
     await this.gateways.sendBeaconCommand(
-      device.gatewayId ?? '',
+      device.gatewayId,
       deskId,
       dto.command,
       dto.params,
