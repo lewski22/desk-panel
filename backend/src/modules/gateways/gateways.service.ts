@@ -166,22 +166,22 @@ export class GatewaysService implements OnModuleDestroy {
     const online = isOnline === false ? false : true;
 
     // Snapshot przed updatem — potrzebny do wykrycia powrotu online
-    // Gateway wysyła hardwareId (MAC/hex) — szukamy po hardwareId, nie po id (CUID)
+    // Gateway wysyła device.id (CUID) zapisany przez beacon w NVS podczas provisioning
     const prev = await this.prisma.device.findUnique({
-      where:  { hardwareId: deviceId },
+      where:  { id: deviceId },
       select: { isOnline: true, deskId: true, id: true, lastSeen: true },
     });
 
     if (!prev) {
       this.logger.warn(
-        `deviceHeartbeat: device not found — hardwareId=${deviceId}. ` +
+        `deviceHeartbeat: device not found — id=${deviceId}. ` +
         `Beacon NVS may be stale or device was deleted. Re-provisioning required.`
       );
       throw new NotFoundException(`Device ${deviceId} not found`);
     }
 
     const device = await this.prisma.device.update({
-      where: { hardwareId: deviceId },
+      where: { id: deviceId },
       data: {
         isOnline:  online,
         lastSeen:  new Date(),
