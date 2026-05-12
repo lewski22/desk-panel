@@ -1,6 +1,44 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-08
+> Ostatnia aktualizacja: 2026-05-12
+
+---
+
+## [0.17.12] — 2026-05-12 — NFC Card Scan Flow + Beacon Boot Fix
+
+### Fixed
+
+- **NFC scan session nigdy nie odbierała karty** — gateway przerywał przetwarzanie skanów bez rezerwacji przed forwarding do backendu (`gateway.py _handle_checkin`). Karty niezarejestrowane (dokładnie te potrzebne przy dodawaniu przez panel admina) nigdy nie trafiały do `NfcScanService.notifyScan()`. Fix: gateway zawsze forwerduje skan do backendu w osobnym wątku, niezależnie od lokalnego cache rezerwacji.
+
+- **MQTT packet size za mały na beaconie** — `PubSubClient` domyślny limit 256 bajtów był przekraczany przez payload checkin (UUID event_id + CUID device_id + CUID desk_id + card_uid + timestamp). `publish()` zwracał `false` po cichu, skan trafiał do offline queue. Heartbeat działał bo jest krótszy. Fix: `_client.setBufferSize(512)` w `MqttService::begin()` (`mqtt_service.cpp`).
+
+- **`/checkins/nfc` używał przestarzałego auth** — endpoint sprawdzał nagłówek `x-gateway-secret`, podczas gdy gateway wysyła `Authorization: Bearer <jwt>` (JWT auth). Fix: zamieniono ręczną weryfikację sekretu na `@UseGuards(GatewayJwtGuard)`; `JwtModule` dodany do exports `GatewaysModule`.
+
+- **Gateway wysyłał snake_case do backendu** — payload beacona używa `card_uid`/`desk_id`, backend `NfcCheckinDto` wymaga `cardUid`/`deskId`. `ValidationPipe` z `transform: true` nie konwertuje automatycznie snake→camel. Fix: jawne mapowanie kluczy w `forward_checkin()`.
+
+- **Gateway wysyłał dodatkowe pola odrzucane przez ValidationPipe** — `gatewayId` i `deviceId` nie są zdefiniowane w `NfcCheckinDto`; `whitelist: true` zwracał 400. Fix: wysyłanie tylko `deskId` + `cardUid`.
+
+- **Beacon WiFi — race condition przy starcie** — `wifi.begin()` jest non-blocking. Natychmiast po wywołaniu `wifi.isConnected()` zwracał `false`, stan był ustawiany na ERROR, MQTT próbował się połączyć bez WiFi. Fix: 15-sekundowa pętla blokująca po `wifi.begin()`, polling co 200ms z resetem watchdoga (`main.cpp`).
+
+- **`urllib` bez User-Agent blokowany przez GitHub CDN** — gateway pobierał assety OTA przez `urllib.request.urlopen` bez nagłówka `User-Agent`; GitHub redirect na `release-assets.githubusercontent.com` zwracał 404. Fix: `urllib.request.Request` z `User-Agent: desk-gateway/<version>` dla pobierania manifestu i pliku.
+
+### Added
+
+- **`NfcCardModal` — DirtyGuard przy zamknięciu** — przypadkowe kliknięcie poza modalem zamykało okno podczas aktywnego skanowania lub wprowadzania UID. Teraz w trybach `scanning`, `manual` i `done` pojawia się `DirtyGuardDialog` z potwierdzeniem (`NfcCardModal.tsx`).
+
+---
+
+## [0.17.11] — 2026-05-12 — Gateway OTA Pipeline
+
+### Added
+
+- **OTA release tooling** — `scripts/ota_release.py` z komendami `genkey` (Ed25519 keypair) i `sign` (podpisanie manifestu). Nowa para kluczy, klucz publiczny zaktualizowany w `gateway.py`.
+- **`.gitignore`** dla `desk-gateway-python` — chroni `scripts/ota_private.pem` i `scripts/ota_manifest.json` przed commitem.
+
+### Fixed
+
+- **Beacon WiFi boot** — dodane blokujące oczekiwanie 15s po `wifi.begin()` (`main.cpp`).
+- **Gateway OTA User-Agent** — `urllib` teraz wysyła `User-Agent` przy pobieraniu manifestu i `gateway.py` z GitHub releases.
 
 ---
 

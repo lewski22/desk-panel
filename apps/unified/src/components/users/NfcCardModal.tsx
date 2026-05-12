@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../../api/client';
 import { Modal } from '../ui';
+import { DirtyGuardDialog } from '../ui/DirtyGuardDialog';
 
 interface Props {
   user: { id: string; firstName?: string | null; lastName?: string | null; cardUid?: string | null };
@@ -19,6 +20,7 @@ export function NfcCardModal({ user, onClose }: Props) {
   const [cardUid,    setCardUid] = useState(user.cardUid ?? '');
   const [busy,       setBusy]    = useState(false);
   const [err,        setErr]     = useState('');
+  const [showGuard,  setShowGuard] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -55,10 +57,18 @@ export function NfcCardModal({ user, onClose }: Props) {
     setBusy(false);
   };
 
+  const isDirty = mode === 'scanning' || mode === 'manual' || mode === 'done';
+
+  const handleClose = () => {
+    if (isDirty) { setShowGuard(true); return; }
+    stopPolling();
+    onClose();
+  };
+
   const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
 
   return (
-    <Modal title={t('users.nfcModal.title', { name })} onClose={() => { stopPolling(); onClose(); }}>
+    <Modal title={t('users.nfcModal.title', { name })} onClose={handleClose}>
       <div className="flex flex-col gap-4">
         {err && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
 
@@ -149,6 +159,12 @@ export function NfcCardModal({ user, onClose }: Props) {
           </>
         )}
       </div>
+      {showGuard && (
+        <DirtyGuardDialog
+          onConfirm={() => { stopPolling(); onClose(); }}
+          onCancel={() => setShowGuard(false)}
+        />
+      )}
     </Modal>
   );
 }

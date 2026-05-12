@@ -46,6 +46,7 @@
   "layout": {
     "staff": "Employee",
     "change_password": "Change password",
+    "nfc_card": "My NFC card",
     "logout": "Logout",
     "open_menu": "Open menu",
     "close_menu": "Close menu",

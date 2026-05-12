@@ -13,6 +13,7 @@ import { BottomNav } from './BottomNav';
 import { Toaster }   from '../ui/Toast';
 import { NotificationBell } from './NotificationBell';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { NfcCardModal } from '../users/NfcCardModal';
 import {
   IconFloorPlan, IconCalendar, IconClipboard, IconFolder,
   IconDesk, IconUsers, IconBeacon, IconProvisioning,
@@ -28,6 +29,7 @@ interface User {
   organizationId?: string;
   firstName?: string;
   lastName?: string;
+  cardUid?: string | null;
   enabledModules?: string[];
   subscriptionStatus?: string | null;
 }
@@ -151,6 +153,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
   });
   const [mobileOpen,  setMobileOpen]  = useState(false);
   const [showChangePwd, setShowChangePwd] = useState(false);
+  const [showNfcCard,   setShowNfcCard]   = useState(false);
 
   const toggleCollapsed = () => setCollapsed(c => {
     const next = !c;
@@ -306,6 +309,19 @@ export function AppLayout({ user, onLogout, children }: Props) {
           {(!collapsed || mobile) && <span className="truncate leading-none">{t('layout.change_password')}</span>}
         </button>
 
+        {/* NFC card — tylko role uprzywilejowane (SA, OA, STAFF) */}
+        {(user.role === 'SUPER_ADMIN' || user.role === 'OFFICE_ADMIN' || user.role === 'STAFF' || user.role === 'OWNER') && (
+          <button
+            onClick={() => { setShowNfcCard(true); if (mobile) setMobileOpen(false); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors hover:bg-black/[0.04]"
+            style={{ color: '#4A3F6B' }}
+            title={collapsed && !mobile ? t('layout.nfc_card') : undefined}
+          >
+            <IconCard size={16} className="shrink-0" />
+            {(!collapsed || mobile) && <span className="truncate leading-none">{t('layout.nfc_card')}</span>}
+          </button>
+        )}
+
         {/* Language + Bell + Logout row */}
         <div className={`flex items-center gap-1 px-1 pt-0.5 ${collapsed && !mobile ? 'flex-col' : ''}`}>
           {(!collapsed || mobile) && <div className="flex-1 min-w-0"><LanguageSwitcher /></div>}
@@ -336,6 +352,9 @@ export function AppLayout({ user, onLogout, children }: Props) {
 
       {/* Change Password Modal — rendered at top level */}
       {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
+
+      {/* NFC Card Modal — self-assign dla wszystkich ról */}
+      {showNfcCard && <NfcCardModal user={user} onClose={() => setShowNfcCard(false)} />}
 
       {/* Must-change-password banner */}
       {mustChange && (

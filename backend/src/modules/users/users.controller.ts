@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Param, Body, Query, Request, UseGuards,
-  HttpCode, HttpStatus, InternalServerErrorException,
+  HttpCode, HttpStatus, InternalServerErrorException, ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -64,9 +64,13 @@ export class UsersController {
   }
 
   @Patch(':id/card')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Assign NFC card UID to user' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
+  @ApiOperation({ summary: 'Assign NFC card UID to user (SA/OA: any user in org; STAFF: self only)' })
   assignCard(@Param('id') id: string, @Body('cardUid') cardUid: string, @Request() req: any) {
+    const isSelf = req.user.id === id;
+    const isAdmin = req.user.role === UserRole.SUPER_ADMIN || req.user.role === UserRole.OFFICE_ADMIN || req.user.role === 'OWNER';
+    if (!isSelf && !isAdmin) throw new ForbiddenException('You can only assign a card to your own account');
     const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.updateCardUid(id, cardUid, actorOrgId);
   }
@@ -94,10 +98,13 @@ export class UsersController {
 
   @Post(':id/nfc-scan-start')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Start 60s NFC scan session — next unknown card scan will be assigned' })
   async nfcScanStart(@Param('id') id: string, @Request() req: any) {
+    const isSelf = req.user.id === id;
+    const isAdmin = req.user.role === UserRole.SUPER_ADMIN || req.user.role === UserRole.OFFICE_ADMIN || req.user.role === 'OWNER';
+    if (!isSelf && !isAdmin) throw new ForbiddenException('You can only start a scan session for your own account');
     // Start sesji asynchronicznie — nie blokuj HTTP
     this.nfcScan.startSession(req.user.id, 60_000)
       .then(async (cardUid: string) => {
@@ -112,9 +119,12 @@ export class UsersController {
 
   @Get(':id/nfc-scan-status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'Poll NFC scan session status' })
   async nfcScanStatus(@Param('id') id: string, @Request() req: any) {
+    const isSelf = req.user.id === id;
+    const isAdmin = req.user.role === UserRole.SUPER_ADMIN || req.user.role === UserRole.OFFICE_ADMIN || req.user.role === 'OWNER';
+    if (!isSelf && !isAdmin) throw new ForbiddenException('You can only poll scan status for your own account');
     const isWaiting = this.nfcScan.hasActiveSession(req.user.id);
     // Pobierz aktualny cardUid z DB — jeśli sesja się zakończyła, UID już jest zapisany
     const user = await this.svc.findOne(id);
