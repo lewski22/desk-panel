@@ -71,6 +71,23 @@ export class GatewaysController {
     });
   }
 
+  // ── Beacon list — gateway fetches this on startup to restore known beacons ──
+  @Get(':id/beacons')
+  @UseGuards(GatewayJwtGuard)
+  @ApiOperation({ summary: 'Return all beacons registered to this gateway (username + passwordHash + deskId)' })
+  async gatewayBeacons(
+    @Param('id') gatewayId: string,
+    @Req()       req: ExpressRequest & { gatewayId: string },
+  ) {
+    if (req.gatewayId !== gatewayId) {
+      throw new ForbiddenException('token does not match gateway id');
+    }
+    return this.prisma.device.findMany({
+      where:  { gatewayId },
+      select: { mqttUsername: true, mqttPasswordHash: true, deskId: true },
+    });
+  }
+
   // ── ACK — gateway confirms command execution ─────────────────
   @Post(':id/ack')
   @UseGuards(GatewayJwtGuard)
