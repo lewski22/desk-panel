@@ -187,22 +187,30 @@ export function DevicesPage() {
   const [gateways, setGateways] = useState<Gateway[]>([]);
   const [loadingD, setLoadingD] = useState(true);
   const [loadingG, setLoadingG] = useState(true);
+  const [errorD,   setErrorD]   = useState(false);
+  const [errorG,   setErrorG]   = useState(false);
 
   const loadDevices = async () => {
     setLoadingD(true);
+    setErrorD(false);
     try {
       const data = await api.devices.list();
       setDevices(Array.isArray(data) ? data : []);
-    } catch { /* noop */ }
+    } catch (e) {
+      if ((e as Error)?.message !== 'Unauthorized') setErrorD(true);
+    }
     setLoadingD(false);
   };
 
   const loadGateways = async () => {
     setLoadingG(true);
+    setErrorG(false);
     try {
       const data = await api.gateways.list();
       setGateways(Array.isArray(data) ? data : []);
-    } catch { /* noop */ }
+    } catch (e) {
+      if ((e as Error)?.message !== 'Unauthorized') setErrorG(true);
+    }
     setLoadingG(false);
   };
 
@@ -243,8 +251,14 @@ export function DevicesPage() {
       </div>
 
       {tab === 'beacons'
-        ? <BeaconsTab devices={devices} loading={loadingD} onRefresh={loadDevices} />
-        : <GatewaysTab gateways={gateways} loading={loadingG} />}
+        ? <>
+            {errorD && <p className="mb-4 text-sm text-red-500">{t('error.load_failed')}</p>}
+            <BeaconsTab devices={devices} loading={loadingD} onRefresh={loadDevices} />
+          </>
+        : <>
+            {errorG && <p className="mb-4 text-sm text-red-500">{t('error.load_failed')}</p>}
+            <GatewaysTab gateways={gateways} loading={loadingG} />
+          </>}
     </div>
   );
 }

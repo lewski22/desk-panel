@@ -12,6 +12,9 @@
   "table": {
     "empty": "Brak danych"
   },
+  "error": {
+    "load_failed": "Nie udało się załadować danych. Odśwież stronę."
+  },
   "btn": {
     "save": "Zapisz",
     "create": "Utwórz",

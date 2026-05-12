@@ -12,6 +12,9 @@
   "table": {
     "empty": "No data"
   },
+  "error": {
+    "load_failed": "Failed to load data. Please refresh."
+  },
   "btn": {
     "save": "Save",
     "create": "Create",

@@ -120,7 +120,12 @@ export class DevicesService {
   // ── CRUD ──────────────────────────────────────────────────────
   async findAll(organizationId?: string) {
     const where = organizationId
-      ? { gateway: { location: { organizationId } } }
+      ? {
+          OR: [
+            { gateway: { location: { organizationId } } },
+            { desk:    { location: { organizationId } } },
+          ],
+        }
       : undefined;
 
     return this.prisma.device.findMany({
