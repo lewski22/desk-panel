@@ -294,6 +294,45 @@ export const appApi = {
       return req<any[]>(`/bookings/admin${qs ? `?${qs}` : ''}`);
     },
   },
+  // ── Parking Groups ────────────────────────────────────────────
+  parkingGroups: {
+    list:         ()                                           => req<any[]>('/parking-groups'),
+    get:          (id: string)                                 => req<any>(`/parking-groups/${id}`),
+    create:       (dto: { name: string; description?: string }) =>
+      req<any>('/parking-groups', { method: 'POST', body: JSON.stringify(dto) }),
+    update:       (id: string, dto: { name?: string; description?: string }) =>
+      req<any>(`/parking-groups/${id}`, { method: 'PATCH', body: JSON.stringify(dto) }),
+    remove:       (id: string) =>
+      req<void>(`/parking-groups/${id}`, { method: 'DELETE' }),
+    addUser:      (id: string, userId: string) =>
+      req<any>(`/parking-groups/${id}/users`, { method: 'POST', body: JSON.stringify({ userId }) }),
+    addUsersBulk: (id: string, userIds: string[]) =>
+      req<any>(`/parking-groups/${id}/users/bulk`, { method: 'POST', body: JSON.stringify({ userIds }) }),
+    removeUser:   (id: string, userId: string) =>
+      req<void>(`/parking-groups/${id}/users/${userId}`, { method: 'DELETE' }),
+    setResources: (id: string, resourceIds: string[]) =>
+      req<any>(`/parking-groups/${id}/resources`, { method: 'PUT', body: JSON.stringify({ resourceIds }) }),
+    setAccessMode: (resourceId: string, accessMode: string) =>
+      req<any>(`/parking-groups/resources/${resourceId}/access-mode`, { method: 'PATCH', body: JSON.stringify({ accessMode }) }),
+  },
+
+  // ── Parking Blocks ────────────────────────────────────────────
+  parkingBlocks: {
+    list:   (params?: { resourceId?: string; groupId?: string; from?: string; to?: string }) => {
+      const p = new URLSearchParams();
+      if (params?.resourceId) p.set('resourceId', params.resourceId);
+      if (params?.groupId)    p.set('groupId',    params.groupId);
+      if (params?.from)       p.set('from',       params.from);
+      if (params?.to)         p.set('to',         params.to);
+      const qs = p.toString();
+      return req<any[]>(`/parking-blocks${qs ? `?${qs}` : ''}`);
+    },
+    create: (dto: { resourceId?: string; groupId?: string; reason?: string; startTime: string; endTime: string }) =>
+      req<any>('/parking-blocks', { method: 'POST', body: JSON.stringify(dto) }),
+    remove: (id: string) =>
+      req<void>(`/parking-blocks/${id}`, { method: 'DELETE' }),
+  },
+
   /** @deprecated Use appApi.resources.cancelBooking / appApi.resources.myBookings instead */
   bookings: {
     cancel: (id: string)    => req<any>(`/bookings/${id}/cancel`, { method: 'POST', body: '{}' }),

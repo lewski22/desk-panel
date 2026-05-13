@@ -1,6 +1,19 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-12
+> Ostatnia aktualizacja: 2026-05-13
+
+---
+
+## [0.17.9] — 2026-05-13 — Fix: MyReservationsPage dla wszystkich ról
+
+### Fixed
+- **`/my-reservations` ukryte dla org bez modułu DESKS** — usunięto `module: 'DESKS'` z nav item "Moje rezerwacje" w `AppLayout.tsx` i `BottomNav.tsx`; link jest teraz zawsze widoczny dla zalogowanych użytkowników (moje rezerwacje to funkcja konta, nie modułu)
+- **Sekcje sal i parkingów niewidoczne dla SUPER_ADMIN** — `MyReservationsPage` teraz pokazuje sekcję sal/parkingów gdy: użytkownik ma rezerwacje danego typu LUB rola to SUPER_ADMIN/OWNER; pustostany wyświetlane zamiast ukrywania sekcji
+- **`findMy` zwracał przeszłe rezerwacje** — dodano filtr `date >= dziś` gdy brak parametru `date`; lista domyślnie pokazuje tylko nadchodzące/bieżące (`reservations.service.ts`)
+
+### Added
+- **Puste stany** dla sekcji sal i parkingów na `MyReservationsPage` (widoczne dla SA/OWNER nawet bez rezerwacji)
+- **i18n** — klucze `my_reservations.rooms_*`, `my_reservations.parking_*`, `my_reservations.all_day`, `my_reservations.past` (PL + EN)
 
 ---
 

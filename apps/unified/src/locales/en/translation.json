@@ -82,6 +82,7 @@
       "change_password": "Change Password",
       "weekly": "Attendance",
       "resources": "Rooms & Parking",
+      "parking_groups": "Parking Groups",
       "visitors": "Visitors",
       "subscription": "Subscription",
       "more": "More",
@@ -1629,5 +1630,94 @@
     "quick_book": "Now",
     "book_for": "Book for:",
     "book_for_self": "Myself (default)"
+  },
+  "my_reservations": {
+    "rooms_title":   "Conference rooms",
+    "rooms_empty":   "No upcoming room bookings",
+    "parking_title": "Parking",
+    "parking_empty": "No upcoming parking bookings"
+  },
+  "parking_groups": {
+    "page_title":   "Parking Groups",
+    "page_sub":     "Manage access to parking spots",
+    "new_group":    "+ New group",
+    "manage":       "Manage →",
+    "empty_title":  "No parking groups",
+    "empty_sub":    "Create a group to control access to parking spots.",
+    "confirm_delete": "Are you sure you want to delete group \"{{name}}\"? Existing reservations will be kept.",
+    "col_name":        "Name",
+    "col_description": "Description",
+    "col_users":       "Users",
+    "col_parkings":    "Parking spots",
+    "create_modal": {
+      "title":            "New parking group",
+      "name_label":       "Group name *",
+      "name_placeholder": "e.g. Management",
+      "desc_label":       "Description (optional)",
+      "desc_placeholder": "e.g. Access for management and directors",
+      "name_required":    "Group name is required",
+      "submit":           "Create group"
+    },
+    "detail": {
+      "back": "← Parking groups",
+      "tab_users":    "👤 Users",
+      "tab_parkings": "🅿️ Parking spots",
+      "tab_blocks":   "⛔ Blocks",
+      "users_tab": {
+        "search_ph":    "Search users…",
+        "add_bulk":     "Add many (CSV)",
+        "add_user":     "+ Add user",
+        "empty_title":  "No users",
+        "empty_sub":    "Add users to the group so they can access parking spots.",
+        "col_user":     "User",
+        "col_email":    "Email",
+        "col_added":    "Added",
+        "confirm_remove": "Remove {{name}} from group?"
+      },
+      "add_user_modal": {
+        "title":        "Add user to group",
+        "search_label": "Search by email or name",
+        "search_ph":    "jan.kowalski@company.com",
+        "submit":       "Add"
+      },
+      "bulk_modal": {
+        "title":   "Add multiple users",
+        "hint":    "Paste email addresses separated by newline or comma.",
+        "added":   "Added {{count}} user(s)",
+        "submit":  "Add"
+      },
+      "parkings_tab": {
+        "hint":         "Select parking spots assigned to this group.",
+        "save":         "Save assignment",
+        "empty_title":  "No parking spots",
+        "empty_sub":    "Add parking spots in the Resources section.",
+        "col_name":     "Name",
+        "col_code":     "Code",
+        "col_access":   "Access mode",
+        "access_group": "🔒 Groups only",
+        "access_public": "🌐 Public"
+      },
+      "blocks_tab": {
+        "future_only":  "Future only",
+        "add_block":    "+ Block group in period",
+        "empty_title":  "No blocks",
+        "empty_sub":    "There are no blocks for this group.",
+        "col_from":     "From",
+        "col_to":       "To",
+        "col_reason":   "Reason",
+        "col_created_by": "Created by",
+        "confirm_remove": "Delete this block?"
+      },
+      "add_block_modal": {
+        "title":         "Block group in period",
+        "time_required": "Please provide start and end time",
+        "time_invalid":  "End time must be after start time",
+        "from_label":    "From",
+        "to_label":      "To",
+        "reason_label":  "Reason (optional)",
+        "reason_ph":     "e.g. Parking renovation",
+        "submit":        "Block"
+      }
+    }
   }
 }

@@ -11,6 +11,7 @@ export {
   Cpu             as IconProvisioning,
   DoorOpen        as IconRoom,
   UserPlus        as IconVisitor,
+  Car             as IconParking,
   // Analytics
   BarChart2       as IconBarChart,
   PieChart        as IconPieChart,

@@ -16,6 +16,119 @@ import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { toast } from '../components/ui/Toast';
 import type { Resource } from '../types/api';
 
+// ── AddBlockModal (dla pojedynczego miejsca) ──────────────────
+function AddResourceBlockModal({ resourceId, onClose, onSaved }: {
+  resourceId: string; onClose: () => void; onSaved: () => void;
+}) {
+  const [startTime, setStart]  = useState('');
+  const [endTime,   setEnd]    = useState('');
+  const [reason,    setReason] = useState('');
+  const [saving,    setSaving] = useState(false);
+  const [err,       setErr]    = useState<string | null>(null);
+
+  const handleSave = async () => {
+    if (!startTime || !endTime) { setErr('Podaj czas początku i końca'); return; }
+    if (new Date(startTime) >= new Date(endTime)) { setErr('Czas końca musi być po czasie początku'); return; }
+    setSaving(true); setErr(null);
+    try {
+      await appApi.parkingBlocks.create({ resourceId, startTime, endTime, reason: reason.trim() || undefined });
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.message ?? 'Błąd');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Zablokuj miejsce parkingowe" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Od" type="datetime-local" value={startTime} onChange={e => setStart(e.target.value)} />
+          <Input label="Do" type="datetime-local" value={endTime}   onChange={e => setEnd(e.target.value)} />
+        </div>
+        <Input label="Powód (opcjonalnie)" value={reason} onChange={e => setReason(e.target.value)} placeholder="np. Remont" />
+        {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
+          <Btn onClick={handleSave} loading={saving}>Zablokuj</Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ── ResourceBlocksSection ─────────────────────────────────────
+function ResourceBlocksSection({ resourceId }: { resourceId: string }) {
+  const [blocks,    setBlocks]   = useState<any[]>([]);
+  const [expanded,  setExpanded] = useState(false);
+  const [loading,   setLoading]  = useState(false);
+  const [showAdd,   setShowAdd]  = useState(false);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    appApi.parkingBlocks.list({ resourceId })
+      .then(setBlocks)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [resourceId]);
+
+  const handleExpand = () => {
+    if (!expanded) load();
+    setExpanded(e => !e);
+  };
+
+  const handleRemove = async (id: string) => {
+    if (!confirm('Usunąć blokadę?')) return;
+    try { await appApi.parkingBlocks.remove(id); load(); }
+    catch (e: any) { alert((e as any)?.message ?? 'Błąd'); }
+  };
+
+  const fmt = (d: string) => new Date(d).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' });
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={handleExpand}
+        className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors flex items-center gap-1">
+        {expanded ? '▾' : '▸'} Blokady miejsca {blocks.length > 0 && !loading && `(${blocks.length})`}
+      </button>
+      {expanded && (
+        <div className="mt-2 pl-2 border-l-2 border-zinc-100">
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-zinc-200 border-t-violet-400 rounded-full animate-spin my-2" />
+          ) : blocks.length === 0 ? (
+            <p className="text-xs text-zinc-400 py-1">Brak blokad</p>
+          ) : (
+            <div className="space-y-1">
+              {blocks.map(b => (
+                <div key={b.id} className="flex items-center gap-2 text-xs text-zinc-600">
+                  <span className="text-red-500">⛔</span>
+                  <span>{fmt(b.startTime)} – {fmt(b.endTime)}</span>
+                  {b.reason && <span className="text-zinc-400">· {b.reason}</span>}
+                  <button onClick={() => handleRemove(b.id)} className="ml-auto text-red-400 hover:text-red-600">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="mt-2 text-xs text-violet-600 hover:text-violet-800 font-medium transition-colors">
+            + Zablokuj miejsce
+          </button>
+        </div>
+      )}
+      {showAdd && (
+        <AddResourceBlockModal
+          resourceId={resourceId}
+          onClose={() => setShowAdd(false)}
+          onSaved={() => { setShowAdd(false); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
 const RESOURCE_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'] as const;
 
 const TYPE_ICONS: Record<string, string> = {
@@ -331,6 +444,18 @@ export function ResourcesPage() {
                       <td className="py-3 px-4">
                         <p className="font-medium text-zinc-800">{r.name}</p>
                         <p className="text-xs text-zinc-400 font-mono">{r.code}</p>
+                        {/* Grupy przypisane do parkingu */}
+                        {r.type === 'PARKING' && (r as any).groups?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(r as any).groups.map((g: any) => (
+                              <span key={g.id} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100 font-medium">
+                                {g.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Blokady miejsca parkingowego */}
+                        {r.type === 'PARKING' && <ResourceBlocksSection resourceId={r.id} />}
                       </td>
                       <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
                         {r.capacity && <span>👤 {r.capacity} · </span>}
@@ -344,6 +469,16 @@ export function ResourcesPage() {
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           r.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'
                         }`}>{r.status === 'ACTIVE' ? t('resource.status.active') : t('resource.status.inactive')}</span>
+                        {/* Access mode badge dla parkingów */}
+                        {r.type === 'PARKING' && (
+                          <span className={`ml-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+                            (r as any).accessMode === 'GROUP_RESTRICTED'
+                              ? 'bg-amber-100 text-amber-700'
+                              : 'bg-emerald-50 text-emerald-600'
+                          }`}>
+                            {(r as any).accessMode === 'GROUP_RESTRICTED' ? '🔒 Tylko grupy' : '🌐 Publiczny'}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

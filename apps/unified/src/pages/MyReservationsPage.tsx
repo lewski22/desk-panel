@@ -2,7 +2,7 @@
  * MyReservationsPage — Sprint H2
  * Dodano swipe-left → reveal "Anuluj" (iOS Mail pattern)
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
 import { EmptyState }      from '../components/ui';
@@ -122,6 +122,9 @@ function canCheckin(r: any): boolean {
 
 export function MyReservationsPage() {
   const { t, i18n } = useTranslation();
+  const user = useMemo(() => appApi.auth.user(), []);
+  const isPrivilegedRole = ['SUPER_ADMIN', 'OFFICE_ADMIN', 'OWNER'].includes(user?.role ?? '');
+
   const [reservations, setReservations] = useState<any[]>([]);
   const [bookings,     setBookings]     = useState<any[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -196,8 +199,11 @@ export function MyReservationsPage() {
   const now             = new Date();
   const activeBookings  = bookings.filter(b => new Date(b.endTime) >= now);
   const pastBookings    = bookings.filter(b => new Date(b.endTime) < now);
-  const roomBookings    = activeBookings.filter(b => b.resource?.type !== 'PARKING');
+  const roomBookings    = activeBookings.filter(b => b.resource?.type === 'ROOM');
   const parkingBookings = activeBookings.filter(b => b.resource?.type === 'PARKING');
+
+  const showRooms   = !loading && (roomBookings.length > 0   || isPrivilegedRole);
+  const showParking = !loading && (parkingBookings.length > 0 || isPrivilegedRole);
 
   const renderBookingCard = (b: any) => {
     const isPast = new Date(b.endTime) < now;
@@ -331,21 +337,29 @@ export function MyReservationsPage() {
           )}
 
           {/* Sale konferencyjne i parkingi */}
-          {roomBookings.length > 0 && (
+          {showRooms && (
             <section>
               <h3 className="font-semibold text-zinc-700 mb-3">
-                🏛 {t('rooms.my_bookings.title', 'Moje rezerwacje sal')}
+                🏛 {t('my_reservations.rooms_title', 'Sale konferencyjne')}
               </h3>
-              <div className="space-y-3">{roomBookings.map(b => renderBookingCard(b))}</div>
+              {roomBookings.length === 0 ? (
+                <EmptyState icon="🏛" title={t('my_reservations.rooms_empty', 'Brak nadchodzących rezerwacji sal')} />
+              ) : (
+                <div className="space-y-3">{roomBookings.map(b => renderBookingCard(b))}</div>
+              )}
             </section>
           )}
 
-          {parkingBookings.length > 0 && (
+          {showParking && (
             <section>
               <h3 className="font-semibold text-zinc-700 mb-3">
-                🅿️ {t('parking.my_bookings.title', 'Moje miejsca parkingowe')}
+                🅿️ {t('my_reservations.parking_title', 'Parkingi')}
               </h3>
-              <div className="space-y-3">{parkingBookings.map(b => renderBookingCard(b))}</div>
+              {parkingBookings.length === 0 ? (
+                <EmptyState icon="🅿️" title={t('my_reservations.parking_empty', 'Brak nadchodzących rezerwacji parkingów')} />
+              ) : (
+                <div className="space-y-3">{parkingBookings.map(b => renderBookingCard(b))}</div>
+              )}
             </section>
           )}
 

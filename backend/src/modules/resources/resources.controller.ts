@@ -41,7 +41,7 @@ export class ResourcesController {
     @Query('date')       date?:      string,
     @Request()           req?:       any,
   ) {
-    return this.svc.findAll(locationId, type, date, req?.user?.organizationId);
+    return this.svc.findAll(locationId, type, date, req?.user?.organizationId, req?.user?.id);
   }
 
   @Post('locations/:locationId/resources')

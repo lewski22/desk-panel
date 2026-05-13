@@ -9,13 +9,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService }        from '../../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ParkingGroupsService } from '../parking-groups/parking-groups.service';
+import { ParkingBlocksService } from '../parking-blocks/parking-blocks.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ResourcesService {
   constructor(
-    private prisma:                PrismaService,
-    private notificationsService:  NotificationsService,
+    private prisma:               PrismaService,
+    private notificationsService: NotificationsService,
+    private parkingGroups:        ParkingGroupsService,
+    private parkingBlocks:        ParkingBlocksService,
   ) {}
 
   // ── Cross-tenant guard ────────────────────────────────────────
@@ -31,7 +35,7 @@ export class ResourcesService {
   private static readonly ALLOWED_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'];
 
   // ── Lista zasobów per lokalizacja ─────────────────────────────
-  async findAll(locationId: string, type?: string, date?: string, actorOrgId?: string) {
+  async findAll(locationId: string, type?: string, date?: string, actorOrgId?: string, actorUserId?: string) {
     if (type && !ResourcesService.ALLOWED_TYPES.includes(type)) {
       throw new BadRequestException('Invalid resource type');
     }
@@ -84,8 +88,47 @@ export class ResourcesService {
           orderBy: { startTime: 'asc' },
           take:    1,
         },
+        parkingGroups: {
+          select: { group: { select: { id: true, name: true } } },
+        },
       },
     });
+
+    // Batch fetch active blocks for parking resources
+    const parkingIds = resources.filter(r => r.type === 'PARKING').map(r => r.id);
+    const blockMap: Record<string, { reason: string | null; endTime: Date }> = {};
+    if (parkingIds.length > 0) {
+      const activeBlocks = await this.prisma.parkingBlock.findMany({
+        where: {
+          resourceId: { in: parkingIds },
+          startTime:  { lte: now },
+          endTime:    { gte: now },
+        },
+        select: { resourceId: true, reason: true, endTime: true },
+      });
+      for (const b of activeBlocks) {
+        if (b.resourceId) blockMap[b.resourceId] = b;
+      }
+    }
+
+    // Batch fetch user's accessible parking IDs (avoids N+1)
+    let accessibleParkingIds: Set<string> | null = null;
+    if (actorUserId && parkingIds.length > 0) {
+      const userGroupIds = (await this.prisma.parkingGroupUser.findMany({
+        where:  { userId: actorUserId },
+        select: { groupId: true },
+      })).map(m => m.groupId);
+
+      if (userGroupIds.length > 0) {
+        const rows = await this.prisma.parkingGroupResource.findMany({
+          where:  { groupId: { in: userGroupIds }, resourceId: { in: parkingIds } },
+          select: { resourceId: true },
+        });
+        accessibleParkingIds = new Set(rows.map(r => r.resourceId));
+      } else {
+        accessibleParkingIds = new Set();
+      }
+    }
 
     // Compute nextAvailableSlot for ROOM resources on today.
     // All slot comparisons are done in location-local-time minutes.
@@ -129,7 +172,7 @@ export class ResourcesService {
     }
 
     return resources.map(r => {
-      const { bookings, location, ...rest } = r;
+      const { bookings, location, parkingGroups, ...rest } = r as any;
       let nextAvailableSlot: string | null = null;
 
       if (r.type === 'ROOM' && isToday) {
@@ -159,7 +202,23 @@ export class ResourcesService {
         }
       }
 
-      return { ...rest, currentBooking: bookings[0] ?? null, nextAvailableSlot };
+      const groups = (parkingGroups ?? []).map((pg: any) => pg.group);
+
+      let activeBlock: { reason: string | null; endTime: Date } | null = null;
+      let userHasAccess: boolean | undefined = undefined;
+
+      if (r.type === 'PARKING') {
+        activeBlock = blockMap[r.id] ?? null;
+        if (actorUserId) {
+          if (rest.accessMode === 'PUBLIC') {
+            userHasAccess = true;
+          } else {
+            userHasAccess = accessibleParkingIds?.has(r.id) ?? false;
+          }
+        }
+      }
+
+      return { ...rest, groups, currentBooking: bookings[0] ?? null, nextAvailableSlot, activeBlock, userHasAccess };
     });
   }
 
@@ -322,11 +381,6 @@ export class ResourcesService {
       throw new ForbiddenException('Access denied');
     }
 
-    const resLoc = resource.location as any;
-    if (resource.type === 'PARKING' && resLoc?.parkingBookingMode === 'ALL_DAY' && !dto.allDay) {
-      throw new ConflictException('To miejsce parkingowe jest w trybie całodniowym. Użyj allDay: true.');
-    }
-
     // targetUserId validation
     let userId = actorId;
     if (dto.targetUserId) {
@@ -336,14 +390,12 @@ export class ResourcesService {
       if (!actorOrgId) {
         throw new ForbiddenException('Organization context required for cross-user bookings');
       }
-      if (actorOrgId) {
-        const targetUser = await this.prisma.user.findUnique({
-          where:  { id: dto.targetUserId },
-          select: { organizationId: true },
-        });
-        if (!targetUser || targetUser.organizationId !== actorOrgId) {
-          throw new ForbiddenException('Target user not found in your organization');
-        }
+      const targetUser = await this.prisma.user.findUnique({
+        where:  { id: dto.targetUserId },
+        select: { organizationId: true },
+      });
+      if (!targetUser || targetUser.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Target user not found in your organization');
       }
       userId = dto.targetUserId;
     }
@@ -359,6 +411,24 @@ export class ResourcesService {
     }
 
     if (end <= start) throw new ConflictException('endTime musi być późniejszy niż startTime');
+
+    // PARKING guards (ALL_DAY mode, access mode, time blocks)
+    if (resource.type === 'PARKING') {
+      const loc = resource.location as any;
+      if (loc?.parkingBookingMode === 'ALL_DAY' && !dto.allDay) {
+        throw new ConflictException('To miejsce jest w trybie całodniowym. Użyj allDay: true.');
+      }
+
+      const hasAccess = await this.parkingGroups.checkUserAccess(resource.id, userId);
+      if (!hasAccess) {
+        throw new ForbiddenException('Brak dostępu do tego miejsca parkingowego.');
+      }
+
+      const blockReason = await this.parkingBlocks.isBlocked(resource.id, userId, start, end);
+      if (blockReason) {
+        throw new ConflictException(`Rezerwacja niemożliwa: ${blockReason}`);
+      }
+    }
 
     // Sprawdź konflikty
     const conflict = await this.prisma.booking.findFirst({

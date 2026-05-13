@@ -101,16 +101,23 @@ export class ReservationsService {
   }
 
   async findMy(userId: string, date?: string, take = 50) {
-    return this.prisma.reservation.findMany({
-      where: {
-        userId,
-        status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
-        ...(date && (() => {
+    const dateFilter = date
+      ? (() => {
           const d    = new Date(`${date}T00:00:00.000Z`);
           const next = new Date(d);
           next.setUTCDate(next.getUTCDate() + 1);
           return { date: { gte: d, lt: next } };
-        })()),
+        })()
+      : (() => {
+          const todayStr = new Date().toLocaleDateString('sv-SE', { timeZone: 'UTC' });
+          return { date: { gte: new Date(`${todayStr}T00:00:00.000Z`) } };
+        })();
+
+    return this.prisma.reservation.findMany({
+      where: {
+        userId,
+        status: { in: [ReservationStatus.PENDING, ReservationStatus.CONFIRMED] },
+        ...dateFilter,
       },
       include: {
         desk: { select: { name: true, code: true, floor: true, zone: true, location: { select: { name: true, timezone: true } } } },

@@ -19,7 +19,7 @@ import {
   IconDesk, IconUsers, IconBeacon, IconProvisioning,
   IconRoom, IconVisitor, IconBarChart, IconPieChart,
   IconBuildings, IconLink, IconBell, IconCard,
-  IconGear, IconKey, IconLogout,
+  IconGear, IconKey, IconLogout, IconParking,
 } from '../icons/SidebarIcons';
 
 interface User {
@@ -55,7 +55,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
       { to: '/weekly',          icon: IconCalendar,  labelKey: 'layout.nav.weekly',          roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'], module: 'WEEKLY_VIEW' },
-      { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'], module: 'DESKS' },
+      { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF','END_USER'] },
       { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'DESKS' },
     ],
   },
@@ -67,8 +67,9 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/users',        icon: IconUsers,        labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['STAFF'] },
       { to: '/provisioning', icon: IconProvisioning, labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/resources',    icon: IconRoom,         labelKey: 'layout.nav.resources',    roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' },
-      { to: '/visitors',     icon: IconVisitor,      labelKey: 'layout.nav.visitors',     roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
+      { to: '/resources',       icon: IconRoom,         labelKey: 'layout.nav.resources',       roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' },
+      { to: '/parking-groups', icon: IconParking,      labelKey: 'layout.nav.parking_groups',  roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'PARKING' },
+      { to: '/visitors',        icon: IconVisitor,      labelKey: 'layout.nav.visitors',        roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },
     ],
   },
   {

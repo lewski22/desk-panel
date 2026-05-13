@@ -29,6 +29,8 @@ import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
 import IntegrationsPage         from './pages/IntegrationsPage';
 import { KioskAccountPage }    from './pages/KioskAccountPage';
+import { ParkingGroupsPage }  from './pages/ParkingGroupsPage';
+import { GroupDetailPage }    from './pages/GroupDetailPage';
 import { PwaBanners }           from './components/PwaBanners';
 import { DemoModeBanner }       from './components/DemoModeBanner';
 import { DEMO_USER }            from './mocks/demoData';
@@ -187,6 +189,12 @@ export default function App() {
                   } />
                   <Route path="/resources" element={
                     <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN']}><ResourcesPage /></Guard>
+                  } />
+                  <Route path="/parking-groups" element={
+                    <Guard user={user} allowed={ADMIN_ROLES}><ParkingGroupsPage /></Guard>
+                  } />
+                  <Route path="/parking-groups/:id" element={
+                    <Guard user={user} allowed={ADMIN_ROLES}><GroupDetailPage /></Guard>
                   } />
                   <Route path="/floor-plan/:locationId" element={
                     <Guard user={user} allowed={['SUPER_ADMIN','OFFICE_ADMIN']}><FloorPlanEditorPage /></Guard>

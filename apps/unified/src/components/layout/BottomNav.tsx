@@ -27,7 +27,7 @@ interface NavEntry {
 const NAV_BY_ROLE: Record<string, NavEntry[]> = {
   END_USER: [
     { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map_short',          module: 'DESKS' },
-    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.reservations_short', badge: true, module: 'DESKS' },
+    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.reservations_short', badge: true },
     { to: '/notifications',   icon: IconBell,      labelKey: 'layout.nav.notifications_short' },
   ],
   STAFF: [
@@ -38,14 +38,14 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
   ],
   OFFICE_ADMIN: [
     { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
-    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
+    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true },
     { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',   module: 'DESKS' },
     { to: '/dashboard',       icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
     { to: '/__more__',        icon: IconGear,      labelKey: 'layout.nav.more', isMore: true },
   ],
   SUPER_ADMIN: [
     { to: '/map',             icon: IconFloorPlan, labelKey: 'layout.nav.map',            module: 'DESKS' },
-    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true, module: 'DESKS' },
+    { to: '/my-reservations', icon: IconClipboard, labelKey: 'layout.nav.my_reservations', badge: true },
     { to: '/reservations',    icon: IconFolder,    labelKey: 'layout.nav.reservations',   module: 'DESKS' },
     { to: '/dashboard',       icon: IconBarChart,  labelKey: 'layout.nav.dashboard' },
     { to: '/__more__',        icon: IconGear,      labelKey: 'layout.nav.more', isMore: true },

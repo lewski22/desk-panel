@@ -89,6 +89,11 @@ enum IntegrationProvider {
   WEBHOOK_CUSTOM
 }
 
+enum ResourceAccessMode {
+  PUBLIC
+  GROUP_RESTRICTED
+}
+
 // ─── Organization ─────────────────────────────────────────────
 
 model Organization {
@@ -136,6 +141,7 @@ model Organization {
   smtpConfig           OrganizationSmtpConfig?
   integrations         OrgIntegration[]         // Sprint F
   invitations          InvitationToken[]        // #15 Registration
+  parkingGroups        ParkingGroup[]
 }
 
 // ─── Location ─────────────────────────────────────────────────
@@ -341,6 +347,10 @@ model User {
   hostedVisitors     Visitor[]       @relation("HostedVisitors")
   graphToken         GraphToken?          // M4
   graphSubscriptions GraphSubscription[]  // M4
+  parkingGroups        ParkingGroupUser[]    @relation("ParkingGroupMember")
+  createdBlocks        ParkingBlock[]        @relation("BlockCreator")
+  addedToGroups        ParkingGroupUser[]    @relation("ParkingGroupAdder")
+  assignedGroupResources ParkingGroupResource[] @relation("ParkingGroupAssigner")
 }
 
 model RefreshToken {
@@ -420,6 +430,7 @@ model Resource {
   floor       String?
   zone        String?
   status      String   @default("ACTIVE")
+  accessMode  ResourceAccessMode @default(PUBLIC)
   posX        Float?
   posY        Float?
   rotation    Int?
@@ -427,8 +438,10 @@ model Resource {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  location Location  @relation(fields: [locationId], references: [id])
-  bookings Booking[]
+  location      Location               @relation(fields: [locationId], references: [id])
+  bookings      Booking[]
+  parkingGroups ParkingGroupResource[]
+  parkingBlocks ParkingBlock[]
 }
 
 model Booking {
@@ -703,4 +716,70 @@ model GraphSubscription {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ─── Parking Groups & Blocks ──────────────────────────────────
+
+model ParkingGroup {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users        ParkingGroupUser[]
+  resources    ParkingGroupResource[]
+  blocks       ParkingBlock[]
+
+  @@index([organizationId])
+}
+
+model ParkingGroupUser {
+  groupId  String
+  userId   String
+  addedBy  String
+  addedAt  DateTime @default(now())
+
+  group ParkingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User         @relation("ParkingGroupMember", fields: [userId],  references: [id], onDelete: Cascade)
+  adder User         @relation("ParkingGroupAdder",  fields: [addedBy], references: [id])
+
+  @@id([groupId, userId])
+  @@index([userId])
+  @@index([addedBy])
+}
+
+model ParkingGroupResource {
+  groupId    String
+  resourceId String
+  assignedBy String
+  assignedAt DateTime @default(now())
+
+  group    ParkingGroup @relation(fields: [groupId],    references: [id], onDelete: Cascade)
+  resource Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  assigner User         @relation("ParkingGroupAssigner", fields: [assignedBy], references: [id])
+
+  @@id([groupId, resourceId])
+  @@index([resourceId])
+  @@index([assignedBy])
+}
+
+model ParkingBlock {
+  id         String    @id @default(cuid())
+  resourceId String?
+  groupId    String?
+  reason     String?
+  startTime  DateTime
+  endTime    DateTime
+  createdBy  String
+  createdAt  DateTime  @default(now())
+
+  resource Resource?     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  group    ParkingGroup? @relation(fields: [groupId],    references: [id], onDelete: Cascade)
+  creator  User          @relation("BlockCreator", fields: [createdBy], references: [id])
+
+  @@index([resourceId, startTime, endTime])
+  @@index([groupId,    startTime, endTime])
 }

@@ -17,6 +17,7 @@ import { BookingModal }     from '../components/desks/BookingModal';
 import { ReservationModal } from '../components/desks/ReservationModal';
 import { appApi }           from '../api/client';
 import { EmptyState }       from '../components/ui';
+import { toast }            from '../components/ui/Toast';
 import { useOrgModules }    from '../hooks/useOrgModules';
 import { RecommendationBanner } from '../components/recommendations/RecommendationBanner';
 import { localDateStr }         from '../utils/date';
@@ -539,9 +540,40 @@ export function DeskMapPage() {
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredResources.map(r => (
-                    <ResourceCard key={r.id} resource={r} onBook={(res, mode) => setBookTarget({ resource: res, mode })} />
-                  ))}
+                  {filteredResources.map(r => {
+                    const isLocked     = r.type === 'PARKING' && r.accessMode === 'GROUP_RESTRICTED' && r.userHasAccess === false;
+                    const activeBlock  = r.activeBlock ?? null;
+
+                    return (
+                      <div key={r.id} className={`relative ${isLocked ? 'opacity-40' : ''}`}>
+                        <ResourceCard
+                          resource={r}
+                          onBook={(res, mode) => {
+                            if (isLocked) {
+                              toast('Nie masz dostępu do tego miejsca parkingowego.', 'warning');
+                              return;
+                            }
+                            if (activeBlock) {
+                              const till = new Date(activeBlock.endTime).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' });
+                              toast(`Miejsce zablokowane do ${till}${activeBlock.reason ? ` · ${activeBlock.reason}` : ''}`, 'warning');
+                              return;
+                            }
+                            setBookTarget({ resource: res, mode });
+                          }}
+                        />
+                        {isLocked && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <span className="text-3xl drop-shadow-sm">🔒</span>
+                          </div>
+                        )}
+                        {!isLocked && activeBlock && (
+                          <div className="absolute top-2 right-2 pointer-events-none">
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">⛔ Zablokowane</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </>

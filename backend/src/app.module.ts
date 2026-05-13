@@ -33,6 +33,8 @@ import { GraphSyncModule }          from './modules/graph-sync/graph-sync.module
 import { TeamsBotModule }           from './modules/teams-bot/teams-bot.module';
 import { StorageModule }            from './modules/storage/storage.module';
 import { KioskModule }             from './modules/kiosk/kiosk.module';
+import { ParkingGroupsModule }     from './modules/parking-groups/parking-groups.module';
+import { ParkingBlocksModule }     from './modules/parking-blocks/parking-blocks.module';
 
 @Module({
   imports: [
@@ -65,6 +67,8 @@ import { KioskModule }             from './modules/kiosk/kiosk.module';
     InAppNotificationsModule,
     ReportsModule,
     KioskModule,
+    ParkingGroupsModule,
+    ParkingBlocksModule,
     StorageModule,          // @Global — R2/S3 CDN for floor plans
     // ── v0.17.0 ───────────────────────────────────────────────
     IntegrationsModule,     // @Global — Slack/Teams/Webhook/Azure/Google per-org

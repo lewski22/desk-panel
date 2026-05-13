@@ -82,6 +82,7 @@
       "change_password": "Zmień hasło",
       "weekly": "Obecności",
       "resources": "Sale i Parking",
+      "parking_groups": "Grupy parkingowe",
       "visitors": "Goście",
       "subscription": "Subskrypcja",
       "more": "Więcej",
@@ -1629,5 +1630,94 @@
     "quick_book": "Teraz",
     "book_for": "Rezerwuj dla:",
     "book_for_self": "Siebie (domyślnie)"
+  },
+  "my_reservations": {
+    "rooms_title":   "Sale konferencyjne",
+    "rooms_empty":   "Brak nadchodzących rezerwacji sal",
+    "parking_title": "Parkingi",
+    "parking_empty": "Brak nadchodzących rezerwacji parkingów"
+  },
+  "parking_groups": {
+    "page_title":   "Grupy parkingowe",
+    "page_sub":     "Zarządzaj dostępem do miejsc parkingowych",
+    "new_group":    "+ Nowa grupa",
+    "manage":       "Zarządzaj →",
+    "empty_title":  "Brak grup parkingowych",
+    "empty_sub":    "Utwórz grupę, aby kontrolować dostęp do miejsc parkingowych.",
+    "confirm_delete": "Czy na pewno chcesz usunąć grupę \"{{name}}\"? Istniejące rezerwacje zostaną zachowane.",
+    "col_name":        "Nazwa",
+    "col_description": "Opis",
+    "col_users":       "Użytkownicy",
+    "col_parkings":    "Parkingi",
+    "create_modal": {
+      "title":            "Nowa grupa parkingowa",
+      "name_label":       "Nazwa grupy *",
+      "name_placeholder": "np. Zarząd",
+      "desc_label":       "Opis (opcjonalnie)",
+      "desc_placeholder": "np. Dostęp dla zarządu i dyrektorów",
+      "name_required":    "Nazwa jest wymagana",
+      "submit":           "Utwórz grupę"
+    },
+    "detail": {
+      "back": "← Grupy parkingowe",
+      "tab_users":    "👤 Użytkownicy",
+      "tab_parkings": "🅿️ Parkingi",
+      "tab_blocks":   "⛔ Blokady",
+      "users_tab": {
+        "search_ph":    "Szukaj użytkownika…",
+        "add_bulk":     "Dodaj wielu (CSV)",
+        "add_user":     "+ Dodaj użytkownika",
+        "empty_title":  "Brak użytkowników",
+        "empty_sub":    "Dodaj użytkowników do grupy, aby mieli dostęp do parkingów.",
+        "col_user":     "Użytkownik",
+        "col_email":    "Email",
+        "col_added":    "Dodano",
+        "confirm_remove": "Usuń {{name}} z grupy?"
+      },
+      "add_user_modal": {
+        "title":       "Dodaj użytkownika do grupy",
+        "search_label": "Szukaj po email lub nazwisku",
+        "search_ph":    "jan.kowalski@firma.pl",
+        "submit":       "Dodaj"
+      },
+      "bulk_modal": {
+        "title":   "Dodaj wielu użytkowników",
+        "hint":    "Wklej adresy email rozdzielone enterem lub przecinkiem.",
+        "added":   "Dodano {{count}} użytkownik(ów)",
+        "submit":  "Dodaj"
+      },
+      "parkings_tab": {
+        "hint":         "Zaznacz miejsca parkingowe przypisane do tej grupy.",
+        "save":         "Zapisz przypisanie",
+        "empty_title":  "Brak miejsc parkingowych",
+        "empty_sub":    "Dodaj miejsca parkingowe w sekcji Zasoby.",
+        "col_name":     "Nazwa",
+        "col_code":     "Kod",
+        "col_access":   "Tryb dostępu",
+        "access_group": "🔒 Tylko grupy",
+        "access_public": "🌐 Publiczny"
+      },
+      "blocks_tab": {
+        "future_only":  "Tylko przyszłe",
+        "add_block":    "+ Zablokuj grupę w terminie",
+        "empty_title":  "Brak blokad",
+        "empty_sub":    "Nie ma żadnych blokad dla tej grupy.",
+        "col_from":     "Od",
+        "col_to":       "Do",
+        "col_reason":   "Powód",
+        "col_created_by": "Utworzył",
+        "confirm_remove": "Usunąć blokadę?"
+      },
+      "add_block_modal": {
+        "title":           "Zablokuj grupę w terminie",
+        "time_required":   "Podaj czas początku i końca blokady",
+        "time_invalid":    "Czas końca musi być po czasie początku",
+        "from_label":      "Od",
+        "to_label":        "Do",
+        "reason_label":    "Powód (opcjonalnie)",
+        "reason_ph":       "np. Remont parkingu",
+        "submit":          "Zablokuj"
+      }
+    }
   }
 }
