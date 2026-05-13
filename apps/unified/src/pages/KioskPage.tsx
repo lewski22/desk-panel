@@ -1,14 +1,18 @@
 /**
- * KioskPage — Sprint H3
+ * KioskPage — Sprint H3 + KIOSK role
  * Route: /kiosk?location=<id>
  * Fullscreen widok zajętości biurek — dla tabletu przy wejściu do biura.
  * Auto-refresh co 30s, wyjście przez PIN weryfikowany na backendzie.
+ * Konta KIOSK: ustawienia lokalizacji/piętra/trybu z serwera, przycisk Ustawienia w headerze.
  */
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useTranslation }  from 'react-i18next';
-import { appApi }           from '../api/client';
-import { LogoMark }         from '../components/logo/LogoMark';
+import { useSearchParams }     from 'react-router-dom';
+import { useTranslation }      from 'react-i18next';
+import { appApi }              from '../api/client';
+import { LogoMark }            from '../components/logo/LogoMark';
+import { KioskSettings }       from '../types';
+import { KioskSettingsPanel }  from '../components/kiosk/KioskSettingsPanel';
+import { FloorPlanView }       from '../components/floor-plan/FloorPlanView';
 
 // ── Kolory statusu ────────────────────────────────────────────
 const S_FREE     = '#10b981';
@@ -144,7 +148,29 @@ interface BeforeInstallPromptEvent extends Event {
 export function KioskPage() {
   const { t }              = useTranslation();
   const [params]           = useSearchParams();
-  const locationId          = params.get('location') ?? '';
+
+  // ── KIOSK role detection ──────────────────────────────────────
+  const [isKioskRole,    setIsKioskRole]    = useState(false);
+  const [kioskSettings,  setKioskSettings]  = useState<KioskSettings | null>(null);
+  const [settingsPinOpen, setSettingsPinOpen] = useState(false);
+  const [settingsOpen,   setSettingsOpen]   = useState(false);
+
+  useEffect(() => {
+    appApi.auth.getMe()
+      .then((u: any) => { if (u?.role === 'KIOSK') setIsKioskRole(true); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isKioskRole) return;
+    appApi.kiosk.getSettings()
+      .then(s => { if (s) setKioskSettings(s); })
+      .catch(() => {});
+  }, [isKioskRole]);
+
+  // locationId: z kioskSettings (KIOSK role) lub URL param (link button)
+  const locationIdFromUrl = params.get('location') ?? '';
+  const locationId = kioskSettings?.locationId ?? locationIdFromUrl;
 
   const [desks,      setDesks]      = useState<any[]>([]);
   const [location,   setLocation]   = useState<any>(null);
@@ -185,9 +211,10 @@ export function KioskPage() {
       .then(locs => setLocation(locs.find((l: any) => l.id === locationId) ?? null))
       .catch((e) => console.error('[KioskPage] locations.listAll', e));
     load();
-    const interval = setInterval(load, 30_000);
+    const intervalMs = (kioskSettings?.refreshInterval ?? 30) * 1000;
+    const interval   = setInterval(load, intervalMs);
     return () => clearInterval(interval);
-  }, [load, locationId]);
+  }, [load, locationId, kioskSettings?.refreshInterval]);
 
   useEffect(() => {
     clockRef.current = setInterval(() => setClock(new Date().toLocaleTimeString()), 1_000);
@@ -200,21 +227,27 @@ export function KioskPage() {
     return () => { document.exitFullscreen?.().catch(() => {}); };
   }, []);
 
+  // Filtruj biurka po piętrze (gdy ustawione w kioskSettings)
+  const visibleDesks = useMemo(() => {
+    if (!kioskSettings?.floor) return desks;
+    return desks.filter((d: any) => d.floor === kioskSettings.floor);
+  }, [desks, kioskSettings?.floor]);
+
   const grouped = useMemo(() => {
     const zones = new Map<string, any[]>();
-    for (const d of desks) {
+    for (const d of visibleDesks) {
       const z = d.zone ?? t('kiosk.default_zone');
       if (!zones.has(z)) zones.set(z, []);
       zones.get(z)!.push(d);
     }
     return zones;
-  }, [desks, t]);
+  }, [visibleDesks, t]);
 
   const stats = useMemo(() => ({
-    free:     desks.filter(d => d.isOnline && !d.isOccupied && !d.currentReservation).length,
-    occupied: desks.filter(d => d.isOccupied).length,
-    total:    desks.filter(d => d.status === 'ACTIVE').length,
-  }), [desks]);
+    free:     visibleDesks.filter((d: any) => d.isOnline && !d.isOccupied && !d.currentReservation).length,
+    occupied: visibleDesks.filter((d: any) => d.isOccupied).length,
+    total:    visibleDesks.filter((d: any) => d.status === 'ACTIVE').length,
+  }), [visibleDesks]);
 
   const verifyPin = useCallback(async (pin: string) => {
     try {
@@ -290,13 +323,20 @@ export function KioskPage() {
           </div>
         </div>
 
-        {/* Install / Exit buttons */}
+        {/* Install / Settings / Exit buttons */}
         <div className="flex items-center gap-2">
           {installEvt && (
             <button onClick={doInstall}
               className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2
                 border border-zinc-700 rounded-xl hover:border-zinc-500">
               {t('kiosk.install_btn')}
+            </button>
+          )}
+          {isKioskRole && (
+            <button onClick={() => setSettingsPinOpen(true)}
+              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2
+                border border-zinc-700 rounded-xl hover:border-zinc-500 flex items-center gap-1.5">
+              ⚙️ {t('kiosk.settings_btn', 'Ustawienia')}
             </button>
           )}
           <button onClick={() => setPinOpen(true)}
@@ -307,26 +347,67 @@ export function KioskPage() {
         </div>
       </div>
 
-      {/* Desk grid */}
-      <div className="px-6 py-6">
-        {Array.from(grouped.entries()).map(([zone, zDesks]) => (
-          <div key={zone} className="mb-8">
-            <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10 gap-3">
-              {zDesks.map(d => <DeskTile key={d.id} desk={d} />)}
-            </div>
+      {/* Desk grid — tryb Kafelki */}
+      {kioskSettings?.displayMode !== 'map' && (
+        <>
+          <div className="px-6 py-6">
+            {Array.from(grouped.entries()).map(([zone, zDesks]) => (
+              <div key={zone} className="mb-8">
+                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
+                <div className={`grid gap-3 ${
+                  kioskSettings?.columns === 4  ? 'grid-cols-4'  :
+                  kioskSettings?.columns === 6  ? 'grid-cols-6'  :
+                  kioskSettings?.columns === 8  ? 'grid-cols-8'  :
+                  kioskSettings?.columns === 10 ? 'grid-cols-10' :
+                  'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10'
+                }`}>
+                  {zDesks.map((d: any) => <DeskTile key={d.id} desk={d} />)}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <Legend />
+        </>
+      )}
 
-      <Legend />
+      {/* Tryb Mapy */}
+      {kioskSettings?.displayMode === 'map' && locationId && (
+        <div className="flex-1 px-4 py-4 min-h-[calc(100vh-80px)]">
+          <FloorPlanView
+            locationId={locationId}
+            desks={desks}
+            userRole="KIOSK"
+            onReserve={undefined}
+            activeFloor={kioskSettings.floor ?? undefined}
+            hideFloorPicker={true}
+          />
+        </div>
+      )}
 
       {/* PIN exit modal */}
-      {pinOpen && !exiting && (
+      {pinOpen && !_exiting && (
         <PinModal
           onClose={() => setPinOpen(false)}
           onSuccess={handlePinSuccess}
           onVerify={verifyPin}
+        />
+      )}
+
+      {/* PIN dla Ustawień — ten sam PIN co exit */}
+      {settingsPinOpen && (
+        <PinModal
+          onClose={() => setSettingsPinOpen(false)}
+          onSuccess={() => { setSettingsPinOpen(false); setSettingsOpen(true); }}
+          onVerify={verifyPin}
+        />
+      )}
+
+      {/* Panel Ustawień */}
+      {settingsOpen && kioskSettings && (
+        <KioskSettingsPanel
+          current={kioskSettings}
+          onSave={(updated) => { setKioskSettings(updated); setSettingsOpen(false); }}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
     </div>

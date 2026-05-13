@@ -28,6 +28,7 @@ import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
 import IntegrationsPage         from './pages/IntegrationsPage';
+import { KioskAccountPage }    from './pages/KioskAccountPage';
 import { PwaBanners }           from './components/PwaBanners';
 import { DemoModeBanner }       from './components/DemoModeBanner';
 import { DEMO_USER }            from './mocks/demoData';
@@ -44,6 +45,7 @@ const OWNER_ONLY   = ['OWNER'];
 
 // Redirect po zalogowaniu per rola
 function homeFor(role: string): string {
+  if (role === 'KIOSK')    return '/kiosk';
   if (role === 'END_USER') return '/map';
   if (role === 'OWNER')    return '/owner';
   return '/dashboard';
@@ -124,7 +126,9 @@ export default function App() {
         <Route path="/*" element={
           !user
             ? <Navigate to="/login" replace />
-            : (
+            : user.role === 'KIOSK'
+              ? <Navigate to="/kiosk" replace />
+              : (
               <AppLayout user={user} onLogout={handleLogout}>
                 <SubscriptionExpiredGate status={user.subscriptionStatus}>
                 <MustChangePasswordGate user={user}>
@@ -195,6 +199,9 @@ export default function App() {
                   } />
                   <Route path="/change-password" element={
                     <Guard user={user} allowed={[...ALL_ROLES, 'OWNER']}><ChangePasswordPage /></Guard>
+                  } />
+                  <Route path="/kiosk-account" element={
+                    <Guard user={user} allowed={['SUPER_ADMIN', 'OFFICE_ADMIN']}><KioskAccountPage /></Guard>
                   } />
 
                   {/* Fallback */}

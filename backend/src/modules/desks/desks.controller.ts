@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, UseGuards, Request,
+  Param, Body, Query, UseGuards, Request, ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -76,15 +76,19 @@ export class DesksController {
   @Get('locations/:locationId/desks/status')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'Real-time occupancy map for location' })
   @ApiQuery({ name: 'date', required: false, example: '2026-05-01', description: 'YYYY-MM-DD — show availability for this date (defaults to today)' })
-  currentStatus(
+  async currentStatus(
     @Param('locationId') locationId: string,
     @Query('date') date?: string,
     @Request() req?: any,
   ) {
-    return this.desks.getCurrentStatus(locationId, req?.user?.role, date);
+    const role = req?.user?.role;
+    if (role === UserRole.KIOSK || role === UserRole.END_USER) {
+      await this.desks.assertLocationInOrg(locationId, req.user.organizationId);
+    }
+    return this.desks.getCurrentStatus(locationId, role, date);
   }
 
   @Get('desks/:id')

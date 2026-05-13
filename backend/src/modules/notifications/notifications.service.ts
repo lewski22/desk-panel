@@ -13,7 +13,7 @@
  *
  * backend/src/modules/notifications/notifications.service.ts
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { NotificationType } from '@prisma/client';
@@ -22,6 +22,15 @@ import { MailerService }  from './mailer.service';
 
 const APP_URL = (config: ConfigService) =>
   config.get<string>('APP_URL', 'https://app.prohalw2026.ovh');
+
+function escapeHtml(s: string | null | undefined): string {
+  return (s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 @Injectable()
 export class NotificationsService {
@@ -226,6 +235,89 @@ export class NotificationsService {
         <p>Jeśli chcesz zarezerwować inne biurko, skorzystaj z mapy biurek.</p>
       `,
       ctaLabel: 'Mapa biurek',
+      ctaUrl:   `${APP_URL(this.config)}/map`,
+      color:    '#ef4444',
+    });
+  }
+
+  /** Potwierdzenie rezerwacji sali / parkingu */
+  async notifyBookingConfirmed(bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where:   { id: bookingId },
+      include: {
+        user:     true,
+        resource: { include: { location: { include: { organization: true } } } },
+      },
+    });
+    if (!booking || !booking.user.email || !booking.resource) return;
+    const org = booking.resource.location?.organization;
+    if (!org) return;
+    if (!await this._isEnabled(org.id, NotificationType.RESERVATION_CONFIRMED)) return;
+
+    const tz           = booking.resource.location?.timezone ?? 'Europe/Warsaw';
+    const icon         = booking.resource.type === 'PARKING' ? '🅿️' : '🏛';
+    const label        = booking.resource.type === 'PARKING' ? 'miejsce parkingowe' : 'salę';
+    const start        = new Date(booking.startTime).toLocaleString('pl-PL', { timeZone: tz });
+    const end          = new Date(booking.endTime).toLocaleTimeString('pl-PL', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+    const firstName    = escapeHtml(booking.user.firstName);
+    const resourceName = escapeHtml(booking.resource.name);
+    const locationName = escapeHtml(booking.resource.location?.name);
+
+    await this._send({
+      type:           NotificationType.RESERVATION_CONFIRMED,
+      organizationId: org.id,
+      recipients:     [booking.user.email],
+      subject:        `✅ Rezerwacja potwierdzona — ${icon} ${resourceName}`,
+      title:          'Twoja rezerwacja jest potwierdzona',
+      body: `
+        <p>Cześć ${firstName}!</p>
+        <p>Zarezerwowałeś/aś ${label}:</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:6px 0;color:#6b7280;width:40%">Zasób:</td>
+              <td style="padding:6px 0;font-weight:600">${icon} ${resourceName}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280">Lokalizacja:</td>
+              <td style="padding:6px 0">${locationName}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280">Termin:</td>
+              <td style="padding:6px 0;font-weight:600">${start} – ${end}</td></tr>
+        </table>
+      `,
+      ctaLabel: 'Moje rezerwacje',
+      ctaUrl:   `${APP_URL(this.config)}/my-reservations`,
+    });
+  }
+
+  /** Anulowanie rezerwacji sali / parkingu */
+  async notifyBookingCancelled(bookingId: string) {
+    const booking = await this.prisma.booking.findUnique({
+      where:   { id: bookingId },
+      include: {
+        user:     true,
+        resource: { include: { location: { include: { organization: true } } } },
+      },
+    });
+    if (!booking || !booking.user.email || !booking.resource) return;
+    const org = booking.resource.location?.organization;
+    if (!org) return;
+    if (!await this._isEnabled(org.id, NotificationType.RESERVATION_CANCELLED)) return;
+
+    const tz           = booking.resource.location?.timezone ?? 'Europe/Warsaw';
+    const icon         = booking.resource.type === 'PARKING' ? '🅿️' : '🏛';
+    const start        = new Date(booking.startTime).toLocaleString('pl-PL', { timeZone: tz });
+    const firstName    = escapeHtml(booking.user.firstName);
+    const resourceName = escapeHtml(booking.resource.name);
+
+    await this._send({
+      type:           NotificationType.RESERVATION_CANCELLED,
+      organizationId: org.id,
+      recipients:     [booking.user.email],
+      subject:        `❌ Rezerwacja anulowana — ${icon} ${resourceName}`,
+      title:          'Twoja rezerwacja została anulowana',
+      body: `
+        <p>Cześć ${firstName}!</p>
+        <p>Rezerwacja <strong>${resourceName}</strong> na <strong>${start}</strong>
+        została anulowana.</p>
+      `,
+      ctaLabel: 'Zarezerwuj ponownie',
       ctaUrl:   `${APP_URL(this.config)}/map`,
       color:    '#ef4444',
     });
@@ -439,6 +531,9 @@ export class NotificationsService {
   }
 
   async testSend(organizationId: string, email: string) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Invalid email format');
+    }
     const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
     const result = await this._mailer.send({
       to:      email,

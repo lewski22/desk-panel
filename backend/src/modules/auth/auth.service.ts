@@ -14,7 +14,7 @@
  *
  * backend/src/modules/auth/auth.service.ts
  */
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -41,8 +41,9 @@ export class AuthService {
   async login(user: User) {
     const payload = { sub: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId };
     const accessToken = this.jwt.sign(payload);
-    const refreshToken = this.jwt.sign(payload, { secret: this.config.get('JWT_REFRESH_SECRET'), expiresIn: '7d' });
-    const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + 7);
+    const refreshDays = user.role === UserRole.KIOSK ? 30 : 7;
+    const refreshToken = this.jwt.sign(payload, { secret: this.config.get('JWT_REFRESH_SECRET'), expiresIn: `${refreshDays}d` });
+    const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + refreshDays);
     await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
@@ -310,6 +311,9 @@ export class AuthService {
   /** Zmienia hasło po weryfikacji obecnego. Waliduje złożoność wg polityki org. Unieważnia wszystkie refresh tokeny (wylogowanie ze wszystkich urządzeń). */
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    if (user.role === UserRole.KIOSK) {
+      throw new ForbiddenException('Konto KIOSK nie może samodzielnie zmieniać hasła');
+    }
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');
     if (await bcrypt.compare(newPassword, user.passwordHash)) throw new BadRequestException('New password must differ from current');
 

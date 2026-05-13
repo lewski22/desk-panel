@@ -46,7 +46,7 @@ interface NavGroup {
   items: { to: string; icon: NavIcon; labelKey: string; roles: string[]; module?: AppModule }[];
 }
 
-const SETTINGS_PATHS = ['/organizations', '/integrations', '/notifications', '/subscription'];
+const SETTINGS_PATHS = ['/organizations', '/integrations', '/notifications', '/subscription', '/kiosk-account'];
 
 const NAV_GROUPS: NavGroup[] = [
   {
@@ -86,6 +86,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/organizations', icon: IconBuildings, labelKey: 'layout.nav.organizations', roles: ['SUPER_ADMIN'] },
       { to: '/integrations',  icon: IconLink,      labelKey: 'layout.nav.integrations',  roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/notifications', icon: IconBell,      labelKey: 'layout.nav.notifications', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/kiosk-account', icon: IconDesk,      labelKey: 'layout.nav.kiosk_account', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/subscription',  icon: IconCard,      labelKey: 'layout.nav.subscription',  roles: ['SUPER_ADMIN'] },
     ],
   },

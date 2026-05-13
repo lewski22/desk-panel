@@ -15,13 +15,15 @@ import { appApi }             from '../../api/client';
 import { format }             from 'date-fns';
 
 interface Props {
-  locationId:     string;
-  desks:          DeskMapItem[];
-  userRole:       string;
-  selectedDate?:  string;
-  currentUserId?: string;
-  timezone?:      string;
-  onReserve?:     (desk: DeskMapItem) => void;  // otwiera ReservationModal
+  locationId:      string;
+  desks:           DeskMapItem[];
+  userRole:        string;
+  selectedDate?:   string;
+  currentUserId?:  string;
+  timezone?:       string;
+  onReserve?:      (desk: DeskMapItem) => void;  // otwiera ReservationModal
+  activeFloor?:    string;    // controlled mode — gdy przekazany, komponent nie zarządza własnym stanem piętra
+  hideFloorPicker?: boolean;  // ukrywa przyciski wyboru piętra (gdy sterowanie zewnętrzne)
 }
 
 // ── Desk Info Card — bottom sheet (mobile) / fixed popover (desktop) ──
@@ -151,15 +153,21 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect, timezone
 }
 
 // ── Main FloorPlanView ────────────────────────────────────────
-export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, timezone, onReserve }: Props) {
+export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, timezone, onReserve, activeFloor: activeFloorProp, hideFloorPicker }: Props) {
   const { t }                  = useTranslation();
   const [floorPlan, setFP]     = useState<any>(null);
   const [loading,   setL]      = useState(true);
   const [selected,     setSel]    = useState<DeskMapItem | null>(null);
   const [selectedRect, setSelRect] = useState<DOMRect | null>(null);
   const [freeOnly,  setFO]     = useState(false);
-  const [floors,    setFloors] = useState<string[]>([]);
-  const [activeFloor, setActiveFloor] = useState<string>('');
+  const [floors,        setFloors]       = useState<string[]>([]);
+  const [internalFloor, setInternalFloor] = useState<string>('');
+
+  // Controlled mode: gdy props.activeFloor przekazany — użyj go; inaczej wewnętrzny stan
+  const activeFloor = activeFloorProp !== undefined ? (activeFloorProp || '') : internalFloor;
+  const setActiveFloor = (f: string) => {
+    if (activeFloorProp === undefined) setInternalFloor(f);
+  };
   const [zoom,      setZoom]   = useState(1.0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -281,8 +289,8 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
         {/* Wiersz 1: Piętro + filtr + licznik */}
         <div className="flex items-center gap-2 flex-wrap">
 
-          {/* Wybór piętra z labelem — ukryty gdy 1 piętro */}
-          {floors.length > 1 && (
+          {/* Wybór piętra z labelem — ukryty gdy 1 piętro lub controlled mode */}
+          {floors.length > 1 && !hideFloorPicker && (
             <>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] text-zinc-400 font-medium shrink-0">

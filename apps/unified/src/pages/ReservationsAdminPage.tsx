@@ -16,6 +16,7 @@ import { STATUS_CFG } from '../utils/reservationStatus';
 
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+
 function todayLocal() {
   return new Date().toLocaleDateString('sv-SE', { timeZone: TZ });
 }
@@ -160,12 +161,18 @@ export function ReservationsAdminPage() {
   const dfns           = i18n.language === 'en' ? enUS : pl;
   const { sort, toggle, sortArray } = useSortable('startTime', 'asc');
 
+  const [activeTab, setActiveTab] = useState<'desks' | 'resources'>('desks');
+
   const [res, setRes]         = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate]       = useState(todayLocal());
   const [status, setStatus]   = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  const [bookings,        setBookings]        = useState<any[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [bookingsErr,     setBookingsErr]     = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,12 +183,31 @@ export function ReservationsAdminPage() {
     setLoading(false);
   }, [date, status]);
 
+  const loadBookings = useCallback(async () => {
+    setBookingsLoading(true);
+    setBookingsErr('');
+    setBookings(await appApi.resources.allBookings({ date }).catch(() => []));
+    setBookingsLoading(false);
+  }, [date]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (activeTab === 'resources') loadBookings(); }, [activeTab, loadBookings]);
 
   const cancel = async (id: string) => {
     if (!confirm(t('reservations.confirm_cancel_simple'))) return;
     await appApi.reservations.cancel(id);
     load();
+  };
+
+  const cancelBooking = async (id: string) => {
+    if (!confirm(t('reservations.confirm_cancel_simple'))) return;
+    try {
+      await appApi.resources.cancelBooking(id);
+    } catch (e: any) {
+      setBookingsErr(e?.response?.data?.message ?? e.message ?? 'Błąd anulowania');
+      return;
+    }
+    loadBookings();
   };
 
   const checkin = async (r: any) => {
@@ -220,14 +246,111 @@ export function ReservationsAdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-zinc-800">{t('pages.reservationsAdmin.title')}</h1>
+      </div>
+
+      {/* Tab switcher */}
+      <div className="flex gap-2 mb-5">
+        <button
+          onClick={() => setActiveTab('desks')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+            activeTab === 'desks'
+              ? 'bg-brand text-white border-brand'
+              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+          }`}
+        >
+          🪑 {t('layout.nav.desks', 'Biurka')}
+        </button>
+        <button
+          onClick={() => setActiveTab('resources')}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors border ${
+            activeTab === 'resources'
+              ? 'bg-brand text-white border-brand'
+              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+          }`}
+        >
+          🏛 {t('layout.nav.resources', 'Sale i Parking')}
+        </button>
       </div>
 
       {/* Day slider */}
       <div className="mb-4">
-        <DaySlider selected={date} onChange={d => setDate(d)} />
+        <DaySlider selected={date} onChange={d => { setDate(d); }} />
       </div>
+
+      {/* ── Resources (Sale/Parking) tab ──────────────────────── */}
+      {activeTab === 'resources' && (
+        <div>
+          {bookingsErr && (
+            <div className="mb-3 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{bookingsErr}</div>
+          )}
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={loadBookings}
+              className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 transition-colors"
+            >
+              ↺ {t('btn.refresh')}
+            </button>
+          </div>
+          {bookingsLoading ? (
+            <SkeletonCards rows={4} />
+          ) : bookings.length === 0 ? (
+            <EmptyState icon="🏛" title={t('reservations.none_filters')} sub={t('reservations.none_filters_sub')} />
+          ) : (
+            <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-xl border-y sm:border border-zinc-100">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.time', 'Godzina')}</th>
+                    <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('resources.resource', 'Zasób')}</th>
+                    <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">{t('reservations.table.user', 'Użytkownik')}</th>
+                    <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">{t('desks.location', 'Lokalizacja')}</th>
+                    <th className="py-2.5 px-4 text-xs text-zinc-400 font-semibold uppercase tracking-wider">{t('reservations.table.actions', 'Akcje')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map(b => {
+                    const tz   = b.resource?.location?.timezone ?? TZ;
+                    const fmt  = (iso: string) => new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: tz });
+                    return (
+                      <tr key={b.id} className="border-b border-zinc-50 hover:bg-zinc-50/60 transition-colors">
+                        <td className="py-3 px-4 font-mono text-xs text-zinc-600 whitespace-nowrap">
+                          {fmt(b.startTime)}–{fmt(b.endTime)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="font-medium text-zinc-800">
+                            {b.resource?.type === 'PARKING' ? '🅿️' : '🏛'} {b.resource?.name ?? '—'}
+                          </p>
+                          <p className="text-xs text-zinc-400">{b.resource?.code}</p>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
+                          {b.user?.firstName} {b.user?.lastName}
+                          {b.user?.email && <p className="text-zinc-400">{b.user.email}</p>}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-zinc-500 hidden sm:table-cell">
+                          {b.resource?.location?.name ?? '—'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => cancelBooking(b.id)}
+                            className="text-xs px-2 py-1.5 sm:py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                          >
+                            {t('reservations.cancel')}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Desks tab ─────────────────────────────────────────── */}
+      {activeTab === 'desks' && (<>
 
       {/* Status chips + refresh */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -372,6 +495,7 @@ export function ReservationsAdminPage() {
           </table>
         </div>
       )}
+      </>)}
     </div>
   );
 }

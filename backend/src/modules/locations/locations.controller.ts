@@ -110,7 +110,7 @@ export class LocationsController {
 
   // ── Sprint D / Multi-floor: Floor Plan endpoints ─────────────
   @Get(':id/floors')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'List floors that have a floor plan uploaded' })
   async getFloors(@Param('id') id: string, @Request() req: any) {
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {
@@ -123,7 +123,7 @@ export class LocationsController {
   }
 
   @Get(':id/floor-plan')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'Get floor plan metadata — optionally per floor' })
   async getFloorPlan(@Param('id') id: string, @Query('floor') floor: string | undefined, @Request() req: any) {
     if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'OWNER') {

@@ -76,6 +76,7 @@
       "organizations": "Offices",
       "notifications": "Notifications",
       "integrations": "Integrations",
+      "kiosk_account": "Kiosk Account",
       "owner": "Operator Panel",
       "notification_rules": "Notification Rules",
       "change_password": "Change Password",
@@ -1255,7 +1256,28 @@
       "offline": "Offline"
     },
     "open_btn":       "Open kiosk mode (new tab)",
-    "open_btn_short": "Kiosk"
+    "open_btn_short": "Kiosk",
+    "settings_btn":          "Settings",
+    "settings_title":        "Kiosk settings",
+    "settings_location":     "Location",
+    "settings_floor":        "Floor",
+    "settings_floor_all":    "All floors",
+    "settings_display_mode": "Display mode",
+    "settings_mode_tiles":   "Tiles",
+    "settings_mode_map":     "Map",
+    "settings_columns":      "Grid columns",
+    "settings_columns_auto": "Auto",
+    "settings_refresh":      "Refresh interval",
+    "settings_save":         "Save",
+    "settings_cancel":       "Cancel",
+    "account_title":         "Kiosk Account",
+    "account_create":        "Create kiosk account",
+    "account_reset":         "Reset password",
+    "account_deactivate":    "Deactivate",
+    "account_activate":      "Activate",
+    "account_password_once": "Save this password — it's shown only once!",
+    "account_copy":          "Copy",
+    "account_close":         "Got it, close"
   },
   "push": {
     "title":       "Reserti",
@@ -1581,6 +1603,13 @@
       "plan": "Floor plan",
       "users": "Invite users",
       "beacon": "Connect beacon"
+    }
+  },
+  "parking": {
+    "my_bookings": {
+      "title":          "My parking spots",
+      "empty":          "You have no upcoming parking bookings",
+      "cancel_confirm": "Cancel this parking booking?"
     }
   },
   "rooms": {

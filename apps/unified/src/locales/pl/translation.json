@@ -76,6 +76,7 @@
       "organizations": "Biura",
       "notifications": "Powiadomienia",
       "integrations": "Integracje",
+      "kiosk_account": "Konto Kiosk",
       "owner": "Panel Operatora",
       "notification_rules": "Reguły powiadomień",
       "change_password": "Zmień hasło",
@@ -1255,7 +1256,28 @@
       "offline": "Offline"
     },
     "open_btn":       "Otwórz tryb kiosk (nowa karta)",
-    "open_btn_short": "Kiosk"
+    "open_btn_short": "Kiosk",
+    "settings_btn":          "Ustawienia",
+    "settings_title":        "Ustawienia kiosku",
+    "settings_location":     "Lokalizacja",
+    "settings_floor":        "Piętro",
+    "settings_floor_all":    "Wszystkie piętra",
+    "settings_display_mode": "Tryb wyświetlania",
+    "settings_mode_tiles":   "Kafelki",
+    "settings_mode_map":     "Mapa",
+    "settings_columns":      "Kolumny siatki",
+    "settings_columns_auto": "Auto",
+    "settings_refresh":      "Odświeżanie",
+    "settings_save":         "Zapisz",
+    "settings_cancel":       "Anuluj",
+    "account_title":         "Konto Kiosk",
+    "account_create":        "Utwórz konto kiosk",
+    "account_reset":         "Reset hasła",
+    "account_deactivate":    "Dezaktywuj",
+    "account_activate":      "Aktywuj",
+    "account_password_once": "Zapisz to hasło — pokazujemy je tylko raz!",
+    "account_copy":          "Kopiuj",
+    "account_close":         "Rozumiem, zamknij"
   },
   "push": {
     "title":       "Reserti",
@@ -1581,6 +1603,13 @@
       "plan": "Plan piętra",
       "users": "Zaproś użytkowników",
       "beacon": "Podłącz beacon"
+    }
+  },
+  "parking": {
+    "my_bookings": {
+      "title":          "Moje miejsca parkingowe",
+      "empty":          "Nie masz nadchodzących rezerwacji parkingowych",
+      "cancel_confirm": "Anulować rezerwację miejsca parkingowego?"
     }
   },
   "rooms": {

@@ -4,6 +4,7 @@
  * Sprint K (recommendations, insights) + M4 (graph) + Google SSO
  */
 import type { Desk, Reservation, User, Gateway, Device } from '../types/api';
+import type { KioskSettings } from '../types';
 
 const BASE      = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -72,10 +73,12 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
   if (res.status === 401 && !isPublic && _retry) {
     const refreshed = await tryRefresh();
     if (refreshed) return req<T>(path, opts, false);
+    localStorage.removeItem(KEYS.impersonationToken);
     if (window.location.pathname !== '/login') window.location.href = '/login';
     throw new Error('Unauthorized');
   }
   if (res.status === 401 && !isPublic) {
+    localStorage.removeItem(KEYS.impersonationToken);
     if (window.location.pathname !== '/login') window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -274,8 +277,22 @@ export const appApi = {
     availability:   (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
     book:           (id: string, body: { date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean; targetUserId?: string }) =>
       req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
-    myBookings:     (from?: string)                 => req<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`),
+    myBookings:     (from?: string, includeHistory?: boolean) => {
+      const p = new URLSearchParams();
+      if (from) p.set('from', from);
+      if (includeHistory) p.set('includeHistory', 'true');
+      const qs = p.toString();
+      return req<any[]>(`/users/me/bookings${qs ? `?${qs}` : ''}`);
+    },
     cancelBooking:  (bookingId: string)             => req<void>(`/bookings/${bookingId}/cancel`, { method: 'POST', body: '{}' }),
+    allBookings:    (filters?: { date?: string; locationId?: string; type?: string }) => {
+      const p = new URLSearchParams();
+      if (filters?.date)       p.set('date',       filters.date);
+      if (filters?.locationId) p.set('locationId', filters.locationId);
+      if (filters?.type)       p.set('type',       filters.type);
+      const qs = p.toString();
+      return req<any[]>(`/bookings/admin${qs ? `?${qs}` : ''}`);
+    },
   },
   /** @deprecated Use appApi.resources.cancelBooking / appApi.resources.myBookings instead */
   bookings: {
@@ -407,6 +424,22 @@ export const appApi = {
     status:     () => req<any>('/graph/status'),
     disconnect: () => req<any>('/graph/disconnect', { method: 'DELETE' }),
     subscribe:  () => req<any>('/graph/subscribe',  { method: 'POST', body: '{}' }),
+  },
+
+  // ── KIOSK ─────────────────────────────────────────────────────
+  kiosk: {
+    createAccount:  (): Promise<{ email: string; plaintextPassword: string }> =>
+      req('/kiosk/account', { method: 'POST' }),
+    getAccount:     (): Promise<any> =>
+      req('/kiosk/account'),
+    resetPassword:  (): Promise<{ plaintextPassword: string }> =>
+      req('/kiosk/account/password', { method: 'PATCH' }),
+    toggleStatus:   (isActive: boolean): Promise<void> =>
+      req('/kiosk/account/status', { method: 'PATCH', body: JSON.stringify({ isActive }) }),
+    getSettings:    (): Promise<KioskSettings> =>
+      req('/kiosk/me/settings'),
+    updateSettings: (dto: KioskSettings): Promise<void> =>
+      req('/kiosk/me/settings', { method: 'PATCH', body: JSON.stringify(dto) }),
   },
 
   // ── Google SSO ────────────────────────────────────────────────

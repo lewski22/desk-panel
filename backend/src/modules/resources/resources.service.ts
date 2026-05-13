@@ -7,12 +7,16 @@ import {
   Injectable, NotFoundException, ConflictException,
   BadRequestException, ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
+import { PrismaService }        from '../../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ResourcesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma:                PrismaService,
+    private notificationsService:  NotificationsService,
+  ) {}
 
   // ── Cross-tenant guard ────────────────────────────────────────
   private async assertResourceInOrg(resourceId: string, actorOrgId: string): Promise<void> {
@@ -24,8 +28,13 @@ export class ResourcesService {
     if (r.location.organizationId !== actorOrgId) throw new ForbiddenException('Access denied');
   }
 
+  private static readonly ALLOWED_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'];
+
   // ── Lista zasobów per lokalizacja ─────────────────────────────
   async findAll(locationId: string, type?: string, date?: string, actorOrgId?: string) {
+    if (type && !ResourcesService.ALLOWED_TYPES.includes(type)) {
+      throw new BadRequestException('Invalid resource type');
+    }
     const now = new Date();
 
     // Pobierz timezone lokalizacji przed głównym zapytaniem
@@ -170,7 +179,16 @@ export class ResourcesService {
     type: string; name: string; code: string; description?: string;
     capacity?: number; amenities?: string[]; vehicleType?: string;
     floor?: string; zone?: string;
-  }) {
+  }, actorOrgId?: string) {
+    if (actorOrgId) {
+      const loc = await this.prisma.location.findUnique({
+        where:  { id: locationId },
+        select: { organizationId: true },
+      });
+      if (!loc || loc.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Location not in your organization');
+      }
+    }
     try {
       return await this.prisma.resource.create({
         data: { ...dto, locationId, type: dto.type as any },
@@ -188,11 +206,13 @@ export class ResourcesService {
     name: string; description: string; capacity: number; amenities: string[];
     vehicleType: string; floor: string; zone: string; status: string;
     posX: number; posY: number; rotation: number;
-  }>) {
+  }>, actorOrgId?: string) {
+    if (actorOrgId) await this.assertResourceInOrg(id, actorOrgId);
     return this.prisma.resource.update({ where: { id }, data: dto });
   }
 
-  async remove(id: string) {
+  async remove(id: string, actorOrgId?: string) {
+    if (actorOrgId) await this.assertResourceInOrg(id, actorOrgId);
     return this.prisma.resource.update({
       where: { id },
       data:  { status: 'INACTIVE' },
@@ -292,13 +312,29 @@ export class ResourcesService {
     },
     actorOrgId?: string,
   ) {
-    if (actorOrgId) await this.assertResourceInOrg(resourceId, actorOrgId);
+    // Fetch resource with location data for validation; also replaces assertResourceInOrg
+    const resource = await this.prisma.resource.findUnique({
+      where:   { id: resourceId },
+      include: { location: { select: { organizationId: true, parkingBookingMode: true, timezone: true, openTime: true, closeTime: true } } },
+    });
+    if (!resource) throw new NotFoundException('Resource not found');
+    if (actorOrgId && (resource.location as any)?.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const resLoc = resource.location as any;
+    if (resource.type === 'PARKING' && resLoc?.parkingBookingMode === 'ALL_DAY' && !dto.allDay) {
+      throw new ConflictException('To miejsce parkingowe jest w trybie całodniowym. Użyj allDay: true.');
+    }
 
     // targetUserId validation
     let userId = actorId;
     if (dto.targetUserId) {
       if (!['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(actorRole)) {
         throw new ForbiddenException('Only admins can book on behalf of others');
+      }
+      if (!actorOrgId) {
+        throw new ForbiddenException('Organization context required for cross-user bookings');
       }
       if (actorOrgId) {
         const targetUser = await this.prisma.user.findUnique({
@@ -316,8 +352,9 @@ export class ResourcesService {
     let end   = new Date(dto.endTime);
 
     if (dto.allDay) {
-      start = new Date(`${dto.date}T00:00:00.000Z`);
-      end   = new Date(`${dto.date}T23:59:59.000Z`);
+      // Anchor at UTC noon — correct local date for any timezone UTC-11..UTC+11
+      start = new Date(`${dto.date}T12:00:00.000Z`);
+      end   = new Date(`${dto.date}T12:00:00.000Z`);
     }
 
     if (end <= start) throw new ConflictException('endTime musi być późniejszy niż startTime');
@@ -333,7 +370,7 @@ export class ResourcesService {
     });
     if (conflict) throw new ConflictException('Zasób jest już zarezerwowany w tym czasie');
 
-    return this.prisma.booking.create({
+    const booking = await this.prisma.booking.create({
       data: {
         resourceId,
         userId,
@@ -344,6 +381,8 @@ export class ResourcesService {
       },
       include: { resource: { select: { name: true, type: true } }, user: { select: { firstName: true, lastName: true } } },
     });
+    this.notificationsService.notifyBookingConfirmed(booking.id).catch(() => {});
+    return booking;
   }
 
   async cancelBooking(bookingId: string, userId: string, role: string, actorOrgId?: string) {
@@ -357,17 +396,57 @@ export class ResourcesService {
     if (booking.userId !== userId && !['SUPER_ADMIN','OFFICE_ADMIN'].includes(role)) {
       throw new ConflictException('Brak uprawnień do anulowania tej rezerwacji');
     }
-    return this.prisma.booking.update({ where: { id: bookingId }, data: { status: 'CANCELLED' } });
+    const cancelled = await this.prisma.booking.update({ where: { id: bookingId }, data: { status: 'CANCELLED' } });
+    this.notificationsService.notifyBookingCancelled(bookingId).catch(() => {});
+    return cancelled;
+  }
+
+  // ── All bookings (admin view) ─────────────────────────────────
+  async allBookings(filters: {
+    actorOrgId?: string; date?: string; locationId?: string; type?: string;
+  }) {
+    if (filters.type && !ResourcesService.ALLOWED_TYPES.includes(filters.type)) {
+      throw new BadRequestException('Invalid resource type');
+    }
+    const where: any = { status: 'CONFIRMED' };
+    if (filters.actorOrgId || filters.locationId) {
+      where.resource = {
+        location: {
+          ...(filters.actorOrgId && { organizationId: filters.actorOrgId }),
+          ...(filters.locationId && { id: filters.locationId }),
+        },
+      };
+    }
+    if (filters.type) {
+      where.resource = { ...(where.resource ?? {}), type: filters.type };
+    }
+    if (filters.date) {
+      const d    = new Date(`${filters.date}T00:00:00.000Z`);
+      const next = new Date(d); next.setUTCDate(d.getUTCDate() + 1);
+      where.startTime = { gte: d, lt: next };
+    }
+    return this.prisma.booking.findMany({
+      where,
+      include: {
+        resource: { select: { name: true, type: true, code: true,
+          location: { select: { name: true, timezone: true } } } },
+        user: { select: { firstName: true, lastName: true, email: true } },
+      },
+      orderBy: { startTime: 'asc' },
+      take:    500,
+    });
   }
 
   // ── My bookings ───────────────────────────────────────────────
-  async myBookings(userId: string, fromDate?: string) {
+  async myBookings(userId: string, fromDate?: string, includeHistory = false) {
     const from = fromDate ? new Date(fromDate) : new Date();
+    const where: any = { userId, status: 'CONFIRMED' };
+    if (!includeHistory) where.endTime = { gte: from };
     return this.prisma.booking.findMany({
-      where:   { userId, status: 'CONFIRMED', endTime: { gte: from } },
-      include: { resource: { select: { id: true, name: true, type: true, location: { select: { name: true, timezone: true } } } } },
-      orderBy: { startTime: 'asc' },
-      take:    20,
+      where,
+      include: { resource: { select: { id: true, name: true, type: true, code: true, location: { select: { name: true, timezone: true } } } } },
+      orderBy: includeHistory ? { startTime: 'desc' } : { startTime: 'asc' },
+      take:    includeHistory ? 50 : 20,
     });
   }
 }

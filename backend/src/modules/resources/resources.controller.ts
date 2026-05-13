@@ -4,6 +4,7 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Param, Body, Query, UseGuards, Request, HttpCode,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard }  from '../auth/guards/jwt-auth.guard';
@@ -14,6 +15,12 @@ import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
 import { UpdateResourceDto } from './dto/update-resource.dto';
 import { CreateBookingDto }  from './dto/create-booking.dto';
+
+function validateDate(date: string | undefined): void {
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new BadRequestException('Invalid date format — expected YYYY-MM-DD');
+  }
+}
 
 @ApiTags('resources')
 @ApiBearerAuth()
@@ -43,22 +50,23 @@ export class ResourcesController {
   create(
     @Param('locationId') locationId: string,
     @Body()              body:       CreateResourceDto,
+    @Request()           req:        any,
   ) {
-    return this.svc.create(locationId, body);
+    return this.svc.create(locationId, body, req.user.organizationId);
   }
 
   @Patch('resources/:id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Update resource details' })
-  update(@Param('id') id: string, @Body() body: UpdateResourceDto) {
-    return this.svc.update(id, body);
+  update(@Param('id') id: string, @Body() body: UpdateResourceDto, @Request() req: any) {
+    return this.svc.update(id, body, req.user.organizationId);
   }
 
   @Delete('resources/:id')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Soft-delete a resource (sets status=INACTIVE)' })
-  remove(@Param('id') id: string) {
-    return this.svc.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.svc.remove(id, req.user.organizationId);
   }
 
   // ── Availability ───────────────────────────────────────────
@@ -70,6 +78,7 @@ export class ResourcesController {
     @Query('date')   date: string,
     @Request()       req:  any,
   ) {
+    validateDate(date);
     return this.svc.getAvailability(id, date, req.user.organizationId);
   }
 
@@ -92,7 +101,27 @@ export class ResourcesController {
   @Get('users/me/bookings')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
   @ApiOperation({ summary: 'My upcoming bookings (rooms, parking)' })
-  myBookings(@Request() req: any, @Query('from') from?: string) {
-    return this.svc.myBookings(req.user.id, from);
+  myBookings(
+    @Request()               req:            any,
+    @Query('from')           from?:          string,
+    @Query('includeHistory') includeHistory?: string,
+  ) {
+    validateDate(from);
+    return this.svc.myBookings(req.user.id, from, includeHistory === 'true');
+  }
+
+  @Get('bookings/admin')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
+  @ApiOperation({ summary: 'All bookings — admin view (rooms, parking)' })
+  allBookings(
+    @Request()           req:         any,
+    @Query('date')       date?:       string,
+    @Query('locationId') locationId?: string,
+    @Query('type')       type?:       string,
+  ) {
+    validateDate(date);
+    // OWNER is the platform-level super-user role; undefined actorOrgId lets them see all orgs (intentional)
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.allBookings({ actorOrgId, date, locationId, type });
   }
 }

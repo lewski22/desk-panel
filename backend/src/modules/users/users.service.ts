@@ -55,7 +55,12 @@ export class UsersService {
   async findAll(organizationId?: string) {
     return this.prisma.user.findMany({
       // FIX P0-3: isActive:{ not:false } treats NULL rows as active (legacy rows before @default(true))
-      where: { ...(organizationId ? { organizationId } : {}), deletedAt: null, isActive: { not: false } },
+      where: {
+        ...(organizationId ? { organizationId } : {}),
+        deletedAt: null,
+        isActive:  { not: false },
+        role:      { not: UserRole.KIOSK },
+      },
       select: USER_SELECT,
       orderBy: { createdAt: 'desc' },
     });

@@ -81,9 +81,14 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    appApi.reservations.getMy()
-      .then((r: any[]) => setBadge(r.filter((rv: any) => rv.status === 'CONFIRMED').length))
-      .catch(() => {});
+    Promise.all([
+      appApi.reservations.getMy(),
+      appApi.resources.myBookings(),
+    ]).then(([reservations, bookings]) => {
+      const deskCount    = reservations.filter((r: any) => r.status === 'CONFIRMED').length;
+      const bookingCount = bookings.filter((b: any) => b.status === 'CONFIRMED').length;
+      setBadge(deskCount + bookingCount);
+    }).catch(() => {});
   }, [loc.pathname]);
 
   // Close "More" sheet on navigation

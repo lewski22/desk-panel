@@ -20,10 +20,10 @@ import { UserRole }             from '@prisma/client';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
-function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string, refreshDays = 7) {
   const base = { httpOnly: true, secure: !IS_DEV, sameSite: IS_DEV ? ('lax' as const) : ('strict' as const) };
   res.cookie('access_token',  accessToken,  { ...base, path: '/',                   maxAge: 15 * 60 * 1000 });
-  res.cookie('refresh_token', refreshToken, { ...base, path: '/api/v1/auth/refresh', maxAge: 7 * 24 * 60 * 60 * 1000 });
+  res.cookie('refresh_token', refreshToken, { ...base, path: '/api/v1/auth/refresh', maxAge: refreshDays * 24 * 60 * 60 * 1000 });
 }
 
 function clearAuthCookies(res: Response) {
@@ -48,7 +48,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Login — sets httpOnly cookies, returns { user }' })
   async login(@Request() req: any, @Res({ passthrough: true }) res: Response) {
     const d = await this.auth.login(req.user);
-    setAuthCookies(res, d.accessToken, d.refreshToken);
+    const refreshDays = d.user.role === UserRole.KIOSK ? 30 : 7;
+    setAuthCookies(res, d.accessToken, d.refreshToken, refreshDays);
     return { user: d.user };
   }
 
@@ -60,7 +61,8 @@ export class AuthController {
     const rt = (req as any).cookies?.refresh_token ?? (req.body as any)?.refreshToken;
     if (!rt) throw new UnauthorizedException('Missing refresh token');
     const d = await this.auth.refresh(rt);
-    setAuthCookies(res, d.accessToken, d.refreshToken);
+    const refreshDays = d.user.role === UserRole.KIOSK ? 30 : 7;
+    setAuthCookies(res, d.accessToken, d.refreshToken, refreshDays);
     return { user: d.user };
   }
 
@@ -102,7 +104,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Login przez Microsoft — sets httpOnly cookies, returns { user }' })
   async loginAzure(@Body() dto: AzureLoginDto, @Res({ passthrough: true }) res: Response) {
     const d = await this.azure.loginWithAzureToken(dto.idToken);
-    setAuthCookies(res, d.accessToken, d.refreshToken);
+    const refreshDays = d.user.role === UserRole.KIOSK ? 30 : 7;
+    setAuthCookies(res, d.accessToken, d.refreshToken, refreshDays);
     return { user: d.user };
   }
 

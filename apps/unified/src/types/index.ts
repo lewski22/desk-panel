@@ -66,3 +66,11 @@ export interface User {
   lastName: string | null;
   role: string;
 }
+
+export interface KioskSettings {
+  locationId:      string;
+  floor:           string | null;
+  displayMode:     'tiles' | 'map';
+  columns:         'auto' | 4 | 6 | 8 | 10;
+  refreshInterval: 15 | 30 | 60;
+}

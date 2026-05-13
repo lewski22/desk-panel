@@ -73,6 +73,12 @@ export const resrApi = {
       api.delete<void>(`/reservations/${id}`).then(r => r.data),
   },
 
+  /** Rezerwacje sal i parkingów */
+  bookings: {
+    myList: (from?: string) =>
+      api.get<any[]>(`/users/me/bookings${from ? `?from=${from}` : ''}`).then(r => r.data),
+  },
+
   /** Użytkownik */
   me: {
     get: () => api.get('/users/me').then(r => r.data),

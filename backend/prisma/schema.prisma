@@ -20,6 +20,7 @@ enum UserRole {
   OFFICE_ADMIN
   STAFF
   END_USER
+  KIOSK
 }
 
 enum DeskStatus {
@@ -320,6 +321,7 @@ model User {
   deletedAt         DateTime?
   scheduledDeleteAt DateTime?
   retentionDays     Int?
+  kioskSettings     Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -87,6 +87,16 @@ export class DesksService {
 
 
   // ── Org isolation guard ─────────────────────────────────────
+  async assertLocationInOrg(locationId: string, actorOrgId: string): Promise<void> {
+    const loc = await this.prisma.location.findUnique({
+      where:  { id: locationId },
+      select: { organizationId: true },
+    });
+    if (!loc || loc.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+    }
+  }
+
   // Weryfikuje: Desk → Location → Organization
   // Rzuca ForbiddenException jeśli biurko nie należy do actorOrg.
   private async assertDeskInOrg(deskId: string, actorOrgId?: string): Promise<void> {

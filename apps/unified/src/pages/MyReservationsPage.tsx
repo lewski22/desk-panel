@@ -128,15 +128,17 @@ export function MyReservationsPage() {
   const [err,          setErr]          = useState('');
   const [cancelling,   setCancelling]   = useState<string | null>(null);
   const [checkingIn,   setCheckingIn]   = useState<string | null>(null);
-  const [checkingOut,  setCheckingOut]  = useState<string | null>(null); // FIX P1-3
+  const [checkingOut,  setCheckingOut]  = useState<string | null>(null);
   const [cancellingB,  setCancellingB]  = useState<string | null>(null);
+  const [showHistory,        setShowHistory]        = useState(false);
+  const [showBookingHistory, setShowBookingHistory] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (withHistory = false) => {
     setLoading(true); setErr('');
     try {
       const [res, bk] = await Promise.all([
         appApi.reservations.getMy(),
-        appApi.resources.myBookings(),
+        appApi.resources.myBookings(undefined, withHistory),
       ]);
       setReservations(res);
       setBookings(bk);
@@ -147,6 +149,8 @@ export function MyReservationsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => { load(showBookingHistory); }, [showBookingHistory, load]);
+
   const cancel = async (id: string) => {
     if (!confirm(t('reservations.confirm_cancel_simple'))) return;
     setCancelling(id);
@@ -155,15 +159,16 @@ export function MyReservationsPage() {
     setCancelling(null);
   };
 
-  const cancelBooking = async (id: string) => {
-    if (!confirm(t('rooms.my_bookings.cancel_confirm', 'Czy na pewno chcesz anulować rezerwację sali?'))) return;
+  const cancelBooking = async (id: string, resourceType?: string) => {
+    const confirmKey = resourceType === 'PARKING' ? 'parking.my_bookings.cancel_confirm' : 'rooms.my_bookings.cancel_confirm';
+    const confirmDefault = resourceType === 'PARKING' ? 'Anulować rezerwację miejsca parkingowego?' : 'Czy na pewno chcesz anulować rezerwację sali?';
+    if (!confirm(t(confirmKey, confirmDefault))) return;
     setCancellingB(id);
     try { await appApi.resources.cancelBooking(id); await load(); }
     catch (e: any) { setErr(e.message); }
     setCancellingB(null);
   };
 
-  // FIX P1-3: checkout handler — ends the active checkin for a reservation
   const checkout = async (checkinId: string) => {
     setCheckingOut(checkinId);
     try { await appApi.checkins.checkout(checkinId); await load(); }
@@ -184,11 +189,56 @@ export function MyReservationsPage() {
     setCheckingIn(null);
   };
 
-  const [showHistory, setShowHistory] = useState(false);
-
   const locale   = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
   const active   = reservations.filter(r => ['PENDING','CONFIRMED'].includes(r.status));
   const inactive = reservations.filter(r => !['PENDING','CONFIRMED'].includes(r.status));
+
+  const now             = new Date();
+  const activeBookings  = bookings.filter(b => new Date(b.endTime) >= now);
+  const pastBookings    = bookings.filter(b => new Date(b.endTime) < now);
+  const roomBookings    = activeBookings.filter(b => b.resource?.type !== 'PARKING');
+  const parkingBookings = activeBookings.filter(b => b.resource?.type === 'PARKING');
+
+  const renderBookingCard = (b: any) => {
+    const isPast = new Date(b.endTime) < now;
+    const TZ = (b.resource?.location?.timezone as string | undefined) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const fmtTime = (iso: string) =>
+      new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+    const fmtDate = (iso: string) =>
+      new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
+    return (
+      <div key={b.id} className={`bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}>
+        <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-lg shrink-0">
+          {b.resource?.type === 'PARKING' ? '🅿️' : '🏛'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
+          <p className="text-xs text-zinc-400 font-mono text-[10px]">{b.resource?.code}</p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {fmtDate(b.startTime)}
+            {' · '}
+            {fmtTime(b.startTime)}
+            {'–'}
+            {fmtTime(b.endTime)}
+          </p>
+          {b.resource?.location?.name && (
+            <p className="text-[11px] text-zinc-400">{b.resource.location.name}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <StatusBadge status={b.status} />
+          {!isPast && b.status === 'CONFIRMED' && (
+            <button
+              onClick={() => cancelBooking(b.id, b.resource?.type)}
+              disabled={cancellingB === b.id}
+              className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors font-medium disabled:opacity-40">
+              {cancellingB === b.id ? '…' : t('reservations.cancel')}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (loading) return (
     <div className="flex justify-center py-16">
@@ -201,7 +251,7 @@ export function MyReservationsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
         <button
-          onClick={load}
+          onClick={() => load(showBookingHistory)}
           className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-500 flex items-center justify-center"
           title={t('btn.refresh')}
         >
@@ -281,55 +331,44 @@ export function MyReservationsPage() {
           )}
 
           {/* Sale konferencyjne i parkingi */}
-          <section>
-            <h3 className="font-semibold text-zinc-700 mb-3">🏛 {t('rooms.my_bookings.title', 'Moje rezerwacje sal')}</h3>
-            {bookings.length === 0 ? (
-              <EmptyState icon="🏛" title={t('rooms.my_bookings.empty', 'Nie masz nadchodzących rezerwacji sal')} />
-            ) : (
-              <div className="space-y-3">
-                {bookings.map(b => {
-                  const isPast = new Date(b.endTime) < new Date();
-                  const TZ = (b.resource?.location?.timezone as string | undefined) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-                  const fmtTime = (iso: string) =>
-                    new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: TZ });
-                  const fmtDate = (iso: string) =>
-                    new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
-                  return (
-                    <div key={b.id} className={`bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}>
-                      <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-lg shrink-0">
-                        {b.resource?.type === 'PARKING' ? '🅿️' : '🏛'}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
-                        <p className="text-xs text-zinc-400 font-mono text-[10px]">{b.resource?.code}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {fmtDate(b.startTime)}
-                          {' · '}
-                          {fmtTime(b.startTime)}
-                          {'–'}
-                          {fmtTime(b.endTime)}
-                        </p>
-                        {b.resource?.location?.name && (
-                          <p className="text-[11px] text-zinc-400">{b.resource.location.name}</p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <StatusBadge status={b.status} />
-                        {!isPast && b.status === 'CONFIRMED' && (
-                          <button
-                            onClick={() => cancelBooking(b.id)}
-                            disabled={cancellingB === b.id}
-                            className="text-xs text-red-500 hover:text-red-700 px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors font-medium disabled:opacity-40">
-                            {cancellingB === b.id ? '…' : t('reservations.cancel')}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+          {roomBookings.length > 0 && (
+            <section>
+              <h3 className="font-semibold text-zinc-700 mb-3">
+                🏛 {t('rooms.my_bookings.title', 'Moje rezerwacje sal')}
+              </h3>
+              <div className="space-y-3">{roomBookings.map(b => renderBookingCard(b))}</div>
+            </section>
+          )}
+
+          {parkingBookings.length > 0 && (
+            <section>
+              <h3 className="font-semibold text-zinc-700 mb-3">
+                🅿️ {t('parking.my_bookings.title', 'Moje miejsca parkingowe')}
+              </h3>
+              <div className="space-y-3">{parkingBookings.map(b => renderBookingCard(b))}</div>
+            </section>
+          )}
+
+          {pastBookings.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-zinc-700">
+                  {t('reservations.history')}
+                </h3>
+                <button
+                  onClick={() => setShowBookingHistory(v => !v)}
+                  className="text-xs text-brand font-semibold"
+                >
+                  {showBookingHistory
+                    ? t('reservations.history_collapse', 'Zwiń ↑')
+                    : t('reservations.history_show', 'Pokaż historię ({{count}}) →', { count: pastBookings.length })}
+                </button>
               </div>
-            )}
-          </section>
+              {showBookingHistory && (
+                <div className="space-y-3">{pastBookings.map(b => renderBookingCard(b))}</div>
+              )}
+            </div>
+          )}
         </div>}
     </div>
   );
