@@ -182,8 +182,10 @@ export const appApi = {
     getByQr:       (token: string)           => req<Desk>(`/desks/qr/${token}`),
     availability:  (id: string, date: string) => req<any>(`/desks/${id}/availability?date=${date}`),
     // Sprint K1 — AI recommendation
-    getRecommended: (params: { locationId: string; date: string; start?: string; end?: string }) =>
-      req<any>(`/desks/recommended?${new URLSearchParams(params as Record<string,string>).toString()}`),
+    getRecommended: (params: { locationId: string; date: string; start?: string; end?: string }) => {
+      const q = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined)) as Record<string, string>;
+      return req<any>(`/desks/recommended?${new URLSearchParams(q).toString()}`);
+    },
     // Aliases used by GH DesksPage
     activate:   (id: string)   => req<Desk>(`/desks/${id}/activate`, { method: 'POST', body: '{}' }),
     hardDelete: (id: string)   => req<void>(`/desks/${id}/permanent`, { method: 'DELETE' }),
