@@ -35,7 +35,7 @@ interface User {
 }
 interface Props { user: User; onLogout: () => void; children: React.ReactNode; }
 
-type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT';
+type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT' | 'BEACONS';
 
 
 type NavIcon = React.FC<{ className?: string; size?: number }>;
@@ -65,8 +65,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/desks',        icon: IconDesk,         labelKey: 'layout.nav.desks',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
       { to: '/users',        icon: IconUsers,        labelKey: 'layout.nav.users',        roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
-      { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['STAFF'] },
-      { to: '/provisioning', icon: IconProvisioning, labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'] },
+      { to: '/devices',      icon: IconBeacon,       labelKey: 'layout.nav.devices',      roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'], module: 'BEACONS' },
+      { to: '/provisioning', icon: IconProvisioning, labelKey: 'layout.nav.provisioning', roles: ['SUPER_ADMIN','OFFICE_ADMIN'],          module: 'BEACONS' },
       { to: '/resources',       icon: IconRoom,         labelKey: 'layout.nav.resources',       roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'ROOMS' },
       { to: '/parking-groups', icon: IconParking,      labelKey: 'layout.nav.parking_groups',  roles: ['SUPER_ADMIN','OFFICE_ADMIN'], module: 'PARKING' },
       { to: '/visitors',        icon: IconVisitor,      labelKey: 'layout.nav.visitors',        roles: ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'] },

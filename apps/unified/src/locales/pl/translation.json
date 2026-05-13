@@ -1637,6 +1637,17 @@
     "parking_title": "Parkingi",
     "parking_empty": "Brak nadchodzących rezerwacji parkingów"
   },
+  "modules": {
+    "BEACONS": {
+      "label": "Beacony IoT",
+      "desc":  "Fizyczne beacony ESP32 + bramki Raspberry Pi. NFC check-in, LED, provisioning, OTA."
+    }
+  },
+  "beacons_gate": {
+    "title":               "Moduł Beaconów nie jest aktywny",
+    "body":                "Ten moduł wymaga fizycznych urządzeń Reserti (beaconów ESP32 i bramek Raspberry Pi). Skontaktuj się z administratorem systemu, aby go włączyć.",
+    "dependency_warning":  "Moduł Beacony IoT wymaga włączonego modułu Biurka."
+  },
   "parking_groups": {
     "page_title":   "Grupy parkingowe",
     "page_sub":     "Zarządzaj dostępem do miejsc parkingowych",

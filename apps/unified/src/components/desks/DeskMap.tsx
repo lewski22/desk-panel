@@ -184,7 +184,7 @@ export function DeskMap({ desks, lastUpdated, onRefresh, userRole, locationLimit
                 // END_USER — cała karta klikalność = modal rezerwacji, bez przycisków wewnątrz
                 <div key={desk.id}
                   onClick={() => setReservationTarget(desk)}
-                  className="cursor-pointer active:scale-95 transition-transform select-none">
+                  className="cursor-pointer hover:ring-2 hover:ring-brand/20 hover:shadow-sm active:scale-95 transition-all select-none rounded-xl">
                   <DeskCard desk={desk} onCheckin={() => {}} onCheckout={() => {}} hideActions isEndUser />
                 </div>
               ) : (

@@ -3,6 +3,7 @@ import QRCode from 'qrcode';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { useOrgModules } from '../hooks/useOrgModules';
 import {
   PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Spinner,
 } from '../components/ui';
@@ -69,6 +70,8 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
 export function DesksPage() {
   const { t } = useTranslation();
   const navigate    = useNavigate();
+  const { isEnabled } = useOrgModules();
+  const hasBeacons  = isEnabled('BEACONS');
   const [locations, setLocations] = useState<any[]>([]);
   const [locId,     setLocId]     = useState(() =>
     localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? ''
@@ -254,7 +257,8 @@ export function DesksPage() {
       <Table headers={[
         t('desks.col.location'), t('desks.col.code'), t('desks.col.name'),
         t('desks.col.desk_id'), t('desks.col.floor'), t('desks.col.zone'),
-        t('desks.col.beacon'), t('desks.col.status'), t('desks.col.actions'),
+        ...(hasBeacons ? [t('desks.col.beacon')] : []),
+        t('desks.col.status'), t('desks.col.actions'),
       ]} empty={!filtered.length}>
         {filtered.map(d => (
           <TR key={d.id}>
@@ -269,22 +273,24 @@ export function DesksPage() {
             </TD>
             <TD>{d.floor ?? '—'}</TD>
             <TD>{d.zone ?? '—'}</TD>
-            <TD>
-              {d.device ? (
-                <div className="flex items-center gap-2">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.device.isOnline ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
-                  <span className="text-xs text-zinc-500">{d.device.isOnline ? t('devices.status.online') : t('devices.status.offline')}</span>
-                  <span className="text-xs text-zinc-300 font-mono">{d.device.hardwareId}</span>
-                  <button onClick={() => handleUnpair(d)}
-                    className="text-xs px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors font-medium"
-                    title={t('desks.actions_extra.unpair_title')}>
-                    {t('desks.actions_extra.unpair')}
-                  </button>
-                </div>
-              ) : (
-                <span className="text-xs text-zinc-300">{t('desks.no_beacon')}</span>
-              )}
-            </TD>
+            {hasBeacons && (
+              <TD>
+                {d.device ? (
+                  <div className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${d.device.isOnline ? 'bg-emerald-400' : 'bg-zinc-300'}`} />
+                    <span className="text-xs text-zinc-500">{d.device.isOnline ? t('devices.status.online') : t('devices.status.offline')}</span>
+                    <span className="text-xs text-zinc-300 font-mono">{d.device.hardwareId}</span>
+                    <button onClick={() => handleUnpair(d)}
+                      className="text-xs px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 transition-colors font-medium"
+                      title={t('desks.actions_extra.unpair_title')}>
+                      {t('desks.actions_extra.unpair')}
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-zinc-300">{t('desks.no_beacon')}</span>
+                )}
+              </TD>
+            )}
             <TD><Badge color={STATUS_COLOR[d.status] ?? 'zinc'}>{STATUS_LABEL[d.status] ?? d.status}</Badge></TD>
             <TD>
               <div className="flex gap-1 flex-wrap">

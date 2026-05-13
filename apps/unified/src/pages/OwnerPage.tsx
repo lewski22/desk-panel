@@ -86,12 +86,13 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
 // ─── Modal: edycja firmy ──────────────────────────────────────
 // ── Definicje modułów ─────────────────────────────────────────
 const MODULE_DEFS = [
-  { id: 'DESKS',       icon: '🪑', label: 'Biurka',           desc: 'Rezerwacja biurek, mapa, check-in NFC/QR' },
-  { id: 'ROOMS',       icon: '🏛',  label: 'Sale konferencyjne', desc: 'Rezerwacja sal, kalendarz dostępności' },
-  { id: 'PARKING',     icon: '🅿️', label: 'Parking',           desc: 'Miejsca parkingowe — rezerwacja i status' },
-  { id: 'FLOOR_PLAN',  icon: '🗺',  label: 'Plan piętra',       desc: 'Interaktywna mapa SVG z pozycjami biurek' },
-  { id: 'WEEKLY_VIEW', icon: '📅', label: 'Widok tygodniowy',  desc: 'Kto jest w biurze — widok kalendarza tygodnia' },
-  { id: 'EQUIPMENT',   icon: '🔧', label: 'Wyposażenie',        desc: 'Ewidencja i rezerwacja sprzętu biurowego' },
+  { id: 'DESKS',       icon: '🪑', label: 'Biurka',               desc: 'Rezerwacje biurek, mapa, QR check-in' },
+  { id: 'BEACONS',     icon: '📡', label: 'Beacony IoT',           desc: 'Fizyczne beacony ESP32 + bramki Raspberry Pi. NFC check-in, LED, provisioning, OTA. Wymagany zakup hardware Reserti.' },
+  { id: 'ROOMS',       icon: '🏛',  label: 'Sale konferencyjne',   desc: 'Rezerwacje sal, sloty 30-min' },
+  { id: 'PARKING',     icon: '🅿️', label: 'Parkingi',              desc: 'Zarządzanie miejscami parkingowymi' },
+  { id: 'FLOOR_PLAN',  icon: '🗺',  label: 'Plan piętra',           desc: 'Interaktywna mapa SVG z pozycjami biurek' },
+  { id: 'WEEKLY_VIEW', icon: '📅', label: 'Widok tygodniowy',      desc: 'Siatka tygodnia z rezerwacjami zespołu' },
+  { id: 'EQUIPMENT',   icon: '🔧', label: 'Sprzęt',                desc: 'Zarządzanie wyposażeniem biura' },
 ] as const;
 
 function ModuleToggle({
@@ -164,6 +165,10 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   };
 
   const submit = async () => {
+    if (modules.includes('BEACONS') && !modules.includes('DESKS')) {
+      setErr(t('beacons_gate.dependency_warning'));
+      return;
+    }
     setSaving(true); setErr('');
     try {
       // Zapisz nazwę, plan, notatki i politykę haseł
@@ -224,15 +229,31 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           </div>
           <div className="space-y-2">
             {MODULE_DEFS.map(m => (
-              <ModuleToggle
-                key={m.id}
-                moduleId={m.id}
-                icon={m.icon}
-                label={m.label}
-                desc={m.desc}
-                enabled={modules.includes(m.id)}
-                onChange={toggleModule}
-              />
+              <React.Fragment key={m.id}>
+                {m.id === 'BEACONS' && (
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest pt-2 pb-1">
+                    Hardware IoT
+                  </p>
+                )}
+                {m.id === 'ROOMS' && (
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest pt-2 pb-1 border-t border-zinc-100 mt-1">
+                    Moduły przestrzeni
+                  </p>
+                )}
+                <ModuleToggle
+                  moduleId={m.id}
+                  icon={m.icon}
+                  label={m.label}
+                  desc={m.desc}
+                  enabled={modules.includes(m.id)}
+                  onChange={toggleModule}
+                />
+                {m.id === 'BEACONS' && modules.includes('BEACONS') && !modules.includes('DESKS') && (
+                  <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 -mt-1">
+                    ⚠️ {t('beacons_gate.dependency_warning')}
+                  </p>
+                )}
+              </React.Fragment>
             ))}
           </div>
           <p className="text-[10px] text-zinc-400 mt-2">

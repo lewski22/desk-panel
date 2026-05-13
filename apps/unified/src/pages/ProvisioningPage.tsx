@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { Btn, Modal, FormField, Input } from '../components/ui';
+import { useOrgModules } from '../hooks/useOrgModules';
 
 // ── Location selector hook ─────────────────────────────────────
 function useLocations() {
@@ -968,7 +969,18 @@ function BeaconSection({ locations, activeLocId }: { locations: any[]; activeLoc
 // ── Main ──────────────────────────────────────────────────────
 export function ProvisioningPage() {
   const { t } = useTranslation();
+  const { isEnabled } = useOrgModules();
   const { locations, activeLocId, setLoc } = useLocations();
+
+  if (!isEnabled('BEACONS')) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-24">
+        <span className="text-5xl">📡</span>
+        <h2 className="text-lg font-semibold text-zinc-700">{t('beacons_gate.title')}</h2>
+        <p className="text-sm text-zinc-500 max-w-sm">{t('beacons_gate.body')}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-10">

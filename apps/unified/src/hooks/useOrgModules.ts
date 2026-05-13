@@ -8,7 +8,7 @@
  */
 import { useMemo } from 'react';
 
-export type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT';
+export type AppModule = 'DESKS' | 'ROOMS' | 'PARKING' | 'FLOOR_PLAN' | 'WEEKLY_VIEW' | 'EQUIPMENT' | 'BEACONS';
 
 /**
  * Odczytuje enabledModules z danych zalogowanego użytkownika / org.

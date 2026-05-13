@@ -108,14 +108,15 @@ export class OwnerService {
     const { org, user } = await this.prisma.$transaction(async (tx) => {
       const org = await tx.organization.create({
         data: {
-          name:         dto.name,
-          slug:         dto.slug,
-          plan:         dto.plan ?? 'starter',
-          contactEmail: dto.contactEmail,
-          notes:        dto.notes,
+          name:           dto.name,
+          slug:           dto.slug,
+          plan:           dto.plan ?? 'starter',
+          contactEmail:   dto.contactEmail,
+          notes:          dto.notes,
           trialEndsAt,
-          createdBy:    ownerId,
-          isActive:     true,
+          createdBy:      ownerId,
+          isActive:       true,
+          enabledModules: ['DESKS'],
         },
       });
 

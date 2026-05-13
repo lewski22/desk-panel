@@ -58,7 +58,7 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
 };
 
 const MORE_LINKS = [
-  { to: '/provisioning',  icon: '📡', labelKey: 'layout.nav.provisioning' },
+  { to: '/provisioning',  icon: '📡', labelKey: 'layout.nav.provisioning', module: 'BEACONS' },
   { to: '/resources',     icon: '🪑', labelKey: 'layout.nav.resources' },
   { to: '/visitors',      icon: '👋', labelKey: 'layout.nav.visitors' },
   { to: '/users',         icon: '👥', labelKey: 'layout.nav.users' },
@@ -175,7 +175,7 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
               {t('layout.nav.more')}
             </p>
             <div className="grid grid-cols-4 gap-2">
-              {MORE_LINKS.map(item => (
+              {MORE_LINKS.filter(item => hasModule(item.module)).map(item => (
                 <NavLink
                   key={item.to}
                   to={item.to}

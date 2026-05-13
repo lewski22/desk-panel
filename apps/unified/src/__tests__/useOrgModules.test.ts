@@ -65,4 +65,28 @@ describe('useOrgModules', () => {
     expect(result.current.isEnabled('PARKING')).toBe(false);
     expect(result.current.isEnabled('WEEKLY_VIEW')).toBe(false);
   });
+
+  it('BEACONS is disabled by default when not in enabledModules', () => {
+    localStorage.setItem('app_user', JSON.stringify({
+      role: 'SUPER_ADMIN', enabledModules: ['DESKS']
+    }));
+    const { result } = renderHook(() => useOrgModules());
+    expect(result.current.isEnabled('BEACONS')).toBe(false);
+  });
+
+  it('BEACONS is enabled when in enabledModules', () => {
+    localStorage.setItem('app_user', JSON.stringify({
+      role: 'SUPER_ADMIN', enabledModules: ['DESKS', 'BEACONS']
+    }));
+    const { result } = renderHook(() => useOrgModules());
+    expect(result.current.isEnabled('BEACONS')).toBe(true);
+  });
+
+  it('BEACONS active when enabledModules is empty (all modules = backward compat)', () => {
+    localStorage.setItem('app_user', JSON.stringify({
+      role: 'SUPER_ADMIN', enabledModules: []
+    }));
+    const { result } = renderHook(() => useOrgModules());
+    expect(result.current.isEnabled('BEACONS')).toBe(true);
+  });
 });

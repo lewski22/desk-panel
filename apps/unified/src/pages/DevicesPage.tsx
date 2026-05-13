@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi as api } from '../api/client';
 import { PageHeader } from '../components/ui';
+import { useOrgModules } from '../hooks/useOrgModules';
 
 interface Device {
   id: string;
@@ -182,6 +183,7 @@ type Tab = 'beacons' | 'gateways';
 
 export function DevicesPage() {
   const { t } = useTranslation();
+  const { isEnabled } = useOrgModules();
   const [tab,      setTab]      = useState<Tab>('beacons');
   const [devices,  setDevices]  = useState<Device[]>([]);
   const [gateways, setGateways] = useState<Gateway[]>([]);
@@ -225,6 +227,16 @@ export function DevicesPage() {
     { key: 'beacons',  label: t('devices.tab.beacons') },
     { key: 'gateways', label: t('devices.tab.gateways') },
   ];
+
+  if (!isEnabled('BEACONS')) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-24">
+        <span className="text-5xl">📡</span>
+        <h2 className="text-lg font-semibold text-zinc-700">{t('beacons_gate.title')}</h2>
+        <p className="text-sm text-zinc-500 max-w-sm">{t('beacons_gate.body')}</p>
+      </div>
+    );
+  }
 
   return (
     <div>

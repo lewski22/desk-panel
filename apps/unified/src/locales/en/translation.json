@@ -1637,6 +1637,17 @@
     "parking_title": "Parking",
     "parking_empty": "No upcoming parking bookings"
   },
+  "modules": {
+    "BEACONS": {
+      "label": "IoT Beacons",
+      "desc":  "Physical ESP32 beacons + Raspberry Pi gateways. NFC check-in, LED, provisioning, OTA."
+    }
+  },
+  "beacons_gate": {
+    "title":               "IoT Beacons module is not active",
+    "body":                "This module requires Reserti physical hardware (ESP32 beacons and Raspberry Pi gateways). Contact your system administrator to enable it.",
+    "dependency_warning":  "IoT Beacons module requires the Desks module to be enabled."
+  },
   "parking_groups": {
     "page_title":   "Parking Groups",
     "page_sub":     "Manage access to parking spots",

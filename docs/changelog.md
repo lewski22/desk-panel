@@ -4,6 +4,28 @@
 
 ---
 
+## [0.18.0] — 2026-05-13 — Nowy moduł BEACONS: tryb LITE vs FULL dla modułu DESKS
+
+### Added
+- **Moduł `BEACONS`** — nowy wpis w systemie `enabledModules`; kontroluje dostęp do całej warstwy IoT (beacony ESP32, bramki Raspberry Pi, NFC check-in, LED, provisioning, OTA) niezależnie od modułu `DESKS` (`useOrgModules.ts`, `owner.controller.ts`)
+- **`BEACONS` w `EditOrgModal`** (Owner) — nowy toggle z opisem "Wymagany zakup hardware Reserti", grupowanie modułów w sekcje wizualne (Hardware IoT / Moduły przestrzeni), guard zależności BEACONS→DESKS (`OwnerPage.tsx`)
+- **Guard zależności backend** — `setModules(['BEACONS'])` bez `DESKS` rzuca `BadRequestException` (`owner.controller.ts`)
+- **`DevicesPage` + `ProvisioningPage` gate** — strony wyświetlają przyjazny komunikat zamiast pustego widoku gdy `!isEnabled('BEACONS')` (`DevicesPage.tsx`, `ProvisioningPage.tsx`)
+- **Nav IoT ukryty** gdy `!BEACONS` — `/devices` i `/provisioning` znikają z `AppLayout` i `BottomNav`; `/devices` rozszerzone na role SUPER_ADMIN + OFFICE_ADMIN + STAFF (`AppLayout.tsx`, `BottomNav.tsx`)
+- **`DeskMapPage`** — `DeskStats` (live beacon counts) warunkowe pod `hasBeacons` (`DeskMapPage.tsx`)
+- **`DesksPage`** — kolumna "Urządzenie" i przycisk "Odepnij" warunkowe pod `hasBeacons` (`DesksPage.tsx`)
+- **`DashboardPage`** — KPI "Beacony online" i alert "beacony offline" warunkowe pod `hasBeacons` (`DashboardPage.tsx`)
+- **Nowe orgi** tworzone z `enabledModules: ['DESKS']` zamiast `[]` — BEACONS wyłączony domyślnie (`owner.service.ts`)
+- **i18n** — klucze `modules.BEACONS.*` i `beacons_gate.*` (PL + EN)
+- **Testy** — 3 nowe przypadki w `useOrgModules.test.ts` dla BEACONS
+
+### Technical
+- Zero breaking change — istniejące orgi z `enabledModules: []` traktują BEACONS jako aktywny (backward compat)
+- `DESKS` pozostaje niezmieniony — kontroluje rezerwacje; `BEACONS` kontroluje wyłącznie hardware IoT
+- Nowe orgi mają `enabledModules: ['DESKS']` jako default — BEACONS wymaga ręcznego włączenia przez Owner
+
+---
+
 ## [0.17.9] — 2026-05-13 — Fix: MyReservationsPage dla wszystkich ról
 
 ### Fixed

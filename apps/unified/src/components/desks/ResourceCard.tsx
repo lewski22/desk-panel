@@ -4,11 +4,12 @@
  */
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Monitor, ParkingCircle, Wrench } from 'lucide-react';
 
-const TYPE_META: Record<string, { icon: string; color: string }> = {
-  ROOM:      { icon: '🏛',  color: 'bg-violet-50 border-violet-200' },
-  PARKING:   { icon: '🅿️',  color: 'bg-sky-50 border-sky-200'      },
-  EQUIPMENT: { icon: '🔧',  color: 'bg-amber-50 border-amber-200'   },
+const TYPE_META: Record<string, { icon: JSX.Element; color: string }> = {
+  ROOM:      { icon: <Monitor size={16} className="text-muted" />,       color: 'bg-white border-border' },
+  PARKING:   { icon: <ParkingCircle size={16} className="text-muted" />, color: 'bg-white border-border' },
+  EQUIPMENT: { icon: <Wrench size={16} className="text-muted" />,        color: 'bg-white border-border' },
 };
 
 const AMENITY_ICONS: Record<string, string> = {
@@ -38,23 +39,24 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
   const canBook    = onBook && isActive;
 
   const statusBadge = !isActive
-    ? { cls: 'bg-zinc-100 text-zinc-500',      label: t('resource.status.inactive') }
+    ? { cls: 'bg-zinc-100 text-zinc-500',           dot: 'bg-zinc-400',    label: t('resource.status.inactive') }
     : isOccupied
-    ? { cls: 'bg-red-100 text-red-700',         label: t('resource.status.occupied')  }
-    : { cls: 'bg-emerald-100 text-emerald-700', label: t('resource.status.free')      };
+    ? { cls: 'bg-red-100 text-red-700',              dot: 'bg-red-500',     label: t('resource.status.occupied')  }
+    : { cls: 'bg-emerald-100 text-emerald-700',      dot: 'bg-emerald-500', label: t('resource.status.free')      };
 
   return (
-    <div className={`rounded-xl border p-4 flex flex-col gap-2.5 transition-all hover:shadow-md ${meta.color} ${!isActive ? 'opacity-60' : ''}`}>
+    <div className={`rounded-xl border p-4 flex flex-col gap-2.5 transition-all hover:shadow-sm hover:border-border-m ${meta.color} ${!isActive ? 'opacity-60' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{meta.icon}</span>
+          <span className="flex-shrink-0">{meta.icon}</span>
           <div>
-            <p className="font-semibold text-zinc-800 text-sm">{resource.name}</p>
-            <p className="text-xs text-zinc-400 font-mono">{resource.code}</p>
+            <p className="font-semibold text-ink text-sm leading-tight">{resource.name}</p>
+            <p className="text-xs text-muted font-mono">{resource.code}</p>
           </div>
         </div>
-        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusBadge.cls}`}>
+        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full ${statusBadge.cls}`}>
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusBadge.dot}`} />
           {statusBadge.label}
         </span>
       </div>
@@ -103,7 +105,7 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
       {resource.amenities?.length > 0 && !compact && (
         <div className="flex flex-wrap gap-1.5">
           {resource.amenities.map((a: string) => (
-            <span key={a} className="flex items-center gap-1 text-[10px] bg-white/60 border border-zinc-200/60 px-1.5 py-0.5 rounded-md text-zinc-600">
+            <span key={a} className="flex items-center gap-1 text-xs bg-surface border border-border px-2 py-0.5 rounded-md text-body">
               {AMENITY_ICONS[a] ?? '•'} {a}
             </span>
           ))}
@@ -112,7 +114,7 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
 
       {/* Location */}
       {(resource.floor || resource.zone) && (
-        <p className="text-xs text-zinc-400">
+        <p className="text-xs text-muted">
           {[resource.zone, resource.floor && `${t('deskcard.floor')} ${resource.floor}`].filter(Boolean).join(' · ')}
         </p>
       )}
@@ -120,18 +122,18 @@ export function ResourceCard({ resource, onBook, compact = false }: Props) {
       {/* Book buttons */}
       {canBook && (
         <div className="flex gap-2 mt-auto">
-          <button
-            onClick={() => onBook(resource)}
-            className="flex-1 py-2 rounded-xl bg-violet-500 text-white text-xs font-semibold hover:bg-violet-600 transition-colors">
-            + {t('resource.book')}
-          </button>
           {isActive && !resource.currentBooking && (
             <button
               onClick={() => onBook(resource, 'now')}
-              className="py-2 px-3 rounded-xl bg-white border border-violet-300 text-violet-600 text-xs font-semibold hover:bg-violet-50 transition-colors">
-              ⚡ {t('rooms.quick_book', 'Teraz')}
+              className="flex-1 py-2 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand/90 transition-colors">
+              {t('rooms.quick_book', 'Teraz')}
             </button>
           )}
+          <button
+            onClick={() => onBook(resource)}
+            className="flex-1 py-2 rounded-xl bg-white border border-border text-body text-xs font-semibold hover:bg-surface transition-colors">
+            {t('resource.book')}
+          </button>
         </div>
       )}
     </div>

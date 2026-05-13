@@ -18,6 +18,7 @@ import { Stat, Card, Spinner, Modal, Btn, EmptyState } from '../components/ui';
 import { SkeletonKpi } from '../components/ui/Skeleton';
 import { InsightsWidget } from '../components/insights/InsightsWidget';
 import { OnboardingChecklist } from '../components/onboarding/OnboardingChecklist';
+import { useOrgModules } from '../hooks/useOrgModules';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 import type { ExtendedStats } from '../types/api';
@@ -195,14 +196,14 @@ const ATTENTION_COLORS: Record<string, { bg: string; border: string; text: strin
   red:   { bg: 'bg-red-50',     border: 'border-red-200',   text: 'text-red-800',     btn: 'text-red-700 hover:text-red-900'     },
 };
 
-function AttentionSection({ desks, offlineCount, isAdmin }: {
-  desks: any[]; offlineCount: number; isAdmin: boolean;
+function AttentionSection({ desks, offlineCount, isAdmin, hasBeacons }: {
+  desks: any[]; offlineCount: number; isAdmin: boolean; hasBeacons: boolean;
 }) {
   const { t }    = useTranslation();
   const navigate = useNavigate();
   const now      = new Date();
 
-  const beaconAlert = isAdmin && offlineCount > 0 ? {
+  const beaconAlert = isAdmin && hasBeacons && offlineCount > 0 ? {
     id: 'beacons', icon: '📡', color: 'amber',
     text: `${offlineCount} beacon${offlineCount > 1 ? 'ów' : ''} offline`,
     sub:  t('dashboard.beacons_offline'),
@@ -414,6 +415,8 @@ export function DashboardPage() {
   const { t, i18n } = useTranslation();
   const locationId   = useLocationId();
   const role         = useRole();
+  const { isEnabled } = useOrgModules();
+  const hasBeacons   = isEnabled('BEACONS');
   const isAdmin         = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(role);
   const isAtLeastStaff  = isAdmin || role === 'STAFF';
   const locale       = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
@@ -545,13 +548,13 @@ export function DashboardPage() {
       )}
 
       {/* Attention section — replaces inline beacon alert */}
-      <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} />
+      <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} hasBeacons={hasBeacons} />
 
       {/* KPI Row — FEATURE P4-3C: beacons card hidden for END_USER */}
       {loading ? (
-        <SkeletonKpi count={isAdmin ? 4 : 3} />
+        <SkeletonKpi count={isAdmin && hasBeacons ? 4 : 3} />
       ) : (
-        <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+        <div className={`grid grid-cols-2 gap-2 sm:gap-3 mb-5 ${isAdmin && hasBeacons ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
           <KpiCard
             label={t('dashboard.kpi.occupancy_now')}
             value={`${Math.round((occupiedDesks / Math.max(desks.length, 1)) * 100)}%`}
@@ -569,7 +572,7 @@ export function DashboardPage() {
             value={todayCheckins}
             trend={isAdmin ? ext?.weekTrend : undefined}
           />
-          {isAdmin && (
+          {isAdmin && hasBeacons && (
             <KpiCard
               label={t('dashboard.kpi.beacons_online')}
               value={onlineCount}

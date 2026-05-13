@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Param, Body, Query, UseGuards, Request,
-  HttpCode, HttpStatus,
+  HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }      from '../auth/guards/jwt-auth.guard';
@@ -53,6 +53,13 @@ export class OwnerController {
   @Patch('organizations/:id')
   @ApiOperation({ summary: 'Edytuj firmę (plan, status, notatki)' })
   updateOrganization(@Param('id') id: string, @Body() dto: UpdateOrgDto) {
+    if (dto.enabledModules !== undefined) {
+      const VALID = ['DESKS', 'BEACONS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW', 'EQUIPMENT'];
+      dto.enabledModules = dto.enabledModules.filter((m: string) => VALID.includes(m));
+      if (dto.enabledModules.includes('BEACONS') && !dto.enabledModules.includes('DESKS')) {
+        throw new BadRequestException('Moduł BEACONS wymaga aktywnego modułu DESKS');
+      }
+    }
     return this.svc.updateOrganization(id, dto);
   }
 
@@ -63,8 +70,11 @@ export class OwnerController {
     @Param('id')  id:   string,
     @Body()       body: SetModulesDto,
   ) {
-    const VALID = ['DESKS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW', 'EQUIPMENT'];
+    const VALID = ['DESKS', 'BEACONS', 'ROOMS', 'PARKING', 'FLOOR_PLAN', 'WEEKLY_VIEW', 'EQUIPMENT'];
     const modules = (body.enabledModules ?? []).filter((m: string) => VALID.includes(m));
+    if (modules.includes('BEACONS') && !modules.includes('DESKS')) {
+      throw new BadRequestException('Moduł BEACONS wymaga aktywnego modułu DESKS');
+    }
     return this.svc.updateOrganization(id, { enabledModules: modules });
   }
 

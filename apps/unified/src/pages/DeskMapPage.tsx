@@ -22,6 +22,7 @@ import { useOrgModules }    from '../hooks/useOrgModules';
 import { RecommendationBanner } from '../components/recommendations/RecommendationBanner';
 import { localDateStr }         from '../utils/date';
 import { format }               from 'date-fns';
+import { Monitor, Building2, ParkingCircle } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────
 const AMENITY_ICONS: Record<string, string> = {
@@ -60,7 +61,7 @@ function LocationTabs({ locations, activeId, desksPerLocation, onChange, userRol
             onClick={isEmpty ? undefined : () => onChange(loc.id)}
             title={isEmpty ? t('deskmap.location_no_desks') : undefined}
             className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
-              active ? 'bg-brand text-white border-brand shadow-sm' : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+              active ? 'bg-brand/10 text-brand border-brand/20' : 'bg-white text-muted border-border hover:text-ink hover:bg-surface'
             } ${isEmpty ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}>
             <span>{loc.name}</span>
             {occ.total > 0 && (
@@ -371,15 +372,15 @@ export function DeskMapPage() {
       {/* Tab bar: Biurka | Sale | Parking — filtrowane przez moduły org — FEATURE P4-4: larger buttons */}
       <div className="flex gap-1 bg-zinc-100 rounded-xl p-1.5 mb-4 w-fit">
         {([
-          ['desks',   '🪑', 'DESKS'  ],
-          ['rooms',   '🏛', 'ROOMS'  ],
-          ['parking', '🅿️', 'PARKING'],
-        ] as const).filter(([, , mod]) => isEnabled(mod)).map(([tab, icon]) => (
+          ['desks',   <Monitor size={15} />,       'DESKS'  ],
+          ['rooms',   <Building2 size={15} />,     'ROOMS'  ],
+          ['parking', <ParkingCircle size={15} />, 'PARKING'],
+        ] as [string, React.ReactElement, 'DESKS' | 'ROOMS' | 'PARKING'][]).filter(([, , mod]) => isEnabled(mod)).map(([tab, icon]) => (
           <button key={tab} onClick={() => setMapTab(tab as any)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
               mapTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
             }`}>
-            <span className="text-base">{icon}</span>
+            <span className="flex items-center">{icon}</span>
             <span>{t(`deskmap.tab.${tab}`)}</span>
           </button>
         ))}
@@ -394,7 +395,7 @@ export function DeskMapPage() {
       />
 
       {/* Stats — above map */}
-      {desks.length > 0 && mapTab === 'desks' && !isEndUser && (
+      {desks.length > 0 && mapTab === 'desks' && !isEndUser && isEnabled('BEACONS') && (
         <DeskStats desks={desks} currentUserId={userId} />
       )}
 
@@ -492,6 +493,7 @@ export function DeskMapPage() {
                 value={minCapacity ?? ''}
                 onChange={e => setMinCapacity(e.target.value ? Number(e.target.value) : null)}
                 className="text-xs border rounded-lg px-2 py-1.5 text-zinc-600 bg-white border-zinc-200"
+                aria-label={t('deskmap.filter.capacity', 'Minimalna pojemność')}
               >
                 <option value="">{t('rooms.filter.any_capacity', 'Dowolna pojemność')}</option>
                 <option value="4">≥ 4 os.</option>
