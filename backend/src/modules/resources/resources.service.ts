@@ -352,9 +352,10 @@ export class ResourcesService {
     let end   = new Date(dto.endTime);
 
     if (dto.allDay) {
-      // Anchor at UTC noon — correct local date for any timezone UTC-11..UTC+11
-      start = new Date(`${dto.date}T12:00:00.000Z`);
-      end   = new Date(`${dto.date}T12:00:00.000Z`);
+      // UTC 10:00–14:00 window: correct calendar date in any timezone UTC-10..UTC+13,
+      // covers the full working day for conflict detection, end > start so no throw.
+      start = new Date(`${dto.date}T10:00:00.000Z`);
+      end   = new Date(`${dto.date}T14:00:00.000Z`);
     }
 
     if (end <= start) throw new ConflictException('endTime musi być późniejszy niż startTime');
