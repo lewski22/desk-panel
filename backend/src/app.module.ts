@@ -51,6 +51,7 @@ import { ParkingBlocksModule }     from './modules/parking-blocks/parking-blocks
     UsersModule,
     OrganizationsModule,
     LocationsModule,
+    RecommendationsModule,  // must be before DesksModule — @Get('desks/:id') would otherwise shadow @Get('recommended')
     DesksModule,
     DevicesModule,
     GatewaysModule,
@@ -72,7 +73,6 @@ import { ParkingBlocksModule }     from './modules/parking-blocks/parking-blocks
     StorageModule,          // @Global — R2/S3 CDN for floor plans
     // ── v0.17.0 ───────────────────────────────────────────────
     IntegrationsModule,     // @Global — Slack/Teams/Webhook/Azure/Google per-org
-    RecommendationsModule,  // K1 — AI desk recommendations
     InsightsModule,         // K2 — utilization insights + cron
     GraphSyncModule,        // M4 — Microsoft Graph Calendar Sync
     TeamsBotModule,         // Teams Bot Framework — slash commands
