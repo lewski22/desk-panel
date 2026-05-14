@@ -31,7 +31,8 @@ export class DesksService {
     private ledEvents: LedEventsService, // FIX P2-4
   ) {}
 
-  async findAll(locationId: string) {
+  async findAll(locationId: string, actorOrgId?: string) {
+    if (actorOrgId) await this.assertLocationInOrg(locationId, actorOrgId);
     return this.prisma.desk.findMany({
       where: { locationId },
       include: {
@@ -52,11 +53,12 @@ export class DesksService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, actorOrgId?: string) {
     const desk = await this.prisma.desk.findUnique({
       where: { id },
       include: {
         device: true,
+        location: { select: { organizationId: true } },
         reservations: {
           where: {
             status: { in: ['PENDING', 'CONFIRMED'] },
@@ -68,10 +70,14 @@ export class DesksService {
       },
     });
     if (!desk) throw new NotFoundException(`Desk ${id} not found`);
+    if (actorOrgId && desk.location.organizationId !== actorOrgId) {
+      throw new ForbiddenException('Biurko nie należy do Twojej organizacji');
+    }
     return desk;
   }
 
-  async create(locationId: string, dto: CreateDeskDto) {
+  async create(locationId: string, dto: CreateDeskDto, actorOrgId?: string) {
+    if (actorOrgId) await this.assertLocationInOrg(locationId, actorOrgId);
     const exists = await this.prisma.desk.findFirst({
       where: { locationId, code: dto.code },
     });
@@ -153,8 +159,8 @@ export class DesksService {
     return { deleted: true };
   }
 
-  async getAvailability(id: string, date: string) {
-    await this.findOne(id);
+  async getAvailability(id: string, date: string, actorOrgId?: string) {
+    await this.findOne(id, actorOrgId);
     const reservations = await this.prisma.reservation.findMany({
       where: {
         deskId: id,
@@ -280,8 +286,8 @@ export class DesksService {
     return this.prisma.desk.update({ where: { id }, data: { status: DeskStatus.ACTIVE } });
   }
 
-  async unassignDevice(id: string) {
-    await this.findOne(id);
+  async unassignDevice(id: string, actorOrgId?: string) {
+    await this.findOne(id, actorOrgId);
     const device = await this.prisma.device.findFirst({ where: { deskId: id } });
     if (!device) return { unlinked: false };
     await this.prisma.device.update({ where: { id: device.id }, data: { deskId: null } });

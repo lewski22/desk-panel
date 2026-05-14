@@ -70,8 +70,9 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'List desks in location' })
-  findAll(@Param('locationId') locationId: string) {
-    return this.desks.findAll(locationId);
+  findAll(@Param('locationId') locationId: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.findAll(locationId, actorOrgId);
   }
 
   @Get('locations/:locationId/desks/status')
@@ -95,18 +96,22 @@ export class DesksController {
   @Get('desks/:id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'Desk detail + upcoming reservations' })
-  findOne(@Param('id') id: string) {
-    return this.desks.findOne(id);
+  findOne(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.findOne(id, actorOrgId);
   }
 
   @Get('desks/:id/availability')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'Free slots for a given date' })
   @ApiQuery({ name: 'date', example: '2025-01-20' })
-  availability(@Param('id') id: string, @Query('date') date: string) {
-    return this.desks.getAvailability(id, date);
+  availability(@Param('id') id: string, @Query('date') date: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.getAvailability(id, date, actorOrgId);
   }
 
   @Post('locations/:locationId/desks')
@@ -117,8 +122,10 @@ export class DesksController {
   create(
     @Param('locationId') locationId: string,
     @Body() dto: CreateDeskDto,
+    @Request() req: any,
   ) {
-    return this.desks.create(locationId, dto);
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.create(locationId, dto, actorOrgId);
   }
 
   @Patch('desks/:id')
@@ -156,7 +163,8 @@ export class DesksController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Unpair beacon from desk' })
-  unassignDevice(@Param('id') id: string) {
-    return this.desks.unassignDevice(id);
+  unassignDevice(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.desks.unassignDevice(id, actorOrgId);
   }
 }

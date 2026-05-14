@@ -48,7 +48,11 @@ export class VisitorsService {
   async invite(locationId: string, hostUserId: string, dto: {
     firstName: string; lastName?: string; email?: string; company?: string;
     visitDate: string; purpose?: string;
-  }) {
+  }, actorOrgId?: string) {
+    if (actorOrgId) {
+      const loc = await this.prisma.location.findUnique({ where: { id: locationId }, select: { organizationId: true } });
+      if (!loc || loc.organizationId !== actorOrgId) throw new ForbiddenException('Brak dostępu do tej lokalizacji');
+    }
     const visitor = await this.prisma.visitor.create({
       data: {
         locationId,
@@ -103,7 +107,18 @@ export class VisitorsService {
   }
 
   // ── Check-in gościa ───────────────────────────────────────────
-  async checkin(id: string) {
+  private async assertVisitorInOrg(visitorId: string, actorOrgId?: string): Promise<void> {
+    if (!actorOrgId) return;
+    const v = await this.prisma.visitor.findUnique({
+      where:   { id: visitorId },
+      select:  { location: { select: { organizationId: true } } },
+    });
+    if (!v) throw new NotFoundException('Gość nie znaleziony');
+    if (v.location.organizationId !== actorOrgId) throw new ForbiddenException('Brak dostępu');
+  }
+
+  async checkin(id: string, actorOrgId?: string) {
+    await this.assertVisitorInOrg(id, actorOrgId);
     const v = await this.prisma.visitor.findUnique({ where: { id } });
     if (!v) throw new NotFoundException('Gość nie znaleziony');
     if (v.status === 'CHECKED_IN') return v;
@@ -117,14 +132,16 @@ export class VisitorsService {
     const v = await this.prisma.visitor.findUnique({ where: { qrToken } });
     if (!v) throw new NotFoundException('Nieważny QR token wizyty');
     if (['CHECKED_OUT','CANCELLED'].includes(v.status)) throw new ForbiddenException('Wizyta wygasła');
-    return this.checkin(v.id);
+    return this.checkin(v.id); // QR — brak actorOrgId, token jest sekretem
   }
 
-  async checkout(id: string) {
+  async checkout(id: string, actorOrgId?: string) {
+    await this.assertVisitorInOrg(id, actorOrgId);
     return this.prisma.visitor.update({ where: { id }, data: { status: 'CHECKED_OUT', checkedOutAt: new Date() } });
   }
 
-  async cancel(id: string) {
+  async cancel(id: string, actorOrgId?: string) {
+    await this.assertVisitorInOrg(id, actorOrgId);
     return this.prisma.visitor.update({ where: { id }, data: { status: 'CANCELLED' } });
   }
 

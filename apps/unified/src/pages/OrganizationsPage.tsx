@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { useOrgModules } from '../hooks/useOrgModules';
 import { PageHeader, Btn, Modal, Input } from '../components/ui';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
@@ -722,6 +723,8 @@ export function OrganizationsPage() {
   const user = getUser();
   const { t } = useTranslation();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const { isEnabled } = useOrgModules();
+  const hasBeacons = isEnabled('BEACONS');
 
   const [locations, setLocations] = useState<any[]>([]);
   const [orgs,      setOrgs]      = useState<any[]>([]);
@@ -743,6 +746,10 @@ export function OrganizationsPage() {
   const [wifiPass,        setWifiPass]        = useState('');
   const [wifiPassVisible, setWifiPassVisible] = useState(false);
   const [editTab,         setEditTab]         = useState<'basic'|'hours'|'iot'|'resources'>('basic');
+
+  useEffect(() => {
+    if (!hasBeacons && editTab === 'iot') setEditTab('basic');
+  }, [hasBeacons]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const closeModal = () => setModal(null);
   const { markDirty, resetDirty, requestClose, showConfirm, confirmClose, cancelClose } =
@@ -880,8 +887,8 @@ export function OrganizationsPage() {
               { num: locations.length, label: t('organizations.summary.locations', 'Biur')      },
               { num: activeCount,      label: t('organizations.summary.active',    'Aktywnych'), color: '#3B6D11' },
               { num: totalDesks,       label: t('organizations.summary.desks',     'Biurek')     },
-              { num: totalGateways,    label: t('organizations.summary.gateways',  'Gatewayów')  },
-            ].map(({ num, label, color }) => (
+              ...(hasBeacons ? [{ num: totalGateways, label: t('organizations.summary.gateways', 'Gatewayów') }] : []),
+            ].map(({ num, label, color }: { num: number | string; label: string; color?: string }) => (
               <div key={label}
                 className="bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 text-center">
                 <p className="text-xl font-semibold" style={{ color: color ?? 'inherit' }}>{num}</p>
@@ -958,12 +965,12 @@ export function OrganizationsPage() {
                   </div>
 
                   {/* Stats row */}
-                  <div className="grid grid-cols-3 border-b border-zinc-100 divide-x divide-zinc-100">
+                  <div className={`grid border-b border-zinc-100 divide-x divide-zinc-100 ${hasBeacons ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     {[
-                      { num: desksCount,    label: t('organizations.stat_desks',    'biurek')    },
-                      { num: gatewaysCount, label: t('organizations.stat_gateways', 'gatewayów') },
+                      { num: desksCount, label: t('organizations.stat_desks', 'biurek') },
+                      ...(hasBeacons ? [{ num: gatewaysCount, label: t('organizations.stat_gateways', 'gatewayów') }] : []),
                       { num: `${loc.maxDaysAhead ?? 14}d·${loc.maxHoursPerDay ?? 8}h`,
-                                            label: t('organizations.stat_limits',   'max')       },
+                                        label: t('organizations.stat_limits', 'max') },
                     ].map(({ num, label }) => (
                       <div key={label} className="py-2.5 text-center">
                         <p className="text-base font-semibold text-zinc-800 leading-none">{num}</p>
@@ -999,14 +1006,16 @@ export function OrganizationsPage() {
                     >
                       {t('organizations_extra.edit', 'Edytuj')}
                     </button>
-                    <button
-                      onClick={() => setInstallModal(loc)}
-                      className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-200
-                                 bg-white text-zinc-600 hover:bg-zinc-100 font-medium
-                                 transition-colors"
-                    >
-                      + Gateway
-                    </button>
+                    {hasBeacons && (
+                      <button
+                        onClick={() => setInstallModal(loc)}
+                        className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-200
+                                   bg-white text-zinc-600 hover:bg-zinc-100 font-medium
+                                   transition-colors"
+                      >
+                        + Gateway
+                      </button>
+                    )}
                     <button
                       onClick={() => setAzureModal(loc)}
                       className="text-[11px] px-2.5 py-1.5 rounded-lg border border-zinc-200
@@ -1120,11 +1129,11 @@ export function OrganizationsPage() {
               {/* ── Tab bar ──────────────────────────────────────── */}
               <div className="flex border-b border-zinc-100 bg-zinc-50 overflow-x-auto">
                 {([
-                  { id: 'basic',     label: 'Podstawowe',      icon: '🏢' },
-                  { id: 'hours',     label: 'Godziny i limity', icon: '🕐' },
-                  { id: 'iot',       label: 'IoT i WiFi',       icon: '📡' },
-                  { id: 'resources', label: 'Zasoby',           icon: '🪑' },
-                ] as const).map(tab => (
+                  { id: 'basic'     as const, label: 'Podstawowe',      icon: '🏢' },
+                  { id: 'hours'     as const, label: 'Godziny i limity', icon: '🕐' },
+                  ...(hasBeacons ? [{ id: 'iot' as const, label: 'IoT i WiFi', icon: '📡' }] : []),
+                  { id: 'resources' as const, label: 'Zasoby',           icon: '🪑' },
+                ]).map(tab => (
                   <button
                     key={tab.id}
                     type="button"
@@ -1312,7 +1321,7 @@ export function OrganizationsPage() {
                 )}
 
                 {/* ── TAB: IoT i WiFi ── */}
-                {editTab === 'iot' && (
+                {editTab === 'iot' && hasBeacons && (
                   <div className="flex flex-col gap-3">
                     {/* Jasność LED */}
                     <div>
@@ -1530,7 +1539,7 @@ export function OrganizationsPage() {
       )}
 
       {/* Install token modal */}
-      {installModal && (
+      {installModal && hasBeacons && (
         <InstallTokenModal location={installModal} onClose={() => setInstallModal(null)} />
       )}
     </div>
