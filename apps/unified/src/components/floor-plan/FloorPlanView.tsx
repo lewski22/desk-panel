@@ -24,6 +24,7 @@ interface Props {
   onReserve?:      (desk: DeskMapItem) => void;  // otwiera ReservationModal
   activeFloor?:    string;    // controlled mode — gdy przekazany, komponent nie zarządza własnym stanem piętra
   hideFloorPicker?: boolean;  // ukrywa przyciski wyboru piętra (gdy sterowanie zewnętrzne)
+  refreshKey?:     number;    // incrementuj aby wymusić re-fetch planu piętra (np. kiosk auto-refresh)
 }
 
 // ── Desk Info Card — bottom sheet (mobile) / fixed popover (desktop) ──
@@ -153,7 +154,7 @@ function DeskInfoCard({ desk, onClose, onReserve, userRole, anchorRect, timezone
 }
 
 // ── Main FloorPlanView ────────────────────────────────────────
-export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, timezone, onReserve, activeFloor: activeFloorProp, hideFloorPicker }: Props) {
+export function FloorPlanView({ locationId, desks, userRole, selectedDate: _selectedDate, currentUserId, timezone, onReserve, activeFloor: activeFloorProp, hideFloorPicker, refreshKey }: Props) {
   const { t }                  = useTranslation();
   const [floorPlan, setFP]     = useState<any>(null);
   const [loading,   setL]      = useState(true);
@@ -252,7 +253,7 @@ export function FloorPlanView({ locationId, desks, userRole, selectedDate: _sele
       .then(fp => setFP(fp?.floorPlanUrl ? fp : null))
       .catch(() => setFP(null))
       .finally(() => setL(false));
-  }, [locationId, activeFloor, floors.length]);
+  }, [locationId, activeFloor, floors.length, refreshKey]);
 
   const canvasW = floorPlan?.floorPlanW ?? 1200;
   const canvasH = floorPlan?.floorPlanH ?? 800;

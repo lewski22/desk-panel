@@ -63,7 +63,7 @@ export function EntraIdSection({ orgId, orgName }: Props) {
 
   const clientId = (window as any).__VITE_AZURE_CLIENT_ID__ ?? import.meta.env?.VITE_AZURE_CLIENT_ID ?? '';
   const consentUrl = clientId
-    ? `https://login.microsoftonline.com/organizations/adminconsent?client_id=${clientId}&redirect_uri=${encodeURIComponent(window.location.origin)}`
+    ? `https://login.microsoftonline.com/organizations/adminconsent?client_id=${clientId}&redirect_uri=${encodeURIComponent(window.location.origin)}&prompt=login`
     : '';
 
   return (

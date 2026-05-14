@@ -182,10 +182,11 @@ export function KioskPage() {
   const locationIdFromUrl = params.get('location') ?? '';
   const locationId = kioskSettings?.locationId ?? locationIdFromUrl;
 
-  const [desks,      setDesks]      = useState<any[]>([]);
-  const [location,   setLocation]   = useState<any>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [fetchError, setFetchError] = useState(false);
+  const [desks,        setDesks]        = useState<any[]>([]);
+  const [location,     setLocation]     = useState<any>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [fetchError,   setFetchError]   = useState(false);
+  const [fpRefreshKey, setFpRefreshKey] = useState(0);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [pinOpen,    setPinOpen]    = useState(false);
   const [_exiting,   setExiting]    = useState(false);
@@ -213,6 +214,7 @@ export function KioskPage() {
       setDesks(res?.desks ?? res ?? []);
       setLastUpdate(new Date());
       setFetchError(false);
+      setFpRefreshKey(k => k + 1);
     } catch {
       setFetchError(true);
     }
@@ -412,6 +414,7 @@ export function KioskPage() {
             onReserve={undefined}
             activeFloor={kioskSettings.floor ?? undefined}
             hideFloorPicker={true}
+            refreshKey={fpRefreshKey}
           />
         </div>
       )}
