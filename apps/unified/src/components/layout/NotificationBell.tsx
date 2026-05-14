@@ -67,19 +67,24 @@ export function NotificationBell({ role, light }: { role: string; light?: boolea
   const panelRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Polling count ogni 30s
+  const [pollingActive, setPollingActive] = useState(true);
+
+  // Polling count co 15s — zatrzymuje się przy 401 (wygasła sesja)
   const fetchCount = useCallback(async () => {
     try {
       const r = await appApi.notifications.countUnread();
       setUnread(r.count);
-    } catch { }
+    } catch (e: any) {
+      if (e?.status === 401 || e?.message?.includes('401')) setPollingActive(false);
+    }
   }, []);
 
   useEffect(() => {
+    if (!pollingActive) return;
     fetchCount();
     const id = setInterval(fetchCount, 15_000);
     return () => clearInterval(id);
-  }, [fetchCount]);
+  }, [fetchCount, pollingActive]);
 
   // Odśwież licznik gdy tab staje się aktywny (powrót z tła / PWA)
   useEffect(() => {
