@@ -693,8 +693,9 @@ function UtilizationTab({ filters }: { filters: Filters }) {
 // ── Parking Tab ────────────────────────────────────────────────────
 function ParkingTab({ filters }: { filters: Filters }) {
   const { t }                   = useTranslation();
-  const [data,    setData]      = useState<any>(null);
-  const [loading, setLoading]   = useState(false);
+  const [data,      setData]    = useState<any>(null);
+  const [loading,   setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showConfirmed, setShowConfirmed] = useState(false);
 
   const load = useCallback(async () => {
@@ -711,6 +712,8 @@ function ParkingTab({ filters }: { filters: Filters }) {
   useEffect(() => { load(); }, [load]);
 
   const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
     try {
       const params: Record<string, string> = { from: filters.from, to: filters.to };
       if (filters.locationId) params.locationId = filters.locationId;
@@ -720,6 +723,7 @@ function ParkingTab({ filters }: { filters: Filters }) {
       Object.assign(document.createElement('a'), { href: url, download: filename }).click();
       URL.revokeObjectURL(url);
     } catch {}
+    setExporting(false);
   };
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-zinc-200 border-t-violet-400 rounded-full animate-spin" /></div>;
@@ -796,9 +800,9 @@ function ParkingTab({ filters }: { filters: Filters }) {
             ⚠️ {t('reports.parking.unconfirmed_title', 'Nieodebrane rezerwacje')}
             <span className="ml-2 text-xs font-normal text-zinc-400">({unconfirmed.length})</span>
           </p>
-          <button onClick={handleExport}
-            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-medium transition-colors">
-            {t('reports.parking.export_csv', 'Eksport CSV')}
+          <button onClick={handleExport} disabled={exporting}
+            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-medium transition-colors disabled:opacity-50">
+            {exporting ? '…' : t('reports.parking.export_csv', 'Eksport CSV')}
           </button>
         </div>
         {unconfirmed.length === 0 ? (

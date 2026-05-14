@@ -49,7 +49,7 @@ export class ReportsController {
     @Res()   res: Response,
     @Request() req: any,
   ) {
-    const orgId = req.user.role === 'OWNER' ? (dto as any).orgId : req.user.organizationId;
+    const orgId = this.resolveOrgId(req, (dto as any).orgId);
     const { fromDate, toDate } = this.reports.validateDateRange(dto.from ?? '', dto.to ?? '');
     const rows   = await this.reports.getOccupancyRows(orgId, fromDate, toDate, dto.locationId);
     const format = dto.format ?? 'csv';

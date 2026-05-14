@@ -38,7 +38,7 @@ export class InstallController {
   private _buildScript(token: string, apiUrl: string): string {
     // Sanityzacja — token to cuid(), tylko alfanumeryczne
     const safeToken  = token.replace(/[^a-zA-Z0-9_-]/g, '');
-    const safeApiUrl = apiUrl.replace(/['"\\`$]/g, '');
+    const safeApiUrl = apiUrl.replace(/[^a-zA-Z0-9:/.?=&_-]/g, '');
 
     return `#!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════

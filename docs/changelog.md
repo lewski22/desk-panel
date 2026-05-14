@@ -1,6 +1,46 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-13
+> Ostatnia aktualizacja: 2026-05-14
+
+---
+
+## [0.19.0] — 2026-05-14 — Moduł Parking: grupy, blokady, QR check-in
+
+### Added
+
+- **`ParkingGroup` / `ParkingGroupUser` / `ParkingGroupResource`** — grupy parkingowe org-scoped; użytkownicy przypisani do grupy uzyskują dostęp do miejsc z trybem `GROUP_RESTRICTED` (`parking-groups.service.ts`, `parking-groups.controller.ts`)
+- **`ParkingBlock`** — blokady czasowe na konkretne miejsca lub całe grupy; `isBlocked()` sprawdza oba poziomy (`parking-blocks.service.ts`, `parking-blocks.controller.ts`)
+- **`accessMode` na `Resource`** — nowe pole `TEXT` (`PUBLIC` | `GROUP_RESTRICTED`); `setAccessMode()` w `ParkingGroupsService` zmienia tryb dostępu pojedynczego miejsca (`parking-groups.service.ts`, `resources.service.ts`)
+- **`qrToken` / `qrCheckinEnabled` na `Resource`** — unikalny token UUID generowany automatycznie; `setQrCheckin()` pozwala admin włączyć/wyłączyć QR check-in dla miejsca (`resources.service.ts`, `resources.controller.ts`)
+- **`checkedInAt` / `checkedInBy` na `Booking`** — rejestracja momentu i wykonawcy check-in QR (`checkins.service.ts`)
+- **`POST /checkins/parking-qr`** — idempotentny check-in przez QR; sprawdza okno grace (`checkinGraceMinutes`), zwraca `alreadyCheckedIn: true` jeśli już zarejestrowany (`checkins.service.ts`, `checkins.controller.ts`)
+- **`GET /resources/qr/:token`** — publiczny endpoint (bez auth) zwracający info o miejscu + bieżącą rezerwację dla skanowania QR (`resources.controller.ts`, `resources.service.ts`)
+- **`GET /reports/parking`** + **`GET /reports/parking/export`** — raport parkingowy: KPI (total, % QR, no-shows, top spot), wykres dzienny, lista potwierdzonych i niepotwierdzonych rezerwacji, eksport CSV (`reports.service.ts`, `reports.controller.ts`)
+- **`maxParkingDaysPerWeek` na `Location`** — opcjonalny limit rezerwacji parkingowych na tydzień per user; egzekwowany przy tworzeniu rezerwacji (`parking-groups.service.ts`)
+- **`checkinGraceMinutes` na `Location`** — okno czasowe przed/po rezerwacji w którym QR check-in jest akceptowany (domyślnie 15 min)
+- **`ParkingGroupsPage`** — lista grup parkingowych org; create/delete; nawigacja do szczegółów (`ParkingGroupsPage.tsx`)
+- **`GroupDetailPage`** — 3 zakładki: Users (dodaj pojedynczego / bulk po emailach, usuń), Parking spots (checkboxy + przełącznik PUBLIC/GROUP_RESTRICTED), Blocks (lista blokad + dodaj blokadę) (`GroupDetailPage.tsx`)
+- **`ParkingQrCheckinPage`** — publiczna strona `/parking-checkin/:token`; stany: loading, disabled, login-required, spot-info, confirming, success, error; wibracja przy sukcesie (`ParkingQrCheckinPage.tsx`)
+- **`ResourcesPage`** — accessMode badge (🔒 Tylko grupy / 🌐 Publiczny) dla PARKING; toggle QR check-in per miejsce; pole "Notatki" w formularzu edycji; `handleRemove` z obsługą błędu 409 (aktywne rezerwacje) (`ResourcesPage.tsx`)
+- **`ReportsPage` — zakładka Parking** — KPI cards, wykres dzienny, tabele confirmed/unconfirmed, eksport CSV z guardem `exporting` (ochrona przed podwójnym kliknięciem) (`ReportsPage.tsx`)
+- **`MyReservationsPage`** — przycisk QR wyświetlany tylko dla dzisiejszych rezerwacji parkingowych z włączonym `qrCheckinEnabled` (`MyReservationsPage.tsx`)
+- **Nav** — `/parking-groups` w `AppLayout` dla ról SUPER_ADMIN + OFFICE_ADMIN, moduł PARKING (`AppLayout.tsx`)
+- **API client** — `appApi.parkingGroups.*` (list, get, create, update, remove, addUser, addUsersBulk, removeUser, setResources, setAccessMode), `appApi.parkingBlocks.*` (list, create, remove), `appApi.checkins.parkingQr()`, `appApi.reports.parking()` / `.parkingExport()` (`client.ts`)
+- **i18n** — klucze `parking_groups.*` i `reports.tabs.parking` / `reports.parking.*` (PL + EN)
+
+### Technical
+
+- Migracja `20260515000001_parking_groups_qr` — idempotentna (IF NOT EXISTS / DO $$ BEGIN), directive `-- This migration requires no transaction.`; `accessMode` konwertowany z enum na TEXT jeśli istnieje
+- Constraint `Resource_locationId_type_code_key` (trójka) zastępuje stary `Resource_locationId_code_key`
+- `resolveOrgId()` zunifikowany — endpoint `GET /reports/export` korzysta teraz z tej samej pomocniczej metody co pozostałe endpointy (fix: SUPER_ADMIN mógł poprzednio podać `orgId` tylko przez `orgId` query, nie przez `resolveOrgId`)
+- `safeApiUrl` w `install.controller.ts` — regex zmieniony z blocklist na allowlist `/[^a-zA-Z0-9:/.?=&_-]/g`
+
+### Fixed
+
+- **`install.controller.ts`** — `safeApiUrl` allowlist zamiast blocklist (poprzednia wersja przepuszczała `$`, `` ` ``, `\`, `'`)
+- **`reports.controller.ts` export endpoint** — SUPER_ADMIN nie mógł podać `?orgId=` przy eksporcie CSV/XLSX (różna logika niż w pozostałych endpointach); ujednolicono przez `resolveOrgId()`
+- **`ReportsPage` ParkingTab** — brak guarda `exporting` na przycisku eksportu (ryzyko podwójnego zapytania)
+- **`MyReservationsPage`** — przycisk QR pojawiał się dla przyszłych rezerwacji parkingowych (brak sprawdzenia daty = dzisiaj)
 
 ---
 

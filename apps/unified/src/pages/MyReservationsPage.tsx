@@ -242,6 +242,7 @@ export function MyReservationsPage() {
   const inactive = reservations.filter(r => !['PENDING','CONFIRMED'].includes(r.status));
 
   const now             = new Date();
+  const todayDateStr    = now.toISOString().slice(0, 10);
   const activeBookings  = bookings.filter(b => new Date(b.endTime) >= now);
   const pastBookings    = bookings.filter(b => new Date(b.endTime) < now);
   const roomBookings    = activeBookings.filter(b => b.resource?.type === 'ROOM');
@@ -278,7 +279,7 @@ export function MyReservationsPage() {
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <StatusBadge status={b.status} />
-          {!isPast && b.resource?.type === 'PARKING' && b.resource?.qrCheckinEnabled && (
+          {!isPast && new Date(b.startTime).toISOString().slice(0, 10) === todayDateStr && b.resource?.type === 'PARKING' && b.resource?.qrCheckinEnabled && (
             <button
               onClick={() => setQrBooking(b)}
               className="text-xs text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg border border-sky-200 hover:border-sky-300 hover:bg-sky-50 transition-colors font-medium">

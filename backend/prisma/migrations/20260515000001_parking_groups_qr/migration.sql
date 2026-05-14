@@ -1,3 +1,5 @@
+-- This migration requires no transaction.
+
 -- ── Resource ──────────────────────────────────────────────────
 ALTER TABLE "Resource"
   ADD COLUMN IF NOT EXISTS "qrToken"          TEXT UNIQUE DEFAULT gen_random_uuid()::TEXT,
