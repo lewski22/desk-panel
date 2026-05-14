@@ -162,11 +162,11 @@ export class ReportsController {
   async parkingReport(
     @Query('from')        from:        string,
     @Query('to')          to:          string,
+    @Request() req: any,
     @Query('locationId')  locationId?: string,
     @Query('resourceId')  resourceId?: string,
     @Query('noCheckinOnly') noCheckinOnly?: string,
     @Query('orgId')       orgId?:      string,
-    @Request() req: any,
   ) {
     const resolvedOrgId = this.resolveOrgId(req, orgId);
     const { fromDate, toDate } = this.reports.validateDateRange(from, to);
@@ -181,12 +181,12 @@ export class ReportsController {
   async exportParking(
     @Query('from')        from:        string,
     @Query('to')          to:          string,
+    @Res()   res: Response,
+    @Request() req: any,
     @Query('locationId')  locationId?: string,
     @Query('resourceId')  resourceId?: string,
     @Query('noCheckinOnly') noCheckinOnly?: string,
     @Query('orgId')       orgId?:      string,
-    @Res()   res: Response,
-    @Request() req: any,
   ) {
     const resolvedOrgId = this.resolveOrgId(req, orgId);
     const { fromDate, toDate } = this.reports.validateDateRange(from, to);

@@ -197,7 +197,7 @@ export class GoogleAuthService {
   }
 
   private _frontendUrl(): string {
-    return this.config.get('FRONTEND_URL');
+    return this.config.get('FRONTEND_URL') ?? '';
   }
 
 }
