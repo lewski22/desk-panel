@@ -104,6 +104,30 @@ export class KioskService {
     }
   }
 
+  async deleteAccount(orgId: string): Promise<void> {
+    const account = await this.findKioskAccount(orgId);
+    if (!account) throw new NotFoundException('Brak konta kiosk dla tej organizacji');
+
+    await this.prisma.refreshToken.deleteMany({ where: { userId: account.id } });
+    await this.prisma.user.delete({ where: { id: account.id } });
+  }
+
+  async updateAccountLocation(orgId: string, locationId: string): Promise<void> {
+    const account = await this.findKioskAccount(orgId);
+    if (!account) throw new NotFoundException('Brak konta kiosk dla tej organizacji');
+
+    const loc = await this.prisma.location.findFirst({
+      where: { id: locationId, organizationId: orgId, isActive: true },
+    });
+    if (!loc) throw new ForbiddenException('Lokalizacja nie istnieje lub nie należy do tej organizacji');
+
+    const current = (account.kioskSettings as any) ?? {};
+    await this.prisma.user.update({
+      where: { id: account.id },
+      data:  { kioskSettings: { ...current, locationId } as any },
+    });
+  }
+
   // ── KIOSK self API ────────────────────────────────────────────
 
   async getSettings(userId: string) {

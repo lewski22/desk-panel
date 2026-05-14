@@ -1320,7 +1320,14 @@
     "settings_pin_title":    "Kiosk settings",
     "map_view_only":         "View only",
     "account_select_location":  "Select a location",
-    "account_location_label":   "Default kiosk location"
+    "account_location_label":   "Default kiosk location",
+    "account_location_save":    "Change",
+    "account_location_saved":   "Location updated",
+    "account_updated":          "Last updated",
+    "account_delete":           "Delete kiosk account",
+    "delete_confirm":           "Delete the kiosk account? All active sessions will be logged out. This cannot be undone.",
+    "deleted":                  "Kiosk account has been deleted",
+    "locations_load_error":     "Failed to load locations. Please refresh."
   },
   "push": {
     "title":       "Reserti",

@@ -1,5 +1,5 @@
 import {
-  Controller, Post, Get, Patch, Body, Request,
+  Controller, Post, Get, Patch, Delete, Body, Request,
   UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -48,6 +48,22 @@ export class KioskController {
   @ApiOperation({ summary: 'Aktywuj / dezaktywuj konto KIOSK' })
   async toggleStatus(@Request() req: any, @Body() dto: UpdateKioskStatusDto) {
     await this.svc.toggleStatus(req.user.organizationId, dto.isActive);
+  }
+
+  @Patch('account/location')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Zmień domyślną lokalizację konta KIOSK' })
+  async updateLocation(@Request() req: any, @Body() body: { locationId: string }) {
+    await this.svc.updateAccountLocation(req.user.organizationId, body.locationId);
+  }
+
+  @Delete('account')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Usuń konto KIOSK (wraz z sesjami)' })
+  async deleteAccount(@Request() req: any) {
+    await this.svc.deleteAccount(req.user.organizationId);
   }
 
   // ── KIOSK self — ustawienia ───────────────────────────────────

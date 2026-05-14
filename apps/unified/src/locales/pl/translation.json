@@ -1320,7 +1320,14 @@
     "settings_pin_title":    "Ustawienia kiosku",
     "map_view_only":         "Tylko podgląd",
     "account_select_location":  "Wybierz lokalizację",
-    "account_location_label":   "Domyślna lokalizacja kiosku"
+    "account_location_label":   "Domyślna lokalizacja kiosku",
+    "account_location_save":    "Zmień",
+    "account_location_saved":   "Lokalizacja zaktualizowana",
+    "account_updated":          "Ostatnia zmiana",
+    "account_delete":           "Usuń konto kiosk",
+    "delete_confirm":           "Usunąć konto kiosk? Wszystkie aktywne sesje zostaną wylogowane. Tej operacji nie można cofnąć.",
+    "deleted":                  "Konto kiosk zostało usunięte",
+    "locations_load_error":     "Nie udało się załadować lokalizacji. Odśwież stronę."
   },
   "push": {
     "title":       "Reserti",

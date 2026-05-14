@@ -511,6 +511,10 @@ export const appApi = {
       req('/kiosk/account/password', { method: 'PATCH' }),
     toggleStatus:   (isActive: boolean): Promise<void> =>
       req('/kiosk/account/status', { method: 'PATCH', body: JSON.stringify({ isActive }) }),
+    updateLocation: (locationId: string): Promise<void> =>
+      req('/kiosk/account/location', { method: 'PATCH', body: JSON.stringify({ locationId }) }),
+    deleteAccount:  (): Promise<void> =>
+      req('/kiosk/account', { method: 'DELETE' }),
     getSettings:    (): Promise<KioskSettings> =>
       req('/kiosk/me/settings'),
     updateSettings: (dto: KioskSettings): Promise<void> =>

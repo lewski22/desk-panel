@@ -13,6 +13,7 @@ export function KioskAccountPage() {
   const [locations,     setLocations]     = useState<any[]>([]);
   const [locationsErr,  setLocationsErr]  = useState(false);
   const [selectedLoc,   setSelectedLoc]   = useState('');
+  const [locSaving,     setLocSaving]     = useState(false);
   const [pinInputs,  setPinInputs]  = useState<Record<string, string>>({});
   const [pinSaving,  setPinSaving]  = useState<Record<string, boolean>>({});
   const [pinSuccess, setPinSuccess] = useState<Record<string, boolean>>({});
@@ -40,6 +41,15 @@ export function KioskAccountPage() {
       .catch(() => setLocationsErr(true));
   }, []);
 
+  // sync selectedLoc with account's current locationId once both are loaded
+  useEffect(() => {
+    if (!account || locations.length === 0) return;
+    const currentLocId = account.kioskSettings?.locationId;
+    if (currentLocId && locations.some((l: any) => l.id === currentLocId)) {
+      setSelectedLoc(currentLocId);
+    }
+  }, [account, locations]);
+
   const handleCreate = async () => {
     if (!selectedLoc) { toast(t('kiosk.account_select_location', 'Wybierz lokalizację'), 'error'); return; }
     setBusy(true);
@@ -50,6 +60,18 @@ export function KioskAccountPage() {
     } catch (e: any) {
       toast(e.message ?? 'Błąd tworzenia konta', 'error');
     } finally { setBusy(false); }
+  };
+
+  const handleUpdateLocation = async () => {
+    if (!selectedLoc) return;
+    setLocSaving(true);
+    try {
+      await appApi.kiosk.updateLocation(selectedLoc);
+      setAccount((a: any) => ({ ...a, kioskSettings: { ...(a.kioskSettings ?? {}), locationId: selectedLoc } }));
+      toast(t('kiosk.account_location_saved', 'Lokalizacja zaktualizowana'), 'success');
+    } catch (e: any) {
+      toast(e.message ?? 'Błąd zmiany lokalizacji', 'error');
+    } finally { setLocSaving(false); }
   };
 
   const handleResetPassword = async () => {
@@ -71,6 +93,18 @@ export function KioskAccountPage() {
       load();
     } catch (e: any) {
       toast(e.message ?? 'Błąd zmiany statusu', 'error');
+    } finally { setBusy(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(t('kiosk.delete_confirm', 'Usunąć konto kiosk? Wszystkie aktywne sesje zostaną wylogowane. Tej operacji nie można cofnąć.'))) return;
+    setBusy(true);
+    try {
+      await appApi.kiosk.deleteAccount();
+      setAccount(null);
+      toast(t('kiosk.deleted', 'Konto kiosk zostało usunięte'), 'success');
+    } catch (e: any) {
+      toast(e.message ?? 'Błąd usuwania konta', 'error');
     } finally { setBusy(false); }
   };
 
@@ -113,6 +147,10 @@ export function KioskAccountPage() {
     </div>
   );
 
+  const currentLocName = account
+    ? locations.find((l: any) => l.id === account.kioskSettings?.locationId)?.name
+    : null;
+
   return (
     <div className="max-w-lg">
       <h2 className="text-lg font-semibold text-zinc-800 mb-4">
@@ -120,6 +158,7 @@ export function KioskAccountPage() {
       </h2>
 
       {!account ? (
+        /* ── Brak konta — formularz tworzenia ───────────────────── */
         <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6">
           <p className="text-zinc-500 text-sm mb-4">
             {t('kiosk.no_account', 'Brak konta kiosk dla tej organizacji.')}
@@ -141,6 +180,11 @@ export function KioskAccountPage() {
               </select>
             </div>
           )}
+          {locationsErr && (
+            <p className="text-xs text-red-500 mb-3">
+              {t('kiosk.locations_load_error', 'Nie udało się załadować lokalizacji.')}
+            </p>
+          )}
           <button
             onClick={handleCreate}
             disabled={busy || !selectedLoc}
@@ -156,8 +200,10 @@ export function KioskAccountPage() {
           </button>
         </div>
       ) : (
+        /* ── Istniejące konto ───────────────────────────────────── */
         <div className="bg-white border border-zinc-200 rounded-2xl p-6">
-          <div className="space-y-2 mb-6">
+          {/* Info */}
+          <div className="space-y-2 mb-5">
             <div className="flex justify-between text-sm">
               <span className="text-zinc-500">Email</span>
               <span className="text-zinc-800 font-mono text-xs">{account.email}</span>
@@ -168,9 +214,13 @@ export function KioskAccountPage() {
                 {account.isActive ? '🟢 Aktywne' : '🔴 Nieaktywne'}
               </span>
             </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">📍 {t('kiosk.account_location_label', 'Domyślna lokalizacja')}</span>
+              <span className="text-zinc-600 text-xs">{currentLocName ?? '—'}</span>
+            </div>
             {account.updatedAt && (
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">Ostatnia zmiana</span>
+                <span className="text-zinc-500">{t('kiosk.account_updated', 'Ostatnia zmiana')}</span>
                 <span className="text-zinc-600 text-xs">
                   {new Date(account.updatedAt).toLocaleString('pl-PL')}
                 </span>
@@ -178,7 +228,40 @@ export function KioskAccountPage() {
             )}
           </div>
 
-          <div className="flex gap-3">
+          {/* Zmiana lokalizacji */}
+          {locations.length > 0 && (
+            <div className="mb-5 pt-4 border-t border-zinc-100">
+              <p className="text-xs font-medium text-zinc-500 mb-1.5">
+                📍 {t('kiosk.account_location_label', 'Domyślna lokalizacja kiosku')}
+              </p>
+              <div className="flex gap-2">
+                <select
+                  value={selectedLoc}
+                  onChange={e => setSelectedLoc(e.target.value)}
+                  className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2
+                    text-sm text-zinc-800 focus:outline-none focus:border-brand"
+                >
+                  {locations.map((l: any) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleUpdateLocation}
+                  disabled={locSaving || selectedLoc === account.kioskSettings?.locationId}
+                  className="px-3 py-2 bg-brand text-white rounded-xl text-sm font-semibold
+                    hover:opacity-90 transition-opacity disabled:opacity-40 whitespace-nowrap"
+                >
+                  {locSaving
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                    : t('kiosk.account_location_save', 'Zmień')
+                  }
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Akcje — Reset / Aktywuj-Dezaktywuj */}
+          <div className="flex gap-3 mb-3">
             <button
               onClick={handleResetPassword}
               disabled={busy}
@@ -202,13 +285,25 @@ export function KioskAccountPage() {
               }
             </button>
           </div>
+
+          {/* Usuń konto */}
+          <div className="pt-3 border-t border-zinc-100">
+            <button
+              onClick={handleDelete}
+              disabled={busy}
+              className="w-full py-2 rounded-xl text-sm border border-red-200 text-red-500
+                hover:bg-red-50 hover:border-red-300 transition-all disabled:opacity-40"
+            >
+              {t('kiosk.account_delete', 'Usuń konto kiosk')}
+            </button>
+          </div>
         </div>
       )}
 
       {/* Sekcja PIN per-lokalizacja */}
       {locationsErr && (
         <p className="mt-4 text-xs text-red-500">
-          Nie udało się załadować lokalizacji. Odśwież stronę.
+          {t('kiosk.locations_load_error', 'Nie udało się załadować lokalizacji. Odśwież stronę.')}
         </p>
       )}
       {!locationsErr && locations.length > 0 && (
