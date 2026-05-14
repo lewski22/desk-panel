@@ -21,7 +21,8 @@ import { UserRole }             from '@prisma/client';
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string, refreshDays = 7) {
-  const base = { httpOnly: true, secure: !IS_DEV, sameSite: IS_DEV ? ('lax' as const) : ('strict' as const) };
+  // SameSite=None+Secure wymagane gdy frontend i API są na różnych subdomenach (cross-site)
+  const base = { httpOnly: true, secure: !IS_DEV, sameSite: IS_DEV ? ('lax' as const) : ('none' as const) };
   res.cookie('access_token',  accessToken,  { ...base, path: '/',                   maxAge: 15 * 60 * 1000 });
   res.cookie('refresh_token', refreshToken, { ...base, path: '/api/v1/auth/refresh', maxAge: refreshDays * 24 * 60 * 60 * 1000 });
 }
