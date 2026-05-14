@@ -23,8 +23,8 @@ export class KioskController {
   @Post('account')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Utwórz konto KIOSK dla org (jednorazowe hasło w odpowiedzi)' })
-  createAccount(@Request() req: any) {
-    return this.svc.createAccount(req.user.organizationId);
+  createAccount(@Request() req: any, @Body() body: { locationId?: string }) {
+    return this.svc.createAccount(req.user.organizationId, body?.locationId);
   }
 
   @Get('account')

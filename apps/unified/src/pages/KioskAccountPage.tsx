@@ -12,6 +12,7 @@ export function KioskAccountPage() {
 
   const [locations,     setLocations]     = useState<any[]>([]);
   const [locationsErr,  setLocationsErr]  = useState(false);
+  const [selectedLoc,   setSelectedLoc]   = useState('');
   const [pinInputs,  setPinInputs]  = useState<Record<string, string>>({});
   const [pinSaving,  setPinSaving]  = useState<Record<string, boolean>>({});
   const [pinSuccess, setPinSuccess] = useState<Record<string, boolean>>({});
@@ -31,14 +32,19 @@ export function KioskAccountPage() {
 
   useEffect(() => {
     appApi.locations.listAll()
-      .then(locs => setLocations(locs.filter((l: any) => l.isActive)))
+      .then(locs => {
+        const active = locs.filter((l: any) => l.isActive);
+        setLocations(active);
+        if (active.length > 0) setSelectedLoc(active[0].id);
+      })
       .catch(() => setLocationsErr(true));
   }, []);
 
   const handleCreate = async () => {
+    if (!selectedLoc) { toast(t('kiosk.account_select_location', 'Wybierz lokalizację'), 'error'); return; }
     setBusy(true);
     try {
-      const res = await appApi.kiosk.createAccount();
+      const res = await appApi.kiosk.createAccount(selectedLoc);
       setPasswordModal(res.plaintextPassword);
       load();
     } catch (e: any) {
@@ -47,7 +53,7 @@ export function KioskAccountPage() {
   };
 
   const handleResetPassword = async () => {
-    if (!confirm('Zresetować hasło konta kiosk? Aktywne sesje zostaną wylogowane.')) return;
+    if (!confirm(t('kiosk.reset_confirm', 'Zresetować hasło konta kiosk? Aktywne sesje zostaną wylogowane.'))) return;
     setBusy(true);
     try {
       const res = await appApi.kiosk.resetPassword();
@@ -70,7 +76,7 @@ export function KioskAccountPage() {
 
   const handleSetPin = async (locationId: string) => {
     const pin = pinInputs[locationId]?.trim();
-    if (!pin || !/^\d{4,8}$/.test(pin)) { toast('PIN musi zawierać 4–8 cyfr', 'error'); return; }
+    if (!pin || !/^\d{4,8}$/.test(pin)) { toast(t('kiosk.pin_invalid', 'PIN musi zawierać 4–8 cyfr'), 'error'); return; }
     const prev = locations.find(l => l.id === locationId)?.kioskPinSet ?? false;
     setPinSaving(s => ({ ...s, [locationId]: true }));
     setLocations(ls => ls.map(l => l.id === locationId ? { ...l, kioskPinSet: true } : l));
@@ -114,17 +120,39 @@ export function KioskAccountPage() {
       </h2>
 
       {!account ? (
-        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6 text-center">
+        <div className="bg-zinc-50 border border-zinc-200 rounded-2xl p-6">
           <p className="text-zinc-500 text-sm mb-4">
-            Brak konta kiosk dla tej organizacji.
+            {t('kiosk.no_account', 'Brak konta kiosk dla tej organizacji.')}
           </p>
+          {locations.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-zinc-500 mb-1.5">
+                📍 {t('kiosk.account_location_label', 'Domyślna lokalizacja kiosku')}
+              </label>
+              <select
+                value={selectedLoc}
+                onChange={e => setSelectedLoc(e.target.value)}
+                className="w-full bg-white border border-zinc-300 rounded-xl px-3 py-2
+                  text-sm text-zinc-800 focus:outline-none focus:border-brand"
+              >
+                {locations.map((l: any) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             onClick={handleCreate}
-            disabled={busy}
-            className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold
+            disabled={busy || !selectedLoc}
+            className="w-full py-2.5 bg-brand text-white rounded-xl text-sm font-semibold
               hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            {busy ? '…' : `+ ${t('kiosk.account_create', 'Utwórz konto kiosk')}`}
+            {busy
+              ? <span className="inline-flex items-center justify-center gap-2">
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </span>
+              : `+ ${t('kiosk.account_create', 'Utwórz konto kiosk')}`
+            }
           </button>
         </div>
       ) : (
@@ -258,7 +286,8 @@ export function KioskAccountPage() {
 
       {/* Modal z jednorazowym hasłem */}
       {passwordModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+          role="alertdialog" aria-modal="true">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <p className="text-amber-600 font-semibold mb-1 text-sm">
               ⚠️ {t('kiosk.account_password_once', 'Zapisz to hasło — pokazujemy je tylko raz!')}
@@ -268,15 +297,16 @@ export function KioskAccountPage() {
               <code className="flex-1 text-zinc-800 font-mono text-sm break-all">{passwordModal}</code>
               <button
                 onClick={() => navigator.clipboard.writeText(passwordModal)}
+                aria-label={t('kiosk.account_copy', 'Kopiuj')}
                 title={t('kiosk.account_copy', 'Kopiuj')}
-                className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg flex-shrink-0"
+                className="text-zinc-400 hover:text-zinc-700 transition-colors text-lg flex-shrink-0 p-1"
               >
                 📋
               </button>
             </div>
             <button
               onClick={() => setPasswordModal(null)}
-              className="w-full py-2 bg-zinc-800 text-white rounded-xl text-sm font-semibold hover:opacity-90"
+              className="w-full py-3 min-h-[44px] bg-zinc-800 text-white rounded-xl text-sm font-semibold hover:opacity-90"
             >
               {t('kiosk.account_close', 'Rozumiem, zamknij')}
             </button>

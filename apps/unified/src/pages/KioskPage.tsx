@@ -28,10 +28,12 @@ function deskColor(d: any) {
 }
 
 // ── PIN exit modal ────────────────────────────────────────────
-function PinModal({ onClose, onSuccess, onVerify }: {
+function PinModal({ onClose, onSuccess, onVerify, title, hint }: {
   onClose:   () => void;
   onSuccess: () => void;
   onVerify:  (pin: string) => Promise<boolean>;
+  title?:    string;
+  hint?:     string;
 }) {
   const { t }         = useTranslation();
   const [pin, setPin] = useState('');
@@ -51,7 +53,7 @@ function PinModal({ onClose, onSuccess, onVerify }: {
         onSuccess();
       } else {
         setErr(true);
-        setTimeout(() => { setPin(''); setErr(false); }, 700);
+        setTimeout(() => { setPin(''); setErr(false); }, 1400);
       }
     }
   };
@@ -59,14 +61,19 @@ function PinModal({ onClose, onSuccess, onVerify }: {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+      role="dialog" aria-modal="true"
       onClick={onClose}>
       <div className="bg-zinc-900 rounded-3xl p-8 w-72 shadow-2xl border border-zinc-700"
         onClick={e => e.stopPropagation()}>
-        <p className="text-center text-white font-bold text-lg mb-1">{t('kiosk.exit_title')}</p>
-        <p className="text-center text-zinc-400 text-sm mb-6">{t('kiosk.exit_hint')}</p>
+        <p className="text-center text-white font-bold text-lg mb-1">
+          {title ?? t('kiosk.exit_title')}
+        </p>
+        <p className="text-center text-zinc-400 text-sm mb-6">
+          {hint ?? t('kiosk.exit_hint')}
+        </p>
 
         {/* PIN dots */}
-        <div className="flex justify-center gap-3 mb-6">
+        <div className="flex justify-center gap-3 mb-2">
           {[0, 1, 2, 3].map(i => (
             <div key={i} className={`w-4 h-4 rounded-full border-2 transition-all ${
               i < pin.length
@@ -75,6 +82,9 @@ function PinModal({ onClose, onSuccess, onVerify }: {
             }`} />
           ))}
         </div>
+        <p className={`text-center text-red-400 text-xs mb-4 transition-opacity ${err ? 'opacity-100' : 'opacity-0'}`}>
+          {t('kiosk.pin_wrong', 'Nieprawidłowy PIN')}
+        </p>
 
         {/* Numpad */}
         <div className="grid grid-cols-3 gap-3">
@@ -110,9 +120,9 @@ function DeskTile({ desk }: { desk: any }) {
 
   return (
     <div className="rounded-2xl flex flex-col items-center justify-center gap-2 p-4 min-h-[100px]"
-      style={{ background: color + '22', border: `2px solid ${color}40` }}>
-      <div className="w-4 h-4 rounded-full" style={{ background: color }} />
-      <p className="font-bold text-white text-sm text-center leading-tight">{desk.name}</p>
+      style={{ background: color + '44', border: `2px solid ${color}99` }}>
+      <div className="w-6 h-6 rounded-full" style={{ background: color }} />
+      <p className="font-bold text-white text-base text-center leading-tight">{desk.name}</p>
       <p className="text-xs text-white/60">{t(labelKey)}</p>
     </div>
   );
@@ -175,6 +185,7 @@ export function KioskPage() {
   const [desks,      setDesks]      = useState<any[]>([]);
   const [location,   setLocation]   = useState<any>(null);
   const [loading,    setLoading]    = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [pinOpen,    setPinOpen]    = useState(false);
   const [_exiting,   setExiting]    = useState(false);
@@ -201,7 +212,10 @@ export function KioskPage() {
       const res = await appApi.desks.status(locationId);
       setDesks(res?.desks ?? res ?? []);
       setLastUpdate(new Date());
-    } catch {}
+      setFetchError(false);
+    } catch {
+      setFetchError(true);
+    }
     setLoading(false);
   }, [locationId]);
 
@@ -292,7 +306,7 @@ export function KioskPage() {
         <div className="flex items-center gap-3">
           <LogoMark size={32} />
           <div>
-            <p className="font-bold text-lg leading-none">{location?.name ?? t('kiosk.default_office')}</p>
+            <p className="font-bold text-2xl leading-none">{location?.name ?? t('kiosk.default_office')}</p>
             <p className="text-xs text-zinc-500 mt-0.5">
               {t('kiosk.last_update')}: {lastUpdate.toLocaleTimeString()}
             </p>
@@ -308,18 +322,18 @@ export function KioskPage() {
         </div>
 
         {/* KPI row */}
-        <div className="flex gap-4 text-center">
+        <div className="flex gap-6 text-center">
           <div>
-            <p className="text-2xl font-bold text-emerald-400">{stats.free}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.free')}</p>
+            <p className="text-3xl font-bold text-emerald-400">{stats.free}</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wide">{t('kiosk.status.free')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-red-400">{stats.occupied}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.status.occupied')}</p>
+            <p className="text-3xl font-bold text-red-400">{stats.occupied}</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wide">{t('kiosk.status.occupied')}</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-zinc-400">{stats.total}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{t('kiosk.total')}</p>
+            <p className="text-3xl font-bold text-zinc-400">{stats.total}</p>
+            <p className="text-xs text-zinc-500 uppercase tracking-wide">{t('kiosk.total')}</p>
           </div>
         </div>
 
@@ -327,20 +341,20 @@ export function KioskPage() {
         <div className="flex items-center gap-2">
           {installEvt && (
             <button onClick={doInstall}
-              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2
+              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2.5 min-h-[44px]
                 border border-zinc-700 rounded-xl hover:border-zinc-500">
               {t('kiosk.install_btn')}
             </button>
           )}
           {isKioskRole && (
             <button onClick={() => setSettingsPinOpen(true)}
-              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2
+              className="text-xs text-zinc-400 hover:text-white transition-colors px-3 py-2.5 min-h-[44px]
                 border border-zinc-700 rounded-xl hover:border-zinc-500 flex items-center gap-1.5">
               ⚙️ {t('kiosk.settings_btn', 'Ustawienia')}
             </button>
           )}
           <button onClick={() => setPinOpen(true)}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-2
+            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors px-3 py-2.5 min-h-[44px]
               border border-zinc-800 rounded-xl hover:border-zinc-600">
             {t('kiosk.exit_btn')}
           </button>
@@ -350,29 +364,47 @@ export function KioskPage() {
       {/* Desk grid — tryb Kafelki */}
       {kioskSettings?.displayMode !== 'map' && (
         <>
+          {fetchError && (
+            <div className="mx-6 mt-6 p-4 rounded-xl bg-red-950 border border-red-900/50 text-red-400 text-sm text-center">
+              {t('kiosk.fetch_error', 'Błąd pobierania danych. Odświeżanie automatyczne…')}
+            </div>
+          )}
           <div className="px-6 py-6">
-            {Array.from(grouped.entries()).map(([zone, zDesks]) => (
-              <div key={zone} className="mb-8">
-                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
-                <div className={`grid gap-3 ${
-                  kioskSettings?.columns === 4  ? 'grid-cols-4'  :
-                  kioskSettings?.columns === 6  ? 'grid-cols-6'  :
-                  kioskSettings?.columns === 8  ? 'grid-cols-8'  :
-                  kioskSettings?.columns === 10 ? 'grid-cols-10' :
-                  'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10'
-                }`}>
-                  {zDesks.map((d: any) => <DeskTile key={d.id} desk={d} />)}
-                </div>
+            {!fetchError && visibleDesks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+                <span className="text-5xl">🖥️</span>
+                <p className="text-white text-xl font-bold">{t('kiosk.no_desks_title', 'Brak biurek do wyświetlenia')}</p>
+                <p className="text-zinc-500 text-sm max-w-xs">{t('kiosk.no_desks_hint', 'Upewnij się, że lokalizacja ma aktywne biurka.')}</p>
               </div>
-            ))}
+            ) : (
+              Array.from(grouped.entries()).map(([zone, zDesks]) => (
+                <div key={zone} className="mb-8">
+                  <p className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-3">{zone}</p>
+                  <div className={`grid gap-3 ${
+                    kioskSettings?.columns === 4  ? 'grid-cols-4'  :
+                    kioskSettings?.columns === 6  ? 'grid-cols-6'  :
+                    kioskSettings?.columns === 8  ? 'grid-cols-8'  :
+                    kioskSettings?.columns === 10 ? 'grid-cols-10' :
+                    'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10'
+                  }`}>
+                    {zDesks.map((d: any) => <DeskTile key={d.id} desk={d} />)}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-          <Legend />
+          {!fetchError && visibleDesks.length > 0 && <Legend />}
         </>
       )}
 
       {/* Tryb Mapy */}
       {kioskSettings?.displayMode === 'map' && locationId && (
-        <div className="flex-1 px-4 py-4 min-h-[calc(100vh-80px)]">
+        <div className="flex-1 px-4 py-4">
+          <div className="mb-2 flex justify-end">
+            <span className="text-xs text-zinc-600 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-full">
+              {t('kiosk.map_view_only', 'Tylko podgląd')}
+            </span>
+          </div>
           <FloorPlanView
             locationId={locationId}
             desks={desks}
@@ -399,6 +431,8 @@ export function KioskPage() {
           onClose={() => setSettingsPinOpen(false)}
           onSuccess={() => { setSettingsPinOpen(false); setSettingsOpen(true); }}
           onVerify={verifyPin}
+          title={t('kiosk.settings_pin_title', 'Ustawienia kiosku')}
+          hint={t('kiosk.exit_hint')}
         />
       )}
 

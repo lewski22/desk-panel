@@ -32,25 +32,29 @@ export class KioskService {
 
   // ── Admin API ─────────────────────────────────────────────────
 
-  async createAccount(orgId: string): Promise<{ email: string; plaintextPassword: string }> {
+  async createAccount(orgId: string, locationId?: string): Promise<{ email: string; plaintextPassword: string }> {
     const existing = await this.findKioskAccount(orgId);
     if (existing) throw new ConflictException('Konto kiosk dla tej organizacji już istnieje');
 
     const org = await this.prisma.organization.findUniqueOrThrow({
       where:  { id: orgId },
-      select: {
-        slug:      true,
-        locations: { where: { isActive: true }, take: 1, select: { id: true } },
-      },
+      select: { slug: true },
     });
+
+    // Verify locationId belongs to this org (if provided)
+    if (locationId) {
+      const loc = await this.prisma.location.findFirst({
+        where: { id: locationId, organizationId: orgId, isActive: true },
+      });
+      if (!loc) throw new ForbiddenException('Lokalizacja nie istnieje lub nie należy do tej organizacji');
+    }
 
     const email    = `kiosk@${org.slug}.reserti.local`;
     const password = this.generatePassword();
     const hash     = await bcrypt.hash(password, 10);
 
-    const firstLocationId = org.locations[0]?.id ?? null;
-    const kioskSettings   = firstLocationId
-      ? { ...DEFAULT_SETTINGS, locationId: firstLocationId }
+    const kioskSettings = locationId
+      ? { ...DEFAULT_SETTINGS, locationId }
       : null;
 
     await this.prisma.user.create({

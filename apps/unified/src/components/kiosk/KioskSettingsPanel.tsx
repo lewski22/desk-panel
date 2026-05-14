@@ -45,13 +45,15 @@ export function KioskSettingsPanel({ current, onSave, onClose }: Props) {
   const set = <K extends keyof KioskSettings>(key: K, val: KioskSettings[K]) =>
     setDraft(d => ({ ...d, [key]: val }));
 
-  const btnBase     = 'px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors';
+  const btnBase     = 'px-3 py-2.5 rounded-lg text-sm font-semibold border transition-colors min-h-[44px]';
   const btnActive   = `${btnBase} bg-brand text-white border-brand`;
   const btnInactive = `${btnBase} bg-zinc-800 text-zinc-300 border-zinc-700 hover:border-zinc-500`;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+      role="dialog" aria-modal="true">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl
+        overflow-y-auto max-h-[85vh]">
         <h2 className="text-white font-semibold text-base mb-5">
           ⚙️ {t('kiosk.settings_title', 'Ustawienia kiosku')}
         </h2>
@@ -163,14 +165,17 @@ export function KioskSettingsPanel({ current, onSave, onClose }: Props) {
         {/* Akcje */}
         <div className="flex gap-3">
           <button onClick={onClose} disabled={saving}
-            className="flex-1 py-2 rounded-xl text-sm text-zinc-400 border border-zinc-700
+            className="flex-1 py-3 min-h-[44px] rounded-xl text-sm text-zinc-400 border border-zinc-700
               hover:border-zinc-500 transition-colors disabled:opacity-40">
             {t('kiosk.settings_cancel', 'Anuluj')}
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-2 rounded-xl text-sm font-semibold bg-brand text-white
-              hover:opacity-90 transition-opacity disabled:opacity-40">
-            {saving ? '…' : t('kiosk.settings_save', 'Zapisz')}
+            className="flex-1 py-3 min-h-[44px] rounded-xl text-sm font-semibold bg-brand text-white
+              hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2">
+            {saving
+              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{t('kiosk.settings_save', 'Zapisz')}</>
+              : t('kiosk.settings_save', 'Zapisz')
+            }
           </button>
         </div>
       </div>

@@ -503,8 +503,8 @@ export const appApi = {
 
   // ── KIOSK ─────────────────────────────────────────────────────
   kiosk: {
-    createAccount:  (): Promise<{ email: string; plaintextPassword: string }> =>
-      req('/kiosk/account', { method: 'POST' }),
+    createAccount:  (locationId?: string): Promise<{ email: string; plaintextPassword: string }> =>
+      req('/kiosk/account', { method: 'POST', body: JSON.stringify({ locationId }) }),
     getAccount:     (): Promise<any> =>
       req('/kiosk/account'),
     resetPassword:  (): Promise<{ plaintextPassword: string }> =>

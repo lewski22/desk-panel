@@ -1309,7 +1309,18 @@
     "pin_save":              "Set PIN",
     "pin_saved":             "✓ Saved",
     "pin_clear":             "Clear PIN",
-    "pin_clear_confirm":     "Remove PIN for this location?"
+    "pin_clear_confirm":     "Remove PIN for this location?",
+    "pin_wrong":             "Incorrect PIN",
+    "pin_invalid":           "PIN must be 4–8 digits",
+    "fetch_error":           "Failed to load data. Auto-refreshing…",
+    "no_desks_title":        "No desks to display",
+    "no_desks_hint":         "Make sure the location has active desks.",
+    "no_account":            "No kiosk account for this organization.",
+    "reset_confirm":         "Reset the kiosk account password? Active sessions will be logged out.",
+    "settings_pin_title":    "Kiosk settings",
+    "map_view_only":         "View only",
+    "account_select_location":  "Select a location",
+    "account_location_label":   "Default kiosk location"
   },
   "push": {
     "title":       "Reserti",

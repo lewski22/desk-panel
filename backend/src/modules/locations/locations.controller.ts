@@ -15,7 +15,7 @@ export class LocationsController {
   constructor(private svc: LocationsService) {}
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   findAll(@Query('organizationId') orgId?: string, @Request() req?: any) {
     // Non-SUPER_ADMIN/OWNER are always scoped to their own org
     const role = req?.user?.role;
