@@ -35,7 +35,11 @@ function EntraIDModal({ onLogin, onClose }: { onLogin: (u: any) => void; onClose
       if (!clientId) throw new Error(t('entra.errors.missing_client'));
       const { PublicClientApplication } = await import('@azure/msal-browser');
       const msal = new PublicClientApplication({
-        auth: { clientId, authority: `https://login.microsoftonline.com/${tenantId}`, redirectUri: window.location.origin },
+        auth: {
+          clientId,
+          authority:   `https://login.microsoftonline.com/${tenantId}`,
+          redirectUri: `${window.location.origin}/auth-redirect.html`,
+        },
         cache: { cacheLocation: 'sessionStorage' },
       });
       await msal.initialize();
