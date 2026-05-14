@@ -84,7 +84,7 @@ export class NonceStoreService implements OnModuleInit, OnModuleDestroy {
 
   async getAndDeleteExchangeCode(code: string): Promise<Record<string, unknown> | null> {
     if (this.redis) {
-      const raw = await this.redis.getDel(`xcode:${code}`);
+      const raw = await this.redis.getdel(`xcode:${code}`);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (parsed._expiresAt < Date.now()) return null;

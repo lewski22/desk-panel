@@ -4,6 +4,109 @@
 
 ---
 
+## [0.19.2] — 2026-05-14 — Security: org isolation, kiosk PIN, SearchDropdown UX
+
+### Security — naprawione podatności
+
+**`backend/src/modules/notifications/notifications.controller.ts`**
+- `GET /notifications/settings` i `PUT /notifications/settings/:type` — usunięto możliwość przekazania `?organizationId=` przez SUPER_ADMIN. Endpoint zawsze używa `req.user.organizationId`. SUPER_ADMIN mógł odczytać i nadpisać ustawienia powiadomień dowolnej organizacji.
+
+**`backend/src/modules/devices/devices.controller.ts`**
+- `GET /devices/:id` — dodano `@Roles(SUPER_ADMIN, OFFICE_ADMIN, STAFF)` (endpoint nie miał żadnej roli — każdy zalogowany użytkownik mógł pobrać dane beacona) oraz izolację org przez `assertBelongsToOrg`.
+- `POST /devices/provision` — przekazuje `actorOrgId` do serwisu; OFFICE_ADMIN nie może provisionować beacona do lokalizacji innej organizacji.
+
+**`backend/src/modules/devices/devices.service.ts`**
+- `provision(dto, actorOrgId?)` — przed rejestracją beacona weryfikuje `gateway → location → organizationId === actorOrgId`. Rzuca `ForbiddenException` przy niezgodności.
+
+**`backend/src/modules/gateways/gateways.controller.ts`**
+- `PATCH /gateway/device/:deviceId/heartbeat` — zastąpiono współdzielony nagłówek `x-gateway-provision-key` (jeden klucz dla wszystkich org) przez `GatewayJwtGuard`. Endpoint chroniony tym samym JWT co pozostałe endpointy bramki.
+
+**`backend/src/modules/gateways/gateways.service.ts`**
+- `deviceHeartbeat(deviceId, ..., callerGatewayId?)` — weryfikuje `device.gatewayId === callerGatewayId`. Bramka nie może aktualizować statusu beaconów przypisanych do innej bramki.
+
+**`backend/src/modules/insights/insights.controller.ts`**
+- `POST /insights/refresh-all` — ograniczono zakres do org aktora (`req.user.organizationId`). OFFICE_ADMIN mógł wyzwolić regenerację insightów dla wszystkich organizacji w systemie.
+
+**`backend/src/modules/insights/insights.service.ts`**
+- `cronGenerateAll(orgId?)` — przyjmuje opcjonalny filtr org. Cron dzienny i seed startowy bez parametru (wszystkie org); wywołanie z API z `orgId` aktora.
+
+**`backend/src/modules/visitors/visitors.controller.ts`**
+- Poprawiono role check z `'SUPER_ADMIN'` na `'OWNER'` we wszystkich metodach (`findAll`, `invite`, `checkin`, `checkout`, `cancel`). Niespójność z resztą backendu powodowała, że SUPER_ADMIN miał pełny cross-org dostęp do gości.
+- Dodano `actorOrgId` do `invite`, `checkin`, `checkout`, `cancel`.
+
+**`backend/src/modules/visitors/visitors.service.ts`**
+- Dodano prywatną metodę `assertVisitorInOrg(visitorId, actorOrgId?)` — waliduje `visitor → location → organizationId`.
+- `invite` — weryfikuje przynależność lokalizacji do org aktora.
+- `checkin`, `checkout`, `cancel` — wywołują `assertVisitorInOrg` przed mutacją.
+
+**`backend/src/modules/desks/desks.controller.ts` / `desks.service.ts`**
+- `GET /desks/:id` i `GET /desks/:id/availability` — dodano brakujące `@Roles` + `actorOrgId`.
+- `GET /locations/:locationId/desks`, `POST /locations/:locationId/desks`, `DELETE /desks/:id/device` — dodano `actorOrgId`.
+- `findAll`, `findOne`, `create`, `getAvailability`, `unassignDevice` — walidacja org w serwisie.
+
+---
+
+### Feature — kiosk PIN per lokalizacja
+
+**`apps/unified/src/pages/KioskAccountPage.tsx`**
+- Sekcja zarządzania PIN-em kiosku per lokalizacja: lista aktywnych lokalizacji z polem PIN, przycisk "Ustaw PIN" i "✕ Usuń".
+- Input PIN: `type="password"`, filtruje tylko cyfry (`/\D/g`), walidacja regex `/^\d{4,8}$/`.
+- Optymistyczny UI z rollbackiem przy błędzie.
+- Zamieniono wszystkie `alert()` na `toast()`.
+
+**`apps/unified/src/api/client.ts`**
+- Dodano `locations.updateKioskPin(locationId, pin | null)`.
+
+**`backend/src/modules/locations/locations.service.ts`**
+- `findAll` i `findOne` — strip `kioskPinHash` z odpowiedzi, eksponują `kioskPinSet: boolean`.
+- `update` — obsługuje `kioskPin?: string | null`; hashuje bcrypt lub nulluje.
+
+**`backend/src/modules/kiosk/dto/kiosk-settings.dto.ts`**
+- Dodano `@ValidateIf(o => o.floor !== null)` — poprawna obsługa `null` w class-validator.
+
+**`backend/src/modules/kiosk/kiosk.service.ts`**
+- Cleanup: `void passwordHash` → `const { passwordHash: _pwd, ...safe }`.
+
+---
+
+### Feature — OrganizationsPage: ukrywanie IoT gdy BEACONS wyłączony
+
+**`apps/unified/src/pages/OrganizationsPage.tsx`**
+- `hasBeacons = isEnabled('BEACONS')` — warunkowe renderowanie: przycisk "+ Gateway", zakładka "IoT i WiFi", zawartość zakładki, modal `InstallTokenModal`, licznik bramek w statystykach.
+- `useEffect` resetuje `editTab` do `'basic'` gdy `hasBeacons` → `false`.
+- Usunięto stary formularz PIN kiosku z zakładki IoT (przeniesiony do `KioskAccountPage`).
+
+---
+
+### UX — GroupDetailPage: SearchDropdown zamiast dual-list
+
+**`apps/unified/src/components/ui/SearchDropdown.tsx`** *(nowy plik)*
+- Generyczny `SearchDropdown<T extends { id: string }>` — wyszukiwarka z podpowiedziami (top 5), lokalne filtrowanie, zamykanie po kliknięciu poza komponentem.
+
+**`apps/unified/src/pages/GroupDetailPage.tsx`**
+- Rewrite UX: `SearchDropdown` dla użytkowników i parkingów zamiast dual-list modalów.
+- Użytkownicy: natychmiastowe API call przy wyborze, lista z avatarem inicjałów i hover-reveal "Usuń".
+- Parkingi: zmiany lokalne akumulowane do "Zapisz zmiany" (PUT), toggle `accessMode`, wskaźnik "Niezapisane zmiany".
+- Blokady: tabela z `date-fns`, filtr "tylko przyszłe".
+- Ładowanie równoległe przez `Promise.all`.
+
+---
+
+### Code review fixes
+
+**`apps/unified/src/components/resources/ParkingQrModal.tsx`**
+- Funkcja `esc()` — escape HTML przed wstrzyknięciem do `document.write()` (XSS).
+- Fallback błędu QR jako czytelna informacja zamiast ukrytego obrazka.
+- Usunięto cast `(import.meta as any).env`.
+
+**`apps/unified/src/types/api.ts`**
+- Dodano `location?` do interfejsu `Resource` — usunięcie `as any` w `MyReservationsPage`.
+
+**`apps/unified/src/components/layout/NotificationBell.tsx`**
+- Uproszczono catch: usunięto martwy branch `e?.status === 401`.
+
+---
+
 ## [0.19.0] — 2026-05-14 — Moduł Parking: grupy, blokady, QR check-in
 
 ### Added
