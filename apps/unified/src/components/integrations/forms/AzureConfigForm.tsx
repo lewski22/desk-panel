@@ -39,7 +39,9 @@ interface Props {
 export function AzureConfigForm({ integration, onSaved, onCancel }: Props) {
   const pub = integration?.publicConfig ?? {};
 
+  const consentDoneFromUrl = new URLSearchParams(window.location.search).get('consent') === 'done';
   const [step, setStep] = useState(0);
+  const [consentDone, setConsentDone] = useState(consentDoneFromUrl);
 
   const [tenantId,       setTenantId]       = useState(pub.tenantId ?? '');
   const [allowedDomains, setAllowedDomains] = useState((pub.allowedDomains ?? []).join(', '));
@@ -56,7 +58,8 @@ export function AzureConfigForm({ integration, onSaved, onCancel }: Props) {
 
   const adminConsentUrl = (() => {
     const clientIdEnv = (import.meta as any).env?.VITE_AZURE_CLIENT_ID ?? 'AZURE_CLIENT_ID';
-    return `https://login.microsoftonline.com/organizations/adminconsent?client_id=${clientIdEnv}&redirect_uri=${encodeURIComponent(window.location.origin)}`;
+    const redirectUri  = `${window.location.origin}/settings/integrations`;
+    return `https://login.microsoftonline.com/organizations/adminconsent?client_id=${clientIdEnv}&redirect_uri=${encodeURIComponent(redirectUri)}&prompt=login`;
   })();
 
   const handleTest = async () => {
