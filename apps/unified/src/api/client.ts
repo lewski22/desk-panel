@@ -285,7 +285,6 @@ export const appApi = {
     update:         (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove:         (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),
     getByQrToken:   (token: string)                 => req<any>(`/resources/qr/${token}`),
-    setQrCheckin:   (id: string, enabled: boolean)  => req<any>(`/resources/${id}/qr-checkin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
     batchPositions: (updates: any[])                => req<any>('/resources/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
     availability:   (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
     book:           (id: string, body: { date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean; targetUserId?: string }) =>

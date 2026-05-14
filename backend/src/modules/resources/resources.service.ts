@@ -527,8 +527,8 @@ export class ResourcesService {
       where: { qrToken: token },
       select: {
         id: true, name: true, code: true, type: true,
-        floor: true, zone: true, notes: true, qrCheckinEnabled: true,
-        location: { select: { name: true, timezone: true } },
+        floor: true, zone: true, notes: true,
+        location: { select: { name: true, timezone: true, parkingQrCheckinEnabled: true } },
         bookings: {
           where: {
             status: 'CONFIRMED',
@@ -552,13 +552,6 @@ export class ResourcesService {
     return { ...rest, currentBooking: bookings[0] ?? null };
   }
 
-  // ── Toggle QR check-in ────────────────────────────────────────
-  async setQrCheckin(resourceId: string, orgId: string, enabled: boolean) {
-    await this.assertResourceInOrg(resourceId, orgId);
-    const r = await this.prisma.resource.findUnique({ where: { id: resourceId } });
-    if (r?.type !== 'PARKING') throw new BadRequestException('Tylko PARKING');
-    return this.prisma.resource.update({ where: { id: resourceId }, data: { qrCheckinEnabled: enabled } });
-  }
 
   // ── Batch positions — floor plan drag ─────────────────────────
   async batchPositions(
@@ -586,7 +579,7 @@ export class ResourcesService {
     if (!includeHistory) where.endTime = { gte: from };
     return this.prisma.booking.findMany({
       where,
-      include: { resource: { select: { id: true, name: true, type: true, code: true, location: { select: { name: true, timezone: true } } } } },
+      include: { resource: { select: { id: true, name: true, type: true, code: true, qrToken: true, location: { select: { name: true, timezone: true, parkingQrCheckinEnabled: true } } } } },
       orderBy: includeHistory ? { startTime: 'desc' } : { startTime: 'asc' },
       take:    includeHistory ? 50 : 20,
     });

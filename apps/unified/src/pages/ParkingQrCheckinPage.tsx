@@ -50,7 +50,7 @@ export function ParkingQrCheckinPage() {
       .then(data => {
         if (!data) { setStep('error'); setError('Nie znaleziono miejsca parkingowego'); return; }
         setResource(data);
-        if (!data.qrCheckinEnabled) { setStep('disabled'); return; }
+        if (!data.location?.parkingQrCheckinEnabled) { setStep('disabled'); return; }
         if (!isAuthenticated())     { setStep('login-required'); return; }
         setStep('spot-info');
       })

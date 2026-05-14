@@ -12,8 +12,8 @@ import {
   Btn, Card, Modal, Input, Select, FormField,
   Spinner, EmptyState, PageHeader,
 } from '../components/ui';
-import { QrImage } from '../components/ui/QrImage';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { ParkingQrModal } from '../components/resources/ParkingQrModal';
 import { toast } from '../components/ui/Toast';
 import type { Resource } from '../types/api';
 
@@ -91,8 +91,15 @@ function ResourceBlocksSection({ resourceId }: { resourceId: string }) {
     <div className="mt-2">
       <button
         onClick={handleExpand}
-        className="text-xs text-zinc-400 hover:text-zinc-600 transition-colors flex items-center gap-1">
-        {expanded ? '▾' : '▸'} Blokady miejsca {blocks.length > 0 && !loading && `(${blocks.length})`}
+        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition-colors group"
+      >
+        <span className={`transition-transform duration-150 ${expanded ? 'rotate-90' : ''}`}>▸</span>
+        <span className="group-hover:underline underline-offset-2">Blokady miejsca</span>
+        {blocks.length > 0 && !loading && (
+          <span className="bg-red-100 text-red-600 text-[10px] font-medium px-1.5 py-0.5 rounded-full leading-none">
+            {blocks.length}
+          </span>
+        )}
       </button>
       {expanded && (
         <div className="mt-2 pl-2 border-l-2 border-zinc-100">
@@ -127,42 +134,6 @@ function ResourceBlocksSection({ resourceId }: { resourceId: string }) {
         />
       )}
     </div>
-  );
-}
-
-// ── ParkingQrModal ────────────────────────────────────────────
-const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin;
-
-function ParkingQrModal({ resource, onClose }: { resource: Resource; onClose: () => void }) {
-  const qrUrl = `${APP_URL}/parking-checkin/${resource.qrToken}`;
-  const [copied, setCopied] = useState(false);
-
-  const copy = () => {
-    navigator.clipboard.writeText(qrUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <Modal title={`QR — ${resource.name}`} onClose={onClose}>
-      <div className="space-y-4 text-center">
-        <div className="flex justify-center">
-          <QrImage value={qrUrl} size={192} className="rounded-xl border border-zinc-100" />
-        </div>
-        <p className="text-xs text-zinc-400 break-all font-mono">{qrUrl}</p>
-        <div className="flex gap-2">
-          <button onClick={copy}
-            className="flex-1 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium transition-colors">
-            {copied ? '✅ Skopiowano' : '📋 Kopiuj link'}
-          </button>
-          <button onClick={() => window.open(qrUrl, '_blank')}
-            className="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors">
-            🔗 Otwórz
-          </button>
-        </div>
-      </div>
-    </Modal>
   );
 }
 
@@ -378,8 +349,7 @@ export function ResourcesPage() {
   const [resources, setResources]     = useState<Resource[]>([]);
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState<'create' | Resource | null>(null);
-  const [qrModal, setQrModal]         = useState<Resource | null>(null);
-  const [togglingId, setTogglingId]   = useState<string | null>(null);
+  const [qrModalResource, setQrModalResource] = useState<Resource | null>(null);
   const [typeFilter, setType]         = useState('');
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
 
@@ -430,19 +400,6 @@ export function ResourcesPage() {
       } else {
         toast(e?.message ?? t('common.error'), 'error');
       }
-    }
-  };
-
-  const handleQrToggle = async (r: Resource) => {
-    if (togglingId === r.id) return;
-    setTogglingId(r.id);
-    try {
-      await appApi.resources.setQrCheckin(r.id, !r.qrCheckinEnabled);
-      load();
-    } catch (e: any) {
-      toast(e?.message ?? t('common.error'), 'error');
-    } finally {
-      setTogglingId(null);
     }
   };
 
@@ -550,23 +507,13 @@ export function ResourcesPage() {
                       <td className="py-3 px-4">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
                           {r.type === 'PARKING' && r.qrToken && (
-                            <button onClick={() => setQrModal(r)}
-                              className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors"
-                              title="QR check-in">
-                              QR
-                            </button>
-                          )}
-                          {r.type === 'PARKING' && (
                             <button
-                              onClick={() => handleQrToggle(r)}
-                              disabled={togglingId === r.id}
-                              className={`text-xs px-2 py-1 rounded-lg transition-colors disabled:opacity-40 ${
-                                r.qrCheckinEnabled
-                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-500'
-                              }`}
-                              title={r.qrCheckinEnabled ? 'QR aktywny — kliknij aby wyłączyć' : 'QR wyłączony — kliknij aby włączyć'}>
-                              {togglingId === r.id ? '…' : r.qrCheckinEnabled ? '✅ QR' : '⬜ QR'}
+                              onClick={() => setQrModalResource(r)}
+                              className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 text-zinc-600
+                                         hover:border-zinc-300 hover:bg-zinc-50 transition-all flex items-center gap-1.5"
+                              title="Wygeneruj kod QR do naklejki przy miejscu parkingowym"
+                            >
+                              📋 <span>Kod QR</span>
                             </button>
                           )}
                           <button onClick={() => setModal(r)}
@@ -598,7 +545,7 @@ export function ResourcesPage() {
           onAddAmenity={addCustomAmenity}
         />
       )}
-      {qrModal && <ParkingQrModal resource={qrModal} onClose={() => setQrModal(null)} />}
+      {qrModalResource && <ParkingQrModal resource={qrModalResource} onClose={() => setQrModalResource(null)} />}
     </div>
   );
 }

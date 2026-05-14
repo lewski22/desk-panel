@@ -401,11 +401,11 @@ export class CheckinsService {
   async checkinParkingQr(userId: string, resourceQrToken: string) {
     const resource = await this.prisma.resource.findUnique({
       where:   { qrToken: resourceQrToken },
-      include: { location: { select: { checkinGraceMinutes: true, timezone: true, name: true } } },
+      include: { location: { select: { parkingQrCheckinEnabled: true, checkinGraceMinutes: true, timezone: true, name: true } } },
     });
     if (!resource) throw new NotFoundException('Nieprawidłowy QR kod miejsca');
-    if (!resource.qrCheckinEnabled) {
-      throw new ForbiddenException('QR check-in nie jest aktywny dla tego miejsca');
+    if (!resource.location?.parkingQrCheckinEnabled) {
+      throw new ForbiddenException('QR check-in nie jest aktywny dla tej lokalizacji. Skontaktuj się z administratorem.');
     }
 
     const now = new Date();

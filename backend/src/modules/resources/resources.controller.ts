@@ -46,18 +46,6 @@ export class ResourcesController {
     return this.svc.batchPositions(dto.updates, req.user.organizationId);
   }
 
-  // ── Toggle QR check-in ──────────────────────────────────────
-  @Patch('resources/:id/qr-checkin')
-  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Enable/disable QR check-in for a parking resource' })
-  setQrCheckin(
-    @Param('id') id: string,
-    @Body() dto: { enabled: boolean },
-    @Request() req: any,
-  ) {
-    return this.svc.setQrCheckin(id, req.user.organizationId, dto.enabled);
-  }
-
   // ── Resources CRUD ─────────────────────────────────────────
   @Get('locations/:locationId/resources')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER)

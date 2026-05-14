@@ -153,9 +153,10 @@ model Location {
   closeTime      String   @default("17:00")
   maxDaysAhead        Int    @default(14)
   maxHoursPerDay      Int    @default(8)
-  parkingBookingMode     String @default("HOURLY")
-  maxParkingDaysPerWeek  Int?
-  checkinGraceMinutes    Int    @default(15)
+  parkingBookingMode       String  @default("HOURLY")
+  maxParkingDaysPerWeek    Int?
+  checkinGraceMinutes      Int     @default(15)
+  parkingQrCheckinEnabled  Boolean @default(false)
 
   kioskPinHash   String?  // bcrypt hash; plaintext PIN never stored
   country        String?  // FEATURE P4-B3: ISO 3166-1 alpha-2 code for holiday-aware workday counting
@@ -426,7 +427,6 @@ model Resource {
   zone             String?
   status           String   @default("ACTIVE")
   qrToken          String   @unique @default(cuid())
-  qrCheckinEnabled Boolean  @default(false)
   notes            String?
   floorPlanUrl     String?
   floorPlanKey     String?

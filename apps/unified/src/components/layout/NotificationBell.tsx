@@ -75,7 +75,7 @@ export function NotificationBell({ role, light }: { role: string; light?: boolea
       const r = await appApi.notifications.countUnread();
       setUnread(r.count);
     } catch (e: any) {
-      if (e?.status === 401 || e?.message?.includes('401')) setPollingActive(false);
+      if (e?.message?.includes('401')) setPollingActive(false);
     }
   }, []);
 

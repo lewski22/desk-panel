@@ -198,9 +198,13 @@ export interface Resource {
   posY?:            number | null;
   isAvailable?:     boolean;
   qrToken?:         string | null;
-  qrCheckinEnabled?: boolean;
   accessMode?:      'PUBLIC' | 'GROUP_RESTRICTED';
   groups?:          { id: string; name: string }[];
+  location?: {
+    name:                    string;
+    timezone:                string;
+    parkingQrCheckinEnabled?: boolean;
+  };
 }
 
 export interface Booking {

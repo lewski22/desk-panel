@@ -730,7 +730,7 @@ export function OrganizationsPage() {
   const [modal,     setModal]     = useState<'create'|'edit'|null>(null);
   const [target,    setTarget]    = useState<any>(null);
   const [form,      setForm]      = useState({
-    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
+    name: '', address: '', city: '', openTime: '08:00', closeTime: '17:00', organizationId: '', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY', parkingQrCheckinEnabled: false,
     ledBrightness: 100,
     ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000', ledColorGuestReserved: '#C8A000',
   });
@@ -764,7 +764,7 @@ export function OrganizationsPage() {
 
   const openCreate = () => {
     resetDirty();
-    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY',
+    setForm({ name:'', address:'', city:'', openTime:'08:00', closeTime:'17:00', maxDaysAhead: 14, maxHoursPerDay: 8, timezone: 'Europe/Warsaw', country: '', parkingBookingMode: 'HOURLY', parkingQrCheckinEnabled: false,
       organizationId: user?.organizationId ?? '',
       ledBrightness: 100,
       ledColorFree: '#00C800', ledColorReserved: '#0050DC', ledColorOccupied: '#DC0000', ledColorGuestReserved: '#C8A000',
@@ -785,6 +785,7 @@ export function OrganizationsPage() {
       timezone: loc.timezone ?? 'Europe/Warsaw',
       country: loc.country ?? '',
       parkingBookingMode: loc.parkingBookingMode ?? 'HOURLY',
+      parkingQrCheckinEnabled: loc.parkingQrCheckinEnabled ?? false,
       organizationId: loc.organizationId,
       ledBrightness:         loc.ledBrightness         ?? 100,
       ledColorFree:          loc.ledColorFree          ?? '#00C800',
@@ -817,6 +818,7 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid || undefined,
           wifiPass: wifiPass || undefined,
           parkingBookingMode: form.parkingBookingMode,
+          parkingQrCheckinEnabled: form.parkingQrCheckinEnabled,
           ledBrightness: form.ledBrightness,
           ledColorFree: form.ledColorFree,
           ledColorReserved: form.ledColorReserved,
@@ -833,6 +835,7 @@ export function OrganizationsPage() {
           wifiSsid: wifiSsid,
           wifiPass: wifiPass,
           parkingBookingMode: form.parkingBookingMode,
+          parkingQrCheckinEnabled: form.parkingQrCheckinEnabled,
           ledBrightness: form.ledBrightness,
           ledColorFree: form.ledColorFree,
           ledColorReserved: form.ledColorReserved,
@@ -1450,6 +1453,38 @@ export function OrganizationsPage() {
                           'Czy miejsca parkingowe są rezerwowane na konkretne godziny czy na cały dzień.')}
                       </p>
                     </div>
+                    {/* ── QR check-in dla parkingów ── */}
+                    <div>
+                      <label className="block text-xs text-zinc-400 mb-2 font-medium">
+                        {t('organizations.form.parking_qr_checkin', 'QR check-in dla parkingów')}
+                      </label>
+                      <div className="flex items-start gap-3 p-3 bg-zinc-50 rounded-xl border border-zinc-200">
+                        <button
+                          type="button"
+                          onClick={() => { setForm(f => ({ ...f, parkingQrCheckinEnabled: !f.parkingQrCheckinEnabled })); markDirty(); }}
+                          className={`relative mt-0.5 inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent
+                            transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand/30 ${
+                            form.parkingQrCheckinEnabled ? 'bg-brand' : 'bg-zinc-300'
+                          }`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                            form.parkingQrCheckinEnabled ? 'translate-x-4' : 'translate-x-0'
+                          }`} />
+                        </button>
+                        <div>
+                          <p className="text-sm font-medium text-zinc-700">
+                            {form.parkingQrCheckinEnabled
+                              ? t('organizations.form.parking_qr_on', 'Aktywny — użytkownicy potwierdzają przybycie')
+                              : t('organizations.form.parking_qr_off', 'Wyłączony')}
+                          </p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            {t('organizations.form.parking_qr_hint',
+                              'Gdy włączone, wydrukuj kody QR dla każdego miejsca i naklejaj przy stanowiskach. Rezerwacje bez potwierdzenia QR będą widoczne w raportach.')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="bg-zinc-50 rounded-xl p-3 border border-zinc-100">
                       <p className="text-xs text-zinc-500">
                         Włączanie/wyłączanie modułów (Sale, Parking, Sprzęt) jest dostępne

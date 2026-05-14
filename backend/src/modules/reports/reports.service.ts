@@ -507,8 +507,7 @@ export class ReportsService {
         resource: {
           select: {
             id: true, name: true, code: true, floor: true, zone: true,
-            qrCheckinEnabled: true,
-            location: { select: { name: true, timezone: true } },
+            location: { select: { name: true, timezone: true, parkingQrCheckinEnabled: true } },
           },
         },
       },
@@ -519,7 +518,7 @@ export class ReportsService {
     const total       = allBookings.length;
     const withCheckin = allBookings.filter(b => b.checkedInAt).length;
     const noCheckin   = allBookings.filter(
-      b => !b.checkedInAt && (b.resource as any).qrCheckinEnabled && new Date(b.endTime) < new Date(),
+      b => !b.checkedInAt && (b.resource as any).location?.parkingQrCheckinEnabled && new Date(b.endTime) < new Date(),
     ).length;
     const checkinPct = total > 0 ? Math.round((withCheckin / total) * 100) : 0;
 
@@ -530,7 +529,7 @@ export class ReportsService {
     const topResource   = allBookings.find(b => b.resourceId === topResourceId)?.resource ?? null;
 
     const unconfirmed = allBookings.filter(
-      b => !b.checkedInAt && (b.resource as any).qrCheckinEnabled && new Date(b.endTime) < new Date(),
+      b => !b.checkedInAt && (b.resource as any).location?.parkingQrCheckinEnabled && new Date(b.endTime) < new Date(),
     );
     const confirmed = allBookings.filter(b => !!b.checkedInAt);
 
