@@ -485,6 +485,76 @@ export class ReportsService {
     return count;
   }
 
+  // ── Parking report ───────────────────────────────────────────────
+  async getParkingReport(orgId: string, filters: {
+    from: Date; to: Date; locationId?: string; resourceId?: string; noCheckinOnly?: boolean;
+  }) {
+    const baseWhere: any = {
+      status: 'CONFIRMED',
+      date:   { gte: filters.from, lte: filters.to },
+      resource: {
+        type:     'PARKING',
+        location: { organizationId: orgId },
+        ...(filters.locationId && { locationId: filters.locationId }),
+        ...(filters.resourceId && { id: filters.resourceId }),
+      },
+    };
+
+    const allBookings = await this.prisma.booking.findMany({
+      where:   baseWhere,
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+        resource: {
+          select: {
+            id: true, name: true, code: true, floor: true, zone: true,
+            qrCheckinEnabled: true,
+            location: { select: { name: true, timezone: true } },
+          },
+        },
+      },
+      orderBy: { startTime: 'desc' },
+      take:    2000,
+    });
+
+    const total       = allBookings.length;
+    const withCheckin = allBookings.filter(b => b.checkedInAt).length;
+    const noCheckin   = allBookings.filter(
+      b => !b.checkedInAt && (b.resource as any).qrCheckinEnabled && new Date(b.endTime) < new Date(),
+    ).length;
+    const checkinPct = total > 0 ? Math.round((withCheckin / total) * 100) : 0;
+
+    const countByResource = allBookings.reduce((acc, b) => {
+      acc[b.resourceId] = (acc[b.resourceId] ?? 0) + 1; return acc;
+    }, {} as Record<string, number>);
+    const topResourceId = Object.entries(countByResource).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const topResource   = allBookings.find(b => b.resourceId === topResourceId)?.resource ?? null;
+
+    const unconfirmed = allBookings.filter(
+      b => !b.checkedInAt && (b.resource as any).qrCheckinEnabled && new Date(b.endTime) < new Date(),
+    );
+    const confirmed = allBookings.filter(b => !!b.checkedInAt);
+
+    const days = this._generateDateRange(filters.from, filters.to);
+    const chartData = days.map(day => {
+      const dayStr      = day.toISOString().split('T')[0];
+      const dayBookings = allBookings.filter(b => b.date.toISOString().split('T')[0] === dayStr);
+      return {
+        date:     dayStr,
+        bookings: dayBookings.length,
+        checkins: dayBookings.filter(b => b.checkedInAt).length,
+      };
+    });
+
+    return { kpi: { total, withCheckin, noCheckin, checkinPct, topResource }, unconfirmed, confirmed, chartData };
+  }
+
+  private _generateDateRange(from: Date, to: Date): Date[] {
+    const days: Date[] = [];
+    const cur = new Date(from);
+    while (cur <= to) { days.push(new Date(cur)); cur.setDate(cur.getDate() + 1); }
+    return days;
+  }
+
   // ── Utils ────────────────────────────────────────────────────────
   private escapeCsv(val: string): string {
     if (!val) return '';

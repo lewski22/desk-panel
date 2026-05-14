@@ -181,21 +181,26 @@ export interface ExtendedStats {
 // ─── Resources (sale, parking, sprzęt) ───────────────────────
 
 export interface Resource {
-  id:          string;
-  locationId:  string;
-  type:        'ROOM' | 'PARKING' | 'EQUIPMENT';
-  name:        string;
-  code:        string;
-  description?: string | null;
-  capacity?:   number | null;
-  amenities:   string[];
-  vehicleType?: string | null;
-  floor?:      string | null;
-  zone?:       string | null;
-  status:      string;
-  posX?:       number | null;
-  posY?:       number | null;
-  isAvailable?: boolean;
+  id:               string;
+  locationId:       string;
+  type:             'ROOM' | 'PARKING' | 'EQUIPMENT';
+  name:             string;
+  code:             string;
+  description?:     string | null;
+  capacity?:        number | null;
+  amenities:        string[];
+  vehicleType?:     string | null;
+  floor?:           string | null;
+  zone?:            string | null;
+  notes?:           string | null;
+  status:           string;
+  posX?:            number | null;
+  posY?:            number | null;
+  isAvailable?:     boolean;
+  qrToken?:         string | null;
+  qrCheckinEnabled?: boolean;
+  accessMode?:      'PUBLIC' | 'GROUP_RESTRICTED';
+  groups?:          { id: string; name: string }[];
 }
 
 export interface Booking {

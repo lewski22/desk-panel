@@ -236,7 +236,7 @@ export class GraphService {
     const clientState = randomBytes(16).toString('hex');
     const expiresAt   = new Date(Date.now() + SUB_TTL_HOURS * 3600 * 1000);
 
-    const notificationUrl = `${this.config.get('PUBLIC_API_URL', 'https://api.prohalw2026.ovh/api/v1')}/graph/webhook`;
+    const notificationUrl = `${this.config.get('PUBLIC_API_URL')}/graph/webhook`;
 
     try {
       const resp = await this._graphPost(token, '/subscriptions', {

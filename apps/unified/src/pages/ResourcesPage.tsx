@@ -12,6 +12,7 @@ import {
   Btn, Card, Modal, Input, Select, FormField,
   Spinner, EmptyState, PageHeader,
 } from '../components/ui';
+import { QrImage } from '../components/ui/QrImage';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { toast } from '../components/ui/Toast';
 import type { Resource } from '../types/api';
@@ -129,6 +130,42 @@ function ResourceBlocksSection({ resourceId }: { resourceId: string }) {
   );
 }
 
+// ── ParkingQrModal ────────────────────────────────────────────
+const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin;
+
+function ParkingQrModal({ resource, onClose }: { resource: Resource; onClose: () => void }) {
+  const qrUrl = `${APP_URL}/parking-checkin/${resource.qrToken}`;
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText(qrUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Modal title={`QR — ${resource.name}`} onClose={onClose}>
+      <div className="space-y-4 text-center">
+        <div className="flex justify-center">
+          <QrImage value={qrUrl} size={192} className="rounded-xl border border-zinc-100" />
+        </div>
+        <p className="text-xs text-zinc-400 break-all font-mono">{qrUrl}</p>
+        <div className="flex gap-2">
+          <button onClick={copy}
+            className="flex-1 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium transition-colors">
+            {copied ? '✅ Skopiowano' : '📋 Kopiuj link'}
+          </button>
+          <button onClick={() => window.open(qrUrl, '_blank')}
+            className="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors">
+            🔗 Otwórz
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 const RESOURCE_TYPES = ['ROOM', 'PARKING', 'EQUIPMENT'] as const;
 
 const TYPE_ICONS: Record<string, string> = {
@@ -156,6 +193,7 @@ function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, o
     floor:       resource?.floor       ?? '',
     zone:        resource?.zone        ?? '',
     amenities:   resource?.amenities   ?? [] as string[],
+    notes:       (resource as any)?.notes ?? '',
   });
   const [saving,      setSaving]      = useState(false);
   const [err,         setErr]         = useState<string | null>(null);
@@ -204,6 +242,7 @@ function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, o
         capacity:    form.capacity ? Number(form.capacity) : undefined,
         vehicleType: form.type === 'PARKING' ? form.vehicleType : undefined,
         amenities:   form.type === 'ROOM'    ? form.amenities   : [],
+        notes:       form.type === 'PARKING' ? (form.notes.trim() || undefined) : undefined,
       };
       if (isEdit) await appApi.resources.update(resource.id, shared);
       else        await appApi.resources.create(locationId, { type, code, ...shared });
@@ -274,13 +313,18 @@ function ResourceModal({ resource, locationId, allAmenities, onClose, onSaved, o
         )}
 
         {form.type === 'PARKING' && (
-          <FormField label={t('resource.form.vehicle_type')}>
-            <Select value={form.vehicleType} onChange={e => set('vehicleType', e.target.value)}>
-              <option value="car">🚗 {t('resource.vehicle.car')}</option>
-              <option value="moto">🏍 {t('resource.vehicle.moto')}</option>
-              <option value="bike">🚲 {t('resource.vehicle.bike')}</option>
-            </Select>
-          </FormField>
+          <>
+            <FormField label={t('resource.form.vehicle_type')}>
+              <Select value={form.vehicleType} onChange={e => set('vehicleType', e.target.value)}>
+                <option value="car">🚗 {t('resource.vehicle.car')}</option>
+                <option value="moto">🏍 {t('resource.vehicle.moto')}</option>
+                <option value="bike">🚲 {t('resource.vehicle.bike')}</option>
+              </Select>
+            </FormField>
+            <Input label={t('resource.form.notes', 'Notatki')} value={form.notes}
+              onChange={e => set('notes', e.target.value)}
+              placeholder={t('resource.form.notes_placeholder', 'np. Tylko dla pojazdów elektrycznych')} />
+          </>
         )}
 
         <div className="grid grid-cols-2 gap-3">
@@ -334,6 +378,8 @@ export function ResourcesPage() {
   const [resources, setResources]     = useState<Resource[]>([]);
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState<'create' | Resource | null>(null);
+  const [qrModal, setQrModal]         = useState<Resource | null>(null);
+  const [togglingId, setTogglingId]   = useState<string | null>(null);
   const [typeFilter, setType]         = useState('');
   const [customAmenities, setCustomAmenities] = useState<string[]>([]);
 
@@ -375,8 +421,29 @@ export function ResourcesPage() {
 
   const handleRemove = async (id: string, name: string) => {
     if (!confirm(t('resource.confirm_remove', { name }))) return;
-    await appApi.resources.remove(id);
-    load();
+    try {
+      await appApi.resources.remove(id);
+      load();
+    } catch (e: any) {
+      if (e?.status === 409 || e?.message?.includes('409') || e?.message?.toLowerCase().includes('booking')) {
+        toast(t('resource.remove_conflict', 'Nie można usunąć — zasób ma aktywne rezerwacje'), 'error');
+      } else {
+        toast(e?.message ?? t('common.error'), 'error');
+      }
+    }
+  };
+
+  const handleQrToggle = async (r: Resource) => {
+    if (togglingId === r.id) return;
+    setTogglingId(r.id);
+    try {
+      await appApi.resources.setQrCheckin(r.id, !r.qrCheckinEnabled);
+      load();
+    } catch (e: any) {
+      toast(e?.message ?? t('common.error'), 'error');
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const grouped = useMemo(() => {
@@ -445,9 +512,9 @@ export function ResourcesPage() {
                         <p className="font-medium text-zinc-800">{r.name}</p>
                         <p className="text-xs text-zinc-400 font-mono">{r.code}</p>
                         {/* Grupy przypisane do parkingu */}
-                        {r.type === 'PARKING' && (r as any).groups?.length > 0 && (
+                        {r.type === 'PARKING' && r.groups && r.groups.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {(r as any).groups.map((g: any) => (
+                            {r.groups.map((g) => (
                               <span key={g.id} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-600 border border-violet-100 font-medium">
                                 {g.name}
                               </span>
@@ -472,16 +539,36 @@ export function ResourcesPage() {
                         {/* Access mode badge dla parkingów */}
                         {r.type === 'PARKING' && (
                           <span className={`ml-1 text-xs px-2 py-0.5 rounded-full font-medium ${
-                            (r as any).accessMode === 'GROUP_RESTRICTED'
+                            r.accessMode === 'GROUP_RESTRICTED'
                               ? 'bg-amber-100 text-amber-700'
                               : 'bg-emerald-50 text-emerald-600'
                           }`}>
-                            {(r as any).accessMode === 'GROUP_RESTRICTED' ? '🔒 Tylko grupy' : '🌐 Publiczny'}
+                            {r.accessMode === 'GROUP_RESTRICTED' ? '🔒 Tylko grupy' : '🌐 Publiczny'}
                           </span>
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
+                          {r.type === 'PARKING' && r.qrToken && (
+                            <button onClick={() => setQrModal(r)}
+                              className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 transition-colors"
+                              title="QR check-in">
+                              QR
+                            </button>
+                          )}
+                          {r.type === 'PARKING' && (
+                            <button
+                              onClick={() => handleQrToggle(r)}
+                              disabled={togglingId === r.id}
+                              className={`text-xs px-2 py-1 rounded-lg transition-colors disabled:opacity-40 ${
+                                r.qrCheckinEnabled
+                                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                                  : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-500'
+                              }`}
+                              title={r.qrCheckinEnabled ? 'QR aktywny — kliknij aby wyłączyć' : 'QR wyłączony — kliknij aby włączyć'}>
+                              {togglingId === r.id ? '…' : r.qrCheckinEnabled ? '✅ QR' : '⬜ QR'}
+                            </button>
+                          )}
                           <button onClick={() => setModal(r)}
                             className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
                             {t('users.actions.edit')}
@@ -511,6 +598,7 @@ export function ResourcesPage() {
           onAddAmenity={addCustomAmenity}
         />
       )}
+      {qrModal && <ParkingQrModal resource={qrModal} onClose={() => setQrModal(null)} />}
     </div>
   );
 }

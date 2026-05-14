@@ -89,11 +89,6 @@ enum IntegrationProvider {
   WEBHOOK_CUSTOM
 }
 
-enum ResourceAccessMode {
-  PUBLIC
-  GROUP_RESTRICTED
-}
-
 // ─── Organization ─────────────────────────────────────────────
 
 model Organization {
@@ -158,7 +153,9 @@ model Location {
   closeTime      String   @default("17:00")
   maxDaysAhead        Int    @default(14)
   maxHoursPerDay      Int    @default(8)
-  parkingBookingMode  String @default("HOURLY")
+  parkingBookingMode     String @default("HOURLY")
+  maxParkingDaysPerWeek  Int?
+  checkinGraceMinutes    Int    @default(15)
 
   kioskPinHash   String?  // bcrypt hash; plaintext PIN never stored
   country        String?  // FEATURE P4-B3: ISO 3166-1 alpha-2 code for holiday-aware workday counting
@@ -347,10 +344,8 @@ model User {
   hostedVisitors     Visitor[]       @relation("HostedVisitors")
   graphToken         GraphToken?          // M4
   graphSubscriptions GraphSubscription[]  // M4
-  parkingGroups        ParkingGroupUser[]    @relation("ParkingGroupMember")
-  createdBlocks        ParkingBlock[]        @relation("BlockCreator")
-  addedToGroups        ParkingGroupUser[]    @relation("ParkingGroupAdder")
-  assignedGroupResources ParkingGroupResource[] @relation("ParkingGroupAssigner")
+  parkingGroups  ParkingGroupUser[]
+  createdBlocks  ParkingBlock[]    @relation("BlockCreator")
 }
 
 model RefreshToken {
@@ -418,22 +413,30 @@ model Checkin {
 // ─── Resource (Room / Parking / Equipment) ────────────────────
 
 model Resource {
-  id          String   @id @default(cuid())
-  locationId  String
-  type        String
-  name        String
-  code        String
-  description String?
-  capacity    Int?
-  amenities   String[] @default([])
-  vehicleType String?
-  floor       String?
-  zone        String?
-  status      String   @default("ACTIVE")
-  accessMode  ResourceAccessMode @default(PUBLIC)
-  posX        Float?
-  posY        Float?
-  rotation    Int?
+  id               String   @id @default(cuid())
+  locationId       String
+  type             String
+  name             String
+  code             String
+  description      String?
+  capacity         Int?
+  amenities        String[] @default([])
+  vehicleType      String?
+  floor            String?
+  zone             String?
+  status           String   @default("ACTIVE")
+  qrToken          String   @unique @default(cuid())
+  qrCheckinEnabled Boolean  @default(false)
+  notes            String?
+  floorPlanUrl     String?
+  floorPlanKey     String?
+  floorPlanW       Int?
+  floorPlanH       Int?
+  gridSize         Int?     @default(40)
+  accessMode       String   @default("PUBLIC")
+  posX             Float?
+  posY             Float?
+  rotation         Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -442,22 +445,30 @@ model Resource {
   bookings      Booking[]
   parkingGroups ParkingGroupResource[]
   parkingBlocks ParkingBlock[]
+
+  @@unique([locationId, type, code])
+  @@index([locationId, type])
 }
 
 model Booking {
-  id         String   @id @default(cuid())
-  resourceId String
-  userId     String
-  date       DateTime @db.Date
-  startTime  DateTime
-  endTime    DateTime
-  status     String   @default("CONFIRMED")
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(cuid())
+  resourceId  String
+  userId      String
+  date        DateTime  @db.Date
+  startTime   DateTime
+  endTime     DateTime
+  status      String    @default("CONFIRMED")
+  notes       String?
+  checkedInAt DateTime?
+  checkedInBy String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   resource Resource @relation(fields: [resourceId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
+
+  @@index([resourceId, date])
+  @@index([status, checkedInAt])
 }
 
 // ─── Visitor ─────────────────────────────────────────────────
@@ -743,12 +754,10 @@ model ParkingGroupUser {
   addedAt  DateTime @default(now())
 
   group ParkingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User         @relation("ParkingGroupMember", fields: [userId],  references: [id], onDelete: Cascade)
-  adder User         @relation("ParkingGroupAdder",  fields: [addedBy], references: [id])
+  user  User         @relation(fields: [userId],  references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
   @@index([userId])
-  @@index([addedBy])
 }
 
 model ParkingGroupResource {
@@ -759,11 +768,9 @@ model ParkingGroupResource {
 
   group    ParkingGroup @relation(fields: [groupId],    references: [id], onDelete: Cascade)
   resource Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
-  assigner User         @relation("ParkingGroupAssigner", fields: [assignedBy], references: [id])
 
   @@id([groupId, resourceId])
   @@index([resourceId])
-  @@index([assignedBy])
 }
 
 model ParkingBlock {

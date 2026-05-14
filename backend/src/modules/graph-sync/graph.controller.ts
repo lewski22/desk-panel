@@ -76,7 +76,7 @@ export class GraphController {
     const state = randomBytes(16).toString('hex');
     graphStateStore.set(state, { userId, orgId, expiresAt: Date.now() + 10 * 60 * 1000 });
 
-    const redirectUri = `${this.config.get('PUBLIC_API_URL', 'https://api.prohalw2026.ovh/api/v1')}/auth/graph/callback`;
+    const redirectUri = `${this.config.get('PUBLIC_API_URL')}/auth/graph/callback`;
 
     const params = new URLSearchParams({
       client_id:     clientId,
@@ -102,7 +102,7 @@ export class GraphController {
     @Query('error') error: string | undefined,
     @Res() res: Response,
   ): Promise<void> {
-    const frontendUrl = this.config.get('FRONTEND_URL', 'https://app.prohalw2026.ovh');
+    const frontendUrl = this.config.get('FRONTEND_URL');
 
     if (error || !code || !state) {
       res.redirect(`${frontendUrl}/settings/integrations?graph_error=${encodeURIComponent(error ?? 'cancelled')}`);
@@ -125,7 +125,7 @@ export class GraphController {
     const clientSecret = (azureCfg as any)?.clientSecret  ?? this.config.get('AZURE_CLIENT_SECRET', '');
     const tenantId     = azureCfg?.tenantId ?? 'common';
 
-    const redirectUri = `${this.config.get('PUBLIC_API_URL', 'https://api.prohalw2026.ovh/api/v1')}/auth/graph/callback`;
+    const redirectUri = `${this.config.get('PUBLIC_API_URL')}/auth/graph/callback`;
 
     try {
       // Wymień code na tokeny

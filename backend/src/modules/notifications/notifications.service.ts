@@ -21,7 +21,7 @@ import { PrismaService }  from '../../database/prisma.service';
 import { MailerService }  from './mailer.service';
 
 const APP_URL = (config: ConfigService) =>
-  config.get<string>('APP_URL', 'https://app.prohalw2026.ovh');
+  config.get<string>('APP_URL') ?? config.get<string>('FRONTEND_URL') ?? '';
 
 function escapeHtml(s: string | null | undefined): string {
   return (s ?? '')

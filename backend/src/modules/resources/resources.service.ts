@@ -272,6 +272,14 @@ export class ResourcesService {
 
   async remove(id: string, actorOrgId?: string) {
     if (actorOrgId) await this.assertResourceInOrg(id, actorOrgId);
+    const activeBookings = await this.prisma.booking.count({
+      where: { resourceId: id, status: 'CONFIRMED', endTime: { gte: new Date() } },
+    });
+    if (activeBookings > 0) {
+      throw new ConflictException(
+        `Zasób ma ${activeBookings} aktywnych rezerwacji. Anuluj je przed usunięciem.`,
+      );
+    }
     return this.prisma.resource.update({
       where: { id },
       data:  { status: 'INACTIVE' },
@@ -424,6 +432,11 @@ export class ResourcesService {
         throw new ForbiddenException('Brak dostępu do tego miejsca parkingowego.');
       }
 
+      const withinLimit = await this.parkingGroups.checkWeeklyLimit(userId, resource.id, new Date(dto.date));
+      if (!withinLimit) {
+        throw new ConflictException('Przekroczono tygodniowy limit rezerwacji parkingowych.');
+      }
+
       const blockReason = await this.parkingBlocks.isBlocked(resource.id, userId, start, end);
       if (blockReason) {
         throw new ConflictException(`Rezerwacja niemożliwa: ${blockReason}`);
@@ -506,6 +519,64 @@ export class ResourcesService {
       orderBy: { startTime: 'asc' },
       take:    500,
     });
+  }
+
+  // ── QR token lookup — public ──────────────────────────────────
+  async getByQrToken(token: string) {
+    const resource = await this.prisma.resource.findUnique({
+      where: { qrToken: token },
+      select: {
+        id: true, name: true, code: true, type: true,
+        floor: true, zone: true, notes: true, qrCheckinEnabled: true,
+        location: { select: { name: true, timezone: true } },
+        bookings: {
+          where: {
+            status: 'CONFIRMED',
+            date: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)),
+              lte: new Date(new Date().setHours(23, 59, 59, 999)),
+            },
+          },
+          select: {
+            id: true, startTime: true, endTime: true, checkedInAt: true,
+            // Only expose user.id — names are returned only after successful auth in the check-in flow.
+            user: { select: { id: true } },
+          },
+          orderBy: { startTime: 'asc' },
+          take: 1,
+        },
+      },
+    });
+    if (!resource) return null;
+    const { bookings, ...rest } = resource;
+    return { ...rest, currentBooking: bookings[0] ?? null };
+  }
+
+  // ── Toggle QR check-in ────────────────────────────────────────
+  async setQrCheckin(resourceId: string, orgId: string, enabled: boolean) {
+    await this.assertResourceInOrg(resourceId, orgId);
+    const r = await this.prisma.resource.findUnique({ where: { id: resourceId } });
+    if (r?.type !== 'PARKING') throw new BadRequestException('Tylko PARKING');
+    return this.prisma.resource.update({ where: { id: resourceId }, data: { qrCheckinEnabled: enabled } });
+  }
+
+  // ── Batch positions — floor plan drag ─────────────────────────
+  async batchPositions(
+    updates: { id: string; posX: number; posY: number; rotation?: number }[],
+    orgId: string,
+  ) {
+    const ids = updates.map(u => u.id);
+    const count = await this.prisma.resource.count({
+      where: { id: { in: ids }, location: { organizationId: orgId } },
+    });
+    if (count !== ids.length) throw new ForbiddenException();
+    await Promise.all(
+      updates.map(u => this.prisma.resource.update({
+        where: { id: u.id },
+        data:  { posX: u.posX, posY: u.posY, rotation: u.rotation ?? 0 },
+      })),
+    );
+    return { updated: updates.length };
   }
 
   // ── My bookings ───────────────────────────────────────────────

@@ -114,8 +114,7 @@ export class GatewaySetupService {
       gatewaySecret: secret,
       locationId:    record.locationId,
       locationName:  record.location.name,
-      serverUrl:     process.env.PUBLIC_API_URL
-                     ?? `https://api.prohalw2026.ovh/api/v1`,
+      serverUrl:     process.env.PUBLIC_API_URL ?? '',
       mqttUsername:  'gateway',
       mqttPassword:  mqttPass,
       provisionKey:  process.env.GATEWAY_PROVISION_KEY ?? '',
@@ -146,8 +145,7 @@ export class GatewaySetupService {
   }
 
   private _buildCmd(token: string): string {
-    const baseUrl = process.env.PUBLIC_API_URL
-                    ?? 'https://api.prohalw2026.ovh/api/v1';
+    const baseUrl = process.env.PUBLIC_API_URL ?? '';
     const scriptUrl = baseUrl.replace('/api/v1', '/install/gateway');
     return `curl -fsSL ${scriptUrl}/${token} | bash`;
   }

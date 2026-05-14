@@ -167,7 +167,7 @@ export class AuthController {
     @Query('error') error?: string,
     @Res() res?: Response,
   ): Promise<void> {
-    const frontendUrl = process.env.FRONTEND_URL ?? 'https://app.prohalw2026.ovh';
+    const frontendUrl = process.env.FRONTEND_URL;
 
     if (error) {
       res!.redirect(`${frontendUrl}/login?error=google_denied`);

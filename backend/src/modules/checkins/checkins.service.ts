@@ -397,6 +397,64 @@ export class CheckinsService {
     );
   }
 
+  // ── Parking QR check-in — użytkownik skanuje QR miejsca ─────
+  async checkinParkingQr(userId: string, resourceQrToken: string) {
+    const resource = await this.prisma.resource.findUnique({
+      where:   { qrToken: resourceQrToken },
+      include: { location: { select: { checkinGraceMinutes: true, timezone: true, name: true } } },
+    });
+    if (!resource) throw new NotFoundException('Nieprawidłowy QR kod miejsca');
+    if (!resource.qrCheckinEnabled) {
+      throw new ForbiddenException('QR check-in nie jest aktywny dla tego miejsca');
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+    const todayEnd   = new Date(now); todayEnd.setHours(23, 59, 59, 999);
+
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        resourceId: resource.id,
+        userId,
+        status: 'CONFIRMED',
+        date:   { gte: todayStart, lte: todayEnd },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+    if (!booking) throw new ForbiddenException('Brak rezerwacji na to miejsce na dziś');
+
+    const graceMs  = (resource.location?.checkinGraceMinutes ?? 15) * 60 * 1000;
+    const earliest = new Date(booking.startTime.getTime() - graceMs);
+    if (now < earliest) {
+      const graceMin = resource.location?.checkinGraceMinutes ?? 15;
+      throw new ForbiddenException(
+        `Check-in możliwy od ${graceMin} min przed startem rezerwacji`,
+      );
+    }
+
+    if (booking.checkedInAt) {
+      return {
+        alreadyCheckedIn: true,
+        checkedInAt:  booking.checkedInAt,
+        resourceName: resource.name,
+        resourceCode: resource.code,
+      };
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: booking.id },
+      data:  { checkedInAt: now, checkedInBy: userId },
+    });
+
+    return {
+      alreadyCheckedIn: false,
+      checkedInAt:  updated.checkedInAt,
+      resourceName: resource.name,
+      resourceCode: resource.code,
+      locationName: resource.location?.name,
+    };
+  }
+
   // ── Helpers ──────────────────────────────────────────────────
 
   // Returns the LED state a desk should show after becoming free.

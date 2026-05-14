@@ -16,8 +16,8 @@ export function ImpersonatePage({ onLogin }: Props) {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (!payload.impersonated) { setErr(t('impersonate.errors.not_impersonation')); return; }
-      localStorage.setItem('app_access',      token);
-      localStorage.setItem('app_impersonated','true');
+      sessionStorage.setItem('app_access',      token);
+      sessionStorage.setItem('app_impersonated','true');
       const u = {
         id:             payload.sub,
         email:          payload.email ?? 'impersonated@reserti.pl',

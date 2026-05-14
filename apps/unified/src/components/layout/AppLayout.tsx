@@ -167,7 +167,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
     mainRef.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [location.pathname]);
 
-  const isImpersonated = localStorage.getItem('app_impersonated') === 'true';
+  const isImpersonated = sessionStorage.getItem('app_impersonated') === 'true';
 
   const enabledModules: string[] = (user as any).enabledModules ?? [];
   const hasModule = (m: AppModule) =>
@@ -393,7 +393,7 @@ export function AppLayout({ user, onLogout, children }: Props) {
         <div className="bg-amber-500 text-white text-xs px-4 py-2 flex items-center justify-between shrink-0 z-40">
           <span className="truncate">👁 {t('layout.impersonation_banner')}</span>
           <button
-            onClick={() => { localStorage.removeItem('app_impersonated'); doLogout(); }}
+            onClick={() => { sessionStorage.removeItem('app_impersonated'); doLogout(); }}
             className="ml-2 shrink-0 underline hover:no-underline"
           >
             {t('layout.impersonation_end')}

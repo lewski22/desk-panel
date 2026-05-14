@@ -21,8 +21,7 @@ export class InstallController {
     @Param('token') token: string,
     @Res() res: Response,
   ) {
-    const apiUrl = this.config.get<string>('PUBLIC_API_URL')
-                   ?? 'https://api.prohalw2026.ovh/api/v1';
+    const apiUrl = this.config.get<string>('PUBLIC_API_URL');
 
     // Skrypt instalacyjny z wstrzykniętymi zmiennymi
     // Token + URL API są bezpiecznie zakodowane w zmiennych bash

@@ -4,7 +4,8 @@ import { appApi }              from './api/client';
 import { AppLayout }           from './components/layout/AppLayout';
 import { LoginPage }           from './pages/LoginPage';
 import { ImpersonatePage }     from './pages/ImpersonatePage';
-import { QrCheckinPage }       from './pages/QrCheckinPage';
+import { QrCheckinPage }          from './pages/QrCheckinPage';
+import { ParkingQrCheckinPage }   from './pages/ParkingQrCheckinPage';
 import { DashboardPage }       from './pages/DashboardPage';
 import { DesksPage }           from './pages/DesksPage';
 import { UsersPage }           from './pages/UsersPage';
@@ -120,7 +121,8 @@ export default function App() {
           user ? <Navigate to={homeFor(user.role)} replace /> : <LoginPage onLogin={setUser} />
         } />
         <Route path="/auth/impersonate" element={<ImpersonatePage onLogin={setUser} />} />
-        <Route path="/checkin/:token"   element={<QrCheckinPage />} />
+        <Route path="/checkin/:token"          element={<QrCheckinPage />} />
+        <Route path="/parking-checkin/:token"  element={<ParkingQrCheckinPage />} />
         <Route path="/register/:token"  element={<RegisterPage />} />
         <Route path="/kiosk"            element={<KioskPage />} />
 

@@ -5,7 +5,51 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
-import { EmptyState }      from '../components/ui';
+import { EmptyState, Modal } from '../components/ui';
+import { QrImage } from '../components/ui/QrImage';
+
+const APP_URL = import.meta.env.VITE_APP_URL ?? window.location.origin;
+
+function QrBookingModal({ booking, onClose }: { booking: any; onClose: () => void }) {
+  const qrToken = booking.resource?.qrToken;
+  const qrUrl   = qrToken ? `${APP_URL}/parking-checkin/${qrToken}` : null;
+  const [copied, setCopied] = useState(false);
+
+  const copy = () => {
+    if (!qrUrl) return;
+    navigator.clipboard.writeText(qrUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Modal title={`QR — ${booking.resource?.name ?? '🅿️'}`} onClose={onClose}>
+      <div className="space-y-4 text-center">
+        {qrUrl ? (
+          <>
+            <div className="flex justify-center">
+              <QrImage value={qrUrl} size={192} className="rounded-xl border border-zinc-100" />
+            </div>
+            <p className="text-xs text-zinc-400 break-all font-mono">{qrUrl}</p>
+            <div className="flex gap-2">
+              <button onClick={copy}
+                className="flex-1 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium transition-colors">
+                {copied ? '✅ Skopiowano' : '📋 Kopiuj'}
+              </button>
+              <button onClick={() => window.open(qrUrl, '_blank')}
+                className="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors">
+                🔗 Otwórz
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-zinc-400 py-4">QR check-in nie jest aktywny dla tego miejsca.</p>
+        )}
+      </div>
+    </Modal>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const { t } = useTranslation();
@@ -133,6 +177,7 @@ export function MyReservationsPage() {
   const [checkingIn,   setCheckingIn]   = useState<string | null>(null);
   const [checkingOut,  setCheckingOut]  = useState<string | null>(null);
   const [cancellingB,  setCancellingB]  = useState<string | null>(null);
+  const [qrBooking,          setQrBooking]          = useState<any>(null);
   const [showHistory,        setShowHistory]        = useState(false);
   const [showBookingHistory, setShowBookingHistory] = useState(false);
 
@@ -233,6 +278,13 @@ export function MyReservationsPage() {
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <StatusBadge status={b.status} />
+          {!isPast && b.resource?.type === 'PARKING' && b.resource?.qrCheckinEnabled && (
+            <button
+              onClick={() => setQrBooking(b)}
+              className="text-xs text-sky-600 hover:text-sky-700 px-3 py-1.5 rounded-lg border border-sky-200 hover:border-sky-300 hover:bg-sky-50 transition-colors font-medium">
+              QR
+            </button>
+          )}
           {!isPast && b.status === 'CONFIRMED' && (
             <button
               onClick={() => cancelBooking(b.id, b.resource?.type)}
@@ -384,6 +436,7 @@ export function MyReservationsPage() {
             </div>
           )}
         </div>}
+      {qrBooking && <QrBookingModal booking={qrBooking} onClose={() => setQrBooking(null)} />}
     </div>
   );
 }

@@ -194,7 +194,7 @@ export class OwnerService {
       { secret: this.config.get('JWT_SECRET'), expiresIn: '30m' },
     );
 
-    const adminUrl = `${this.config.get('ADMIN_URL') ?? 'https://admin.prohalw2026.ovh'}/auth/impersonate?token=${token}`;
+    const adminUrl = `${this.config.get('ADMIN_URL') ?? this.config.get('FRONTEND_URL') ?? ''}/auth/impersonate?token=${token}`;
 
     this.logger.log(`Owner ${ownerId} impersonating org ${orgId} (${org.name}) from ${ip}`);
 

@@ -22,20 +22,22 @@ const METHOD_COLORS: Record<string, string> = {
   MANUAL:  '#f59e0b',
   UNKNOWN: '#a1a1aa',
 };
-const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization', 'insights'] as const;
+const TABS = ['snapshot', 'heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization', 'insights', 'parking'] as const;
 type Tab     = typeof TABS[number];
-type Segment = 'today' | 'trends' | 'ai';
+type Segment = 'today' | 'trends' | 'ai' | 'parking';
 
 const SEGMENT_TABS: Record<Segment, Tab[]> = {
-  today:  ['snapshot'],
-  trends: ['heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization'],
-  ai:     ['insights'],
+  today:   ['snapshot'],
+  trends:  ['heatmap', 'reservations', 'methods', 'by_user', 'by_desk', 'utilization'],
+  ai:      ['insights'],
+  parking: ['parking'],
 };
 
 const SEGMENT_LABELS: Record<Segment, string> = {
-  today:  'Dziś',
-  trends: 'Trendy',
-  ai:     'AI',
+  today:   'Dziś',
+  trends:  'Trendy',
+  ai:      'AI',
+  parking: '🅿️ Parking',
 };
 
 // ── Utils ──────────────────────────────────────────────────────────
@@ -688,6 +690,188 @@ function UtilizationTab({ filters }: { filters: Filters }) {
   );
 }
 
+// ── Parking Tab ────────────────────────────────────────────────────
+function ParkingTab({ filters }: { filters: Filters }) {
+  const { t }                   = useTranslation();
+  const [data,    setData]      = useState<any>(null);
+  const [loading, setLoading]   = useState(false);
+  const [showConfirmed, setShowConfirmed] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const res = await appApi.reports.parking(params);
+      setData(res);
+    } catch {}
+    setLoading(false);
+  }, [filters.from, filters.to, filters.locationId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleExport = async () => {
+    try {
+      const params: Record<string, string> = { from: filters.from, to: filters.to };
+      if (filters.locationId) params.locationId = filters.locationId;
+      const blob     = await appApi.reports.parkingExport(params);
+      const url      = URL.createObjectURL(blob);
+      const filename = `reserti-parking-${filters.from}-${filters.to}.csv`;
+      Object.assign(document.createElement('a'), { href: url, download: filename }).click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-zinc-200 border-t-violet-400 rounded-full animate-spin" /></div>;
+
+  if (!data) return (
+    <Card className="p-8 text-center text-zinc-400 text-sm">{t('reports.parking.no_data', 'Brak danych dla wybranego okresu')}</Card>
+  );
+
+  const confirmed   = data.confirmed   ?? [];
+  const unconfirmed = data.unconfirmed ?? [];
+  const total       = confirmed.length + unconfirmed.length;
+  const checkinPct  = total > 0 ? Math.round((confirmed.length / total) * 100) : 0;
+
+  const byDate: Record<string, number> = {};
+  for (const b of [...confirmed, ...unconfirmed]) {
+    const d = (b.date ?? b.startTime ?? '').toString().slice(0, 10);
+    if (d) byDate[d] = (byDate[d] ?? 0) + 1;
+  }
+  const chartData = Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).map(([date, count]) => ({
+    date: date.slice(5),
+    count,
+  }));
+
+  const topSpot = (() => {
+    const counts: Record<string, number> = {};
+    for (const b of confirmed) {
+      const name = (b.resource as any)?.name ?? '—';
+      counts[name] = (counts[name] ?? 0) + 1;
+    }
+    return Object.entries(counts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? '—';
+  })();
+
+  const fmtDate = (iso: string) => iso?.toString().slice(0, 10) ?? '—';
+  const fmtTime = (iso: string | undefined) => iso ? new Date(iso).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : '—';
+
+  return (
+    <div className="space-y-5">
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: t('reports.parking.kpi_total', 'Rezerwacje'), value: total, icon: '📊' },
+          { label: t('reports.parking.kpi_checkin_pct', '% potwierdzeń'), value: `${checkinPct}%`, icon: '✅' },
+          { label: t('reports.parking.kpi_no_checkin', 'Nieodebrane'), value: unconfirmed.length, icon: '⚠️' },
+          { label: t('reports.parking.kpi_top_spot', 'Top miejsce (wg zameldowań)'), value: topSpot, icon: '🏆' },
+        ].map(({ label, value, icon }) => (
+          <Card key={label} className="p-4">
+            <p className="text-xl mb-1">{icon}</p>
+            <p className="text-2xl font-bold text-zinc-800">{value}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">{label}</p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Bar chart */}
+      {chartData.length > 0 && (
+        <Card className="p-4">
+          <p className="text-sm font-semibold text-zinc-700 mb-3">Rezerwacje parkingowe per dzień</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="count" fill={ACCENT} radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* Unconfirmed table */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-zinc-100">
+          <p className="text-sm font-semibold text-zinc-700">
+            ⚠️ {t('reports.parking.unconfirmed_title', 'Nieodebrane rezerwacje')}
+            <span className="ml-2 text-xs font-normal text-zinc-400">({unconfirmed.length})</span>
+          </p>
+          <button onClick={handleExport}
+            className="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 font-medium transition-colors">
+            {t('reports.parking.export_csv', 'Eksport CSV')}
+          </button>
+        </div>
+        {unconfirmed.length === 0 ? (
+          <p className="text-sm text-zinc-400 text-center py-6">{t('reports.parking.no_data', 'Brak danych')}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-zinc-50 border-b border-zinc-100">
+                <tr>
+                  {['Data', 'Miejsce', 'Lokalizacja', 'Użytkownik'].map(h => (
+                    <th key={h} className="py-2 px-3 text-left text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {unconfirmed.map((b: any) => (
+                  <tr key={b.id} className="border-b border-zinc-50 hover:bg-zinc-50/60">
+                    <td className="py-2 px-3 text-zinc-700">{fmtDate(b.date ?? b.startTime)}</td>
+                    <td className="py-2 px-3 font-medium text-zinc-800">{(b.resource as any)?.name ?? '—'}</td>
+                    <td className="py-2 px-3 text-zinc-500">{(b.resource as any)?.location?.name ?? '—'}</td>
+                    <td className="py-2 px-3 text-zinc-500">{(b.user as any)?.email ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* Confirmed section (collapsible) */}
+      <Card className="overflow-hidden">
+        <button
+          onClick={() => setShowConfirmed(v => !v)}
+          className="w-full flex items-center justify-between p-4 border-b border-zinc-100 text-left">
+          <p className="text-sm font-semibold text-zinc-700">
+            ✅ {t('reports.parking.confirmed_title', 'Potwierdzone rezerwacje')}
+            <span className="ml-2 text-xs font-normal text-zinc-400">({confirmed.length})</span>
+          </p>
+          <span className="text-zinc-400 text-sm">{showConfirmed ? '▾' : '▸'}</span>
+        </button>
+        {showConfirmed && (
+          confirmed.length === 0 ? (
+            <p className="text-sm text-zinc-400 text-center py-6">{t('reports.parking.no_data', 'Brak danych')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-zinc-50 border-b border-zinc-100">
+                  <tr>
+                    {['Data', 'Miejsce', 'Lokalizacja', 'Użytkownik', 'Check-in'].map(h => (
+                      <th key={h} className="py-2 px-3 text-left text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {confirmed.map((b: any) => (
+                    <tr key={b.id} className="border-b border-zinc-50 hover:bg-zinc-50/60">
+                      <td className="py-2 px-3 text-zinc-700">{fmtDate(b.date ?? b.startTime)}</td>
+                      <td className="py-2 px-3 font-medium text-zinc-800">{(b.resource as any)?.name ?? '—'}</td>
+                      <td className="py-2 px-3 text-zinc-500">{(b.resource as any)?.location?.name ?? '—'}</td>
+                      <td className="py-2 px-3 text-zinc-500">{(b.user as any)?.email ?? '—'}</td>
+                      <td className="py-2 px-3 text-emerald-600">{fmtTime(b.checkedInAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </Card>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────
 function ReportsPage() {
   const { t } = useTranslation();
@@ -754,7 +938,7 @@ function ReportsPage() {
 
       {/* Segment selector */}
       <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl mb-4 self-start w-fit">
-        {(['today', 'trends', 'ai'] as Segment[]).map(s => (
+        {(['today', 'trends', 'parking', 'ai'] as Segment[]).map(s => (
           <button
             key={s}
             onClick={() => { setSegment(s); setActiveTab(SEGMENT_TABS[s][0]); }}
@@ -798,6 +982,7 @@ function ReportsPage() {
       {activeTab === 'by_user'      && <ByUserTab filters={filters} />}
       {activeTab === 'by_desk'      && <ByDeskTab filters={filters} />}
       {activeTab === 'utilization'  && <UtilizationTab filters={filters} />}
+      {activeTab === 'parking'      && <ParkingTab filters={filters} />}
       {activeTab === 'insights' && (
         // FIX P2-3: show in-context location picker when no location selected
         <Card className="p-5">

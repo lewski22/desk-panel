@@ -13,7 +13,7 @@ function getStoredUser() {
 // With cookie-based auth, "authenticated" is detected by presence of app_user in localStorage.
 // Impersonation token (app_access) is also supported.
 function getImpersonationToken(): string | null {
-  return localStorage.getItem('app_access');
+  return sessionStorage.getItem('app_access');
 }
 
 export function QrCheckinPage() {
@@ -64,7 +64,7 @@ export function QrCheckinPage() {
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
           localStorage.removeItem('app_user');
-          localStorage.removeItem('app_access');
+          sessionStorage.removeItem('app_access');
           setStep('login-required');
           return;
         }

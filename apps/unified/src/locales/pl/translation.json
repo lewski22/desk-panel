@@ -37,7 +37,7 @@
     "organizations": "Biura",
     "owner": "Panel Operatora",
     "change_password": "Zmień hasło",
-    "map": "Mapa biurek",
+    "map": "Zarezerwuj",
     "my_reservations": "Moje rezerwacje",
     "devices": "Urządzenia",
     "notifications": "Powiadomienia",
@@ -63,7 +63,7 @@
       "operator": "Operator"
     },
     "nav": {
-      "map": "Mapa biurek",
+      "map": "Zarezerwuj",
       "my_reservations": "Moje rezerwacje",
       "reservations": "Wszystkie rezerwacje",
       "search": "Szukaj",
@@ -86,7 +86,7 @@
       "visitors": "Goście",
       "subscription": "Subskrypcja",
       "more": "Więcej",
-      "map_short":              "Mapa",
+      "map_short":              "Rezerwuj",
       "reservations_short":     "Moje",
       "notifications_short":    "Alerty"
     },
@@ -643,7 +643,25 @@
       "by_user":      "Per osoba",
       "by_desk":      "Per biurko",
       "utilization":  "Utilizacja",
-      "insights":     "AI Insights"
+      "insights":     "AI Insights",
+      "parking":      "🅿️ Parking"
+    },
+    "parking": {
+      "kpi_total":        "Rezerwacje parkingowe",
+      "kpi_checkin_pct":  "% potwierdzeń QR",
+      "kpi_no_checkin":   "Nieodebrane",
+      "kpi_top_spot":     "Najczęstsze miejsce",
+      "unconfirmed_title": "Nieodebrane rezerwacje",
+      "confirmed_title":   "Potwierdzone rezerwacje",
+      "col_date":          "Data",
+      "col_spot":          "Miejsce",
+      "col_location":      "Lokalizacja",
+      "col_floor":         "Piętro",
+      "col_zone":          "Strefa",
+      "col_checkin_time":  "Czas zameldowania",
+      "export_csv":        "Eksport CSV",
+      "no_data":           "Brak danych dla wybranego okresu",
+      "qr_not_enabled":    "QR check-in nie jest włączony dla żadnego miejsca"
     },
     "insights": {
       "select_location": "Wybierz lokalizację aby zobaczyć insighty",

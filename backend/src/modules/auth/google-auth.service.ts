@@ -154,7 +154,7 @@ export class GoogleAuthService {
   private async _exchangeCode(code: string, cfg: GoogleWorkspaceConfig): Promise<{
     access_token: string; id_token?: string; refresh_token?: string; expires_in: number;
   }> {
-    const redirectUri = `${this.config.get('PUBLIC_API_URL', 'https://api.prohalw2026.ovh/api/v1')}${REDIRECT_URI_PATH}`;
+    const redirectUri = `${this.config.get('PUBLIC_API_URL')}${REDIRECT_URI_PATH}`;
 
     const body = new URLSearchParams({
       code,
@@ -197,7 +197,7 @@ export class GoogleAuthService {
   }
 
   private _frontendUrl(): string {
-    return this.config.get('FRONTEND_URL', 'https://app.prohalw2026.ovh');
+    return this.config.get('FRONTEND_URL');
   }
 
 }

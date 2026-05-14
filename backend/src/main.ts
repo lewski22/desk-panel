@@ -19,8 +19,24 @@ async function bootstrap() {
   // Trust proxy — poprawne IP klienta za load balancerem (Coolify/Nginx)
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  // Security headers — CSP disabled for Swagger UI compatibility (inline scripts)
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // Security headers — CSP enabled with directives broad enough for Swagger UI.
+  // Swagger needs 'unsafe-inline' for its own scripts/styles; this is acceptable
+  // because the API itself only serves JSON — HTML is only at /api/docs (non-prod).
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc:  ["'self'"],
+        scriptSrc:   ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc:    ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc:     ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc:      ["'self'", 'data:', 'https:'],
+        connectSrc:  ["'self'"],
+        frameSrc:    ["'none'"],
+        objectSrc:   ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+  }));
 
   // Cookie parser — wymagany przez httpOnly JWT cookies
   const cookieParser = require('cookie-parser');

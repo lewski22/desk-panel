@@ -17,10 +17,13 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [ctx.getHandler(), ctx.getClass()]);
-    if (!required) return true;
     const { user } = ctx.switchToHttp().getRequest();
+    // OWNER bypasses all role checks — check first so impersonation works correctly.
     if (user?.role === 'OWNER') return true;
+    const required = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [ctx.getHandler(), ctx.getClass()]);
+    // Deny by default: a route protected by RolesGuard MUST declare @Roles().
+    // Forgetting the decorator now causes a visible 403 instead of silent over-permission.
+    if (!required) return false;
     return required.some(r => r === user?.role);
   }
 }

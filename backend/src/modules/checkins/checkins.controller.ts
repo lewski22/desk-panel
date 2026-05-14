@@ -29,4 +29,9 @@ export class CheckinsController {
   web(@Body('reservationId') reservationId: string, @Request() req: any) { return this.svc.checkinWeb(req.user.id, reservationId); }
   @Patch(':id/checkout') @UseGuards(JwtAuthGuard) @ApiOperation({summary:'Check out'})
   checkout(@Param('id') id: string, @Request() req: any) { return this.svc.checkout(id,req.user.id,req.user.role); }
+
+  @Post('parking-qr') @UseGuards(JwtAuthGuard) @HttpCode(HttpStatus.OK) @ApiOperation({summary:'Parking QR check-in'})
+  checkinParkingQr(@Body() dto: { resourceQrToken: string }, @Request() req: any) {
+    return this.svc.checkinParkingQr(req.user.id, dto.resourceQrToken);
+  }
 }

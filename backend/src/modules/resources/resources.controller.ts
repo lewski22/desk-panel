@@ -10,6 +10,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { JwtAuthGuard }  from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }    from '../auth/guards/roles.guard';
 import { Roles }         from '../auth/decorators/roles.decorator';
+import { Public }        from '../auth/decorators/public.decorator';
 import { UserRole }      from '@prisma/client';
 import { ResourcesService } from './resources.service';
 import { CreateResourceDto } from './dto/create-resource.dto';
@@ -28,6 +29,34 @@ function validateDate(date: string | undefined): void {
 @Controller()
 export class ResourcesController {
   constructor(private readonly svc: ResourcesService) {}
+
+  // ── QR lookup — public ─────────────────────────────────────
+  @Get('resources/qr/:token')
+  @Public()
+  @ApiOperation({ summary: 'Get resource info by QR token (public)' })
+  getByQr(@Param('token') token: string) {
+    return this.svc.getByQrToken(token);
+  }
+
+  // ── Batch positions — floor plan drag ───────────────────────
+  @Patch('resources/batch-positions')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Update multiple resource positions on the floor plan' })
+  batchPositions(@Body() dto: { updates: any[] }, @Request() req: any) {
+    return this.svc.batchPositions(dto.updates, req.user.organizationId);
+  }
+
+  // ── Toggle QR check-in ──────────────────────────────────────
+  @Patch('resources/:id/qr-checkin')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @ApiOperation({ summary: 'Enable/disable QR check-in for a parking resource' })
+  setQrCheckin(
+    @Param('id') id: string,
+    @Body() dto: { enabled: boolean },
+    @Request() req: any,
+  ) {
+    return this.svc.setQrCheckin(id, req.user.organizationId, dto.enabled);
+  }
 
   // ── Resources CRUD ─────────────────────────────────────────
   @Get('locations/:locationId/resources')

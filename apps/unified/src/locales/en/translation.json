@@ -37,7 +37,7 @@
     "organizations": "Offices",
     "owner": "Operator",
     "change_password": "Change password",
-    "map": "Desk map",
+    "map": "Book",
     "my_reservations": "My reservations",
     "devices": "Devices",
     "notifications": "Notifications",
@@ -63,7 +63,7 @@
       "operator": "Operator"
     },
     "nav": {
-      "map": "Desk Map",
+      "map": "Book",
       "my_reservations": "My Reservations",
       "reservations": "All Reservations",
       "search": "Search",
@@ -86,7 +86,7 @@
       "visitors": "Visitors",
       "subscription": "Subscription",
       "more": "More",
-      "map_short":              "Map",
+      "map_short":              "Book",
       "reservations_short":     "Mine",
       "notifications_short":    "Alerts"
     },
@@ -643,7 +643,25 @@
       "by_user":      "By person",
       "by_desk":      "By desk",
       "utilization":  "Utilization",
-      "insights":     "AI Insights"
+      "insights":     "AI Insights",
+      "parking":      "🅿️ Parking"
+    },
+    "parking": {
+      "kpi_total":        "Parking bookings",
+      "kpi_checkin_pct":  "QR check-in rate",
+      "kpi_no_checkin":   "No-shows",
+      "kpi_top_spot":     "Top spot",
+      "unconfirmed_title": "Unchecked bookings",
+      "confirmed_title":   "Confirmed check-ins",
+      "col_date":          "Date",
+      "col_spot":          "Spot",
+      "col_location":      "Location",
+      "col_floor":         "Floor",
+      "col_zone":          "Zone",
+      "col_checkin_time":  "Check-in time",
+      "export_csv":        "Export CSV",
+      "no_data":           "No data for the selected period",
+      "qr_not_enabled":    "QR check-in is not enabled for any spot"
     },
     "insights": {
       "select_location": "Select a location to view insights",

@@ -10,6 +10,13 @@ const BASE      = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 const KEYS = { user: 'app_user', impersonationToken: 'app_access' };
+// Impersonation token lives in sessionStorage (tab-scoped, auto-cleared on close)
+// rather than localStorage to reduce XSS exposure window.
+const impStore = {
+  get:    ()          => sessionStorage.getItem(KEYS.impersonationToken),
+  set:    (v: string) => sessionStorage.setItem(KEYS.impersonationToken, v),
+  remove: ()          => sessionStorage.removeItem(KEYS.impersonationToken),
+};
 
 let _refreshPromise: Promise<boolean> | null = null;
 const _REFRESH_TS_KEY = 'app_last_refresh_fail';
@@ -57,7 +64,7 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
   }
 
   // Impersonation token stored by ImpersonatePage — takes precedence over cookies
-  const impersonationToken = localStorage.getItem(KEYS.impersonationToken);
+  const impersonationToken = impStore.get();
   const res = await fetch(`${BASE}${path}`, {
     ...opts,
     credentials: 'include',
@@ -73,12 +80,12 @@ async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Prom
   if (res.status === 401 && !isPublic && _retry) {
     const refreshed = await tryRefresh();
     if (refreshed) return req<T>(path, opts, false);
-    localStorage.removeItem(KEYS.impersonationToken);
+    impStore.remove();
     if (window.location.pathname !== '/login') window.location.href = '/login';
     throw new Error('Unauthorized');
   }
   if (res.status === 401 && !isPublic) {
-    localStorage.removeItem(KEYS.impersonationToken);
+    impStore.remove();
     if (window.location.pathname !== '/login') window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -109,7 +116,7 @@ export const appApi = {
     logout() {
       req('/auth/logout', { method: 'POST' }).catch((e) => console.error('[client] logout', e));
       localStorage.removeItem(KEYS.user);
-      localStorage.removeItem(KEYS.impersonationToken);
+      impStore.remove();
     },
     changePassword: (currentPassword: string, newPassword: string) =>
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),
@@ -256,12 +263,13 @@ export const appApi = {
 
   // ── Checkins ─────────────────────────────────────────────────
   checkins: {
-    manual:   (deskId: string, userId: string, resId?: string) =>
+    manual:      (deskId: string, userId: string, resId?: string) =>
       req<any>('/checkins/manual', { method: 'POST', body: JSON.stringify({ deskId, userId, reservationId: resId }) }),
-    web:      (reservationId: string)              => req<any>('/checkins/web', { method: 'POST', body: JSON.stringify({ reservationId }) }),
-    checkout: (id: string)                        => req<any>(`/checkins/${id}/checkout`, { method: 'PATCH' }),
-    qr:       (deskId: string, qrToken: string)   => req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
-    walkin:   (deskId: string)                    => req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),
+    web:         (reservationId: string)              => req<any>('/checkins/web', { method: 'POST', body: JSON.stringify({ reservationId }) }),
+    checkout:    (id: string)                        => req<any>(`/checkins/${id}/checkout`, { method: 'PATCH' }),
+    qr:          (deskId: string, qrToken: string)   => req<any>('/checkins/qr', { method: 'POST', body: JSON.stringify({ deskId, qrToken }) }),
+    walkin:      (deskId: string)                    => req<any>('/checkins/qr/walkin', { method: 'POST', body: JSON.stringify({ deskId }) }),
+    parkingQr:   (resourceQrToken: string)           => req<any>('/checkins/parking-qr', { method: 'POST', body: JSON.stringify({ resourceQrToken }) }),
   },
 
   // ── Resources ─────────────────────────────────────────────────
@@ -276,6 +284,9 @@ export const appApi = {
     create:         (locId: string, body: any)      => req<any>(`/locations/${locId}/resources`, { method: 'POST', body: JSON.stringify(body) }),
     update:         (id: string, body: any)         => req<any>(`/resources/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     remove:         (id: string)                    => req<any>(`/resources/${id}`, { method: 'DELETE' }),
+    getByQrToken:   (token: string)                 => req<any>(`/resources/qr/${token}`),
+    setQrCheckin:   (id: string, enabled: boolean)  => req<any>(`/resources/${id}/qr-checkin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
+    batchPositions: (updates: any[])                => req<any>('/resources/batch-positions', { method: 'PATCH', body: JSON.stringify({ updates }) }),
     availability:   (id: string, date: string)      => req<any>(`/resources/${id}/availability?date=${date}`),
     book:           (id: string, body: { date: string; startTime: string; endTime: string; notes?: string; allDay?: boolean; targetUserId?: string }) =>
       req<any>(`/resources/${id}/bookings`, { method: 'POST', body: JSON.stringify(body) }),
@@ -431,14 +442,29 @@ export const appApi = {
   reports: {
     heatmap: (params: Record<string, string>) =>
       req<any>('/reports/heatmap?' + new URLSearchParams(params).toString()),
-    export: (params: Record<string, string>): Promise<Blob> =>
-      fetch(`${BASE}/reports/export?${new URLSearchParams(params)}`, {
+    export: (params: Record<string, string>): Promise<Blob> => {
+      const imp = impStore.get();
+      return fetch(`${BASE}/reports/export?${new URLSearchParams(params)}`, {
         credentials: 'include',
-      }).then(r => r.blob()),
+        headers: imp ? { Authorization: `Bearer ${imp}` } : {},
+      }).then(r => r.blob());
+    },
     // Generic — used by ReportsPage
     get: (endpoint: string, params?: Record<string, string>): Promise<any> => {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
       return req<any>(`/reports${endpoint}${qs}`);
+    },
+    parking: (params?: Record<string, string>): Promise<any> => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return req<any>(`/reports/parking${qs}`);
+    },
+    parkingExport: (params?: Record<string, string>): Promise<Blob> => {
+      const qs  = params ? '?' + new URLSearchParams(params).toString() : '';
+      const imp = impStore.get();
+      return fetch(`${BASE}/reports/parking/export${qs}`, {
+        credentials: 'include',
+        headers: imp ? { Authorization: `Bearer ${imp}` } : {},
+      }).then(r => r.blob());
     },
   },
 

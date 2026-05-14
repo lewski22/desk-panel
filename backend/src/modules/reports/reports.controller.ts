@@ -156,6 +156,69 @@ export class ReportsController {
     return this.reports.getDashboardSnapshot(resolvedOrgId, locationId);
   }
 
+  // ── Parking report ─────────────────────────────────────────────
+  @Get('parking')
+  @Roles(...REPORT_ROLES)
+  async parkingReport(
+    @Query('from')        from:        string,
+    @Query('to')          to:          string,
+    @Query('locationId')  locationId?: string,
+    @Query('resourceId')  resourceId?: string,
+    @Query('noCheckinOnly') noCheckinOnly?: string,
+    @Query('orgId')       orgId?:      string,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    return this.reports.getParkingReport(resolvedOrgId, {
+      from: fromDate, to: toDate, locationId, resourceId,
+      noCheckinOnly: noCheckinOnly === 'true',
+    });
+  }
+
+  @Get('parking/export')
+  @Roles(...REPORT_EXPORT_ROLES)
+  async exportParking(
+    @Query('from')        from:        string,
+    @Query('to')          to:          string,
+    @Query('locationId')  locationId?: string,
+    @Query('resourceId')  resourceId?: string,
+    @Query('noCheckinOnly') noCheckinOnly?: string,
+    @Query('orgId')       orgId?:      string,
+    @Res()   res: Response,
+    @Request() req: any,
+  ) {
+    const resolvedOrgId = this.resolveOrgId(req, orgId);
+    const { fromDate, toDate } = this.reports.validateDateRange(from, to);
+    const data = await this.reports.getParkingReport(resolvedOrgId, {
+      from: fromDate, to: toDate, locationId, resourceId,
+      noCheckinOnly: noCheckinOnly === 'true',
+    });
+
+    const all = [...data.confirmed, ...data.unconfirmed];
+    const lines = all.map(b => {
+      const r = b.resource as any;
+      const u = b.user as any;
+      return [
+        b.date?.toString().slice(0, 10) ?? '',
+        r?.location?.name ?? '',
+        r?.name ?? '',
+        r?.code ?? '',
+        u?.email ?? '',
+        `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim(),
+        b.checkedInAt ? b.checkedInAt.toISOString() : '',
+        b.checkedInBy ?? '',
+      ].join(',');
+    });
+
+    const header = 'date,location,resource,code,email,name,checkedInAt,checkedInBy';
+    const buf = Buffer.from([header, ...lines].join('\n'), 'utf-8');
+    const filename = `reserti-parking-${from}-${to}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buf);
+  }
+
   // ── Helper ─────────────────────────────────────────────────────
   private resolveOrgId(req: any, queryOrgId?: string): string {
     const user = req.user;
