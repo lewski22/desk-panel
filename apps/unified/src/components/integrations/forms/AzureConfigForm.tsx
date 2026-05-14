@@ -58,7 +58,7 @@ export function AzureConfigForm({ integration, onSaved, onCancel }: Props) {
 
   const adminConsentUrl = (() => {
     const clientIdEnv = (import.meta as any).env?.VITE_AZURE_CLIENT_ID ?? 'AZURE_CLIENT_ID';
-    const redirectUri  = `${window.location.origin}/settings/integrations`;
+    const redirectUri  = `${window.location.origin}/auth-redirect.html`;
     return `https://login.microsoftonline.com/organizations/adminconsent?client_id=${clientIdEnv}&redirect_uri=${encodeURIComponent(redirectUri)}&prompt=login`;
   })();
 
