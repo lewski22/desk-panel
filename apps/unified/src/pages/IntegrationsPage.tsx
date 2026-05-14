@@ -8,6 +8,7 @@
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation }     from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { appApi }             from '../api/client';
 import { IntegrationCard }    from '../components/integrations/IntegrationCard';
 import { AzureConfigForm }    from '../components/integrations/forms/AzureConfigForm';
@@ -39,10 +40,21 @@ const GrafanaIcon = () => (
 );
 
 export default function IntegrationsPage() {
-  const { t } = useTranslation();
+  const { t }    = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [integrations, setIntegrations] = useState<Record<string, any>>({});
   const [loading,      setLoading]      = useState(true);
   const [activeForm,   setActiveForm]   = useState<ActiveForm>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('consent') === 'done') {
+      setActiveForm('AZURE_ENTRA');
+      navigate(location.pathname, { replace: true });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const load = useCallback(async () => {
     setLoading(true);

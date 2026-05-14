@@ -115,7 +115,7 @@ export function AzureConfigForm({ integration, onSaved, onCancel }: Props) {
   };
 
   const stepContent = [
-    <AzureStep1Consent adminConsentUrl={adminConsentUrl} />,
+    <AzureStep1Consent adminConsentUrl={adminConsentUrl} consentDone={consentDone} onConsentDone={setConsentDone} />,
     <AzureStep2Connection
       tenantId={tenantId}           onTenantId={setTenantId}
       allowedDomains={allowedDomains} onDomains={setAllowedDomains}
