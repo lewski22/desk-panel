@@ -139,6 +139,26 @@ export class IntegrationsService {
     return this.crypto.decryptJson<T>(record.configEncrypted);
   }
 
+  // ── Znajdź org po domenie emaila (JIT provisioning) ─────────
+  async findOrgIdByEmailDomain(emailDomain: string): Promise<string | null> {
+    const records = await (this.prisma as any).orgIntegration.findMany({
+      where:   { provider: 'AZURE_ENTRA', isEnabled: true },
+      include: { organization: { select: { id: true, isActive: true } } },
+    });
+
+    for (const record of records) {
+      if (!record.organization?.isActive) continue;
+      const cfg = this.crypto.decryptJson<AzureEntraConfig>(record.configEncrypted);
+      const allowed: string[] = cfg?.allowedDomains ?? [];
+      // Brak ograniczeń domenowych LUB domena na liście
+      if (allowed.length === 0 || allowed.includes(emailDomain)) {
+        return record.organization.id;
+      }
+    }
+
+    return null;
+  }
+
   // ── Backward compat: pobierz Azure config (OrgIntegration lub Organization) ─
   async getAzureConfig(orgId: string): Promise<{ tenantId: string; isEnabled: boolean; clientId?: string; clientSecret?: string } | null> {
     // Próba 1: nowy model OrgIntegration

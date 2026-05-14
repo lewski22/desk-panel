@@ -125,20 +125,19 @@ export class AzureAuthService {
   }> {
     if (!orgSlug && !email) return { available: false };
 
-    // Szukaj organizacji
+    const emailDomain = email ? email.split('@')[1]?.toLowerCase() : undefined;
     let orgId: string | null = null;
 
+    // 1. Szukaj po dokładnym emailu (istniejący użytkownik)
     if (email) {
-      const domain = email.split('@')[1]?.toLowerCase();
-      if (domain) {
-        const user = await this.prisma.user.findFirst({
-          where:  { email: email.toLowerCase() },
-          select: { organizationId: true },
-        });
-        orgId = user?.organizationId ?? null;
-      }
+      const user = await this.prisma.user.findFirst({
+        where:  { email: email.toLowerCase() },
+        select: { organizationId: true },
+      });
+      orgId = user?.organizationId ?? null;
     }
 
+    // 2. Fallback: orgSlug podany jawnie (np. link do logowania)
     if (!orgId && orgSlug) {
       const org = await this.prisma.organization.findUnique({
         where:  { slug: orgSlug },
@@ -147,9 +146,14 @@ export class AzureAuthService {
       orgId = org?.id ?? null;
     }
 
+    // 3. Fallback: szukaj po domenie emaila wśród aktywnych integracji Azure
+    //    Obsługuje JIT provisioning — użytkownik nie ma jeszcze konta w Reserti
+    if (!orgId && emailDomain) {
+      orgId = await this.integrations.findOrgIdByEmailDomain(emailDomain);
+    }
+
     if (!orgId) return { available: false };
 
-    // Sprawdź konfigurację Azure — IntegrationsService czyta oba modele
     const azureCfg = await this.integrations.getAzureConfig(orgId);
     if (azureCfg?.isEnabled && azureCfg.tenantId) {
       return { available: true, tenantId: azureCfg.tenantId };
