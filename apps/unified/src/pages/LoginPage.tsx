@@ -39,7 +39,12 @@ function EntraIDModal({ onLogin, onClose }: { onLogin: (u: any) => void; onClose
         cache: { cacheLocation: 'sessionStorage' },
       });
       await msal.initialize();
-      const result = await msal.loginPopup({ scopes: ['openid', 'profile', 'email'], loginHint: email, prompt: 'select_account' });
+      const result = await msal.loginPopup({
+        scopes: ['openid', 'profile', 'email'],
+        loginHint: email,
+        prompt: 'login',
+        extraQueryParameters: { domain_hint: 'organizations' },
+      });
       if (!result?.idToken) throw new Error(t('entra.errors.no_token'));
       onLogin(await appApi.auth.loginAzure(result.idToken));
     } catch (e: any) {

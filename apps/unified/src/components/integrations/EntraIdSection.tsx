@@ -72,7 +72,7 @@ export function EntraIdSection({ orgId, orgName }: Props) {
       <div className="bg-blue-950/40 border border-blue-800/50 rounded-xl p-4 space-y-2.5 text-xs text-blue-300">
         <p className="font-semibold text-blue-200 text-sm">📋 Jak skonfigurować Entra ID (Microsoft 365)</p>
         <div className="space-y-2">
-          <p><span className="font-medium text-blue-100">Krok 1</span> — Przekaż poniższy link IT Adminowi firmy (wymaga uprawnień Global Admin w Entra ID):</p>
+          <p><span className="font-medium text-blue-100">Krok 1</span> — Przekaż poniższy link IT Adminowi firmy (wymaga uprawnień Global Admin w Entra ID). Admin musi zalogować się <strong className="text-amber-300">służbowym</strong> kontem Microsoft 365 — konta osobiste (@hotmail, @outlook) nie są obsługiwane:</p>
           {consentUrl ? (
             <a href={consentUrl} target="_blank" rel="noopener noreferrer"
                className="block bg-blue-900/40 border border-blue-700/50 rounded-lg px-3 py-2 text-[11px] text-blue-300 break-all hover:bg-blue-900/70 transition-colors">
