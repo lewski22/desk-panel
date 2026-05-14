@@ -73,8 +73,7 @@ export class KioskService {
     const account = await this.findKioskAccount(orgId);
     if (!account) throw new NotFoundException('Brak konta kiosk dla tej organizacji');
 
-    const { passwordHash, ...safe } = account;
-    void passwordHash;
+    const { passwordHash: _pwd, ...safe } = account;
     return safe;
   }
 

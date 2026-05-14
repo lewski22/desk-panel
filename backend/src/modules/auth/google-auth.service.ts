@@ -55,6 +55,20 @@ export class GoogleAuthService {
       throw new BadRequestException('Brak zdefiniowanej domeny Google Workspace');
     }
 
+    // Validate redirectUrl against allowed origin to prevent open-redirect token theft
+    const allowedOrigin = new URL(this._frontendUrl()).origin;
+    if (redirectUrl) {
+      try {
+        const given = new URL(redirectUrl).origin;
+        if (given !== allowedOrigin) {
+          throw new BadRequestException('Invalid redirectUrl: origin not allowed');
+        }
+      } catch (e: any) {
+        if (e instanceof BadRequestException) throw e;
+        throw new BadRequestException('Invalid redirectUrl');
+      }
+    }
+
     // Generuj nonce — CSRF protection
     const nonce = randomBytes(16).toString('hex');
     await this.nonceStore.set(nonce, {
@@ -73,7 +87,7 @@ export class GoogleAuthService {
    * handleCallback — Exchange authorization code → tokens → user → JWT Reserti.
    * Zwraca Reserti accessToken + redirectUrl do frontendu.
    */
-  async handleCallback(code: string, state: string): Promise<{ accessToken: string; redirectUrl: string }> {
+  async handleCallback(code: string, state: string): Promise<{ exchangeCode: string; redirectUrl: string }> {
     // 1. Dekoduj i waliduj state
     let parsed: { nonce: string; orgId: string };
     try {
@@ -116,14 +130,34 @@ export class GoogleAuthService {
     const user = await this._getOrCreateUser(claims, orgId);
 
     // 6. Wydaj Reserti JWT
-    const { accessToken } = await this.auth.login(user);
+    const { accessToken, refreshToken, user: userProfile } = await this.auth.login(user);
 
     this.logger.log(`Google SSO login: ${claims.email} → org=${orgId} user=${user.id}`);
 
-    return {
+    // 7. Store tokens under a short-lived exchange code — token never placed in URL
+    const exchangeCode = randomBytes(24).toString('hex');
+    await this.nonceStore.setExchangeCode(exchangeCode, {
       accessToken,
+      refreshToken,
+      user: userProfile,
+      role: user.role,
+    });
+
+    return {
+      exchangeCode,
       redirectUrl: redirectUrl ?? this._frontendUrl(),
     };
+  }
+
+  // ── Wymiana exchange code na tokeny + ustawienie cookies ─────
+  async exchangeCode(code: string): Promise<{
+    accessToken: string; refreshToken: string; user: any; role: string;
+  }> {
+    const entry = await this.nonceStore.getAndDeleteExchangeCode(code);
+    if (!entry) {
+      throw new UnauthorizedException('Exchange code wygasł lub jest nieprawidłowy');
+    }
+    return entry as any;
   }
 
   // ── checkAvailable — czy Google SSO jest skonfigurowane? ────

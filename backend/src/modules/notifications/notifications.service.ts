@@ -231,7 +231,7 @@ export class NotificationsService {
       body: `
         <p>Cześć ${res.user.firstName ?? ''}!</p>
         <p>Rezerwacja biurka <strong>${res.desk.name}</strong> na <strong>${start}</strong>
-        została anulowana${reason ? ': ' + reason : ''}.</p>
+        została anulowana${reason ? ': ' + escapeHtml(reason) : ''}.</p>
         <p>Jeśli chcesz zarezerwować inne biurko, skorzystaj z mapy biurek.</p>
       `,
       ctaLabel: 'Mapa biurek',

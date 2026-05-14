@@ -56,9 +56,10 @@ export class LocationsService {
       },
       orderBy: { name: 'asc' },
     });
-    return rows.map(({ wifiSsidEnc, wifiPassEnc, ...loc }) => ({
+    return rows.map(({ wifiSsidEnc, wifiPassEnc, kioskPinHash, ...loc }) => ({
       ...loc,
-      hasWifi: !!wifiSsidEnc,
+      hasWifi:    !!wifiSsidEnc,
+      kioskPinSet: !!kioskPinHash,
     }));
   }
 
@@ -72,8 +73,8 @@ export class LocationsService {
       },
     });
     if (!raw) throw new NotFoundException(`Location ${id} not found`);
-    const { wifiSsidEnc, wifiPassEnc, ...loc } = raw;
-    return { ...loc, hasWifi: !!wifiSsidEnc };
+    const { wifiSsidEnc, wifiPassEnc, kioskPinHash, ...loc } = raw;
+    return { ...loc, hasWifi: !!wifiSsidEnc, kioskPinSet: !!kioskPinHash };
   }
 
   async create(dto: CreateLocationDto) {

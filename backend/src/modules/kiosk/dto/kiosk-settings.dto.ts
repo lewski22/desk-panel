@@ -1,10 +1,11 @@
-import { IsString, IsIn, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsIn, IsOptional, IsNumber, ValidateIf } from 'class-validator';
 
 export class UpdateKioskSettingsDto {
   @IsString()
   locationId: string;
 
   @IsOptional()
+  @ValidateIf(o => o.floor !== null)
   @IsString()
   floor: string | null;
 

@@ -162,14 +162,14 @@ export class GatewaysService implements OnModuleDestroy {
     });
   }
 
-  async deviceHeartbeat(deviceId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean) {
+  async deviceHeartbeat(deviceId: string, rssi?: number, firmwareVersion?: string, isOnline?: boolean, callerGatewayId?: string) {
     const online = isOnline === false ? false : true;
 
     // Snapshot przed updatem — potrzebny do wykrycia powrotu online
     // Gateway wysyła device.id (CUID) zapisany przez beacon w NVS podczas provisioning
     const prev = await this.prisma.device.findUnique({
       where:  { id: deviceId },
-      select: { isOnline: true, deskId: true, id: true, lastSeen: true },
+      select: { isOnline: true, deskId: true, id: true, lastSeen: true, gatewayId: true },
     });
 
     if (!prev) {
@@ -178,6 +178,11 @@ export class GatewaysService implements OnModuleDestroy {
         `Beacon NVS may be stale or device was deleted. Re-provisioning required.`
       );
       throw new NotFoundException(`Device ${deviceId} not found`);
+    }
+
+    if (callerGatewayId && prev.gatewayId !== callerGatewayId) {
+      this.logger.warn(`deviceHeartbeat: device ${deviceId} belongs to gateway ${prev.gatewayId}, rejected caller ${callerGatewayId}`);
+      throw new ForbiddenException('Device nie należy do tego gateway');
     }
 
     const device = await this.prisma.device.update({

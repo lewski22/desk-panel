@@ -255,18 +255,17 @@ export class GatewaysController {
     return this.svc.triggerUpdate(id);
   }
 
-  // ── Device heartbeat (x-gateway-provision-key required) ───────
+  // ── Device heartbeat (GatewayJwtGuard — beacon belongs to this gateway) ──
   @Patch('device/:deviceId/heartbeat')
-  @ApiOperation({ summary: 'Beacon heartbeat — GATEWAY_PROVISION_KEY required' })
+  @UseGuards(GatewayJwtGuard)
+  @ApiOperation({ summary: 'Beacon heartbeat — gateway JWT required' })
   async deviceHeartbeat(
     @Param('deviceId') deviceId: string,
-    @Headers('x-gateway-provision-key') provKey?: string,
+    @Req()             req: ExpressRequest & { gatewayId: string },
     @Body('rssi') rssi?: number,
     @Body('firmwareVersion') firmwareVersion?: string,
     @Body('isOnline') isOnline?: boolean,
   ) {
-    const expected = process.env.GATEWAY_PROVISION_KEY ?? '';
-    if (!expected || provKey !== expected) throw new UnauthorizedException('Invalid provision key');
-    return this.svc.deviceHeartbeat(deviceId, rssi, firmwareVersion, isOnline);
+    return this.svc.deviceHeartbeat(deviceId, rssi, firmwareVersion, isOnline, req.gatewayId);
   }
 }

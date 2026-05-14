@@ -36,10 +36,8 @@ export class NotificationsController {
   @Get('settings')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Pobierz ustawienia powiadomień dla organizacji' })
-  async getSettings(@Request() req: any, @Query('organizationId') qOrgId?: string) {
-    const orgId = req.user.role === UserRole.SUPER_ADMIN
-      ? (qOrgId || req.user.organizationId)
-      : req.user.organizationId;
+  async getSettings(@Request() req: any) {
+    const orgId = req.user.organizationId;
     if (!orgId) return [];
     const saved = await this.svc.getSettings(orgId);
 
@@ -68,12 +66,8 @@ export class NotificationsController {
     @Param('type')  type:    string,
     @Body()         body:    UpsertSettingDto,
     @Request()      req:     any,
-    @Query('organizationId') qOrgId?: string,
   ) {
-    // OFFICE_ADMIN may only manage their own org
-    const orgId = req.user.role === UserRole.SUPER_ADMIN
-      ? (qOrgId ?? req.user.organizationId)
-      : req.user.organizationId;
+    const orgId = req.user.organizationId;
     if (!orgId) return { error: 'No organization' };
     this.logger.log(`NotificationSetting: org=${orgId} type=${type} enabled=${body.enabled}`);
     return this.svc.upsertSetting(orgId, type, body);

@@ -43,15 +43,19 @@ export class DevicesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
+  async findOne(@Param('id') id: string, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    if (actorOrgId) await this.svc.assertBelongsToOrg(id, actorOrgId);
     return this.svc.findOne(id);
   }
 
   @Post('provision')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
   @ApiOperation({ summary: 'Provision new beacon — returns MQTT credentials (once)' })
-  provision(@Body() dto: ProvisionDeviceDto) {
-    return this.svc.provision(dto);
+  provision(@Body() dto: ProvisionDeviceDto, @Request() req: any) {
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    return this.svc.provision(dto, actorOrgId);
   }
 
   @Post(':id/command')

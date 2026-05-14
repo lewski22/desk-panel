@@ -66,7 +66,16 @@ export class DevicesService {
   ) {}
 
   // ── Provisioning ──────────────────────────────────────────────
-  async provision(dto: ProvisionDeviceDto) {
+  async provision(dto: ProvisionDeviceDto, actorOrgId?: string) {
+    if (actorOrgId) {
+      const gw = await this.prisma.gateway.findUnique({
+        where:  { id: dto.gatewayId },
+        select: { location: { select: { organizationId: true } } },
+      });
+      if (!gw || gw.location.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Gateway nie należy do Twojej organizacji');
+      }
+    }
     const mqttUsername    = `beacon_${dto.hardwareId}`;
     const mqttPassword    = randomBytes(24).toString('hex');
     const mqttPasswordHash = await bcrypt.hash(mqttPassword, 10);

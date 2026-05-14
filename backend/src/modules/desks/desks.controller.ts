@@ -86,9 +86,10 @@ export class DesksController {
     @Query('date') date?: string,
     @Request() req?: any,
   ) {
-    const role = req?.user?.role;
-    if (role === UserRole.KIOSK || role === UserRole.END_USER) {
-      await this.desks.assertLocationInOrg(locationId, req.user.organizationId);
+    const role       = req?.user?.role;
+    const actorOrgId = role === 'OWNER' ? undefined : req?.user?.organizationId;
+    if (actorOrgId) {
+      await this.desks.assertLocationInOrg(locationId, actorOrgId);
     }
     return this.desks.getCurrentStatus(locationId, role, date);
   }

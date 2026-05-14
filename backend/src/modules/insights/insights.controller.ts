@@ -54,9 +54,10 @@ export class InsightsController {
 
   @Post('refresh-all')
   @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
-  @ApiOperation({ summary: 'Trigger insight generation for all locations (useful for first run)' })
-  async refreshAll() {
-    await this.svc.cronGenerateAll();
+  @ApiOperation({ summary: 'Trigger insight generation for own org locations' })
+  async refreshAll(@Request() req: any) {
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
+    await this.svc.cronGenerateAll(orgId);
     return { triggered: true };
   }
 

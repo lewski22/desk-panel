@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
@@ -111,6 +111,20 @@ export function LoginPage({ onLogin }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = (location.state as any)?.returnTo as string | undefined;
+
+  // Handle Google SSO redirect: ?google_code=<exchange_code>
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const googleCode = params.get('google_code');
+    if (!googleCode) return;
+    // Remove code from URL immediately so it's not in history
+    navigate(location.pathname, { replace: true });
+    setBusy(true);
+    appApi.auth.exchangeGoogleCode(googleCode)
+      .then(user => { onLogin(user); })
+      .catch(e => setErr(e.message ?? 'Błąd logowania Google'))
+      .finally(() => setBusy(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setErr('');

@@ -51,10 +51,11 @@ export class InsightsService implements OnModuleInit {
 
   // ── Cron: 07:00 każdego dnia ─────────────────────────────────
   @Cron('0 7 * * *', { name: 'generate-insights' })
-  async cronGenerateAll(): Promise<void> {
-    this.logger.log('[K2] Starting daily insights generation');
+  async cronGenerateAll(orgId?: string): Promise<void> {
+    this.logger.log(`[K2] Starting insights generation${orgId ? ` for org ${orgId}` : ' (all)'}`);
 
     const locations = await this.prisma.location.findMany({
+      where: orgId ? { organizationId: orgId } : undefined,
       select: { id: true, organizationId: true, name: true },
     });
 

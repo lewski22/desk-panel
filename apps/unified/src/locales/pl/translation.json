@@ -1300,7 +1300,16 @@
     "account_activate":      "Aktywuj",
     "account_password_once": "Zapisz to hasło — pokazujemy je tylko raz!",
     "account_copy":          "Kopiuj",
-    "account_close":         "Rozumiem, zamknij"
+    "account_close":         "Rozumiem, zamknij",
+    "pin_section_title":     "Kod PIN kiosku — per lokalizacja",
+    "pin_section_desc":      "PIN wymagany do otwarcia panelu Ustawień oraz wyjścia z trybu kiosk. Ustaw oddzielny PIN dla każdej lokalizacji.",
+    "pin_set":               "PIN ustawiony",
+    "pin_not_set":           "Brak PIN",
+    "pin_placeholder":       "Nowy PIN (min. 4 znaki)",
+    "pin_save":              "Ustaw PIN",
+    "pin_saved":             "✓ Zapisano",
+    "pin_clear":             "Usuń PIN",
+    "pin_clear_confirm":     "Usunąć PIN dla tej lokalizacji?"
   },
   "push": {
     "title":       "Reserti",

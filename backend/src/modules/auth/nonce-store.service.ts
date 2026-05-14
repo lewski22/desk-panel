@@ -6,6 +6,9 @@ interface NonceEntry { orgId: string; expiresAt: number; redirectUrl?: string; }
 const NONCE_TTL_MS  = 10 * 60 * 1000; // 10 minutes
 const NONCE_TTL_SEC = 600;
 
+const XCODE_TTL_MS  = 60 * 1000; // 60 seconds — one-time exchange code
+const XCODE_TTL_SEC = 60;
+
 /**
  * NonceStoreService — stores OAuth2 nonces used for CSRF protection during
  * Google SSO flow. Uses Redis when REDIS_URL is configured (required for
@@ -16,7 +19,8 @@ const NONCE_TTL_SEC = 600;
 export class NonceStoreService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(NonceStoreService.name);
   private redis: import('ioredis').Redis | null = null;
-  private readonly local = new Map<string, NonceEntry>();
+  private readonly local      = new Map<string, NonceEntry>();
+  private readonly localXcode = new Map<string, string>();
 
   constructor(private readonly config: ConfigService) {}
 
@@ -65,6 +69,33 @@ export class NonceStoreService implements OnModuleInit, OnModuleDestroy {
     } else {
       this.local.delete(nonce);
     }
+  }
+
+  // ── Exchange code store (60s TTL) ────────────────────────────
+
+  async setExchangeCode(code: string, payload: object): Promise<void> {
+    const raw = JSON.stringify({ ...payload, _expiresAt: Date.now() + XCODE_TTL_MS });
+    if (this.redis) {
+      await this.redis.set(`xcode:${code}`, raw, 'EX', XCODE_TTL_SEC);
+    } else {
+      this.localXcode.set(code, raw);
+    }
+  }
+
+  async getAndDeleteExchangeCode(code: string): Promise<Record<string, unknown> | null> {
+    if (this.redis) {
+      const raw = await this.redis.getDel(`xcode:${code}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed._expiresAt < Date.now()) return null;
+      return parsed;
+    }
+    const raw = this.localXcode.get(code);
+    this.localXcode.delete(code);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed._expiresAt < Date.now()) return null;
+    return parsed;
   }
 
   private _cleanupLocal() {

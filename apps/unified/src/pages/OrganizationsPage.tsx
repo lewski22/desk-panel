@@ -1416,24 +1416,6 @@ export function OrganizationsPage() {
                         {t('organizations.form.wifi_hint')}
                       </p>
                     </div>
-                    <div>
-                      <label className="block text-xs text-zinc-400 mb-1 font-medium">
-                        PIN kiosku
-                      </label>
-                      <input
-                        type="text"
-                        maxLength={4}
-                        pattern="[0-9]{4}"
-                        placeholder="0000"
-                        defaultValue=""
-                        onChange={() => markDirty()}
-                        className="w-28 border border-zinc-200 rounded-lg px-3 py-2 text-sm
-                                   font-mono text-center focus:outline-none focus:ring-2 focus:ring-brand/30"
-                      />
-                      <p className="text-[10px] text-zinc-400 mt-1">
-                        4-cyfrowy PIN do wyjścia z trybu kiosku
-                      </p>
-                    </div>
                   </div>
                 )}
 

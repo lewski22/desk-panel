@@ -128,6 +128,13 @@ export const appApi = {
       req<{ email: string; orgName: string; role: string; expired: boolean; used: boolean }>(`/auth/invite/${token}`),
     register: (body: { token: string; firstName: string; lastName: string; password: string }) =>
       req<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    async exchangeGoogleCode(code: string) {
+      const d = await req<{ user: any }>('/auth/google/exchange', {
+        method: 'POST', body: JSON.stringify({ code }),
+      });
+      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
+      return d?.user ?? d;
+    },
     async getMe() {
       const u = await req<any>('/auth/me');
       localStorage.setItem(KEYS.user, JSON.stringify(u));
@@ -161,6 +168,8 @@ export const appApi = {
     verifyKioskPin: (id: string, pin: string) =>
       req<any>(`/locations/${id}/kiosk/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }),
     floors: (id: string) => req<string[]>(`/locations/${id}/floors`),
+    updateKioskPin: (locationId: string, pin: string | null): Promise<void> =>
+      req(`/locations/${locationId}`, { method: 'PATCH', body: JSON.stringify({ kioskPin: pin }) }),
     floorPlan: {
       get:    (id: string, floor?: string)          => req<any>(`/locations/${id}/floor-plan${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`),
       update: (id: string, d: any, floor?: string)  => req<any>(`/locations/${id}/floor-plan${floor ? `?floor=${encodeURIComponent(floor)}` : ''}`, { method: 'POST', body: JSON.stringify(d) }),

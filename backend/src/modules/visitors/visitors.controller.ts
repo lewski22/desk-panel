@@ -25,7 +25,7 @@ export class VisitorsController {
     @Query('date')       date?: string,
     @Request()           req?: any,
   ) {
-    const orgId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.organizationId;
+    const orgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.findAll(locationId, date, orgId);
   }
 
@@ -37,7 +37,7 @@ export class VisitorsController {
     @Body()              body: InviteVisitorDto,
     @Request()           req: any,
   ) {
-    const actorOrgId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.organizationId;
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.invite(locationId, req.user.id, body, actorOrgId);
   }
 
@@ -46,7 +46,7 @@ export class VisitorsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Manual check-in visitor' })
   checkin(@Param('id') id: string, @Request() req: any) {
-    const actorOrgId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.organizationId;
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.checkin(id, actorOrgId);
   }
 
@@ -60,7 +60,7 @@ export class VisitorsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Check-out visitor' })
   checkout(@Param('id') id: string, @Request() req: any) {
-    const actorOrgId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.organizationId;
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.checkout(id, actorOrgId);
   }
 
@@ -69,7 +69,7 @@ export class VisitorsController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Cancel visit invitation' })
   cancel(@Param('id') id: string, @Request() req: any) {
-    const actorOrgId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.organizationId;
+    const actorOrgId = req.user.role === 'OWNER' ? undefined : req.user.organizationId;
     return this.svc.cancel(id, actorOrgId);
   }
 }

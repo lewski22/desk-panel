@@ -1,6 +1,6 @@
 import {
   Controller, Post, Patch, Get, Body, Query, Param,
-  UseGuards, Request, HttpCode, HttpStatus, Res, UnauthorizedException,
+  UseGuards, Request, HttpCode, HttpStatus, Res, UnauthorizedException, BadRequestException,
 } from '@nestjs/common';
 import { Response, Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -180,9 +180,10 @@ export class AuthController {
     }
 
     try {
-      const { accessToken, redirectUrl } = await this.google.handleCallback(code, state);
-      // Token w hash — nie trafia do server logs
-      res!.redirect(`${redirectUrl}/login#google_token=${accessToken}`);
+      const { exchangeCode, redirectUrl } = await this.google.handleCallback(code, state);
+      // Exchange code (60s TTL) — frontend wymienia go przez POST /auth/google/exchange.
+      // Token nigdy nie trafia do URL, historii przeglądarki ani rozszerzeń.
+      res!.redirect(`${redirectUrl}/login?google_code=${exchangeCode}`);
     } catch (err: any) {
       const msg = encodeURIComponent(err.message ?? 'Błąd logowania');
       res!.redirect(`${frontendUrl}/login?error=google_auth&msg=${msg}`);
@@ -243,5 +244,29 @@ export class AuthController {
     @Query('orgSlug') orgSlug?: string,
   ) {
     return this.google.checkAvailable(email, orgSlug);
+  }
+
+  /**
+   * POST /auth/google/exchange
+   * Wymienia jednorazowy exchange code (60s TTL) na sesję Reserti.
+   * Ustawia httpOnly cookies i zwraca { user } — identycznie jak /auth/login.
+   * Code jest przechowywany server-side; token nigdy nie opuszcza backendu przez URL.
+   */
+  @Post('google/exchange')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
+  @ApiOperation({ summary: 'Wymień google_code na sesję Reserti (ustawia cookies)' })
+  async exchangeGoogleCode(
+    @Body() body: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const code = body?.code;
+    if (!code || typeof code !== 'string') {
+      throw new BadRequestException('Missing code');
+    }
+    const { accessToken, refreshToken, user, role } = await this.google.exchangeCode(code);
+    const refreshDays = role === UserRole.KIOSK ? 30 : 7;
+    setAuthCookies(res, accessToken, refreshToken, refreshDays);
+    return { user };
   }
 }
