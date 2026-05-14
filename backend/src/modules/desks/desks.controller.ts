@@ -68,6 +68,7 @@ export class DesksController {
   @Get('locations/:locationId/desks')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF, UserRole.END_USER, UserRole.KIOSK)
   @ApiOperation({ summary: 'List desks in location' })
   findAll(@Param('locationId') locationId: string) {
     return this.desks.findAll(locationId);
