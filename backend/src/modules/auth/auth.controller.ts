@@ -251,6 +251,11 @@ export class AuthController {
    * Wymienia jednorazowy exchange code (60s TTL) na sesję Reserti.
    * Ustawia httpOnly cookies i zwraca { user } — identycznie jak /auth/login.
    * Code jest przechowywany server-side; token nigdy nie opuszcza backendu przez URL.
+   *
+   * SECURITY: access_token is NEVER returned in the response body — only set as
+   * httpOnly cookie (path=/). refresh_token is httpOnly cookie (path=/api/v1/auth/refresh).
+   * Frontend must NOT store tokens in localStorage — use cookies only.
+   * TODO #BACKLOG-1: Add token binding (device fingerprint) to refresh tokens.
    */
   @Post('google/exchange')
   @HttpCode(HttpStatus.OK)
