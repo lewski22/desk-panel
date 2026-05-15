@@ -55,18 +55,8 @@ export class GoogleAuthService {
       throw new BadRequestException('Brak zdefiniowanej domeny Google Workspace');
     }
 
-    // Validate redirectUrl against allowed origin to prevent open-redirect token theft
-    const allowedOrigin = new URL(this._frontendUrl()).origin;
     if (redirectUrl) {
-      try {
-        const given = new URL(redirectUrl).origin;
-        if (given !== allowedOrigin) {
-          throw new BadRequestException('Invalid redirectUrl: origin not allowed');
-        }
-      } catch (e: any) {
-        if (e instanceof BadRequestException) throw e;
-        throw new BadRequestException('Invalid redirectUrl');
-      }
+      await this._assertSafeRedirectUrl(redirectUrl);
     }
 
     // Generuj nonce — CSRF protection
@@ -234,4 +224,25 @@ export class GoogleAuthService {
     return this.config.get('FRONTEND_URL') ?? '';
   }
 
+  private async _assertSafeRedirectUrl(redirectUrl: string): Promise<void> {
+    const allowedOrigins = new Set<string>();
+
+    for (const key of ['FRONTEND_URL', 'ADMIN_URL'] as const) {
+      const val = this.config.get<string>(key);
+      if (val) {
+        try { allowedOrigins.add(new URL(val).origin); } catch { /* skip malformed */ }
+      }
+    }
+
+    let given: string;
+    try {
+      given = new URL(redirectUrl).origin;
+    } catch {
+      throw new BadRequestException('Invalid redirectUrl');
+    }
+
+    if (!allowedOrigins.has(given)) {
+      throw new BadRequestException('Invalid redirectUrl: origin not allowed');
+    }
+  }
 }
