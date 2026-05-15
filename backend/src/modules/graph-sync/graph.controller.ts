@@ -21,13 +21,10 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }    from '../auth/guards/jwt-auth.guard';
 import { GraphService }    from './graph.service';
 import { IntegrationsService } from '../integrations/integrations.service';
+import { NonceStoreService }  from '../auth/nonce-store.service';
 import type { AzureEntraConfig } from '../integrations/types/integration-config.types';
 import { randomBytes }     from 'crypto';
 import { ConfigService }   from '@nestjs/config';
-
-// In-memory state store (CSRF protection) — TTL 10 min
-interface GraphStateEntry { userId: string; orgId: string; expiresAt: number; }
-const graphStateStore = new Map<string, GraphStateEntry>();
 
 const GRAPH_SCOPES = 'Calendars.ReadWrite offline_access User.Read';
 
@@ -40,6 +37,7 @@ export class GraphController {
     private readonly graphService:   GraphService,
     private readonly integrations:   IntegrationsService,
     private readonly config:         ConfigService,
+    private readonly nonceStore:     NonceStoreService,
   ) {}
 
   // ── Krok 1: Redirect do Microsoft OAuth2 ────────────────────
@@ -72,9 +70,9 @@ export class GraphController {
       return;
     }
 
-    // Generuj state (CSRF)
+    // Generuj state (CSRF) — persisted in NonceStoreService (Redis or in-memory)
     const state = randomBytes(16).toString('hex');
-    graphStateStore.set(state, { userId, orgId, expiresAt: Date.now() + 10 * 60 * 1000 });
+    await this.nonceStore.set(state, { orgId, userId });
 
     const redirectUri = `${this.config.get('PUBLIC_API_URL')}/auth/graph/callback`;
 
@@ -110,14 +108,15 @@ export class GraphController {
     }
 
     // Waliduj state
-    const entry = graphStateStore.get(state);
+    const entry = await this.nonceStore.get(state);
     if (!entry || entry.expiresAt < Date.now()) {
       res.redirect(`${frontendUrl}/settings/integrations?graph_error=state_expired`);
       return;
     }
-    graphStateStore.delete(state);
+    await this.nonceStore.delete(state);
 
-    const { userId, orgId } = entry;
+    const userId = entry.userId!;
+    const orgId  = entry.orgId;
 
     // Pobierz config Azure
     const azureCfg = await this.integrations.getAzureConfig(orgId);

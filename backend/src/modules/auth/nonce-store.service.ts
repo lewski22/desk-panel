@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-interface NonceEntry { orgId: string; expiresAt: number; redirectUrl?: string; }
+interface NonceEntry { orgId: string; expiresAt: number; redirectUrl?: string; userId?: string; }
 
 const NONCE_TTL_MS  = 10 * 60 * 1000; // 10 minutes
 const NONCE_TTL_SEC = 600;

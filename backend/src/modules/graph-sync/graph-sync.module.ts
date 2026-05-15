@@ -11,10 +11,11 @@
  *   - Jeśli ma ScheduleModule.forRoot() → tutaj użyj ScheduleModule
  *   - Jeśli nie ma → tutaj użyj ScheduleModule.forRoot()
  */
-import { Module }          from '@nestjs/common';
-import { ScheduleModule }  from '@nestjs/schedule';
-import { GraphService }    from './graph.service';
-import { GraphController } from './graph.controller';
+import { Module }              from '@nestjs/common';
+import { ScheduleModule }      from '@nestjs/schedule';
+import { GraphService }        from './graph.service';
+import { GraphController }     from './graph.controller';
+import { NonceStoreService }   from '../auth/nonce-store.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { GraphController } from './graph.controller';
     ScheduleModule,
   ],
   controllers: [GraphController],
-  providers:   [GraphService],
+  providers:   [GraphService, NonceStoreService],
   exports:     [GraphService],
 })
 export class GraphSyncModule {}
