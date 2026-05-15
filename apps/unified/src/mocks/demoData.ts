@@ -88,18 +88,79 @@ export const DEMO_ORG = {
 };
 
 export const DEMO_RESOURCES = [
-  { id: 'r1', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Alpha', code: 'RM-A01', capacity: 8, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['whiteboard', 'projector'] },
-  { id: 'r2', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Beta',  code: 'RM-A02', capacity: 4, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['tv'] },
-  { id: 'r3', locationId: LOC2_ID, type: 'PARKING', name: 'Parking P1', code: 'P-K01',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+  { id: 'r1', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Alpha',  code: 'RM-A01', capacity: 8, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['whiteboard', 'projector'] },
+  { id: 'r2', locationId: LOC1_ID, type: 'ROOM',    name: 'Sala Beta',   code: 'RM-A02', capacity: 4, floor: '1', zone: 'Conference', status: 'ACTIVE', amenities: ['tv'] },
+  { id: 'r3', locationId: LOC1_ID, type: 'PARKING', name: 'Parking P01', code: 'P-W01',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+  { id: 'r4', locationId: LOC1_ID, type: 'PARKING', name: 'Parking P02', code: 'P-W02',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+  { id: 'r5', locationId: LOC1_ID, type: 'PARKING', name: 'Parking P03', code: 'P-W03',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: ['electric'] },
+  { id: 'r6', locationId: LOC1_ID, type: 'PARKING', name: 'Parking P04', code: 'P-W04',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+  { id: 'r7', locationId: LOC1_ID, type: 'PARKING', name: 'Parking P05', code: 'P-W05',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+  { id: 'r8', locationId: LOC2_ID, type: 'PARKING', name: 'Parking K01', code: 'P-K01',  capacity: 1, floor: null, zone: null,        status: 'ACTIVE', amenities: [] },
+];
+
+const todayIso = new Date().toISOString();
+const todayStart = (h: number) => new Date(new Date().setHours(h, 0, 0, 0)).toISOString();
+
+export const DEMO_PARKING_BLOCKS = [
+  { id: 'pb1', resourceId: 'r3', startTime: todayStart(8),  endTime: todayStart(17), reason: 'Rezerwacja dzienna', createdAt: todayIso },
+  { id: 'pb2', resourceId: 'r4', startTime: todayStart(9),  endTime: todayStart(13), reason: 'Spotkanie z klientem', createdAt: todayIso },
 ];
 
 export const DEMO_VISITORS = [
   { id: 'v1', locationId: LOC1_ID, hostUserId: DEMO_USER.id,
-    firstName: 'Jan', lastName: 'Nowak', email: 'jan.nowak@external.com',
-    company: 'Acme Ltd', visitDate: new Date().toISOString(),
+    firstName: 'Jan',  lastName: 'Nowak',    email: 'jan.nowak@external.com',
+    company: 'Acme Ltd', visitDate: todayIso,
     purpose: 'Spotkanie biznesowe', status: 'INVITED', qrToken: 'visitor-qr-1',
     checkedInAt: null, checkedOutAt: null },
+  { id: 'v2', locationId: LOC1_ID, hostUserId: DEMO_USER.id,
+    firstName: 'Anna', lastName: 'Wiśniewska', email: 'anna.w@partner.pl',
+    company: 'Partner Sp. z o.o.', visitDate: todayIso,
+    purpose: 'Prezentacja produktu', status: 'CHECKED_IN', qrToken: 'visitor-qr-2',
+    checkedInAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(), checkedOutAt: null },
+  { id: 'v3', locationId: LOC1_ID, hostUserId: DEMO_USER.id,
+    firstName: 'Piotr', lastName: 'Kowalczyk', email: null,
+    company: 'Freelancer', visitDate: todayIso,
+    purpose: null, status: 'CANCELLED', qrToken: 'visitor-qr-3',
+    checkedInAt: null, checkedOutAt: null },
+  { id: 'v4', locationId: LOC2_ID, hostUserId: DEMO_USER.id,
+    firstName: 'Maria', lastName: 'Zając', email: 'maria@corp.eu',
+    company: 'Corp EU', visitDate: todayIso,
+    purpose: 'Audyt', status: 'CHECKED_OUT', qrToken: 'visitor-qr-4',
+    checkedInAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    checkedOutAt: new Date(Date.now() - 30 * 60 * 1000).toISOString() },
 ];
+
+// Weekly attendance — format expected by WeeklyViewPage: { rows: [{ user, days: [{ date, status }] }] }
+const DEMO_TEAM = [
+  { firstName: 'Demo',    lastName: 'Admin'     },
+  { firstName: 'Karol',   lastName: 'Kowalski'  },
+  { firstName: 'Marta',   lastName: 'Nowak'     },
+  { firstName: 'Tomasz',  lastName: 'Wiśniewski' },
+  { firstName: 'Agata',   lastName: 'Zielińska' },
+];
+
+function makeWeekDays(weekOffset = 0): string[] {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() || 7) - 1) + weekOffset * 7);
+  return Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+const STATUSES: Array<'office' | 'reserved' | 'unknown'> = ['office', 'office', 'reserved', 'unknown', 'office'];
+
+export const DEMO_ATTENDANCE = {
+  rows: DEMO_TEAM.map((user, ui) => ({
+    user,
+    days: makeWeekDays(0).map((date, di) => ({
+      date,
+      status: (ui + di) % 4 === 3 ? 'unknown' : STATUSES[(ui + di) % STATUSES.length],
+    })),
+  })),
+};
 
 export const DEMO_REPORT_CHECKINS_BY_DAY = {
   data: Array.from({ length: 7 }, (_, i) => {

@@ -5,7 +5,7 @@
 import {
   DEMO_USER, DEMO_LOCATIONS, DEMO_DESKS, DEMO_RESERVATIONS,
   DEMO_STATS, DEMO_ORG,
-  DEMO_RESOURCES, DEMO_VISITORS,
+  DEMO_RESOURCES, DEMO_VISITORS, DEMO_PARKING_BLOCKS, DEMO_ATTENDANCE,
   DEMO_REPORT_CHECKINS_BY_DAY, DEMO_REPORT_PER_DESK, DEMO_REPORT_PER_USER, DEMO_REPORT_METHODS,
 } from './demoData';
 
@@ -68,6 +68,16 @@ const ROUTES: Array<{ test: RegExp | string; method?: string; handler: Handler }
   { test: /\/locations\/[^/]+\/visitors/, handler: (_path: string) => {
     const locId = _path.split('/')[2];
     return DEMO_VISITORS.filter(v => v.locationId === locId);
+  }},
+
+  // Weekly attendance
+  { test: /\/locations\/[^/]+\/attendance/, handler: () => DEMO_ATTENDANCE },
+
+  // Parking blocks per resource
+  { test: /\/parking-blocks/, handler: (_path: string) => {
+    const match = _path.match(/resources\/([^/]+)\/parking-blocks/);
+    if (match) return DEMO_PARKING_BLOCKS.filter(b => b.resourceId === match[1]);
+    return DEMO_PARKING_BLOCKS;
   }},
 
   // Floor plan — brak w demo
