@@ -39,7 +39,7 @@ export class AuthService {
   }
   /** Tworzy parę access+refresh token, zapisuje refresh w DB, zwraca profil użytkownika z modułami org. */
   async login(user: User) {
-    const payload = { sub: user.id, email: user.email, role: user.role, organizationId: (user as any).organizationId };
+    const payload = { sub: user.id, email: user.email, role: user.role, organizationId: user.organizationId };
     const accessToken = this.jwt.sign(payload);
     const refreshDays = user.role === UserRole.KIOSK ? 30 : 7;
     const refreshToken = this.jwt.sign(payload, { secret: this.config.get('JWT_REFRESH_SECRET'), expiresIn: `${refreshDays}d` });
@@ -47,11 +47,11 @@ export class AuthService {
     await this.prisma.refreshToken.create({ data: { userId: user.id, token: refreshToken, expiresAt } });
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
-    let mustChangePassword = !!(user as any).mustChangePassword;
+    let mustChangePassword = !!user.mustChangePassword;
     let passwordPolicy: { minLength: number; requireUppercase: boolean; requireNumbers: boolean; requireSpecial: boolean } | undefined;
-    if ((user as any).organizationId) {
+    if (user.organizationId) {
       const org = await this.prisma.organization.findUnique({
-        where: { id: (user as any).organizationId },
+        where: { id: user.organizationId },
         select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true, passwordMinLength: true, passwordRequireUppercase: true, passwordRequireNumbers: true, passwordRequireSpecial: true },
       });
       enabledModules = org?.enabledModules ?? [];
@@ -68,7 +68,7 @@ export class AuthService {
         };
       }
     }
-    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy } };
+    return { accessToken, refreshToken, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: user.organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy } };
   }
   /** Rotuje refresh token: sprawdza DB, kasuje stary, wydaje nową parę. Dezaktywowane konta odrzuca. */
   async refresh(refreshToken: string) {
@@ -86,11 +86,11 @@ export class AuthService {
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     let enabledModules: string[] = [];
     let subscriptionStatus: string | null = null;
-    let mustChangePassword = !!(user as any).mustChangePassword;
+    let mustChangePassword = !!user.mustChangePassword;
     let passwordPolicy: { minLength: number; requireUppercase: boolean; requireNumbers: boolean; requireSpecial: boolean } | undefined;
-    if ((user as any).organizationId) {
+    if (user.organizationId) {
       const org = await this.prisma.organization.findUnique({
-        where: { id: (user as any).organizationId },
+        where: { id: user.organizationId },
         select: { enabledModules: true, planExpiresAt: true, trialEndsAt: true, passwordExpiryDays: true, passwordMinLength: true, passwordRequireUppercase: true, passwordRequireNumbers: true, passwordRequireSpecial: true },
       });
       enabledModules = org?.enabledModules ?? [];
@@ -107,7 +107,7 @@ export class AuthService {
         };
       }
     }
-    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: (user as any).organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy };
+    return { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, organizationId: user.organizationId, enabledModules, subscriptionStatus, mustChangePassword, passwordPolicy };
   }
 
   /**
@@ -117,8 +117,8 @@ export class AuthService {
    */
   private async _checkPasswordExpiry(user: User, passwordExpiryDays: number | null): Promise<boolean> {
     if (!passwordExpiryDays) return false;
-    if ((user as any).passwordHash === 'AZURE_SSO_ONLY' || (user as any).passwordHash === 'GOOGLE_SSO_ONLY') return false;
-    const lastChange: Date = (user as any).passwordChangedAt ?? (user as any).createdAt ?? new Date();
+    if (user.passwordHash === 'AZURE_SSO_ONLY' || user.passwordHash === 'GOOGLE_SSO_ONLY') return false;
+    const lastChange: Date = user.passwordChangedAt ?? user.createdAt ?? new Date();
     const daysSince = Math.floor((Date.now() - lastChange.getTime()) / 86_400_000);
     if (daysSince < passwordExpiryDays) return false;
     await this.prisma.user.update({ where: { id: user.id }, data: { mustChangePassword: true } });
@@ -317,7 +317,7 @@ export class AuthService {
     if (!await bcrypt.compare(currentPassword, user.passwordHash)) throw new UnauthorizedException('Current password is incorrect');
     if (await bcrypt.compare(newPassword, user.passwordHash)) throw new BadRequestException('New password must differ from current');
 
-    const orgId = (user as any).organizationId;
+    const orgId = user.organizationId;
     if (orgId) {
       const org = await this.prisma.organization.findUnique({
         where:  { id: orgId },

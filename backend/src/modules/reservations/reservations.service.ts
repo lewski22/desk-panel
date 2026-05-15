@@ -130,13 +130,13 @@ export class ReservationsService {
 
   async create(actorId: string, dto: CreateReservationDto, actorOrgId?: string, actorRole?: string) {
     const staffRoles = ['OWNER', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF'];
-    if ((dto as any).targetUserId && !staffRoles.includes(actorRole ?? '')) {
+    if (dto.targetUserId && !staffRoles.includes(actorRole ?? '')) {
       throw new ForbiddenException('Nie masz uprawnień do rezerwacji dla innego użytkownika');
     }
     if (dto.reservationType && dto.reservationType !== 'STANDARD' && !staffRoles.includes(actorRole ?? '')) {
       throw new ForbiddenException('Nie masz uprawnień do tworzenia rezerwacji GUEST/TEAM');
     }
-    const userId = (dto as any).targetUserId ?? actorId;
+    const userId = dto.targetUserId ?? actorId;
 
     const desk = await this.prisma.desk.findUnique({
       where:   { id: dto.deskId },
@@ -328,7 +328,7 @@ export class ReservationsService {
       if (actorId !== reservation.userId) {
         this.push.notifyUser(reservation.userId, {
           title: 'Rezerwacja anulowana',
-          body:  `Twoja rezerwacja biurka ${(reservation as any).desk?.name ?? reservation.deskId} została anulowana przez administratora.`,
+          body:  `Twoja rezerwacja biurka ${(reservation as any).desk?.name ?? reservation.deskId} została anulowana przez administratora.`, // TODO: as any — backlog #6, requires typed findOne return
           url:   '/my-reservations',
         }).catch(() => {});
       }
