@@ -9,10 +9,11 @@ import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService }          from './auth.service';
 import { AzureAuthService }     from './azure-auth.service';
 import { GoogleAuthService }    from './google-auth.service';
-import { AzureLoginDto }        from './dto/azure-login.dto';
-import { ChangePasswordDto }    from './dto/change-password.dto';
-import { InviteUserDto }        from './dto/invite-user.dto';
-import { RegisterDto }          from './dto/register.dto';
+import { AzureLoginDto }           from './dto/azure-login.dto';
+import { ChangePasswordDto }       from './dto/change-password.dto';
+import { ExchangeGoogleCodeDto }   from './dto/exchange-google-code.dto';
+import { InviteUserDto }           from './dto/invite-user.dto';
+import { RegisterDto }             from './dto/register.dto';
 import { JwtAuthGuard }         from './guards/jwt-auth.guard';
 import { RolesGuard }           from './guards/roles.guard';
 import { Roles }                from './decorators/roles.decorator';
@@ -262,14 +263,10 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: 'Wymień google_code na sesję Reserti (ustawia cookies)' })
   async exchangeGoogleCode(
-    @Body() body: any,
+    @Body() body: ExchangeGoogleCodeDto,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const code = body?.code;
-    if (!code || typeof code !== 'string') {
-      throw new BadRequestException('Missing code');
-    }
-    const { accessToken, refreshToken, user, role } = await this.google.exchangeCode(code);
+    const { accessToken, refreshToken, user, role } = await this.google.exchangeCode(body.code);
     const refreshDays = role === UserRole.KIOSK ? 30 : 7;
     setAuthCookies(res, accessToken, refreshToken, refreshDays);
     return { user };
