@@ -1,6 +1,76 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-14
+> Ostatnia aktualizacja: 2026-05-15
+
+---
+
+## [0.19.3] — 2026-05-15 — Security hardening: SSRF, brute-force, OAuth, type safety
+
+### Security — naprawione podatności
+
+**`backend/src/modules/integrations/providers/webhook.provider.ts`**
+- `_send()` — dodano `_assertPublicUrl()` blokujące SSRF: prywatne zakresy IP (`127.x`, `10.x`, `172.16-31.x`, `192.168.x`), link-local i endpoint AWS metadata (`169.254.x`), loopback IPv6 (`::1`), `localhost`, `0.0.0.0`. Każde wywołanie fetch (dispatch + test) przechodzi przez ten check.
+
+**`backend/src/modules/gateways/gateways.controller.ts`**
+- `POST /gateway/auth` (HMAC→JWT exchange) — dodano `@Throttle({ default: { ttl: 60_000, limit: 5 } })`. Endpoint bez limitu umożliwiał brute-force sekretu HMAC bramki.
+
+**`backend/src/modules/auth/auth.controller.ts`** + **`dto/exchange-google-code.dto.ts`** *(nowy plik)*
+- `POST /auth/google/exchange` — zastąpiono `@Body() body: any` z ręcznym `if (!code)` przez `ExchangeGoogleCodeDto` z `@IsString() @Length(1, 128)`. Walidacja przeniesiona do GlobalValidationPipe.
+
+**`backend/src/modules/locations/dto/upload-floor-plan.dto.ts`**
+- `floorPlanUrl` — zmieniono `@IsString()` na `@Matches(/^(https?:\/\/|data:image\/)/)`, odrzuca dowolne stringi niebędące URL-em HTTP/HTTPS ani data URI.
+
+---
+
+### Security — poprzednia sesja (BUG #1–#5)
+
+**`backend/src/modules/auth/google-auth.service.ts`**
+- `_assertSafeRedirectUrl()` — walidacja `redirectUrl` sprawdza teraz zarówno `FRONTEND_URL` jak i `ADMIN_URL`; loguje błąd gdy żaden origin nie jest skonfigurowany.
+
+**`backend/src/modules/graph-sync/graph.controller.ts`** + **`graph-sync.module.ts`**
+- CSRF state kalendarza Graph przeniesiony z in-memory `Map` (niebezpieczne w środowiskach multi-instance) do `NonceStoreService` (Redis-backed).
+- `graph-sync.module.ts` importuje `AuthModule` zamiast duplikować providera `NonceStoreService` — eliminacja dwóch oddzielnych instancji z osobnym stanem.
+- Zastąpiono `entry.userId!` jawnym null-checkiem z redirectem na stronę błędu.
+
+**`backend/src/modules/auth/auth.module.ts`**
+- `NonceStoreService` dodany do `exports` — umożliwia konsumpcję z `GraphSyncModule` bez duplikowania providera.
+
+**`apps/unified/src/components/integrations/forms/AzureConfigForm.tsx`** + **`AzureStep1Consent.tsx`**
+- Usunięto fallback `?? 'AZURE_CLIENT_ID'` — literal string trafiał do URL zgody admin. Gdy `clientId` jest pusty, wyświetlane jest ostrzeżenie zamiast przycisku zgody.
+
+**`apps/teams/scripts/build-manifest.js`** *(nowy plik)* + **`manifest/manifest.example.json`**
+- Teams manifest budowany przez skrypt z pliku szablonu `manifest.example.json` (`${VAR}` placeholders). Skrypt waliduje `TEAMS_APP_ID`, `TEAMS_BOT_APP_ID`, `AZURE_CLIENT_ID` i kończy z `process.exit(1)` przy brakach.
+- `apps/teams/manifest/manifest.json` dodany do `.gitignore` — hardcoded ID usunięte z VCS.
+
+---
+
+### Refactor — type safety (BUG #8)
+
+**`backend/src/modules/auth/types/jwt-payload.interface.ts`** *(nowy plik)*
+- Interfejs `JwtPayload { sub, email, role: UserRole, organizationId: string | null, impersonated?, iat?, exp? }`.
+
+**`backend/src/modules/auth/strategies/jwt.strategy.ts`**
+- `validate(payload: any)` → `validate(payload: JwtPayload)`.
+
+**`backend/src/modules/auth/auth.service.ts`**
+- Usunięto wszystkie `(user as any).*` — pola istnieją na typie Prisma `User`.
+
+**`backend/src/modules/reservations/reservations.service.ts`**
+- `(dto as any).targetUserId` → `dto.targetUserId`; wyekstrahowano zmienną `deskName` z `TODO: backlog #6` na osobnej linii.
+
+---
+
+### Demo mode — nowe fixtures (BUG #13)
+
+**`apps/unified/src/mocks/demoData.ts`**
+- `DEMO_RESOURCES` rozszerzono do 8 pozycji (2 sale + 5 miejsc parkingowych LOC1 + 1 LOC2).
+- Dodano `DEMO_PARKING_BLOCKS` — 2 aktywne blokady.
+- `DEMO_VISITORS` rozszerzono do 4 gości (statusy: INVITED / CHECKED_IN / CANCELLED / CHECKED_OUT).
+- Dodano `DEMO_ATTENDANCE` — dane widoku tygodniowego dla 5 osób.
+
+**`apps/unified/src/mocks/demoHandlers.ts`**
+- Dodano route `/locations/{id}/attendance` → `DEMO_ATTENDANCE`.
+- Dodano route `/resources/{id}/parking-blocks` (anchored regex) → przefiltrowane `DEMO_PARKING_BLOCKS`.
 
 ---
 
