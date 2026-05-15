@@ -1672,7 +1672,11 @@
     "filter": {
       "capacity": "Capacity",
       "amenities": "Amenities",
-      "any_capacity": "Any capacity"
+      "any_capacity": "Any capacity",
+      "cap_2": "2+ people",
+      "cap_5": "5+ people",
+      "cap_10": "10+ people",
+      "cap_20": "20+ people"
     },
     "next_free": "Free from:",
     "booked_until": "Booked until:",

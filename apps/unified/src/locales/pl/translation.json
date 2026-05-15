@@ -1672,7 +1672,11 @@
     "filter": {
       "capacity": "Pojemność",
       "amenities": "Udogodnienia",
-      "any_capacity": "Dowolna pojemność"
+      "any_capacity": "Dowolna pojemność",
+      "cap_2": "2+ osoby",
+      "cap_5": "5+ osób",
+      "cap_10": "10+ osób",
+      "cap_20": "20+ osób"
     },
     "next_free": "Wolna od:",
     "booked_until": "Zarezerwowana do:",

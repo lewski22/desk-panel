@@ -2,7 +2,7 @@
  * ResourceCard — Sprint I
  * Testy karty zasobu (sala/parking/sprzęt)
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@testing-library/react';
 import { ResourceCard } from '../components/desks/ResourceCard';
 
@@ -40,20 +40,20 @@ describe('ResourceCard', () => {
   it('shows book button when onBook is provided', () => {
     const onBook = vi.fn();
     const view = render(<ResourceCard resource={makeResource()} onBook={onBook} />);
-    expect(view.getByText(/resource\.book/)).toBeInTheDocument();
+    expect(view.getByText(/rooms\.pick_slot/)).toBeInTheDocument();
   });
 
   it('calls onBook when book button clicked', () => {
     const onBook = vi.fn();
     const view = render(<ResourceCard resource={makeResource()} onBook={onBook} />);
-    view.getByText(/resource\.book/).click();
+    view.getByText(/rooms\.pick_slot/).click();
     expect(onBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
   });
 
   it('does not show book button when compact=true', () => {
     const onBook = vi.fn();
     const view = render(<ResourceCard resource={makeResource()} onBook={onBook} compact />);
-    expect(view.queryByText(/resource\.book/)).not.toBeInTheDocument();
+    expect(view.queryByText(/rooms\.pick_slot/)).not.toBeInTheDocument();
   });
 
   it('shows inactive badge for inactive resources', () => {
@@ -63,6 +63,33 @@ describe('ResourceCard', () => {
 
   it('renders parking type with vehicleType', () => {
     const view = render(<ResourceCard resource={makeResource({ type: 'PARKING', vehicleType: 'car', capacity: undefined, amenities: [] })} />);
-    expect(view.getByText(/car/i)).toBeInTheDocument();
+    // Tabler ti-car icon rendered + translated vehicle label
+    expect(view.container.querySelector('.ti-car')).toBeInTheDocument();
+  });
+
+  describe('parking assigned to other user', () => {
+    beforeEach(() => localStorage.setItem('app_user', JSON.stringify({ id: 'user-current' })));
+    afterEach(() => localStorage.removeItem('app_user'));
+
+    it('shows assigned badge with lock icon', () => {
+      const view = render(
+        <ResourceCard
+          resource={makeResource({ type: 'PARKING', assignedUserId: 'user-other', amenities: [] })}
+          onBook={vi.fn()}
+        />
+      );
+      expect(view.container.querySelector('.ti-lock')).toBeInTheDocument();
+    });
+
+    it('disables both CTA buttons', () => {
+      const view = render(
+        <ResourceCard
+          resource={makeResource({ type: 'PARKING', assignedUserId: 'user-other', amenities: [] })}
+          onBook={vi.fn()}
+        />
+      );
+      const disabledButtons = view.getAllByRole('button').filter(b => b.hasAttribute('disabled'));
+      expect(disabledButtons.length).toBe(2);
+    });
   });
 });

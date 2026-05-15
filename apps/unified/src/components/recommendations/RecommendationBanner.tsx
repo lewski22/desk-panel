@@ -2,7 +2,7 @@
  * RecommendationBanner — Sprint K1
  *
  * Dismissable banner nad mapą biurek pokazujący sugerowane biurko.
- * Znika po kliknięciu "Zarezerwuj" lub "Nie teraz".
+ * Znika po kliknięciu "Zarezerwuj" lub ✕.
  * Nie pojawia się więcej niż raz dziennie per user (localStorage).
  *
  * apps/unified/src/components/recommendations/RecommendationBanner.tsx
@@ -39,9 +39,9 @@ function getDismissKey(userId: string, date: string) {
 export function RecommendationBanner({ locationId, userId, date, start, end, onReserve }: Props) {
   const { t } = useTranslation();
 
-  const [rec,      setRec]      = useState<Recommendation | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [visible,  setVisible]  = useState(false);
+  const [rec,     setRec]     = useState<Recommendation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   const dismissKey = getDismissKey(userId, date);
 
@@ -57,7 +57,6 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
   }, [rec, dismiss, onReserve]);
 
   useEffect(() => {
-    // Sprawdź czy już odrzucony dzisiaj
     if (localStorage.getItem(dismissKey)) {
       setLoading(false);
       return;
@@ -77,94 +76,127 @@ export function RecommendationBanner({ locationId, userId, date, start, end, onR
 
   if (loading || !visible || !rec) return null;
 
-  const reasonLabel: Record<string, string> = {
-    FAVORITE:      t('recommendations.reason.favorite'),
-    FAVORITE_ZONE: t('recommendations.reason.favorite_zone'),
-    ANY_FREE:      t('recommendations.reason.any_free'),
-  };
+  const subtitle = [
+    rec.zone,
+    rec.floor ? `P${rec.floor}` : null,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div
       role="status"
       aria-live="polite"
       style={{
-        display:        'flex',
-        alignItems:     'center',
-        gap:            12,
-        background:     'var(--color-background-info)',
-        border:         '0.5px solid var(--color-border-info)',
-        borderRadius:   10,
-        padding:        '10px 14px',
-        marginBottom:   16,
-        flexWrap:       'wrap',
+        position:     'relative',
+        background:   '#B53578',
+        borderRadius: 12,
+        padding:      16,
+        marginBottom: 16,
+        overflow:     'hidden',
       }}
     >
-      {/* Ikona */}
-      <span style={{ fontSize: 18, flexShrink: 0 }}>💡</span>
+      {/* Decorative circles */}
+      <div style={{ position: 'absolute', right: -18, top: -18, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', right: 16, bottom: -28, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
-      {/* Tekst */}
-      <div style={{ flex: 1, minWidth: 160 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-info)' }}>
-          {t('recommendations.suggested')}:{' '}
-          <strong>{rec.deskCode || rec.deskName}</strong>
+      {/* Dismiss button */}
+      <button
+        onClick={dismiss}
+        aria-label={t('recommendations.dismiss_aria')}
+        style={{
+          position:        'absolute',
+          top:             6,
+          right:           8,
+          fontSize:        14,
+          color:           'rgba(255,255,255,0.5)',
+          background:      'none',
+          border:          'none',
+          cursor:          'pointer',
+          fontFamily:      'Sora, sans-serif',
+          lineHeight:      1,
+          minWidth:        44,
+          minHeight:       44,
+          display:         'flex',
+          alignItems:      'center',
+          justifyContent:  'center',
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Eyebrow */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', flexShrink: 0 }} />
+        <span style={{
+          fontFamily:    'Sora, sans-serif',
+          fontSize:      10,
+          fontWeight:    600,
+          color:         'rgba(255,255,255,0.65)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}>
+          {t('recommendations.suggested_eyebrow', 'Polecane dla Ciebie')}
         </span>
-        {rec.zone && (
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
-            {rec.zone}{rec.floor ? ` · ${t('deskcard.floor')} ${rec.floor}` : ''}
-          </span>
-        )}
-        <span
-          style={{
-            display:      'inline-block',
-            marginLeft:   8,
-            fontSize:     11,
-            color:        'var(--color-text-info)',
-            background:   'var(--color-background-primary)',
-            borderRadius: 999,
-            padding:      '1px 7px',
-            border:       '0.5px solid var(--color-border-info)',
-          }}
-        >
-          {reasonLabel[rec.reason] ?? reasonLabel.ANY_FREE}
-        </span>
-        {rec.timesBooked > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginLeft: 6 }}>
-            ({t('recommendations.times_booked', { count: rec.timesBooked })})
-          </span>
-        )}
       </div>
 
-      {/* CTA */}
-      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+      {/* Desk name */}
+      <p style={{
+        fontFamily: 'Sora, sans-serif',
+        fontSize:   17,
+        fontWeight: 700,
+        color:      '#fff',
+        margin:     '0 0 2px 0',
+        lineHeight: 1.2,
+      }}>
+        {rec.deskCode || rec.deskName}
+      </p>
+
+      {/* Subtitle */}
+      {subtitle && (
+        <p style={{
+          fontFamily: 'DM Sans, sans-serif',
+          fontSize:   12,
+          color:      'rgba(255,255,255,0.65)',
+          margin:     '0 0 12px 0',
+        }}>
+          {subtitle}
+        </p>
+      )}
+
+      {/* Bottom row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Status badge */}
+        <span style={{
+          display:    'inline-flex',
+          alignItems: 'center',
+          gap:        5,
+          background: 'rgba(255,255,255,0.18)',
+          borderRadius: 20,
+          padding:    '4px 10px',
+          fontFamily: 'DM Sans, sans-serif',
+          fontSize:   11,
+          fontWeight: 500,
+          color:      '#fff',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#34D399', flexShrink: 0 }} />
+          {t('resource.status.free')}
+        </span>
+
+        {/* CTA button */}
         <button
           onClick={handleReserve}
           style={{
-            fontSize:     12,
-            fontWeight:   500,
-            padding:      '5px 12px',
+            background:   'rgba(255,255,255,0.15)',
+            border:       '1px solid rgba(255,255,255,0.4)',
             borderRadius: 8,
-            border:       'none',
-            background:   'var(--brand)',
+            fontFamily:   'Sora, sans-serif',
+            fontSize:     12,
+            fontWeight:   600,
             color:        '#fff',
+            padding:      '6px 14px',
             cursor:       'pointer',
           }}
         >
-          + {t('deskcard.book')}
-        </button>
-        <button
-          onClick={dismiss}
-          aria-label={t('recommendations.dismiss_aria')}
-          style={{
-            fontSize:     12,
-            padding:      '5px 10px',
-            borderRadius: 8,
-            border:       '0.5px solid var(--color-border-secondary)',
-            background:   'transparent',
-            color:        'var(--color-text-secondary)',
-            cursor:       'pointer',
-          }}
-        >
-          {t('recommendations.not_now')}
+          {t('deskcard.book')} →
         </button>
       </div>
     </div>

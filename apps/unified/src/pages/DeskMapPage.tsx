@@ -26,7 +26,7 @@ import { Monitor, Building2, ParkingCircle } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────
 const AMENITY_ICONS: Record<string, string> = {
-  TV: '📺', videoconf: '📹', whiteboard: '📋', projector: '📽',
+  TV: 'ti-device-tv', videoconf: 'ti-video', whiteboard: 'ti-writing', projector: 'ti-device-projector',
 };
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -250,6 +250,19 @@ export function DeskMapPage() {
   // Room filters
   const [minCapacity,   setMinCapacity]   = useState<number | null>(null);
   const [amenityFilter, setAmenityFilter] = useState<string[]>([]);
+  const [showCapDrop,   setShowCapDrop]   = useState(false);
+  const capDropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showCapDrop) return;
+    const handler = (e: MouseEvent) => {
+      if (capDropRef.current && !capDropRef.current.contains(e.target as Node)) {
+        setShowCapDrop(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCapDrop]);
 
   const userRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
@@ -387,6 +400,7 @@ export function DeskMapPage() {
       </div>
 
       {/* Day slider — wspólny dla wszystkich tabów */}
+      {/* TODO: DaySlider weekend styling — add disabledDates prop to DaySlider and pass weekend dates when supported */}
       <DaySlider
         selected={selectedDate}
         onChange={setSelectedDate}
@@ -486,33 +500,72 @@ export function DeskMapPage() {
       {/* Resources — Sale i Parking */}
       {mapTab !== 'desks' && (
         <div>
-          {/* Room filters (only for rooms tab) */}
+          {/* Room filters — chip-pill bar */}
           {mapTab === 'rooms' && (
-            <div className="flex flex-wrap gap-2 mb-3">
-              <select
-                value={minCapacity ?? ''}
-                onChange={e => setMinCapacity(e.target.value ? Number(e.target.value) : null)}
-                className="text-xs border rounded-lg px-2 py-1.5 text-zinc-600 bg-white border-zinc-200"
-                aria-label={t('deskmap.filter.capacity', 'Minimalna pojemność')}
-              >
-                <option value="">{t('rooms.filter.any_capacity', 'Dowolna pojemność')}</option>
-                <option value="4">≥ 4 os.</option>
-                <option value="8">≥ 8 os.</option>
-                <option value="12">≥ 12 os.</option>
-                <option value="20">≥ 20 os.</option>
-              </select>
-              {(['TV', 'videoconf', 'whiteboard', 'projector'] as const).map(a => (
-                <button key={a}
-                  onClick={() => setAmenityFilter(f => f.includes(a) ? f.filter(x => x !== a) : [...f, a])}
-                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all ${
-                    amenityFilter.includes(a)
-                      ? 'bg-brand text-white border-brand'
-                      : 'bg-white text-zinc-600 border-zinc-200'
-                  }`}
+            <div className="flex flex-wrap gap-2 mb-3" style={{ alignItems: 'center' }}>
+              {/* Capacity chip with inline dropdown */}
+              <div ref={capDropRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowCapDrop(d => !d)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '5px 11px', borderRadius: 20,
+                    fontFamily: 'DM Sans, sans-serif', fontSize: 12,
+                    cursor: 'pointer',
+                    background: minCapacity ? '#FDF4F9' : 'white',
+                    border: minCapacity ? '0.5px solid #B53578' : '0.5px solid #DCD6EA',
+                    color: minCapacity ? '#B53578' : '#6B5F7A',
+                  }}
+                  aria-label={t('rooms.filter.capacity')}
                 >
-                  {AMENITY_ICONS[a]} {a}
+                  <i className="ti ti-users" style={{ fontSize: 13 }} />
+                  {minCapacity === null  ? t('rooms.filter.capacity') :
+                   minCapacity === 2     ? t('rooms.filter.cap_2') :
+                   minCapacity === 5     ? t('rooms.filter.cap_5') :
+                   minCapacity === 10    ? t('rooms.filter.cap_10') :
+                   minCapacity === 20    ? t('rooms.filter.cap_20') : `${minCapacity}+`}
                 </button>
-              ))}
+                {showCapDrop && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, background: 'white', border: '0.5px solid #EDE8FA', borderRadius: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', marginTop: 4, minWidth: 150, overflow: 'hidden' }}>
+                    {([null, 2, 5, 10, 20] as (number | null)[]).map(cap => (
+                      <button
+                        key={cap ?? 'any'}
+                        onClick={() => { setMinCapacity(cap); setShowCapDrop(false); }}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '8px 14px', fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: minCapacity === cap ? '#B53578' : '#1A0A2E', background: minCapacity === cap ? '#FDF4F9' : 'transparent', border: 'none', cursor: 'pointer' }}
+                      >
+                        {cap === null ? t('rooms.filter.any_capacity') :
+                         cap === 2    ? t('rooms.filter.cap_2') :
+                         cap === 5    ? t('rooms.filter.cap_5') :
+                         cap === 10   ? t('rooms.filter.cap_10') :
+                                        t('rooms.filter.cap_20')}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Amenity chips */}
+              {(['TV', 'videoconf', 'whiteboard', 'projector'] as const).map(a => {
+                const active = amenityFilter.includes(a);
+                return (
+                  <button
+                    key={a}
+                    onClick={() => setAmenityFilter(f => f.includes(a) ? f.filter(x => x !== a) : [...f, a])}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '5px 11px', borderRadius: 20,
+                      fontFamily: 'DM Sans, sans-serif', fontSize: 12,
+                      cursor: 'pointer',
+                      background: active ? '#FDF4F9' : 'white',
+                      border: active ? '0.5px solid #B53578' : '0.5px solid #DCD6EA',
+                      color: active ? '#B53578' : '#6B5F7A',
+                    }}
+                  >
+                    <i className={`ti ${AMENITY_ICONS[a]}`} style={{ fontSize: 13 }} />
+                    {a}
+                  </button>
+                );
+              })}
             </div>
           )}
 
