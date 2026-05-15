@@ -326,9 +326,11 @@ export class ReservationsService {
 
       // Push — powiadom bookera jeśli anulował ktoś inny (admin)
       if (actorId !== reservation.userId) {
+        // TODO: as any — backlog #6, requires typed findOne return (openapi-typescript codegen)
+        const deskName = (reservation as any).desk?.name ?? reservation.deskId;
         this.push.notifyUser(reservation.userId, {
           title: 'Rezerwacja anulowana',
-          body:  `Twoja rezerwacja biurka ${(reservation as any).desk?.name ?? reservation.deskId} została anulowana przez administratora.`, // TODO: as any — backlog #6, requires typed findOne return
+          body:  `Twoja rezerwacja biurka ${deskName} została anulowana przez administratora.`,
           url:   '/my-reservations',
         }).catch(() => {});
       }

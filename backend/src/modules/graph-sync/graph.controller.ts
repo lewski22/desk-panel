@@ -115,7 +115,12 @@ export class GraphController {
     }
     await this.nonceStore.delete(state);
 
-    const userId = entry.userId!;
+    if (!entry.userId) {
+      this.logger.warn(`graphCallback: state=${state} missing userId — re-auth required`);
+      res.redirect(`${frontendUrl}/settings/integrations?graph_error=state_expired`);
+      return;
+    }
+    const userId = entry.userId;
     const orgId  = entry.orgId;
 
     // Pobierz config Azure

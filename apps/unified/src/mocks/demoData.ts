@@ -152,6 +152,7 @@ function makeWeekDays(weekOffset = 0): string[] {
 
 const STATUSES: Array<'office' | 'reserved' | 'unknown'> = ['office', 'office', 'reserved', 'unknown', 'office'];
 
+// NOTE: dates computed once at module load time — restart process to refresh current week
 export const DEMO_ATTENDANCE = {
   rows: DEMO_TEAM.map((user, ui) => ({
     user,

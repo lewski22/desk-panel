@@ -74,10 +74,10 @@ const ROUTES: Array<{ test: RegExp | string; method?: string; handler: Handler }
   { test: /\/locations\/[^/]+\/attendance/, handler: () => DEMO_ATTENDANCE },
 
   // Parking blocks per resource
-  { test: /\/parking-blocks/, handler: (_path: string) => {
+  { test: /\/resources\/[^/]+\/parking-blocks/, handler: (_path: string) => {
     const match = _path.match(/resources\/([^/]+)\/parking-blocks/);
     if (match) return DEMO_PARKING_BLOCKS.filter(b => b.resourceId === match[1]);
-    return DEMO_PARKING_BLOCKS;
+    return undefined;
   }},
 
   // Floor plan — brak w demo

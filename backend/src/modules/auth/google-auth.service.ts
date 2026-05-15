@@ -234,6 +234,10 @@ export class GoogleAuthService {
       }
     }
 
+    if (allowedOrigins.size === 0) {
+      this.logger.error('_assertSafeRedirectUrl: no allowed origins configured — set FRONTEND_URL or ADMIN_URL');
+    }
+
     let given: string;
     try {
       given = new URL(redirectUrl).origin;

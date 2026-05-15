@@ -41,6 +41,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     AuthService,
     AzureAuthService,
     GoogleAuthService,
+    NonceStoreService,
   ],
 })
 export class AuthModule {}
