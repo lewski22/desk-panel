@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { NfcCardModal } from '../components/users/NfcCardModal';
-import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select, Spinner } from '../components/ui';
+import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select } from '../components/ui';
 import { SkeletonRows } from '../components/ui/Skeleton';
 import { useDirtyGuard } from '../hooks';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
@@ -13,6 +13,16 @@ import { toast } from '../components/ui/Toast';
 const ROLE_COLOR: Record<string,'purple'|'blue'|'zinc'|'green'> = {
   SUPER_ADMIN: 'purple', OFFICE_ADMIN: 'blue', STAFF: 'zinc', END_USER: 'green',
 };
+
+const chipBtn = (active: boolean) =>
+  `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
+    active
+      ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+      : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
+  }`;
+
+const iconBtn =
+  'w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors';
 
 type TabType = 'active' | 'deactivated';
 
@@ -33,10 +43,40 @@ export function UsersPage() {
   const [busy,       setBusy]       = useState(false);
   const [err,        setErr]        = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  // FEATURE P4-1: filter state
   const [search,     setSearch]     = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [cardFilter, setCardFilter] = useState<''|'has'|'none'>();
+  const [cardFilter, setCardFilter] = useState<''|'has'|'none'>('');
+  const [showRoleDrop, setShowRoleDrop] = useState(false);
+  const [showCardDrop, setShowCardDrop] = useState(false);
+  const [openMenuId,   setOpenMenuId]   = useState<string | null>(null);
+
+  const roleDropRef = useRef<HTMLDivElement>(null);
+  const cardDropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showRoleDrop) return;
+    const handler = (e: MouseEvent) => {
+      if (roleDropRef.current && !roleDropRef.current.contains(e.target as Node)) setShowRoleDrop(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showRoleDrop]);
+
+  useEffect(() => {
+    if (!showCardDrop) return;
+    const handler = (e: MouseEvent) => {
+      if (cardDropRef.current && !cardDropRef.current.contains(e.target as Node)) setShowCardDrop(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCardDrop]);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = () => setOpenMenuId(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openMenuId]);
 
   const currentUserRole = useMemo(() => {
     try { return JSON.parse(localStorage.getItem('app_user') ?? '{}')?.role ?? ''; } catch { return ''; }
@@ -44,13 +84,11 @@ export function UsersPage() {
 
   const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 
-  // FEATURE P4-1: reset filters when tab switches
   const handleTabChange = useCallback((next: TabType) => {
     setTab(next);
     setSearch(''); setRoleFilter(''); setCardFilter('');
   }, []);
 
-  // FEATURE P4-1: filtered list
   const filtered = useMemo(() => {
     let list = tab === 'active' ? users : deactivated;
     if (search.trim()) {
@@ -162,18 +200,23 @@ export function UsersPage() {
         sub={t('users.sub', { active: users.length, deactivated: deactivated.length })}
         action={
           <div className="flex gap-2">
-            <Btn variant="secondary" onClick={() => { setInviteForm({ email:'', role:'END_USER' }); setInviteSent(false); setErr(''); setModal('invite'); }}>
+            <button
+              onClick={() => { setInviteForm({ email:'', role:'END_USER' }); setInviteSent(false); setErr(''); setModal('invite'); }}
+              className={chipBtn(false)}>
+              <i className="ti ti-mail text-base" />
               {t('users.invite.btn')}
-            </Btn>
+            </button>
             <Btn onClick={() => { resetDirty(); setModal('create'); }}>{t('pages.users.new')}</Btn>
           </div>
         }
       />
 
-      <div className="flex gap-1 mb-4 p-1 bg-zinc-100 rounded-xl w-fit">
+      {/* Tab chips */}
+      <div className="flex gap-1 mb-4">
         {(['active','deactivated'] as TabType[]).map(tabKey => (
           <button key={tabKey} onClick={() => handleTabChange(tabKey)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${tab === tabKey ? 'bg-white shadow text-zinc-800' : 'text-zinc-400 hover:text-zinc-600'}`}>
+            className={chipBtn(tab === tabKey)}>
+            <i className={`ti ${tabKey === 'active' ? 'ti-users' : 'ti-user-off'} text-base`} />
             {tabKey === 'active'
               ? t('users.tabs.active', { count: users.length })
               : t('users.tabs.deactivated', { count: deactivated.length })}
@@ -181,37 +224,70 @@ export function UsersPage() {
         ))}
       </div>
 
-      {/* FEATURE P4-1: filter bar */}
+      {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="relative w-full sm:w-64">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
+          <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-[#6B5F7A] text-sm pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('users.filter.search_placeholder')}
-            className="w-full pl-8 pr-3 py-2 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+            className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-xl text-sm bg-[#F8F6FC] focus:outline-none focus:ring-2 focus:ring-[#B53578]/20"
           />
         </div>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)}
-          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white">
-          <option value="">{t('users.filter.all_roles')}</option>
-          <option value="SUPER_ADMIN">{t('users.roles.SUPER_ADMIN')}</option>
-          <option value="OFFICE_ADMIN">{t('users.roles.OFFICE_ADMIN')}</option>
-          <option value="STAFF">{t('users.roles.STAFF')}</option>
-          <option value="END_USER">{t('users.roles.END_USER')}</option>
-        </select>
-        <select value={cardFilter ?? ''} onChange={e => setCardFilter(e.target.value as any)}
-          className="border border-zinc-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white">
-          <option value="">{t('users.filter.all_cards')}</option>
-          <option value="has">{t('users.filter.has_card')}</option>
-          <option value="none">{t('users.filter.no_card')}</option>
-        </select>
+
+        {/* Role chip dropdown */}
+        <div className="relative" ref={roleDropRef}>
+          <button onClick={() => setShowRoleDrop(p => !p)} className={chipBtn(!!roleFilter)}>
+            <i className="ti ti-shield text-base" />
+            {roleFilter ? ROLE_LABEL[roleFilter] : t('users.filter.all_roles')}
+            <i className="ti ti-chevron-down text-xs" />
+          </button>
+          {showRoleDrop && (
+            <div className="absolute left-0 top-10 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[160px]">
+              {(['', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] as const).map(r => (
+                <button key={r} onClick={() => { setRoleFilter(r); setShowRoleDrop(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                    roleFilter === r ? 'text-[#B53578] bg-[#FDF4F9]' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'
+                  }`}>
+                  {r ? ROLE_LABEL[r] : t('users.filter.all_roles')}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Card chip dropdown */}
+        <div className="relative" ref={cardDropRef}>
+          <button onClick={() => setShowCardDrop(p => !p)} className={chipBtn(!!cardFilter)}>
+            <i className="ti ti-credit-card text-base" />
+            {cardFilter === 'has' ? t('users.filter.has_card') : cardFilter === 'none' ? t('users.filter.no_card') : t('users.filter.all_cards')}
+            <i className="ti ti-chevron-down text-xs" />
+          </button>
+          {showCardDrop && (
+            <div className="absolute left-0 top-10 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[160px]">
+              {([
+                { value: '' as const,    label: t('users.filter.all_cards') },
+                { value: 'has' as const, label: t('users.filter.has_card') },
+                { value: 'none' as const,label: t('users.filter.no_card') },
+              ]).map(({ value, label }) => (
+                <button key={value} onClick={() => { setCardFilter(value); setShowCardDrop(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                    cardFilter === value ? 'text-[#B53578] bg-[#FDF4F9]' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {anyFilterActive && (
           <>
-            <span className="text-xs text-zinc-400">{t('users.filter.results', { count: filtered.length })}</span>
+            <span className="text-xs text-[#6B5F7A]">{t('users.filter.results', { count: filtered.length })}</span>
             <button onClick={() => { setSearch(''); setRoleFilter(''); setCardFilter(''); }}
-              className="text-xs text-brand hover:underline">
+              className="text-xs text-[#B53578] hover:underline">
               {t('users.filter.clear')}
             </button>
           </>
@@ -220,14 +296,16 @@ export function UsersPage() {
 
       {err && <div className="mb-3 p-3 rounded-lg bg-red-50 text-red-600 text-sm">{err}</div>}
 
+      {/* Pending invites banner */}
       {tab === 'active' && pendingInvites.length > 0 && (
-        <div className="mb-4 p-3 bg-sky-50 border border-sky-200 rounded-xl text-sm text-sky-700">
-          <p className="font-semibold mb-1">
-            📬 {pendingInvites.length} {t('users.invite.pending', 'oczekujące zaproszenie(a)')}
+        <div className="mb-4 p-3 bg-[#F8F6FC] border border-[#DCD6EA] rounded-xl text-sm text-[#6B5F7A]">
+          <p className="font-semibold mb-1 flex items-center gap-2">
+            <i className="ti ti-mail text-base text-[#B53578]" />
+            {pendingInvites.length} {t('users.invite.pending', 'oczekujące zaproszenie(a)')}
           </p>
           <div className="space-y-1">
             {pendingInvites.map(inv => (
-              <p key={inv.email} className="text-xs text-sky-600">
+              <p key={inv.email} className="text-xs text-[#6B5F7A]">
                 {inv.email} · {inv.role} · {t('users.invite.expires', 'wygasa')} {new Date(inv.expiresAt).toLocaleDateString()}
               </p>
             ))}
@@ -235,11 +313,11 @@ export function UsersPage() {
         </div>
       )}
 
+      {/* Active users table */}
       {tab === 'active' && (
         <Table headers={[
           t('users.table.name'), { label: t('users.table.email'), hideOnMobile: true },
-          t('users.table.role'), { label: t('users.table.card'), hideOnMobile: true },
-          { label: t('users.table.active'), hideOnMobile: true }, '',
+          t('users.table.role'), { label: t('users.table.card'), hideOnMobile: true }, '',
         ]} empty={!filtered.length}>
           {filtered.map(u => (
             <TR key={u.id}>
@@ -248,27 +326,40 @@ export function UsersPage() {
               <TD><Badge color={ROLE_COLOR[u.role] ?? 'zinc'}>{ROLE_LABEL[u.role] ?? u.role}</Badge></TD>
               <TD hideOnMobile>
                 {u.cardUid
-                  ? <span className="font-mono text-xs text-zinc-500">{u.cardUid}</span>
-                  : <Btn variant="ghost" size="sm" onClick={() => { setTarget(u); setModal('card'); }}>{t('users.actions.add_card')}</Btn>}
-              </TD>
-              <TD hideOnMobile>
-                <span className={`text-xs font-medium ${u.isActive ? 'text-emerald-600' : 'text-zinc-400'}`}>
-                  {u.isActive ? t('users.yes') : t('users.no')}
-                </span>
+                  ? <span className="font-mono text-xs text-[#6B5F7A]">{u.cardUid}</span>
+                  : <span className="text-xs text-[#6B5F7A] italic">{t('users.filter.no_card')}</span>}
               </TD>
               <TD>
-                <div className="flex gap-1">
-                  {/* Admin nie może edytować ani dezaktywować kont SA */}
+                <div className="flex items-center gap-1">
                   {!(u.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN') && (
-                    <Btn variant="ghost" size="sm" onClick={() => openEdit(u)}>{t('users.actions.edit')}</Btn>
+                    <button title={t('users.actions.edit')} onClick={() => openEdit(u)} className={iconBtn}>
+                      <i className="ti ti-edit text-sm" />
+                    </button>
                   )}
-                  {u.cardUid && (
-                    <Btn variant="ghost" size="sm" onClick={() => { setTarget(u); setModal('card'); }}>{t('users.actions.card')}</Btn>
-                  )}
+                  <button
+                    title={u.cardUid ? t('users.actions.card') : t('users.actions.add_card')}
+                    onClick={() => { setTarget(u); setModal('card'); }}
+                    className={iconBtn}>
+                    <i className="ti ti-credit-card text-sm" />
+                  </button>
                   {u.isActive && !(u.role === 'SUPER_ADMIN' && currentUserRole === 'OFFICE_ADMIN') && (
-                    <Btn variant="danger" size="sm" onClick={() => { setTarget(u); setRetDays(30); setErr(''); setModal('deactivate'); }}>
-                      {t('users.actions.deactivate')}
-                    </Btn>
+                    <div className="relative">
+                      <button title={t('btn.menu', 'Menu')}
+                        onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === u.id ? null : u.id); }}
+                        className={iconBtn}>
+                        <i className="ti ti-dots-vertical text-sm" />
+                      </button>
+                      {openMenuId === u.id && (
+                        <div className="absolute right-0 top-8 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[150px]">
+                          <button
+                            onClick={() => { setTarget(u); setRetDays(30); setErr(''); setModal('deactivate'); setOpenMenuId(null); }}
+                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                            <i className="ti ti-user-off text-sm" />
+                            {t('users.actions.deactivate')}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </TD>
@@ -277,6 +368,7 @@ export function UsersPage() {
         </Table>
       )}
 
+      {/* Deactivated users table */}
       {tab === 'deactivated' && (
         <Table headers={[
           t('users.table.name'), { label: t('users.table.email'), hideOnMobile: true },
@@ -295,18 +387,34 @@ export function UsersPage() {
                 <TD hideOnMobile>{u.deletedAt ? formatDate(u.deletedAt) : '—'}</TD>
                 <TD hideOnMobile>
                   {daysLeft !== null
-                    ? <span className={`text-xs font-mono ${daysLeft <= 7 ? 'text-red-500' : 'text-zinc-500'}`}>
+                    ? <span className={`text-xs font-mono ${daysLeft <= 7 ? 'text-red-500' : 'text-[#6B5F7A]'}`}>
                         {t('users.days', { count: daysLeft })}
                       </span>
                     : '—'}
                 </TD>
                 <TD>
-                  <div className="flex gap-1">
-                    <Btn variant="secondary" size="sm" onClick={() => handleRestore(u.id)}>{t('users.actions.restore')}</Btn>
+                  <div className="flex items-center gap-1">
+                    <button title={t('users.actions.restore')} onClick={() => handleRestore(u.id)} className={iconBtn}>
+                      <i className="ti ti-user-check text-sm" />
+                    </button>
                     {daysLeft === 0 && (
-                      <Btn variant="danger" size="sm" onClick={() => handleHardDelete(u.id, `${u.firstName} ${u.lastName}`)}>
-                        {t('users.actions.delete_data')}
-                      </Btn>
+                      <div className="relative">
+                        <button title={t('btn.menu', 'Menu')}
+                          onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === u.id ? null : u.id); }}
+                          className={iconBtn}>
+                          <i className="ti ti-dots-vertical text-sm" />
+                        </button>
+                        {openMenuId === u.id && (
+                          <div className="absolute right-0 top-8 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[150px]">
+                            <button
+                              onClick={() => { handleHardDelete(u.id, `${u.firstName} ${u.lastName}`); setOpenMenuId(null); }}
+                              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                              <i className="ti ti-trash text-sm" />
+                              {t('users.actions.delete_data')}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </TD>
@@ -320,7 +428,7 @@ export function UsersPage() {
         <Modal title={t('users.invite.modal_title')} onClose={() => setModal(null)}>
           {inviteSent ? (
             <div className="text-center py-4">
-              <p className="text-3xl mb-2">✉️</p>
+              <i className="ti ti-mail text-4xl text-[#B53578] mb-2 block" />
               <p className="font-semibold text-zinc-800 text-sm mb-1">{t('users.invite.sent_title')}</p>
               <p className="text-xs text-zinc-500 mb-5">{t('users.invite.sent_body', { email: inviteForm.email })}</p>
               <Btn onClick={() => setModal(null)}>{t('btn.cancel')}</Btn>
