@@ -1176,6 +1176,27 @@
     "page_sub": "Manage conference rooms, parking spots and equipment",
     "add": "Add resource",
     "book": "Book",
+    "type_label": {
+      "room":      "Rooms",
+      "parking":   "Parking",
+      "equipment": "Equipment"
+    },
+    "section": {
+      "room":      "Conference rooms",
+      "parking":   "Parking",
+      "equipment": "Equipment"
+    },
+    "add_type": {
+      "room":      "Add room",
+      "parking":   "Add spot",
+      "equipment": "Add equipment"
+    },
+    "access": {
+      "group_only": "Group only",
+      "public":     "Public"
+    },
+    "blockades":       "Spot blockades",
+    "blockades_empty": "No blockades defined.",
     "edit_title": "Edit: {{name}}",
     "create_title": "New resource",
     "confirm_book": "Confirm booking",

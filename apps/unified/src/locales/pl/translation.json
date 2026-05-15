@@ -1176,6 +1176,27 @@
     "page_sub": "Zarządzaj salami konferencyjnymi, miejscami parkingowymi i sprzętem",
     "add": "Dodaj zasób",
     "book": "Zarezerwuj",
+    "type_label": {
+      "room":      "Sale",
+      "parking":   "Parking",
+      "equipment": "Sprzęt"
+    },
+    "section": {
+      "room":      "Sale konferencyjne",
+      "parking":   "Parking",
+      "equipment": "Sprzęt i wyposażenie"
+    },
+    "add_type": {
+      "room":      "Dodaj salę",
+      "parking":   "Dodaj miejsce",
+      "equipment": "Dodaj sprzęt"
+    },
+    "access": {
+      "group_only": "Tylko grupy",
+      "public":     "Publiczne"
+    },
+    "blockades":       "Blokady miejsca",
+    "blockades_empty": "Brak zdefiniowanych blokad.",
     "edit_title": "Edytuj: {{name}}",
     "create_title": "Nowy zasób",
     "confirm_book": "Potwierdź rezerwację",
