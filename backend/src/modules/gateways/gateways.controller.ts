@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Req, Res, Headers, HttpCode, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { Request as ExpressRequest, Response } from 'express';
 import { GatewaysService }          from './gateways.service';
@@ -29,6 +30,7 @@ export class GatewaysController {
   // ── HMAC → JWT exchange — called by gateway at startup and every 50 min ──
   @Post('auth')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Exchange HMAC-SHA256 challenge for a short-lived gateway JWT' })
   async auth(@Body() dto: GatewayAuthDto) {
     const accessToken = await this.gatewayAuth.exchange(dto.gatewayId, dto.ts, dto.sig);
