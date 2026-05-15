@@ -117,6 +117,8 @@ export class WebhookProvider {
   }
 
   private async _send(cfg: WebhookCustomConfig, payload: WebhookEventPayload): Promise<{ ok: boolean; status: number }> {
+    this._assertPublicUrl(cfg.url);
+
     const body = JSON.stringify(payload);
     const sig  = this._sign(cfg.secret, body);
 
@@ -136,6 +138,33 @@ export class WebhookProvider {
     });
 
     return { ok: resp.status >= 200 && resp.status < 300, status: resp.status };
+  }
+
+  // Blocks SSRF targets: private IPs, loopback, link-local, and AWS metadata endpoint.
+  private _assertPublicUrl(rawUrl: string): void {
+    let parsed: URL;
+    try { parsed = new URL(rawUrl); }
+    catch { throw new Error(`Invalid webhook URL: ${rawUrl}`); }
+
+    if (!['https:', 'http:'].includes(parsed.protocol)) {
+      throw new Error('Webhook URL must use HTTP or HTTPS');
+    }
+
+    const host = parsed.hostname.toLowerCase().replace(/^\[|]$/g, ''); // strip IPv6 brackets
+
+    const blocked =
+      host === 'localhost' ||
+      host === '0.0.0.0'  ||
+      host === '::1'       ||
+      /^127\./.test(host)                          || // 127.0.0.0/8
+      /^10\./.test(host)                           || // 10.0.0.0/8
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host)     || // 172.16.0.0/12
+      /^192\.168\./.test(host)                     || // 192.168.0.0/16
+      /^169\.254\./.test(host);                       // 169.254.0.0/16 — link-local + AWS metadata
+
+    if (blocked) {
+      throw new Error(`Webhook URL points to a private or reserved address: ${host}`);
+    }
   }
 
   private _sign(secret: string, body: string): string {
