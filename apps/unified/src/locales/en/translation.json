@@ -408,6 +408,7 @@
     "filter": {
       "search_placeholder": "Search by name or code…",
       "all_floors": "All floors",
+      "floor_prefix": "Floor",
       "all_statuses": "All statuses",
       "results": "{{count}} of {{total}}",
       "clear": "Clear"

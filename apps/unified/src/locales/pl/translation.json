@@ -408,6 +408,7 @@
     "filter": {
       "search_placeholder": "Szukaj po nazwie lub kodzie…",
       "all_floors": "Wszystkie piętra",
+      "floor_prefix": "Piętro",
       "all_statuses": "Wszystkie statusy",
       "results": "{{count}} z {{total}}",
       "clear": "Wyczyść"
