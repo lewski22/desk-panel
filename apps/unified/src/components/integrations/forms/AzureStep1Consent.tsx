@@ -52,14 +52,20 @@ export function AzureStep1Consent({ adminConsentUrl, consentDone, onConsentDone 
                 na stronie zgody Microsoft. Użyj konta służbowego — konta osobiste
                 (@hotmail, @outlook) nie są obsługiwane.
               </p>
-              <a
-                href={adminConsentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand border border-brand/30 bg-white rounded-lg px-3 py-1.5 hover:bg-brand/5 transition-colors"
-              >
-                Otwórz stronę zgody (Global Admin) ↗
-              </a>
+              {adminConsentUrl ? (
+                <a
+                  href={adminConsentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand border border-brand/30 bg-white rounded-lg px-3 py-1.5 hover:bg-brand/5 transition-colors"
+                >
+                  Otwórz stronę zgody (Global Admin) ↗
+                </a>
+              ) : (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Brak konfiguracji VITE_AZURE_CLIENT_ID — skontaktuj się z administratorem systemu.
+                </p>
+              )}
             </div>
           </div>
 
