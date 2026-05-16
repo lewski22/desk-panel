@@ -1,6 +1,125 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-15
+> Ostatnia aktualizacja: 2026-05-16
+
+---
+
+## [0.20.0] — 2026-05-16 — UI unification sprint, design tokens, org logo + white-label
+
+### Phase A — UI unification (Tabler icons, DS chip-pill, no emoji in JSX)
+
+**`apps/unified/tailwind.config.js`** + **`apps/unified/src/index.css`**
+- Zaktualizowano brand: `primary: #B53578`, `hover: #9C2264`, `surface: #FDF4F9`.
+- Pliki generowane przez `npm run tokens` z `design/brand.tokens.ts`.
+
+**`apps/unified/src/components/ui.tsx`**
+- `EmptyState.icon`: `string` → `React.ReactNode` — wywołania przekazują `<i className="ti ti-X ...">`.
+
+**`apps/unified/src/locales/pl/translation.json`** + **`en/translation.json`**
+- Usunięto emoji z kluczy metody rezerwacji: `📡 NFC` → `NFC`, `📷 QR` → `QR`, `✋ Ręczny` → `Ręczny/Manual`.
+
+**`apps/unified/src/components/layout/BottomNav.tsx`**
+- `MORE_LINKS`: zmieniono `icon: string` na `tablerIcon: string`; renderowanie przez `<i className="ti ti-X">` zamiast emoji.
+
+**`apps/unified/src/components/reservations/ReservationList.tsx`**
+- `METHOD_ICON` mapuje metody na klasy `ti-antenna/ti-qrcode/ti-hand-stop/ti-world`.
+- Chip "ALL" i filtry metodą: wzorzec DS chip-pill (`bg-[#FDF4F9] border-[#B53578]` active vs `bg-white border-[#DCD6EA]` inactive).
+- Przyciski anulowania i odświeżania: wzorzec `w-7 h-7` icon button z Tabler.
+
+**`apps/unified/src/pages/MyReservationsPage.tsx`**
+- Przyciski modala QR, ikony kart, przycisk odświeżania: emoji → Tabler.
+- `EmptyState` z `ti-calendar-off`, `ti-building-community`, `ti-parking`.
+- Nagłówki sekcji: styl `text-[10px] font-semibold text-[#A898B8] uppercase tracking-[.08em]`.
+
+**`apps/unified/src/pages/ReportsPage.tsx`**
+- Wszystkie `EmptyState` emoji → Tabler ReactNode.
+- KPI parkingu i nagłówki sekcji: `ti-chart-bar`, `ti-alert-triangle`, `ti-circle-check`, itp.
+- Selektor segmentów i pod-zakładki: migrated do wzorca chip-pill DS.
+- Dropdown lokalizacji: natywny `<select>` → chip dropdown z `showLocDrop`/`locDropRef` + click-outside handler.
+
+**`apps/unified/src/pages/VisitorsPage.tsx`**
+- `STATUS_CFG`: emoji `icon` → `tablerIcon` (`ti-mail`, `ti-building`, `ti-logout`, `ti-x`).
+- Akcje wiersza: `opacity-0 group-hover` → zawsze widoczne przyciski `w-7 h-7`.
+- Dropdown lokalizacji: natywny `<select>` → chip dropdown.
+
+**`apps/unified/src/pages/QrCheckinPage.tsx`**
+- Błąd, piętro, strefa: emoji → ikony `ti-alert-triangle`, `ti-stairs`, `ti-layout-grid`.
+
+**`apps/unified/src/pages/OrganizationsPage.tsx`**
+- Footer kart: przyciski tekstowe → ikony `ti-pencil`, `ti-brand-azure`, `ti-antenna`.
+- Pasek zakładek modala edycji: emoji → tablerIcons.
+- Empty state: `ti-search`, `ti-building`.
+
+---
+
+### Phase B — Design token system
+
+**`design/brand.tokens.ts`** *(nowy plik)*
+- Jeden plik źródła prawdy: `BRAND`, `BORDER`, `INK`, `STATUS`, `FONT`, `RADIUS`, `ICON_SIZE`, `ANIMATIONS`, `TAILWIND_COLORS`.
+
+**`design/generate-tokens.ts`** *(nowy plik)*
+- Generator uruchamiany przez `npm run tokens` (tsx); regeneruje `tailwind.config.js`, `index.css`, `docs/DESIGN_TOKENS.md`.
+- Używa `process.cwd()` jako ROOT (nie `import.meta.url`) — kompatybilny z CJS i ESM.
+
+**`package.json`** (root)
+- Dodano `"tokens": "tsx design/generate-tokens.ts"` i `"tsx": "^4.19.2"` w devDependencies.
+
+**`.gitattributes`** *(nowy plik)*
+- Oznaczono `tailwind.config.js`, `index.css`, `docs/DESIGN_TOKENS.md` jako `linguist-generated=true`.
+
+**`.github/workflows/check-tokens.yml`** *(nowy plik)*
+- CI: weryfikuje że pliki generowane są zsynchronizowane z `brand.tokens.ts`.
+
+**`docs/ai-context.md`**
+- Sekcja design system: referencja do `design/brand.tokens.ts`, aktualizacja palety kolorów i ikon.
+
+---
+
+### Phase C — Org logo upload + white-label
+
+**`backend/prisma/schema.prisma`**
+- `Organization`: dodano `logoUrl String?`, `logoBgColor String?`, `whitelabelEnabled Boolean @default(false)`.
+
+**`backend/prisma/migrations/20260517000001_org_logo/migration.sql`** *(nowy plik)*
+- `ALTER TABLE "Organization" ADD COLUMN IF NOT EXISTS ...` dla trzech nowych pól.
+
+**`backend/src/modules/organizations/organizations.controller.ts`**
+- `POST /:id/logo` — `@Roles(SUPER_ADMIN, OFFICE_ADMIN)`, walidacja MIME (PNG/SVG/WEBP/JPEG) i rozmiaru (≤ 512 KB).
+- `DELETE /:id/logo` — `@Roles(SUPER_ADMIN, OFFICE_ADMIN)`, 204.
+- `PATCH /:id/whitelabel` — **`@Roles(OWNER)` wyłącznie**, 204.
+
+**`backend/src/modules/organizations/organizations.service.ts`**
+- `uploadLogo()`: zapis do `uploads/logos/`, losowa nazwa hex, usunięcie starego pliku.
+- `deleteLogo()`: usuwa plik + nulluje pola DB.
+- `setWhitelabel()`: aktualizuje `whitelabelEnabled`.
+
+**`apps/unified/src/api/client.ts`**
+- `organizations.findOne(id)` — `GET /organizations/:id`.
+- `organizations.uploadLogo(orgId, file, bgColor?)` — raw `fetch` z `FormData` (omija `Content-Type: application/json`).
+- `organizations.deleteLogo(orgId)` — `DELETE`.
+- `organizations.setWhitelabel(orgId, enabled)` — `PATCH`.
+
+**`apps/unified/src/hooks/useOrgBranding.ts`** *(nowy plik)*
+- Interfejs `OrgBranding { name, logoUrl, logoBgColor, whitelabelEnabled }`.
+- Fetch z `/organizations/:orgId`; graceful fail dla ról bez dostępu → domyślny branding Reserti.
+
+**`apps/unified/src/components/layout/AppLayout.tsx`**
+- Wywołuje `useOrgBranding(user.organizationId)`.
+- Logo organizacji wyświetlane gdy `whitelabelEnabled && logoUrl` w 3 miejscach: zwinięty sidebar, rozwinięty sidebar, mobilny topbar.
+
+**`apps/unified/src/pages/OwnerPage.tsx`**
+- `handleToggleWhitelabel()` z optimistic update + rollback.
+- Nowa kolumna "White-label" (toggle switch) w tabeli organizacji.
+
+**`apps/unified/src/components/org/OrgLogoUpload.tsx`** *(nowy plik)*
+- Drop-zone z podglądem, przyciskiem usunięcia, walidacją MIME/rozmiaru po stronie klienta.
+- Baner ostrzegawczy gdy `logoUrl && !whitelabelEnabled`.
+
+**`apps/unified/src/pages/OrganizationsPage.tsx`**
+- Sekcja `OrgLogoUpload` poniżej `PasswordPolicySection` dla SUPER_ADMIN.
+
+**`apps/unified/src/locales/pl/translation.json`** + **`en/translation.json`**
+- Dodano `org.logo.whitelabel_disabled`.
 
 ---
 

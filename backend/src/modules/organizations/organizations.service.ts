@@ -7,7 +7,10 @@
  *
  * backend/src/modules/organizations/organizations.service.ts
  */
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import * as path from 'path';
+import * as fs   from 'fs/promises';
+import * as crypto from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 
 export interface CreateOrganizationDto {
@@ -117,6 +120,77 @@ export class OrganizationsService {
       }),
     ]);
     return { organizationId: id, totalDesks: desks, totalReservations: reservations, totalCheckins: checkins };
+  }
+
+  // ── Logo management ───────────────────────────────────────────────────────
+
+  async uploadLogo(
+    orgId: string,
+    file: Express.Multer.File,
+    bgColor?: string,
+  ): Promise<{ logoUrl: string }> {
+    await this.findOne(orgId);
+
+    const uploadDir = path.resolve(process.cwd(), 'uploads', 'logos');
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    // Delete previous logo file if exists
+    const current = await this.prisma.organization.findUnique({
+      where: { id: orgId }, select: { logoUrl: true },
+    });
+    if (current?.logoUrl) {
+      const prevFile = path.join(uploadDir, path.basename(current.logoUrl));
+      await fs.unlink(prevFile).catch(() => undefined);
+    }
+
+    const ext      = file.mimetype === 'image/svg+xml' ? '.svg' : path.extname(file.originalname) || '.png';
+    const filename = `${orgId}-${crypto.randomBytes(6).toString('hex')}${ext}`;
+    const dest     = path.join(uploadDir, filename);
+
+    try {
+      await fs.writeFile(dest, file.buffer);
+    } catch {
+      throw new InternalServerErrorException('Failed to save logo file');
+    }
+
+    const logoUrl = `/uploads/logos/${filename}`;
+
+    await this.prisma.organization.update({
+      where: { id: orgId },
+      data:  {
+        logoUrl,
+        ...(bgColor !== undefined && { logoBgColor: bgColor || null }),
+      },
+    });
+
+    return { logoUrl };
+  }
+
+  async deleteLogo(orgId: string): Promise<void> {
+    const org = await this.prisma.organization.findUnique({
+      where: { id: orgId }, select: { logoUrl: true },
+    });
+    if (!org) throw new NotFoundException(`Organization ${orgId} not found`);
+
+    if (org.logoUrl) {
+      const uploadDir = path.resolve(process.cwd(), 'uploads', 'logos');
+      const filepath  = path.join(uploadDir, path.basename(org.logoUrl));
+      await fs.unlink(filepath).catch(() => undefined);
+    }
+
+    await this.prisma.organization.update({
+      where: { id: orgId },
+      data:  { logoUrl: null, logoBgColor: null },
+    });
+  }
+
+  // ── White-label flag — OWNER only ─────────────────────────────────────────
+
+  async setWhitelabel(orgId: string, enabled: boolean): Promise<void> {
+    await this.prisma.organization.update({
+      where: { id: orgId },
+      data:  { whitelabelEnabled: enabled },
+    });
   }
 
   async forcePasswordReset(orgId: string): Promise<{ affected: number }> {

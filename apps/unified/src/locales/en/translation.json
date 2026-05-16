@@ -1281,6 +1281,9 @@
       "require_special": "Require special character (!@#$…)",
       "must_change_banner": "Your password must be changed before you can continue.",
       "must_change_action": "Change password now"
+    },
+    "logo": {
+      "whitelabel_disabled": "Logo is uploaded, but white-labeling is disabled. Contact Reserti to activate."
     }
   },
   "kiosk": {

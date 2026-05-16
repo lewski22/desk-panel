@@ -430,6 +430,7 @@ export const appApi = {
 
   // ── Organizations ─────────────────────────────────────────────
   organizations: {
+    findOne:             (id: string)         => req<any>(`/organizations/${id}`),
     getAzureConfig:      (id: string)         => req<any>(`/organizations/${id}/azure`),
     updateAzureConfig:   (id: string, d: any) => req<any>(`/organizations/${id}/azure`, { method: 'PUT', body: JSON.stringify(d) }),
     getAmenities:        ()                   => req<string[]>('/organizations/me/amenities'),
@@ -437,6 +438,24 @@ export const appApi = {
       req<string[]>('/organizations/me/amenities', { method: 'PUT', body: JSON.stringify({ amenities }) }),
     forcePasswordReset:  (id: string)         =>
       req<{ affected: number }>(`/organizations/${id}/force-password-reset`, { method: 'POST', body: '{}' }),
+    uploadLogo: async (orgId: string, file: File, bgColor?: string): Promise<{ logoUrl: string }> => {
+      const fd = new FormData();
+      fd.append('file', file);
+      if (bgColor) fd.append('bgColor', bgColor);
+      const imp = impStore.get();
+      const res = await fetch(`${BASE}/organizations/${orgId}/logo`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: imp ? { Authorization: `Bearer ${imp}` } : {},
+        body: fd,
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).message ?? res.statusText); }
+      return res.json();
+    },
+    deleteLogo:      (orgId: string)            => req<void>(`/organizations/${orgId}/logo`, { method: 'DELETE' }),
+    setWhitelabel:   async (orgId: string, enabled: boolean): Promise<void> => {
+      await req<void>(`/organizations/${orgId}/whitelabel`, { method: 'PATCH', body: JSON.stringify({ enabled }) });
+    },
   },
 
   // ── Push Notifications ────────────────────────────────────────

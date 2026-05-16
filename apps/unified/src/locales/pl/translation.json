@@ -1281,6 +1281,9 @@
       "require_special": "Wymagaj znaku specjalnego (!@#$…)",
       "must_change_banner": "Twoje hasło wymaga zmiany, aby kontynuować pracę.",
       "must_change_action": "Zmień hasło teraz"
+    },
+    "logo": {
+      "whitelabel_disabled": "Logo jest wgrane, ale white-labeling jest wyłączony. Skontaktuj się z Reserti aby aktywować."
     }
   },
   "kiosk": {

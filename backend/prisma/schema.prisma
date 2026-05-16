@@ -124,6 +124,10 @@ model Organization {
   passwordRequireNumbers   Boolean   @default(false)
   passwordRequireSpecial   Boolean   @default(false)
 
+  logoUrl           String?
+  logoBgColor       String?
+  whitelabelEnabled Boolean  @default(false)
+
   // Azure SSO — DEPRECATED in favour of OrgIntegration (kept for backward compat)
   azureTenantId  String?
   azureEnabled   Boolean   @default(false)

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Request, ForbiddenException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, UseGuards, Request, ForbiddenException, HttpCode, HttpStatus, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth, ApiOperation }                           from '@nestjs/swagger';
 import { UserRole }                                                       from '@prisma/client';
 import { IsString, IsBoolean, IsOptional, IsArray, IsNotEmpty }            from 'class-validator';
@@ -7,6 +8,10 @@ import { AzureAuthService } from '../auth/azure-auth.service';
 import { JwtAuthGuard }     from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }       from '../auth/guards/roles.guard';
 import { Roles }            from '../auth/decorators/roles.decorator';
+
+class SetWhitelabelDto {
+  @IsBoolean() enabled: boolean;
+}
 
 class UpdateAzureConfigDto {
   @IsOptional() @IsString()   azureTenantId?: string;
@@ -65,6 +70,50 @@ export class OrganizationsController {
   update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto, @Request() req: any) {
     this._assertSameOrg(id, req);
     return this.svc.update(id, dto);
+  }
+
+  // ── Logo upload / delete ───────────────────────────────────
+  // SUPER_ADMIN and OFFICE_ADMIN can upload / delete logo (prepare branding).
+  // Logo is only displayed when whitelabelEnabled === true (controlled by OWNER).
+
+  @Post(':id/logo')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Upload org logo (max 512 KB, PNG/SVG/WEBP)' })
+  async uploadLogo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('bgColor') bgColor: string | undefined,
+    @Request() req: any,
+  ) {
+    this._assertOrgAccess(id, req);
+    if (!file) throw new BadRequestException('No file uploaded');
+    const allowed = ['image/png', 'image/svg+xml', 'image/webp', 'image/jpeg'];
+    if (!allowed.includes(file.mimetype)) throw new BadRequestException('Unsupported file type');
+    if (file.size > 512 * 1024) throw new BadRequestException('File too large (max 512 KB)');
+    return this.svc.uploadLogo(id, file, bgColor);
+  }
+
+  @Delete(':id/logo')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete org logo' })
+  async deleteLogo(@Param('id') id: string, @Request() req: any) {
+    this._assertOrgAccess(id, req);
+    return this.svc.deleteLogo(id);
+  }
+
+  // ── White-label toggle — OWNER only ───────────────────────
+
+  @Patch(':id/whitelabel')
+  @Roles(UserRole.OWNER)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Enable / disable white-label branding (OWNER only)' })
+  async setWhitelabel(
+    @Param('id') id: string,
+    @Body() dto: SetWhitelabelDto,
+  ): Promise<void> {
+    await this.svc.setWhitelabel(id, dto.enabled);
   }
 
   // ── Password policy ───────────────────────────────────────

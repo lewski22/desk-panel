@@ -9,6 +9,7 @@ import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
 import { toast } from '../components/ui/Toast';
 import { KioskLinkButton } from '../components/KioskLinkButton';
+import { OrgLogoUpload } from '../components/org/OrgLogoUpload';
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
@@ -1066,6 +1067,20 @@ export function OrganizationsPage() {
           onSaved={load}
         />
       )}
+
+      {/* ── Logo organizacji (SUPER_ADMIN) ──────────────────── */}
+      {isSuperAdmin && user?.organizationId && (() => {
+        const myOrg = orgs.find(o => o.id === user.organizationId);
+        return (
+          <OrgLogoUpload
+            orgId={user.organizationId}
+            logoUrl={myOrg?.logoUrl ?? null}
+            logoBgColor={myOrg?.logoBgColor ?? null}
+            whitelabelEnabled={myOrg?.whitelabelEnabled ?? false}
+            onSaved={load}
+          />
+        );
+      })()}
 
       {/* Create / Edit modal */}
       {(() => {

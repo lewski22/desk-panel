@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../LanguageSwitcher';
 import { LogoMark } from '../logo/LogoMark';
 import { appApi } from '../../api/client';
+import { useOrgBranding } from '../../hooks/useOrgBranding';
 import { BottomNav } from './BottomNav';
 import { Toaster }   from '../ui/Toast';
 import { NotificationBell } from './NotificationBell';
@@ -146,6 +147,9 @@ export function AppLayout({ user, onLogout, children }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
   const mainRef  = useRef<HTMLElement>(null);
+  const branding = useOrgBranding(user.organizationId);
+  const BACKEND  = (import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1').replace(/\/api\/v1$/, '');
+  const logoActive = !!branding?.whitelabelEnabled && !!branding?.logoUrl;
   const mustChange        = !!(user as any).mustChangePassword;
   const mustChangeOnForm  = mustChange && location.pathname === '/change-password';
   const [collapsed,   setCollapsed]   = useState(() => {
@@ -198,14 +202,25 @@ export function AppLayout({ user, onLogout, children }: Props) {
       <div className="flex items-center gap-2.5 px-3 py-3 shrink-0" style={{ borderBottom: '1px solid #DDD6F5' }}>
         {/* Avatar / Logo */}
         {collapsed && !mobile ? (
-          <LogoMark size={32} className="shrink-0" />
+          logoActive
+            ? <img src={`${BACKEND}${branding!.logoUrl}`} alt="Logo"
+                   className="shrink-0 rounded"
+                   style={{ width: 32, height: 32, objectFit: 'contain',
+                            background: branding!.logoBgColor ?? 'transparent' }} />
+            : <LogoMark size={32} className="shrink-0" />
         ) : (
           <>
-            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">
-              {user.firstName
-                ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
-                : user.email[0].toUpperCase()}
-            </div>
+            {logoActive
+              ? <img src={`${BACKEND}${branding!.logoUrl}`} alt="Logo"
+                     className="shrink-0 rounded"
+                     style={{ width: 32, height: 32, objectFit: 'contain',
+                              background: branding!.logoBgColor ?? 'transparent' }} />
+              : <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0 text-white text-xs font-bold select-none">
+                  {user.firstName
+                    ? `${user.firstName[0]}${user.lastName?.[0] ?? ''}`.toUpperCase()
+                    : user.email[0].toUpperCase()}
+                </div>
+            }
             <div className="min-w-0 flex-1">
               <div className="text-zinc-800 text-xs font-semibold truncate">
                 {user.firstName ? `${user.firstName} ${user.lastName ?? ''}`.trim() : user.email}
@@ -418,8 +433,16 @@ export function AppLayout({ user, onLogout, children }: Props) {
             <rect x="2" y="14" width="16" height="2" rx="1"/>
           </svg>
         </button>
-        <LogoMark size={28} />
-        <span className="font-bold text-sm tracking-widest" style={{ color: '#1A0A2E' }}>RESERTI</span>
+        {logoActive
+          ? <img src={`${BACKEND}${branding!.logoUrl}`} alt="Logo"
+                 className="rounded"
+                 style={{ height: 28, maxWidth: 120, objectFit: 'contain',
+                          background: branding!.logoBgColor ?? 'transparent' }} />
+          : <>
+              <LogoMark size={28} />
+              <span className="font-bold text-sm tracking-widest" style={{ color: '#1A0A2E' }}>RESERTI</span>
+            </>
+        }
         <div className="ml-auto flex items-center gap-2">
           <NotificationBell role={user.role} light />
         </div>

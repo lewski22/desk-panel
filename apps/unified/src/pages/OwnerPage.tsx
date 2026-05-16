@@ -769,6 +769,17 @@ export function OwnerPage() {
     catch (e: any) { setErr(e.message); }
   };
 
+  const handleToggleWhitelabel = async (org: any) => {
+    const next = !org.whitelabelEnabled;
+    setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, whitelabelEnabled: next } : o));
+    try {
+      await appApi.organizations.setWhitelabel(org.id, next);
+    } catch (e: any) {
+      setOrgs(prev => prev.map(o => o.id === org.id ? { ...o, whitelabelEnabled: !next } : o));
+      setErr(e.message);
+    }
+  };
+
   const handleForcePasswordReset = async (org: any) => {
     if (!confirm(`Wymusić zmianę hasła dla wszystkich użytkowników "${org.name}"?`)) return;
     try {
@@ -879,7 +890,7 @@ export function OwnerPage() {
             <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                  {['Firma', 'Slug', 'Plan', 'Użytkownicy', 'Status', 'Akcje'].map(h => (
+                  {['Firma', 'Slug', 'Plan', 'Użytkownicy', 'Status', 'White-label', 'Akcje'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -907,6 +918,16 @@ export function OwnerPage() {
                         <span className={`w-1.5 h-1.5 rounded-full ${org.isActive ? 'bg-emerald-500' : 'bg-red-400'}`} />
                         {org.isActive ? 'Aktywna' : 'Nieaktywna'}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleWhitelabel(org)}
+                        title={org.whitelabelEnabled ? 'White-label aktywny' : 'White-label wyłączony'}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${org.whitelabelEnabled ? 'bg-brand' : 'bg-zinc-300'}`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${org.whitelabelEnabled ? 'left-4' : 'left-0.5'}`} />
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1.5 items-center flex-wrap">
