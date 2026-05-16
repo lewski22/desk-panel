@@ -1,6 +1,6 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-16 (0.19.5)
+> Ostatnia aktualizacja: 2026-05-16 (0.19.6)
 
 ---
 
@@ -120,6 +120,28 @@
 
 **`apps/unified/src/locales/pl/translation.json`** + **`en/translation.json`**
 - Dodano `org.logo.whitelabel_disabled`.
+
+---
+
+## [0.19.6] — 2026-05-16 — Security hardening round 4: timing attack, body token, DTO validation
+
+### Security — naprawione podatności (audit round 4)
+
+**`backend/src/modules/gateways/gateways.controller.ts`**
+- `GET /gateway/config` — zastąpiono `secret !== expected` przez `crypto.timingSafeEqual()`. Poprzednie porównanie stringów nie jest stałoczasowe; pomiar latencji pozwalał odgadnąć `GATEWAY_PROVISION_KEY` bajt po bajcie (timing oracle). Bufor o niezgodnej długości jest obsługiwany przez try/catch — `timingSafeEqual` rzuca przy różnych długościach.
+
+**`backend/src/modules/graph-sync/graph.controller.ts`** + **`dto/graph-webhook.dto.ts`** *(nowy plik)*
+- `POST /graph/webhook` — zastąpiono `@Body() body: any` przez `GraphWebhookBodyDto` z `@IsArray() @ValidateNested()`. GlobalValidationPipe był całkowicie pomijany; niesprawdzony JSON trafiał bezpośrednio do serwisu.
+
+**`backend/src/modules/auth/auth.controller.ts`**
+- `POST /auth/refresh` i `POST /auth/logout` — usunięto fallback `?? (req.body as any)?.refreshToken`. Refresh token jest teraz akceptowany wyłącznie z httpOnly cookie. Fallback przez body rozszerzał powierzchnię ataku i umożliwiał bearer-style token reuse poza kontekstem przeglądarki.
+
+**`backend/src/modules/reservations/dto/create-reservation.dto.ts`** + **`create-recurring.dto.ts`**
+- `deskId` i `targetUserId`: `@IsString()` → `@IsUUID()` — odrzuca nieUUID stringi zanim dotrą do Prisma; czyste 400 zamiast wewnętrznego błędu ORM.
+- `notes`: dodano `@MaxLength(2000)` — brak limitu pozwalał na wysyłanie megabajtowych wartości przechowywanych i zwracanych przy każdym zapytaniu listy.
+
+**`backend/src/modules/integrations/integrations.service.ts`**
+- `upsert()` — dodano walidację typów pól konfiguracji webhooka przed szyfrowaniem: `url`/`secret` muszą być niepustymi stringami; `events` musi być tablicą; `timeoutMs` musi być liczbą 500–30 000; `maxRetries` całkowitą liczbą 0–10; `headers` obiektem klucz-wartość. `@IsObject()` w DTO akceptowało dowolne typy pól — błędne wartości (np. `timeoutMs: "evil"`, `maxRetries: -999`) trafiały do szyfrowania bez sprawdzenia.
 
 ---
 
