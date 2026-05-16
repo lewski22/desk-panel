@@ -34,7 +34,10 @@ export function QrCheckinPage() {
     return imp ? { Authorization: `Bearer ${imp}` } : {};
   };
 
-  const isAuthenticated = () => !!getStoredUser() || !!getImpersonationToken();
+  // TODO(backlog#1): replace localStorage auth detection with /auth/me check once
+  // impersonation token is moved to httpOnly cookie.
+  // Note: this is only a UX hint — all API calls are validated server-side via httpOnly cookie.
+  const isAuthenticated = () => !!getImpersonationToken() || !!getStoredUser();
 
   // 1. Fetch desk info (public endpoint)
   useEffect(() => {

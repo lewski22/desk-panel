@@ -124,7 +124,7 @@ export class ResourcesController {
     @Query('includeHistory') includeHistory?: string,
   ) {
     validateDate(from);
-    return this.svc.myBookings(req.user.id, from, includeHistory === 'true');
+    return this.svc.myBookings(req.user.id, from, includeHistory === 'true', req.user.organizationId);
   }
 
   @Get('bookings/admin')

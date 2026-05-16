@@ -172,7 +172,7 @@ describe('ReservationsController', () => {
 
       const result = await controller.cancel('res-1', makeReq('END_USER'));
 
-      expect(svcMock.cancel).toHaveBeenCalledWith('res-1', 'user-1', 'END_USER');
+      expect(svcMock.cancel).toHaveBeenCalledWith('res-1', 'user-1', 'END_USER', 'org-1');
       expect(result.status).toBe('CANCELLED');
     });
 
@@ -181,7 +181,7 @@ describe('ReservationsController', () => {
 
       await controller.cancel('res-1', makeReq('OFFICE_ADMIN', 'admin-id'));
 
-      expect(svcMock.cancel).toHaveBeenCalledWith('res-1', 'admin-id', 'OFFICE_ADMIN');
+      expect(svcMock.cancel).toHaveBeenCalledWith('res-1', 'admin-id', 'OFFICE_ADMIN', 'org-1');
     });
 
     it('przekazuje rolę użytkownika do svc.cancel', async () => {
@@ -189,8 +189,9 @@ describe('ReservationsController', () => {
 
       await controller.cancel('res-1', makeReq('SUPER_ADMIN', 'sa-id'));
 
-      const [, , role] = svcMock.cancel.mock.calls[0];
+      const [, , role, orgId] = svcMock.cancel.mock.calls[0];
       expect(role).toBe('SUPER_ADMIN');
+      expect(orgId).toBe('org-1');
     });
 
     it('propaguje ForbiddenException z serwisu', async () => {
@@ -212,7 +213,7 @@ describe('ReservationsController', () => {
 
       const result = await controller.findOne('res-1', { user: { role: 'OFFICE_ADMIN', organizationId: 'org-1' } } as any);
 
-      expect(svcMock.findOne).toHaveBeenCalledWith('res-1');
+      expect(svcMock.findOne).toHaveBeenCalledWith('res-1', 'org-1');
       expect(result.id).toBe('res-1');
     });
   });

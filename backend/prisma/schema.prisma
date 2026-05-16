@@ -128,7 +128,8 @@ model Organization {
   logoBgColor       String?
   whitelabelEnabled Boolean  @default(false)
 
-  // Azure SSO — DEPRECATED in favour of OrgIntegration (kept for backward compat)
+  // Azure SSO — DEPRECATED — TODO: run `grep -r "azureTenantId\|azureEnabled" src/` and confirm
+  // zero reads in application code, then create migration to NULL these columns and remove from schema.
   azureTenantId  String?
   azureEnabled   Boolean   @default(false)
 

@@ -3,6 +3,9 @@
  * Sticky bar reminding user they are in demo mode with hardcoded data.
  */
 export function DemoModeBanner() {
+  if (import.meta.env.PROD && import.meta.env.VITE_DEMO_MODE === 'true') {
+    console.error('[RESERTI] CRITICAL: VITE_DEMO_MODE=true in production build!');
+  }
   return (
     <div className="sticky top-0 z-[999] bg-amber-400 text-amber-950 text-xs font-semibold
       flex items-center justify-center gap-2 py-1.5 px-4 select-none">

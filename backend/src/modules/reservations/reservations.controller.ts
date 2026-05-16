@@ -36,7 +36,8 @@ export class ReservationsController {
   }
   @Post(':id/cancel-recurring') @HttpCode(HttpStatus.OK) @ApiOperation({summary:'Cancel recurring'})
   cancelRecurring(@Param('id') id: string, @Body() body: CancelRecurringDto, @Request() req: any) {
-    return this.svc.cancelRecurring(id,body.scope,req.user.id,req.user.role);
+    const actorOrgId=req.user.role==='OWNER'?undefined:req.user.organizationId;
+    return this.svc.cancelRecurring(id,body.scope,req.user.id,req.user.role,actorOrgId);
   }
   @Delete(':id') @HttpCode(HttpStatus.OK) @ApiOperation({summary:'Cancel reservation'})
   cancel(@Param('id') id: string, @Request() req: any) {

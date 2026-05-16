@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3010",
-    "build": "node scripts/generate-icons.mjs && vite build",
+    "build": "node -e \"if(process.env.VITE_DEMO_MODE==='true'){console.error('ERROR: VITE_DEMO_MODE=true blocks production build');process.exit(1)}\" && node scripts/generate-icons.mjs && vite build",
     "preview": "vite preview --port 3010",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

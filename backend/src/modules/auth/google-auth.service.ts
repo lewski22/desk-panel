@@ -56,7 +56,7 @@ export class GoogleAuthService {
     }
 
     if (redirectUrl) {
-      await this._assertSafeRedirectUrl(redirectUrl);
+      this._assertSafeRedirectUrl(redirectUrl);
     }
 
     // Generuj nonce — CSRF protection
@@ -224,29 +224,30 @@ export class GoogleAuthService {
     return this.config.get('FRONTEND_URL') ?? '';
   }
 
-  private async _assertSafeRedirectUrl(redirectUrl: string): Promise<void> {
-    const allowedOrigins = new Set<string>();
-
-    for (const key of ['FRONTEND_URL', 'ADMIN_URL'] as const) {
+  private _assertSafeRedirectUrl(redirectUrl: string): void {
+    const trustedOrigins: string[] = [];
+    const frontendUrl = this._frontendUrl();
+    try { if (frontendUrl) trustedOrigins.push(new URL(frontendUrl).origin); } catch { /* skip */ }
+    for (const key of ['ADMIN_URL'] as const) {
       const val = this.config.get<string>(key);
-      if (val) {
-        try { allowedOrigins.add(new URL(val).origin); } catch { /* skip malformed */ }
-      }
+      if (val) { try { trustedOrigins.push(new URL(val).origin); } catch { /* skip */ } }
     }
+    const extra = (process.env.ALLOWED_REDIRECT_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    for (const u of extra) { try { trustedOrigins.push(new URL(u).origin); } catch { /* skip */ } }
 
-    if (allowedOrigins.size === 0) {
-      this.logger.error('_assertSafeRedirectUrl: no allowed origins configured — set FRONTEND_URL or ADMIN_URL');
+    if (trustedOrigins.length === 0) {
+      this.logger.error('_assertSafeRedirectUrl: no allowed origins configured — set FRONTEND_URL');
     }
 
     let given: string;
     try {
       given = new URL(redirectUrl).origin;
     } catch {
-      throw new BadRequestException('Invalid redirectUrl');
+      throw new BadRequestException('Invalid redirectUrl format');
     }
 
-    if (!allowedOrigins.has(given)) {
-      throw new BadRequestException('Invalid redirectUrl: origin not allowed');
+    if (!trustedOrigins.includes(given)) {
+      throw new BadRequestException(`redirectUrl origin not allowed: ${given}`);
     }
   }
 }

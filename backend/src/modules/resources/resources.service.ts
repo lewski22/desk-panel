@@ -573,9 +573,13 @@ export class ResourcesService {
   }
 
   // ── My bookings ───────────────────────────────────────────────
-  async myBookings(userId: string, fromDate?: string, includeHistory = false) {
+  async myBookings(userId: string, fromDate?: string, includeHistory = false, actorOrgId?: string) {
     const from = fromDate ? new Date(fromDate) : new Date();
-    const where: any = { userId, status: 'CONFIRMED' };
+    const where: any = {
+      userId,
+      status: 'CONFIRMED',
+      ...(actorOrgId && { resource: { location: { organizationId: actorOrgId } } }),
+    };
     if (!includeHistory) where.endTime = { gte: from };
     return this.prisma.booking.findMany({
       where,

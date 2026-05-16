@@ -399,8 +399,17 @@ export class ReservationsService {
     return { created: results.length, reservations: results };
   }
 
-  async cancelRecurring(id: string, scope: 'single' | 'following' | 'all', actorId: string, actorRole: string) {
+  async cancelRecurring(id: string, scope: 'single' | 'following' | 'all', actorId: string, actorRole: string, actorOrgId?: string) {
     const res = await this.findOne(id);
+    if (actorOrgId) {
+      const sample = await this.prisma.reservation.findFirst({
+        where: { recurrenceGroupId: (res as any).recurrenceGroupId ?? id },
+        include: { desk: { include: { location: { select: { organizationId: true } } } } },
+      });
+      if (sample && sample.desk?.location?.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Brak dostępu do tej serii rezerwacji');
+      }
+    }
     if (res.userId !== actorId && !['SUPER_ADMIN', 'OFFICE_ADMIN'].includes(actorRole)) {
       throw new ForbiddenException('Not allowed');
     }
