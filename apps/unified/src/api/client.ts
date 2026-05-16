@@ -114,6 +114,7 @@ export const appApi = {
     logout() {
       req('/auth/logout', { method: 'POST' }).catch((e) => console.error('[client] logout', e));
       impStore.remove();
+      sessionStorage.removeItem('app_impersonated');
     },
     changePassword: (currentPassword: string, newPassword: string) =>
       req('/auth/change-password', { method: 'PATCH', body: JSON.stringify({ currentPassword, newPassword }) }),

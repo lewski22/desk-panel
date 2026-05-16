@@ -2,8 +2,9 @@
  * ResourceCard — Sprint E2 + Reserti DS (ROOM-FIX 0.18)
  * Karta sali konferencyjnej, miejsca parkingowego lub sprzętu
  */
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useOrgUser } from '../../context/UserContext';
 
 const TYPE_META: Record<string, { icon: string; borderColor: string }> = {
   ROOM:      { icon: 'ti-building-community', borderColor: '#10B981' },
@@ -49,9 +50,7 @@ interface Props {
 export function ResourceCard({ resource, onBook, compact = false }: Props) {
   const { t } = useTranslation();
 
-  const currentUserId = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.id ?? ''; } catch { return ''; }
-  }, []);
+  const currentUserId = useOrgUser()?.id ?? '';
 
   const meta             = TYPE_META[resource.type] ?? TYPE_META.ROOM;
   const isActive         = resource.status === 'ACTIVE';

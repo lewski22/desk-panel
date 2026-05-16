@@ -20,6 +20,9 @@ const STATUS_COLOR: Record<string, 'green'|'amber'|'red'|'zinc'> = {
   ACTIVE: 'green', INACTIVE: 'zinc', MAINTENANCE: 'amber',
 };
 
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
   const { t } = useTranslation();
   const qrUrl = `${STAFF_URL}/checkin/${desk.qrToken}`;
@@ -37,9 +40,9 @@ function QrModal({ desk, onClose }: { desk: any; onClose: () => void }) {
   const print = () => {
     const w = window.open('', '_blank');
     if (!w) return;
-    w.document.write(`<html><head><title>QR — ${desk.name}</title>
+    w.document.write(`<html><head><title>QR — ${esc(desk.name)}</title>
       <style>body{font-family:sans-serif;text-align:center;padding:40px}h2{font-size:22px;margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:20px}img{display:block;margin:0 auto 16px}code{font-size:11px;color:#888;word-break:break-all}</style></head><body>
-        <h2>${desk.name}</h2><p>${desk.code}</p><img src="${qrDataUrl}" width="200" height="200" /><code>${qrUrl}</code>
+        <h2>${esc(desk.name)}</h2><p>${esc(desk.code)}</p><img src="${qrDataUrl}" width="200" height="200" /><code>${esc(qrUrl)}</code>
       </body></html>`);
     w.document.close(); w.focus();
     setTimeout(() => { w.print(); }, 500);

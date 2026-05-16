@@ -220,7 +220,7 @@ export class AuthController {
   }
 
   @Get('invite/:token')
-  @SkipThrottle()
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
   @ApiOperation({ summary: 'Verify invitation token — returns email + org name (public)' })
   getInviteInfo(@Param('token') token: string) {
     return this.auth.getInvitationInfo(token);

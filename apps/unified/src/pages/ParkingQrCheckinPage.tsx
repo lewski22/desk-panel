@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LogoMark } from '../components/logo/LogoMark';
+import { useOrgUser } from '../context/UserContext';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
 type Step = 'loading' | 'disabled' | 'login-required' | 'spot-info' | 'confirming' | 'success' | 'error';
 
-function getStoredUser() {
-  try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
-}
 function getImpersonationToken(): string | null {
   return sessionStorage.getItem('app_access');
 }
@@ -16,7 +14,6 @@ function authHeaders(): HeadersInit {
   const imp = getImpersonationToken();
   return imp ? { Authorization: `Bearer ${imp}` } : {};
 }
-function isAuthenticated() { return !!getStoredUser() || !!getImpersonationToken(); }
 
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-5"
@@ -38,10 +35,13 @@ const Spinner = () => (
 export function ParkingQrCheckinPage() {
   const { token }  = useParams<{ token: string }>();
   const navigate   = useNavigate();
+  const orgUser    = useOrgUser();
   const [step,     setStep]    = useState<Step>('loading');
   const [resource, setResource] = useState<any>(null);
   const [result,   setResult]   = useState<any>(null);
   const [error,    setError]    = useState('');
+
+  const isAuthenticated = () => !!orgUser || !!getImpersonationToken();
 
   useEffect(() => {
     if (!token) { setStep('error'); setError('Nieprawidłowy kod QR'); return; }
@@ -55,7 +55,7 @@ export function ParkingQrCheckinPage() {
         setStep('spot-info');
       })
       .catch(() => { setStep('error'); setError('Błąd połączenia — sprawdź internet'); });
-  }, [token]);
+  }, [token, orgUser]); // re-evaluate auth when context resolves
 
   const handleCheckin = async () => {
     if (!isAuthenticated()) { setStep('login-required'); return; }
@@ -70,7 +70,6 @@ export function ParkingQrCheckinPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('app_user');
           sessionStorage.removeItem('app_access');
           setStep('login-required');
           return;
@@ -195,12 +194,11 @@ export function ParkingQrCheckinPage() {
   );
 
   // spot-info
-  const user    = getStoredUser();
   const booking = resource?.currentBooking ?? null;
   // Allow check-in when using impersonation token without a stored user object,
   // since we can't compare user IDs — the backend validates ownership.
-  const tokenOnly   = !user && !!getImpersonationToken();
-  const isMyBooking = booking && (tokenOnly || user?.id === booking?.user?.id);
+  const tokenOnly   = !orgUser && !!getImpersonationToken();
+  const isMyBooking = booking && (tokenOnly || orgUser?.id === booking?.user?.id);
   const isOtherBooking = booking && !isMyBooking;
 
   return (

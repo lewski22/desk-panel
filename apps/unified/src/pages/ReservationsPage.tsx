@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useReservations } from '../hooks';
 import { ReservationList } from '../components/reservations/ReservationList';
 import { appApi } from '../api/client';
+import { useOrgUser } from '../context/UserContext';
 
 export function ReservationsPage() {
   const { t } = useTranslation();
@@ -16,9 +17,7 @@ export function ReservationsPage() {
     }).catch((e) => console.error('[ReservationsPage] locations.listAll', e));
   }, []);
 
-  const user = (() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
-  })();
+  const user = useOrgUser();
 
   const { reservations, loading, error, refetch, cancel } = useReservations(locationId, user);
 

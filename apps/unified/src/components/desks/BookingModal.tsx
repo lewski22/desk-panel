@@ -4,9 +4,10 @@
  * - HOURLY: sloty 30-min z siatką wyboru
  * - ALL_DAY: jeden slot "cały dzień" dla parkingów
  */
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../../api/client';
+import { useRole }         from '../../context/UserContext';
 import { Modal, Btn }      from '../ui';
 import { CharCount }       from '../ui/CharCount';
 import { localDateStr, localDateTimeISO } from '../../utils/date';
@@ -40,9 +41,7 @@ export function BookingModal({ resource, onClose, onBooked, initialDate, presetN
   const [targetUserId, setTargetUserId] = useState<string | null>(null);
   const [usersList, setUsersList]       = useState<any[]>([]);
 
-  const userRole = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
-  }, []);
+  const userRole = useRole();
   const isAdmin = ['OFFICE_ADMIN', 'SUPER_ADMIN'].includes(userRole);
 
   useEffect(() => {

@@ -25,6 +25,20 @@
 ### Fixed
 - LED desync po restarcie beacona: `mqtt.handlers.ts` wywołuje `restoreDeskLed()` przy `payload.request_sync === true`
 
+## [0.21.2] — 2026-05-16 — Security hardening
+
+### Security
+- **XSS w `DesksPage` — `QrModal.print()`** — `desk.name`, `desk.code`, `qrUrl` wstrzykiwane do `document.write()` eskejpowane przez helper `esc()`
+- **`dangerouslySetInnerHTML` w `NotificationRulesPage`** — zastąpiono `__html: t(...)` przez `{t(...)}` (brak HTML w tej treści tłumaczenia)
+- **Demo credentials gated by `VITE_DEMO_MODE`** — hardcodowane konta testowe (`superadmin@reserti.pl` itp.) widoczne tylko gdy `VITE_DEMO_MODE=true`
+- **`app_impersonated` nie czyszczone przy logout** — dodano `sessionStorage.removeItem('app_impersonated')` w `client.ts:logout()`
+- **bcrypt rounds ujednolicone do 12** — `users.service.ts` używał 10 (create + update); zmieniono na 12 zgodnie z `auth.service.ts`
+- **Throttle na `GET /auth/invite/:token`** — zmieniono `@SkipThrottle()` na `@Throttle({ ttl: 60s, limit: 20 })` (ochrona przed brute-force tokenów zaproszeń)
+- **Dalsza migracja `localStorage` → `UserContext`** — usunięto pozostałe `localStorage.getItem('app_user')` reads z: `BookingModal`, `ResourceCard`, `UsersPage`, `ReservationsPage`, `ParkingQrCheckinPage`; usunięto martwą `getStoredUser()` i `localStorage.removeItem('app_user')`
+
+### Note
+- Graph webhook (`POST /graph/webhook`) ma już poprawną walidację `clientState` per-subskrypcja w `graph.service._processOne()` — brak potrzeby zmian w kontrolerze
+
 ## [0.21.1] — 2026-05-16
 
 ### Fixed

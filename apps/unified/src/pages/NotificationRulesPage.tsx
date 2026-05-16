@@ -59,7 +59,7 @@ function AnnounceModal({ onClose }: { onClose(): void }) {
   if (result) return (
     <Modal title={t('notifications.rules.saved')} onClose={onClose}>
       <p className="text-green-600 font-semibold mb-2">{t('notifications.rules.saved')}</p>
-      <p className="text-sm text-zinc-500" dangerouslySetInnerHTML={{ __html: t('notifications.announce.delivered', { count: result.count }) }} />
+      <p className="text-sm text-zinc-500">{t('notifications.announce.delivered', { count: result.count })}</p>
       <div className="mt-4"><Btn onClick={onClose}>{t('btn.cancel')}</Btn></div>
     </Modal>
   );

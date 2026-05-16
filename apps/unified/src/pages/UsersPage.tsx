@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { useRole } from '../context/UserContext';
 import { NfcCardModal } from '../components/users/NfcCardModal';
 import { PageHeader, Btn, Table, TR, TD, Badge, Modal, Input, Select } from '../components/ui';
 import { SkeletonRows } from '../components/ui/Skeleton';
@@ -78,9 +79,7 @@ export function UsersPage() {
     return () => document.removeEventListener('click', handler);
   }, [openMenuId]);
 
-  const currentUserRole = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? '{}')?.role ?? ''; } catch { return ''; }
-  }, []);
+  const currentUserRole = useRole();
 
   const locale = i18n.language === 'en' ? 'en-GB' : 'pl-PL';
 

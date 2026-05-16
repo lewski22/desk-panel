@@ -47,7 +47,7 @@ export class UsersService {
   async create(dto: CreateUserDto) {
     const exists = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (exists) throw new ConflictException('Email already in use');
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const passwordHash = await bcrypt.hash(dto.password, 12);
     const { password, ...rest } = dto;
     return this.prisma.user.create({ data: { ...rest, passwordHash }, select: USER_SELECT });
   }
@@ -97,7 +97,7 @@ export class UsersService {
     }
     const data: any = { ...dto };
     if (dto.password) {
-      data.passwordHash = await bcrypt.hash(dto.password, 10);
+      data.passwordHash = await bcrypt.hash(dto.password, 12);
       delete data.password;
     }
     // FIX: single update — Prisma throws P2025 if not found, no pre-fetch needed

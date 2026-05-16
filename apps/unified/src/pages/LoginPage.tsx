@@ -203,6 +203,7 @@ export function LoginPage({ onLogin }: Props) {
               </Link>
             </p>
 
+            {import.meta.env.VITE_DEMO_MODE && (
             <div className="mt-5 pt-4 border-t border-zinc-800">
               <p className="text-xs text-zinc-600 mb-1.5">{t('login.test_accounts')}</p>
               {[
@@ -217,6 +218,7 @@ export function LoginPage({ onLogin }: Props) {
                 </button>
               ))}
             </div>
+            )}
           </div>
         </div>
       </div>
