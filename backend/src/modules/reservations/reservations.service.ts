@@ -365,6 +365,16 @@ export class ReservationsService {
   async createRecurring(actorId: string, body: any, actorOrgId?: string) {
     const { deskId, date, startTime, endTime, notes, rule, reservationType } = body;
 
+    if (actorOrgId) {
+      const desk = await this.prisma.desk.findUnique({
+        where:  { id: deskId },
+        select: { location: { select: { organizationId: true } } },
+      });
+      if (!desk || desk.location?.organizationId !== actorOrgId) {
+        throw new ForbiddenException('Biurko należy do innej organizacji');
+      }
+    }
+
     // Parsuj RRULE — np. 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;COUNT=4'
     const dates = this._expandRRule(rule, new Date(date));
     const results: any[] = [];
@@ -400,7 +410,7 @@ export class ReservationsService {
   }
 
   async cancelRecurring(id: string, scope: 'single' | 'following' | 'all', actorId: string, actorRole: string, actorOrgId?: string) {
-    const res = await this.findOne(id);
+    const res = await this.findOne(id, actorOrgId);
     const groupId = (res as any).recurrenceGroupId;
     if (actorOrgId && groupId) {
       const sample = await this.prisma.reservation.findFirst({
@@ -415,9 +425,8 @@ export class ReservationsService {
       throw new ForbiddenException('Not allowed');
     }
 
-    const groupId = (res as any).recurrenceGroupId;
     if (!groupId || scope === 'single') {
-      return this.cancel(id, actorId, actorRole);
+      return this.cancel(id, actorId, actorRole, actorOrgId);
     }
 
     const where: any = {
@@ -430,7 +439,7 @@ export class ReservationsService {
 
     const toCancel = await this.prisma.reservation.findMany({ where, select: { id: true } });
     for (const r of toCancel) {
-      await this.cancel(r.id, actorId, actorRole);
+      await this.cancel(r.id, actorId, actorRole, actorOrgId);
     }
     return { cancelled: toCancel.length };
   }

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService }            from '../../database/prisma.service';
 import { IntegrationCryptoService } from './integration-crypto.service';
+import { assertPublicWebhookUrl } from './providers/webhook-url-guard';
 import type {
   AnyIntegrationConfig,
   IntegrationPublicView,
@@ -56,6 +57,11 @@ export class IntegrationsService {
     config:   AnyIntegrationConfig,
     opts?: { displayName?: string; tenantHint?: string; isEnabled?: boolean },
   ): Promise<IntegrationPublicView> {
+    if (provider === 'WEBHOOK_CUSTOM') {
+      const webhookCfg = config as WebhookCustomConfig;
+      if (webhookCfg.url) assertPublicWebhookUrl(webhookCfg.url);
+    }
+
     const configEncrypted = this.crypto.encryptJson(config);
 
     const record = await (this.prisma as any).orgIntegration.upsert({
