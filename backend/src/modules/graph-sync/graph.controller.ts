@@ -205,7 +205,7 @@ export class GraphController {
     }
 
     // Przetwarzaj notyfikacje w tle — nie blokuj odpowiedzi
-    const notifications: GraphWebhookBodyDto['value'] = body?.value ?? [];
+    const notifications: Record<string, unknown>[] = body?.value ?? [];
     if (notifications.length > 0) {
       this.graphService.processWebhookNotification(notifications).catch(err => {
         this.logger.error(`Webhook processing error: ${err.message}`);

@@ -1,16 +1,8 @@
-import { IsArray, IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-
-export class GraphChangeNotificationDto {
-  // Microsoft Graph sends many fields — we only validate the envelope;
-  // individual field values are checked in the service before DB writes.
-  [key: string]: unknown;
-}
+import { IsArray, IsObject, IsOptional } from 'class-validator';
 
 export class GraphWebhookBodyDto {
   @IsOptional()
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => GraphChangeNotificationDto)
-  value?: GraphChangeNotificationDto[];
+  @IsObject({ each: true })
+  value?: Record<string, unknown>[];
 }

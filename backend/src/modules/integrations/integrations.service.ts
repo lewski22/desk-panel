@@ -59,11 +59,11 @@ export class IntegrationsService {
   ): Promise<IntegrationPublicView> {
     if (provider === 'WEBHOOK_CUSTOM') {
       const webhookCfg = config as WebhookCustomConfig;
-      if (webhookCfg.url) assertPublicWebhookUrl(webhookCfg.url);
       if (typeof webhookCfg.url !== 'string' || !webhookCfg.url)
         throw new BadRequestException('webhook url musi być niepustym stringiem');
       if (typeof webhookCfg.secret !== 'string' || !webhookCfg.secret)
         throw new BadRequestException('webhook secret musi być niepustym stringiem');
+      assertPublicWebhookUrl(webhookCfg.url);
       if (webhookCfg.events !== undefined && !Array.isArray(webhookCfg.events))
         throw new BadRequestException('webhook events musi być tablicą');
       if (webhookCfg.timeoutMs !== undefined &&
