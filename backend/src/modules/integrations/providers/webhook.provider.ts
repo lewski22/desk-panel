@@ -7,7 +7,7 @@
  *
  * backend/src/modules/integrations/providers/webhook.provider.ts
  */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { createHmac }          from 'crypto';
 import { IntegrationsService } from '../integrations.service';
 import { assertPublicWebhookUrl } from './webhook-url-guard';
@@ -64,14 +64,10 @@ export class WebhookProvider {
       return { ok: false, message: 'Brak signing secret' };
     }
 
-    // Walidacja URL
     try {
-      const parsed = new URL(cfg.url);
-      if (!['https:', 'http:'].includes(parsed.protocol)) {
-        return { ok: false, message: 'URL musi używać protokołu HTTPS lub HTTP' };
-      }
-    } catch {
-      return { ok: false, message: `Nieprawidłowy URL: ${cfg.url}` };
+      assertPublicWebhookUrl(cfg.url);
+    } catch (err: unknown) {
+      return { ok: false, message: err instanceof BadRequestException ? err.message : `Nieprawidłowy URL: ${cfg.url}` };
     }
 
     const testPayload: WebhookEventPayload = {
