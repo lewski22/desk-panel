@@ -1,8 +1,12 @@
 # Roadmap — Reserti Desk Management System
 
-> Ostatnia aktualizacja: 2026-05-08
+> Ostatnia aktualizacja: 2026-05-16
 
 Historia sprintów A-K → `docs/CHANGELOG.md`.
+
+| Wersja | Data | Zakres |
+|--------|------|--------|
+| 0.21.0 | 2026-05-16 | Sprint FREE TIER + Tech debt (UserContext, QR print, RegisterOrg, free plan) |
 
 ---
 
@@ -10,25 +14,23 @@ Historia sprintów A-K → `docs/CHANGELOG.md`.
 
 ### Priorytet wysoki
 
-- **Tokeny w localStorage → httpOnly cookies** — duży zakres (backend `Set-Cookie` + frontend auth flow). Patrz `docs/BACKLOG.md` #1.
-- **Floor Plan CDN (R2)** — zdjęcia pięter przechowywane jako base64 w DB (~2-3 MB/rekord). Migracja do Cloudflare R2 + URL. Patrz `docs/BACKLOG.md` #2.
+- **R2 env vars w Coolify** — kod gotowy (`r2.service.ts`), brakuje 5 env vars. Patrz BACKLOG.md #17.
 
 ### Priorytet średni
 
-- **Sprint L** — Publiczny booking + Stripe Checkout
-- **M365 calendar sync** — dwustronna sync sal konferencyjnych (rozszerzenie `GraphSyncModule`)
-- **Visitor email invite** (TODO w `visitors.service.ts`)
-- **`as any` cleanup (136x)** — generowanie typów z OpenAPI (`openapi-typescript`)
-- **Playwright E2E testy** — scenariusze golden path (rezerwacja, check-in, admin)
+- **M365 calendar sync — sale** — rozszerzenie `GraphSyncModule` o `Booking` model
+- **Playwright CI secrets** — `TEST_DATABASE_URL` w GitHub Secrets
 
 ### Priorytet niski
 
-- Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
-- ~~Kiosk link w UI~~ **✅ DONE v0.17.9** — `KioskLinkButton` zintegrowany w `OrganizationsPage`
-- ~~Demo mode fixtures~~ **✅ DONE v0.17.9** — kompletne stubs dla resources, visitors, reports
-- Cloud MQTT / Gateway SaaS (Faza 3) — beacony TLS bez lokalnego Pi
-- ~~**Polityka haseł (ISO 27001)**~~ **✅ DONE v0.17.9** — `mustChangePassword`, `passwordExpiryDays`, `MustChangePasswordGate`, 3 endpointy force-reset, cron `check-password-expiry`
-- ISO 27001 przygotowanie
+- **Gateway Faza 2** — dedykowany obraz Raspberry Pi OS (.img przez pi-gen)
+- **ISO 27001** — audyt procesów, dokumentacja kontrolek
+- **OpenAPI-typescript** — generowanie typów z Swagger
+
+### FUTURE (nie planować)
+
+- Sprint L (Stripe + publiczny booking) — odłożony na decyzję
+- Cloud MQTT / Gateway SaaS (Faza 3) — gdy klientów > 10
 
 ---
 

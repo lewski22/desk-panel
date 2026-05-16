@@ -452,29 +452,32 @@ user@demo-corp.pl     User1234!     END_USER
 
 Pełny backlog → `docs/BACKLOG.md`.
 
+### Zrobione w v0.21.0
+- ✅ Sprint FREE TIER (plan free, FreeUpgradeNudge, QrStickersPrint, RegisterOrgPage)
+- ✅ UserContext — localStorage app_user → React Context (useUser, useRole, useOrgUser)
+- ✅ LED desync fix (request_sync retransmit w mqtt.handlers.ts)
+- ✅ Gateway install.sh (desk-gateway-python main)
+- ✅ CI Playwright (.github/workflows/playwright.yml)
+
 ### Priorytet wysoki
 
-- **httpOnly cookies** — migracja tokenów z `localStorage` (backend `Set-Cookie` + frontend auth flow)
-- **Floor Plan CDN (R2)** — zdjęcia pięter jako base64 w DB → migracja do Cloudflare R2
+- **R2 env vars** — skonfigurować w Coolify (kod gotowy w `r2.service.ts`)
 
 ### Priorytet średni
 
-- **Sprint L** — Publiczny booking + Stripe Checkout (`PublicBookingModule`)
-- **M365 calendar sync** — dwustronna sync sal konferencyjnych (rozszerzenie `GraphSyncModule`)
-- **Visitor email invite** — TODO w `visitors.service.ts`, wstrzyknąć `NotificationsService`
-- **`as any` cleanup (136x)** — generowanie typów z OpenAPI (`openapi-typescript`)
-- **Playwright E2E testy** — golden path: rezerwacja, check-in, admin
-- **Dashboard STAFF KPI** — `DashboardPage.tsx`: `isAtLeastStaff = isAdmin || isStaff`
-- **Dirty guard wdrożenie** — `useDirtyGuard` podpiąć w `EditLocationModal`, `EditUserModal`, `EditOrgModal`
+- **M365 calendar sync — sale** — Booking.graphEventId + webhook room mailbox
+- **Playwright CI secrets** — GitHub Secrets dla test DB
 
 ### Priorytet niski
 
-- Gateway auto-setup.sh (Faza 1) — Raspberry Pi `@reboot` cron
-- ~~Kiosk link w UI~~ **✅ DONE v0.17.9**
-- ~~Demo mode fixtures~~ **✅ DONE v0.17.9**
-- ~~Polityka haseł~~ **✅ DONE v0.17.9**
-- Beacon LED desync (R3) — analiza `beacons.service.ts` + retransmit stanu po heartbeat
-- ISO 27001 przygotowanie
+- **Gateway Faza 2** — Raspberry Pi OS image (.img)
+- **ISO 27001** — audyt procesów
+- **OpenAPI-typescript** — generowanie typów
+
+### FUTURE
+
+- Sprint L (Stripe) — odłożony na decyzję
+- Cloud MQTT Faza 3 — gdy klientów > 10
 
 ---
 

@@ -14,6 +14,7 @@ import { ChangePasswordDto }       from './dto/change-password.dto';
 import { ExchangeGoogleCodeDto }   from './dto/exchange-google-code.dto';
 import { InviteUserDto }           from './dto/invite-user.dto';
 import { RegisterDto }             from './dto/register.dto';
+import { RegisterOrgDto }         from './dto/register-org.dto';
 import { JwtAuthGuard }         from './guards/jwt-auth.guard';
 import { RolesGuard }           from './guards/roles.guard';
 import { Roles }                from './decorators/roles.decorator';
@@ -258,6 +259,14 @@ export class AuthController {
    * Frontend must NOT store tokens in localStorage — use cookies only.
    * TODO #BACKLOG-1: Add token binding (device fingerprint) to refresh tokens.
    */
+  @Post('register-org')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { ttl: 3_600_000, limit: 5 } })
+  @ApiOperation({ summary: 'Self-service org registration (Free plan)' })
+  async registerOrg(@Body() dto: RegisterOrgDto) {
+    return this.auth.registerOrg(dto);
+  }
+
   @Post('google/exchange')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { ttl: 60_000, limit: 10 } })

@@ -59,6 +59,7 @@ function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): 
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
           <select value={plan} onChange={e => setPlan(e.target.value)}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="free">Free</option>
             <option value="trial">Trial</option>
             <option value="starter">Starter</option>
             <option value="pro">Pro</option>
@@ -193,6 +194,7 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           <label className="block text-xs text-zinc-500 mb-1 font-medium">Plan</label>
           <select value={plan} onChange={e => { setPlan(e.target.value); markDirty(); }}
             className="w-full border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
+            <option value="free">Free</option>
             <option value="trial">Trial</option>
             <option value="starter">Starter</option>
             <option value="pro">Pro</option>
@@ -308,7 +310,7 @@ function LegacySubPlanModal({ org, onClose }: { org: any; onClose: () => void })
     setSaving(false);
   };
 
-  const PLANS = ['starter', 'trial', 'pro', 'enterprise'];
+  const PLANS = ['free', 'starter', 'trial', 'pro', 'enterprise'];
 
   return (
     <Modal title={`Subskrypcja: ${org.name}`} onClose={onClose} wide>
@@ -552,7 +554,7 @@ function PlanTemplatesTab() {
     setSaving(false);
   };
 
-  const PLANS = ['trial', 'starter', 'pro', 'enterprise'];
+  const PLANS = ['free', 'trial', 'starter', 'pro', 'enterprise'];
   const FEATURES: [string, string][] = [['ota','OTA Updates'],['sso','SSO / Azure'],['smtp','Custom SMTP'],['api','API Access']];
 
   return (

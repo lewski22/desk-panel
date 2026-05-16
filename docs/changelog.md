@@ -1,6 +1,32 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-16 (0.19.6)
+> Ostatnia aktualizacja: 2026-05-16 (0.21.0)
+
+---
+
+## [0.21.0] — 2026-05-16
+
+### Added
+
+**Sprint FREE TIER**
+- Plan `free` w `PLAN_LIMITS` (5 biurek, 0 gateway, 1 lokalizacja)
+- `PlanTemplate` seed dla planu `free` (migracja idempotentna SQL)
+- `FreeUpgradeNudge` — banner na DashboardPage (trigger: ghost > 20% lub limit biurek > 80%), CTA mailto:hello@reserti.com
+- `QrStickersPrintModal` — bulk print naklejek QR dla wszystkich biurek lokalizacji (A4 3-col, window.print, zero nowych deps)
+- `RegisterOrgPage` + `POST /auth/register-org` — self-service rejestracja org na planie Free (throttle 5/h per IP)
+- Link "Załóż konto Free" na LoginPage z toast po sukcesie
+
+**Tech debt**
+- `UserContext` — profil użytkownika przeniesiony z `localStorage` do React Context (`useUser`, `useRole`, `useOrgUser`)
+- `api.ts` rozszerzony o typy: `Resource`, `Booking`, `Visitor`, `DashboardSnapshot`, `PaginatedResponse`, `InAppNotification`
+- `PlanBadge` + `SubPlanModal` — obsługa planu `free` (szary badge)
+- GitHub Actions CI: `.github/workflows/playwright.yml` (zweryfikowany — już obecny)
+
+### Fixed
+- LED desync po restarcie beacona: `mqtt.handlers.ts` wywołuje `restoreDeskLed()` przy `payload.request_sync === true`
+
+### Infra
+- `desk-gateway-python/install.sh` v1.1 — skrypt prowizjonowania gateway (zweryfikowany — już obecny)
 
 ---
 

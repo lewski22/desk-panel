@@ -1808,5 +1808,12 @@
         "submit":          "Zablokuj"
       }
     }
+  },
+  "free_nudge": {
+    "ghost_title": "{{pct}}% rezerwacji bez check-inu w tym tygodniu",
+    "ghost_body": "Beacon Reserti eliminuje ghost bookings automatycznie przez NFC. Skontaktuj się z nami.",
+    "limit_title": "Jesteś na {{pct}}% limitu biurek planu Free",
+    "limit_body": "Plan Free pozwala na 5 biurek. Przejdź na Starter lub Pro aby dodać więcej.",
+    "cta": "Porozmawiajmy →"
   }
 }

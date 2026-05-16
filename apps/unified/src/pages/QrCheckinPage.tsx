@@ -2,16 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogoMark } from '../components/logo/LogoMark';
+import { useOrgUser } from '../context/UserContext';
 
 const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
 type Step = 'loading' | 'login-required' | 'desk-info' | 'confirming' | 'success' | 'occupied' | 'error';
 
-function getStoredUser() {
-  try { return JSON.parse(localStorage.getItem('app_user') ?? 'null'); } catch { return null; }
-}
-// With cookie-based auth, "authenticated" is detected by presence of app_user in localStorage.
-// Impersonation token (app_access) is also supported.
 function getImpersonationToken(): string | null {
   return sessionStorage.getItem('app_access');
 }
@@ -20,6 +16,7 @@ export function QrCheckinPage() {
   const { t }      = useTranslation();
   const { token }  = useParams<{ token: string }>();
   const navigate   = useNavigate();
+  const orgUser    = useOrgUser();
   const [step,     setStep]    = useState<Step>('loading');
   const [desk,     setDesk]    = useState<any>(null);
   const [result,   setResult]  = useState<any>(null);
@@ -34,10 +31,8 @@ export function QrCheckinPage() {
     return imp ? { Authorization: `Bearer ${imp}` } : {};
   };
 
-  // TODO(backlog#1): replace localStorage auth detection with /auth/me check once
-  // impersonation token is moved to httpOnly cookie.
-  // Note: this is only a UX hint — all API calls are validated server-side via httpOnly cookie.
-  const isAuthenticated = () => !!getImpersonationToken() || !!getStoredUser();
+  // UX hint only — all API calls are validated server-side via httpOnly cookie.
+  const isAuthenticated = () => !!getImpersonationToken() || !!orgUser;
 
   // 1. Fetch desk info (public endpoint)
   useEffect(() => {
@@ -66,7 +61,6 @@ export function QrCheckinPage() {
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('app_user');
           sessionStorage.removeItem('app_access');
           setStep('login-required');
           return;
@@ -270,7 +264,7 @@ export function QrCheckinPage() {
   }
 
   // ── Main desk-info view ───────────────────────────────────────
-  const isMyReservation = desk.currentReservation && getStoredUser()?.id === desk.currentReservation.userId;
+  const isMyReservation = desk.currentReservation && orgUser?.id === desk.currentReservation.userId;
 
   return (
     <Wrapper>
@@ -361,7 +355,7 @@ export function QrCheckinPage() {
           {/* Occupied — check-out (only own checkin) */}
           {deskStatus === 'occupied' && desk.checkins?.[0] && (
             (() => {
-              const myUserId = getStoredUser()?.id;
+              const myUserId = orgUser?.id;
               const isMyCheckin = desk.checkins[0].userId === myUserId;
               return isMyCheckin ? (
                 <button onClick={() => handleCheckout(desk.checkins[0].id)}

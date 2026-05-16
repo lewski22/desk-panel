@@ -15,6 +15,7 @@
  * backend/src/modules/auth/auth.service.ts
  */
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { RegisterOrgDto } from './dto/register-org.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -335,6 +336,51 @@ export class AuthService {
    * Sprawdza złożoność hasła wg polityki organizacji.
    * Rzuca BadRequestException z kodem maszynowym (do i18n na frontendzie).
    */
+  async registerOrg(dto: RegisterOrgDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.adminEmail.toLowerCase() },
+    });
+    if (existing) throw new ConflictException('Email jest już zajęty');
+
+    const base = dto.orgName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40);
+    const slugExists = await this.prisma.organization.findUnique({ where: { slug: base } });
+    const slug = slugExists ? `${base}-${Date.now().toString(36)}` : base;
+
+    const { org, user } = await this.prisma.$transaction(async tx => {
+      const org = await tx.organization.create({
+        data: {
+          name:           dto.orgName,
+          slug,
+          plan:           'free',
+          isActive:       true,
+          enabledModules: ['DESKS'],
+        },
+      });
+      const user = await tx.user.create({
+        data: {
+          email:          dto.adminEmail.toLowerCase(),
+          passwordHash:   await bcrypt.hash(dto.password, 12),
+          firstName:      dto.adminFirstName,
+          lastName:       dto.adminLastName,
+          role:           'SUPER_ADMIN' as any,
+          isActive:       true,
+          organizationId: org.id,
+        },
+      });
+      return { org, user };
+    });
+
+    return {
+      organizationId: org.id,
+      userId:         user.id,
+      message:        'Konto zostało założone. Możesz się teraz zalogować.',
+    };
+  }
+
   private _validatePasswordComplexity(
     password: string,
     policy: { passwordMinLength?: number | null; passwordRequireUppercase?: boolean; passwordRequireNumbers?: boolean; passwordRequireSpecial?: boolean },

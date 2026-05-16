@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { LogoMark } from '../components/logo/LogoMark';
+import { toast } from '../components/ui/Toast';
 
 const MSVG = <svg width="16" height="16" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>;
 
@@ -121,6 +122,12 @@ export function LoginPage({ onLogin }: Props) {
   const location = useLocation();
   const returnTo = (location.state as any)?.returnTo as string | undefined;
 
+  useEffect(() => {
+    if ((location.state as any)?.registered) {
+      toast('Konto założone! Możesz się teraz zalogować.');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Handle Google SSO redirect: #google_code=<exchange_code> (hash — not logged by servers)
   useEffect(() => {
     const params = new URLSearchParams(location.hash.slice(1));
@@ -189,6 +196,13 @@ export function LoginPage({ onLogin }: Props) {
               className="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-zinc-700 bg-zinc-800/30 hover:bg-zinc-800 text-zinc-300 text-sm font-medium transition-colors">
               {MSVG} {t('entra.title')}
             </button>
+            <p className="text-center text-xs text-zinc-600 mt-4">
+              Nie masz konta?{' '}
+              <Link to="/register" className="text-brand hover:underline">
+                Załóż konto Free →
+              </Link>
+            </p>
+
             <div className="mt-5 pt-4 border-t border-zinc-800">
               <p className="text-xs text-zinc-600 mb-1.5">{t('login.test_accounts')}</p>
               {[

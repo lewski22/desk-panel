@@ -102,12 +102,10 @@ export const appApi = {
   auth: {
     async login(email: string, password: string) {
       const d = await req<{ user: any }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
       return d?.user ?? d;
     },
     async loginAzure(idToken: string) {
       const d = await req<{ user: any }>('/auth/azure', { method: 'POST', body: JSON.stringify({ idToken }) });
-      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
       return d?.user ?? d;
     },
     async checkSso(email: string): Promise<{ available: boolean; tenantId?: string }> {
@@ -115,7 +113,6 @@ export const appApi = {
     },
     logout() {
       req('/auth/logout', { method: 'POST' }).catch((e) => console.error('[client] logout', e));
-      localStorage.removeItem(KEYS.user);
       impStore.remove();
     },
     changePassword: (currentPassword: string, newPassword: string) =>
@@ -132,17 +129,18 @@ export const appApi = {
       const d = await req<{ user: any }>('/auth/google/exchange', {
         method: 'POST', body: JSON.stringify({ code }),
       });
-      if (d?.user) localStorage.setItem(KEYS.user, JSON.stringify(d.user));
       return d?.user ?? d;
     },
     async getMe() {
-      const u = await req<any>('/auth/me');
-      localStorage.setItem(KEYS.user, JSON.stringify(u));
-      return u;
+      return req<any>('/auth/me');
     },
-    user: (): any | null => {
-      try { return JSON.parse(localStorage.getItem(KEYS.user) ?? 'null'); } catch { return null; }
-    },
+    registerOrg: (body: {
+      orgName: string; adminEmail: string;
+      adminFirstName: string; adminLastName: string; password: string;
+    }) => req<{ organizationId: string; userId: string; message: string }>(
+      '/auth/register-org',
+      { method: 'POST', body: JSON.stringify(body) }
+    ),
   },
 
   // ── Organizations ────────────────────────────────────────────

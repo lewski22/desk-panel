@@ -26,7 +26,6 @@ export function ImpersonatePage({ onLogin }: Props) {
         impersonated:   true,
         accessToken:    token,
       };
-      localStorage.setItem('app_user', JSON.stringify(u));
       onLogin(u);
       navigate('/dashboard', { replace: true });
     } catch {

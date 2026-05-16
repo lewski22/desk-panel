@@ -15,6 +15,7 @@ export const PLAN_LIMITS: Record<string, {
   ota: boolean; sso: boolean; smtp: boolean; api: boolean;
   label: string; color: string;
 }> = {
+  free:       { desks: 5,    users: 15,   gateways: 0, locations: 1,    ota: false, sso: false, smtp: false, api: false, label: 'Free',       color: 'gray'   },
   starter:    { desks: 10,   users: 25,   gateways: 1, locations: 1,    ota: false, sso: false, smtp: false, api: false, label: 'Starter',    color: 'zinc'   },
   trial:      { desks: 10,   users: 10,   gateways: 1, locations: 1,    ota: false, sso: false, smtp: false, api: false, label: 'Trial',      color: 'amber'  },
   pro:        { desks: 50,   users: 150,  gateways: 3, locations: 5,    ota: true,  sso: true,  smtp: true,  api: false, label: 'Pro',        color: 'indigo' },
@@ -22,10 +23,10 @@ export const PLAN_LIMITS: Record<string, {
 };
 
 const PLAN_COLORS: Record<string, string> = {
-  starter: 'zinc', trial: 'amber', pro: 'indigo', enterprise: 'yellow',
+  free: 'gray', starter: 'zinc', trial: 'amber', pro: 'indigo', enterprise: 'yellow',
 };
 const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter', trial: 'Trial', pro: 'Pro', enterprise: 'Enterprise',
+  free: 'Free', starter: 'Starter', trial: 'Trial', pro: 'Pro', enterprise: 'Enterprise',
 };
 
 @Injectable()

@@ -18,7 +18,9 @@ import { Stat, Card, Spinner, Modal, Btn, EmptyState } from '../components/ui';
 import { SkeletonKpi } from '../components/ui/Skeleton';
 import { InsightsWidget } from '../components/insights/InsightsWidget';
 import { OnboardingChecklist } from '../components/onboarding/OnboardingChecklist';
+import { FreeUpgradeNudge } from '../components/free/FreeUpgradeNudge';
 import { useOrgModules } from '../hooks/useOrgModules';
+import { useRole } from '../context/UserContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pl, enUS } from 'date-fns/locale';
 import type { ExtendedStats } from '../types/api';
@@ -38,12 +40,6 @@ const METHOD_COLORS: Record<string, string> = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────
-function useRole() {
-  return useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
-  }, []);
-}
-
 function useLocationId() {
   const [locationId, setLocationId] = useState<string>(
     localStorage.getItem('desks_loc') ?? import.meta.env.VITE_LOCATION_ID ?? '',
@@ -428,6 +424,9 @@ export function DashboardPage() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [usersCount,   setUsersCount]   = useState(0);
   const [hasPlan,      setHasPlan]      = useState(false);
+  const [subPlan,      setSubPlan]      = useState('');
+  const [ghostPct,     setGhostPct]     = useState<number | undefined>();
+  const [deskUsePct,   setDeskUsePct]   = useState<number | undefined>();
 
   const load = useCallback(async (silent = false) => {
     if (!locationId) { setLoading(false); return; }
@@ -462,6 +461,19 @@ export function DashboardPage() {
     const id = setInterval(() => load(true), 60_000);
     return () => clearInterval(id);
   }, [load]);
+
+  useEffect(() => {
+    appApi.subscription.getStatus().then((s: any) => {
+      setSubPlan(s?.plan ?? '');
+      setDeskUsePct(s?.usage?.desks?.pct);
+      if (s?.plan === 'free' && locationId) {
+        appApi.insights.getForLocation(locationId).then((r: any) => {
+          const ghost = r?.insights?.find((i: any) => i.type === 'GHOST_DESKS');
+          if (ghost?.metric !== undefined) setGhostPct(ghost.metric);
+        }).catch(() => {});
+      }
+    }).catch(() => {});
+  }, [locationId]);
 
   const zoneData = useMemo(() => {
     const zones = new Map<string, { free:number; occupied:number; reserved:number }>();
@@ -549,6 +561,8 @@ export function DashboardPage() {
 
       {/* Attention section — replaces inline beacon alert */}
       <AttentionSection desks={desks} offlineCount={offlineCount} isAdmin={isAdmin} hasBeacons={hasBeacons} />
+
+      <FreeUpgradeNudge plan={subPlan} ghostPct={ghostPct} deskUsagePct={deskUsePct} />
 
       {/* KPI Row — FEATURE P4-3C: beacons card hidden for END_USER */}
       {loading ? (

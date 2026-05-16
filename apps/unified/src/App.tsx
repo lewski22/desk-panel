@@ -25,6 +25,7 @@ import { FloorPlanEditorPage } from './pages/FloorPlanEditorPage';
 import { WeeklyViewPage }      from './pages/WeeklyViewPage';
 import { KioskPage }           from './pages/KioskPage';
 import { RegisterPage }        from './pages/RegisterPage';
+import { RegisterOrgPage }    from './pages/RegisterOrgPage';
 import { VisitorsPage }        from './pages/VisitorsPage';
 import { SubscriptionPage }    from './pages/SubscriptionPage';
 import { ResourcesPage }       from './pages/ResourcesPage';
@@ -35,6 +36,7 @@ import { GroupDetailPage }    from './pages/GroupDetailPage';
 import { PwaBanners }           from './components/PwaBanners';
 import { DemoModeBanner }       from './components/DemoModeBanner';
 import { DEMO_USER }            from './mocks/demoData';
+import { UserContext }          from './context/UserContext';
 
 const DEMO_MODE = (import.meta as any).env?.VITE_DEMO_MODE === 'true';
 
@@ -112,6 +114,7 @@ export default function App() {
   };
 
   return (
+    <UserContext.Provider value={{ user, setUser }}>
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {DEMO_MODE && <DemoModeBanner />}
       <PwaBanners />
@@ -124,6 +127,7 @@ export default function App() {
         <Route path="/checkin/:token"          element={<QrCheckinPage />} />
         <Route path="/parking-checkin/:token"  element={<ParkingQrCheckinPage />} />
         <Route path="/register/:token"  element={<RegisterPage />} />
+        <Route path="/register"         element={<RegisterOrgPage />} />
         <Route path="/kiosk"            element={<KioskPage />} />
 
         {/* Chronione — z AppLayout */}
@@ -224,5 +228,6 @@ export default function App() {
         } />
       </Routes>
     </BrowserRouter>
+    </UserContext.Provider>
   );
 }

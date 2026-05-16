@@ -12,6 +12,7 @@ import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
 import { parseApiError, FieldErrors } from '../utils/parseApiError';
 import { FieldError } from '../components/ui/FieldError';
 import { toast } from '../components/ui/Toast';
+import { QrStickersPrintModal } from '../components/desks/QrStickersPrintModal';
 
 const STAFF_URL = window.location.origin;
 
@@ -94,6 +95,7 @@ export function DesksPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFloorDrop, setShowFloorDrop] = useState(false);
   const [openMenuId,    setOpenMenuId]    = useState<string | null>(null);
+  const [showBulkQr,   setShowBulkQr]    = useState(false);
 
   const floorDropRef = useRef<HTMLDivElement>(null);
 
@@ -238,7 +240,14 @@ export function DesksPage() {
       <PageHeader
         title={t('pages.desks.title')}
         sub={t('desks.sub_active', { active: activeCount, total: desks.length })}
-        action={<Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>{t('pages.desks.new')}</Btn>}
+        action={
+          <div className="flex gap-2">
+            <Btn variant="secondary" onClick={() => setShowBulkQr(true)} disabled={desks.length === 0}>
+              🖨️ Naklejki QR
+            </Btn>
+            <Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>{t('pages.desks.new')}</Btn>
+          </div>
+        }
       />
 
       {/* Location tabs */}
@@ -581,6 +590,14 @@ export function DesksPage() {
       {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
 
       {modal === 'qr' && target && <QrModal desk={target} onClose={() => setModal(null)} />}
+
+      {showBulkQr && (
+        <QrStickersPrintModal
+          desks={desks.filter((d: any) => d.qrToken)}
+          locationName={locations.find(l => l.id === locId)?.name ?? ''}
+          onClose={() => setShowBulkQr(false)}
+        />
+      )}
     </div>
   );
 }

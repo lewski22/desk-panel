@@ -1,5 +1,6 @@
 import React from 'react';
 const COLORS: Record<string, string> = {
+  free:       'bg-gray-100 text-gray-500 border-gray-200',
   starter:    'bg-zinc-100 text-zinc-600 border-zinc-200',
   trial:      'bg-amber-100 text-amber-700 border-amber-200',
   pro:        'bg-indigo-100 text-indigo-700 border-indigo-200',

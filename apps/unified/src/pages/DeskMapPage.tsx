@@ -19,6 +19,7 @@ import { appApi }           from '../api/client';
 import { EmptyState }       from '../components/ui';
 import { toast }            from '../components/ui/Toast';
 import { useOrgModules }    from '../hooks/useOrgModules';
+import { useOrgUser }       from '../context/UserContext';
 import { RecommendationBanner } from '../components/recommendations/RecommendationBanner';
 import { localDateStr }         from '../utils/date';
 import { format }               from 'date-fns';
@@ -212,12 +213,12 @@ function DaySlider({ selected, onChange, maxDaysAhead = 14, timezone }: {
 export function DeskMapPage() {
   const { t }       = useTranslation();
   const navigate    = useNavigate();
+  const orgUser     = useOrgUser();
   const [locations,     setLocations]     = useState<any[]>([]);
   const [locationId,    setLocationId]    = useState<string>(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('app_user') ?? 'null');
-      if (stored?.id) {
-        const pref = localStorage.getItem(`user_default_location_${stored.id}`);
+      if (orgUser?.id) {
+        const pref = localStorage.getItem(`user_default_location_${orgUser.id}`);
         if (pref) return pref;
       }
       const last = localStorage.getItem('desks_loc');
@@ -230,10 +231,7 @@ export function DeskMapPage() {
   const [occupancyCache, setOccupancyCache] = useState<Record<string, { occupied: number; total: number }>>({});
   const [hasPlan,       setHasPlan]       = useState(false);
   const [viewMode,      setViewMode]      = useState<ViewMode>(() => {
-    try {
-      const role = JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? '';
-      if (role === 'END_USER') return 'plan';
-    } catch {}
+    if (orgUser?.role === 'END_USER') return 'plan';
     return (localStorage.getItem('desk_view_mode') as ViewMode) ?? 'cards';
   });
   const [reservationTarget, setReservationTarget] = useState<any>(null);
@@ -264,12 +262,8 @@ export function DeskMapPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [showCapDrop]);
 
-  const userRole = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.role ?? ''; } catch { return ''; }
-  }, []);
-  const userId = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem('app_user') ?? 'null')?.id ?? ''; } catch { return ''; }
-  }, []);
+  const userRole  = orgUser?.role ?? '';
+  const userId    = orgUser?.id ?? '';
   const isAdmin   = ['SUPER_ADMIN','OFFICE_ADMIN'].includes(userRole);
   const isStaff   = ['SUPER_ADMIN','OFFICE_ADMIN','STAFF'].includes(userRole);
   const isEndUser = userRole === 'END_USER';
@@ -369,12 +363,9 @@ export function DeskMapPage() {
         <div className="flex justify-end -mt-2 mb-3">
           <button
             onClick={() => {
-              try {
-                const stored = JSON.parse(localStorage.getItem('app_user') ?? 'null');
-                if (stored?.id) {
-                  localStorage.setItem(`user_default_location_${stored.id}`, locationId);
-                }
-              } catch {}
+              if (userId) {
+                localStorage.setItem(`user_default_location_${userId}`, locationId);
+              }
             }}
             className="text-xs text-brand hover:underline font-medium">
             ☆ {t('deskmap.set_default', 'Domyślne')}

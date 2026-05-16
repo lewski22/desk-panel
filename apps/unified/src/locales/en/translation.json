@@ -1808,5 +1808,12 @@
         "submit":        "Block"
       }
     }
+  },
+  "free_nudge": {
+    "ghost_title": "{{pct}}% of reservations had no check-in this week",
+    "ghost_body": "Reserti Beacon eliminates ghost bookings automatically via NFC. Get in touch.",
+    "limit_title": "You're at {{pct}}% of your Free plan desk limit",
+    "limit_body": "Free plan allows 5 desks. Upgrade to Starter or Pro for more.",
+    "cta": "Let's talk →"
   }
 }
