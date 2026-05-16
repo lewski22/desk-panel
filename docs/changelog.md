@@ -1,6 +1,6 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-16
+> Ostatnia aktualizacja: 2026-05-16 (0.19.4)
 
 ---
 
@@ -120,6 +120,44 @@
 
 **`apps/unified/src/locales/pl/translation.json`** + **`en/translation.json`**
 - Dodano `org.logo.whitelabel_disabled`.
+
+---
+
+## [0.19.4] — 2026-05-16 — Security patch: open redirect, cross-tenant isolation, demo guard
+
+### Security — naprawione podatności (audit 2026-05-16)
+
+**`backend/src/modules/auth/google-auth.service.ts`**
+- `_assertSafeRedirectUrl()` — rozszerzono listę zaufanych origins o zmienną środowiskową `ALLOWED_REDIRECT_ORIGINS` (lista rozdzielona przecinkami). Odczyt przez `ConfigService` (spójnie z resztą serwisu).
+- Gdy żadne zaufane origin nie jest skonfigurowane, metoda rzuca natychmiast `BadRequestException('OAuth redirect not configured — contact administrator')` zamiast logować ostrzeżenie i kontynuować.
+- Komunikat błędu przy próbie open redirect zawiera teraz zablokowane origin: `redirectUrl origin not allowed: https://evil.com`.
+
+**`backend/src/modules/reservations/reservations.controller.ts`**
+- `POST /:id/cancel-recurring` — dodano wyznaczenie `actorOrgId` (OWNER → `undefined`, pozostałe role → `organizationId`) i przekazanie do `svc.cancelRecurring()`. Brak tego parametru umożliwiał anulowanie serii rezerwacji z obcej org.
+
+**`backend/src/modules/reservations/reservations.service.ts`**
+- `cancelRecurring()` — dodano parametr `actorOrgId?: string` oraz cross-tenant guard: sprawdza przynależność `recurrenceGroupId` do org aktora przed anulowaniem. Guard odpytuje DB tylko gdy `groupId` jest zdefiniowany (uniknięto zbędnego roundtrip przy `scope === 'single'` bez grupy).
+
+**`backend/src/modules/resources/resources.service.ts`** + **`resources.controller.ts`**
+- `myBookings()` — dodano filtr `resource.location.organizationId` gdy `actorOrgId` jest obecny. Zabezpiecza przypadek brzegowy przeniesienia użytkownika między organizacjami (stary token → widok cudzych bookingów).
+
+### Jakość kodu
+
+**`backend/src/modules/reservations/reservations.controller.spec.ts`**
+- Poprawiono asercje `cancel()`: dodano 4. argument `'org-1'` (actorOrgId) we wszystkich 3 przypadkach testowych — poprzednie testy dawały false-green dla izolacji multi-tenant.
+- Poprawiono asercję `findOne()`: `('res-1')` → `('res-1', 'org-1')`.
+
+**`apps/unified/src/components/DemoModeBanner.tsx`**
+- Guard produkcyjny przeniesiony z ciała funkcji komponentu na poziom modułu — uruchamia się raz przy imporcie, nie przy każdym renderze.
+
+**`apps/unified/scripts/check-demo-mode.mjs`** *(nowy plik)*
+- Wyodrębniony skrypt blokujący build gdy `VITE_DEMO_MODE=true`. Zastąpił inline `node -e "..."` w `package.json` — poprzednia forma była nieczytelna i mogła nie działać na Windows PowerShell.
+
+**`apps/unified/package.json`**
+- `build` script: `node scripts/check-demo-mode.mjs && ...` zamiast inline one-liner.
+
+**`backend/.env.example`**
+- Dodano `ALLOWED_REDIRECT_ORIGINS=""` z komentarzem po linii `FRONTEND_URL`.
 
 ---
 
