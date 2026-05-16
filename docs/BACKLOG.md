@@ -11,7 +11,7 @@ Zestawienie wszystkich otwartych zadań (niezrealizowanych bugów, długu techni
 
 | # | Obszar | Opis | Priorytet |
 |---|--------|------|-----------|
-| 1 | Security | ~~localStorage app_user → React Context~~ **✅ DONE v0.21.0** — UserContext, useOrgModules, DashboardPage, DeskMapPage, QrCheckinPage, ImpersonatePage, client.ts | ~~Średni~~ |
+| 1 | Security | ~~localStorage app_user → React Context~~ **✅ DONE v0.21.2** — UserContext, useOrgModules, DashboardPage, DeskMapPage, QrCheckinPage, ImpersonatePage, client.ts + BookingModal, ResourceCard, UsersPage, ReservationsPage, ParkingQrCheckinPage | ~~Średni~~ |
 | 3 | Rezerwacje | Sprint L — Publiczny booking + Stripe Checkout (stripe.com API, checkout session) | Średni |
 | 4 | Integracje | M365 calendar sync — dwustronna synchronizacja kalendarza sal konferencyjnych (rozszerzenie `GraphSyncModule`) | Średni |
 | 6 | Tech debt | `as any` cleanup (136x) — generowanie typów z OpenAPI (`openapi-typescript`) | Średni |
