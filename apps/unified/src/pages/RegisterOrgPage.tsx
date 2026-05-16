@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { Input, Btn } from '../components/ui';
 
 export function RegisterOrgPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     orgName: '', adminEmail: '', adminFirstName: '',
@@ -18,7 +20,7 @@ export function RegisterOrgPage() {
 
   const submit = async () => {
     if (form.password !== form.confirm) {
-      setErr('Hasła nie są identyczne'); return;
+      setErr(t('register_org.passwords_mismatch')); return;
     }
     setLoading(true); setErr('');
     try {
@@ -31,7 +33,7 @@ export function RegisterOrgPage() {
       });
       navigate('/login', { state: { registered: true } });
     } catch (e: any) {
-      setErr(e.message ?? 'Błąd rejestracji');
+      setErr(e.message ?? t('register_org.error_fallback'));
     }
     setLoading(false);
   };
@@ -42,27 +44,27 @@ export function RegisterOrgPage() {
                       border border-zinc-100 p-8">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-zinc-900">
-            Załóż konto Reserti
+            {t('register_org.title')}
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Plan Free · 5 biurek · bez karty kredytowej
+            {t('register_org.subtitle')}
           </p>
         </div>
 
         <div className="space-y-3">
-          <Input label="Nazwa firmy"
+          <Input label={t('register_org.org_name')}
             value={form.orgName} onChange={set('orgName')} />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Imię"
+            <Input label={t('register_org.first_name')}
               value={form.adminFirstName} onChange={set('adminFirstName')} />
-            <Input label="Nazwisko"
+            <Input label={t('register_org.last_name')}
               value={form.adminLastName} onChange={set('adminLastName')} />
           </div>
-          <Input label="Email" type="email"
+          <Input label={t('register_org.email')} type="email"
             value={form.adminEmail} onChange={set('adminEmail')} />
-          <Input label="Hasło" type="password"
+          <Input label={t('register_org.password')} type="password"
             value={form.password} onChange={set('password')} />
-          <Input label="Powtórz hasło" type="password"
+          <Input label={t('register_org.password_confirm')} type="password"
             value={form.confirm} onChange={set('confirm')} />
         </div>
 
@@ -72,13 +74,13 @@ export function RegisterOrgPage() {
         )}
 
         <Btn className="w-full mt-5" onClick={submit} disabled={loading}>
-          {loading ? 'Zakładanie konta…' : 'Załóż konto Free'}
+          {loading ? t('register_org.submitting') : t('register_org.submit')}
         </Btn>
 
         <p className="text-center text-xs text-zinc-400 mt-4">
-          Masz już konto?{' '}
+          {t('register_org.have_account')}{' '}
           <Link to="/login" className="text-brand hover:underline">
-            Zaloguj się
+            {t('register_org.login_link')}
           </Link>
         </p>
       </div>

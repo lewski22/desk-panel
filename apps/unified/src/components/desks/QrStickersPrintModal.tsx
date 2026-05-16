@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
+import { useTranslation } from 'react-i18next';
 import { Modal, Btn } from '../ui';
 
 interface Desk {
@@ -13,6 +14,7 @@ interface Props {
 const APP_URL = (import.meta as any).env?.VITE_APP_URL ?? window.location.origin;
 
 export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(new Set(desks.map(d => d.id)));
   const [qrMap,    setQrMap]    = useState<Record<string, string>>({});
   const [loading,  setLoading]  = useState(true);
@@ -62,7 +64,7 @@ export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
     }).join('');
 
     w.document.write(`<!DOCTYPE html><html><head>
-      <title>Naklejki QR — ${locationName}</title>
+      <title>QR — ${locationName}</title>
       <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:system-ui,sans-serif;padding:12mm}
@@ -87,11 +89,11 @@ export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
   };
 
   return (
-    <Modal title={`Naklejki QR — ${locationName}`} onClose={onClose} wide>
+    <Modal title={t('qr_stickers.title', { locationName })} onClose={onClose} wide>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-zinc-500">
-            {selected.size} z {desks.length} zaznaczonych
+            {t('qr_stickers.selected_count', { selected: selected.size, total: desks.length })}
           </span>
           <button
             onClick={() => setSelected(
@@ -101,7 +103,9 @@ export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
             )}
             className="text-xs text-brand hover:underline"
           >
-            {selected.size === desks.length ? 'Odznacz wszystkie' : 'Zaznacz wszystkie'}
+            {selected.size === desks.length
+              ? t('qr_stickers.deselect_all')
+              : t('qr_stickers.select_all')}
           </button>
         </div>
 
@@ -132,16 +136,18 @@ export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
         )}
 
         <p className="text-xs text-zinc-400 text-center">
-          Format A4 · 3 kolumny · 12 naklejek/strona
+          {t('qr_stickers.footer')}
         </p>
 
         <div className="flex gap-3">
           <Btn variant="secondary" className="flex-1" onClick={onClose}>
-            Zamknij
+            {t('qr_stickers.close')}
           </Btn>
           <Btn className="flex-1" onClick={handlePrint}
                disabled={!selected.size || loading}>
-            🖨️ Drukuj {selected.size > 0 ? `(${selected.size})` : ''}
+            🖨️ {selected.size > 0
+              ? t('qr_stickers.print_count', { count: selected.size })
+              : t('qr_stickers.print')}
           </Btn>
         </div>
       </div>

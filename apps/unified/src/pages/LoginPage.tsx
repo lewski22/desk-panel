@@ -124,7 +124,7 @@ export function LoginPage({ onLogin }: Props) {
 
   useEffect(() => {
     if ((location.state as any)?.registered) {
-      toast('Konto założone! Możesz się teraz zalogować.');
+      toast(t('login.registered_toast'));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -197,9 +197,9 @@ export function LoginPage({ onLogin }: Props) {
               {MSVG} {t('entra.title')}
             </button>
             <p className="text-center text-xs text-zinc-600 mt-4">
-              Nie masz konta?{' '}
+              {t('login.no_account')}{' '}
               <Link to="/register" className="text-brand hover:underline">
-                Załóż konto Free →
+                {t('login.register_free')}
               </Link>
             </p>
 

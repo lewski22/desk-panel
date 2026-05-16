@@ -117,7 +117,10 @@
     "submit": "Sign in",
     "submitting": "Signing in…",
     "or": "or",
-    "test_accounts": "Test accounts:"
+    "test_accounts": "Test accounts:",
+    "no_account": "Don't have an account?",
+    "register_free": "Create Free account →",
+    "registered_toast": "Account created! You can now sign in."
   },
   "entra": {
     "title": "Sign in with Entra ID",
@@ -345,6 +348,7 @@
     "location_label": "Office:",
     "sub_active": "{{active}} active of {{total}}",
     "no_beacon": "No beacon",
+    "qr_stickers_btn": "QR Stickers",
     "actions": {
       "maintenance": "Service",
       "activate": "Activate",
@@ -1808,6 +1812,32 @@
         "submit":        "Block"
       }
     }
+  },
+  "qr_stickers": {
+    "title": "QR Stickers — {{locationName}}",
+    "selected_count": "{{selected}} of {{total}} selected",
+    "select_all": "Select all",
+    "deselect_all": "Deselect all",
+    "footer": "A4 format · 3 columns · 12 stickers/page",
+    "close": "Close",
+    "print": "Print",
+    "print_count": "Print ({{count}})"
+  },
+  "register_org": {
+    "title": "Create Reserti account",
+    "subtitle": "Free plan · 5 desks · no credit card required",
+    "org_name": "Company name",
+    "first_name": "First name",
+    "last_name": "Last name",
+    "email": "Email",
+    "password": "Password",
+    "password_confirm": "Confirm password",
+    "passwords_mismatch": "Passwords do not match",
+    "submit": "Create Free account",
+    "submitting": "Creating account…",
+    "error_fallback": "Registration error",
+    "have_account": "Already have an account?",
+    "login_link": "Sign in"
   },
   "free_nudge": {
     "ghost_title": "{{pct}}% of reservations had no check-in this week",

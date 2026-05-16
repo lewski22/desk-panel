@@ -243,7 +243,7 @@ export function DesksPage() {
         action={
           <div className="flex gap-2">
             <Btn variant="secondary" onClick={() => setShowBulkQr(true)} disabled={desks.length === 0}>
-              🖨️ Naklejki QR
+              🖨️ {t('desks.qr_stickers_btn')}
             </Btn>
             <Btn onClick={() => { setModal('create'); setForm({ name:'', code:'', floor:'', zone:'', locId }); setErr(''); }}>{t('pages.desks.new')}</Btn>
           </div>

@@ -117,7 +117,10 @@
     "submit": "Zaloguj się",
     "submitting": "Logowanie…",
     "or": "lub",
-    "test_accounts": "Konta testowe:"
+    "test_accounts": "Konta testowe:",
+    "no_account": "Nie masz konta?",
+    "register_free": "Załóż konto Free →",
+    "registered_toast": "Konto założone! Możesz się teraz zalogować."
   },
   "entra": {
     "title": "Logowanie przez Entra ID",
@@ -345,6 +348,7 @@
     "location_label": "Biuro:",
     "sub_active": "{{active}} aktywnych z {{total}}",
     "no_beacon": "Brak beacona",
+    "qr_stickers_btn": "Naklejki QR",
     "actions": {
       "maintenance": "Serwis",
       "activate": "Aktywuj",
@@ -1808,6 +1812,32 @@
         "submit":          "Zablokuj"
       }
     }
+  },
+  "qr_stickers": {
+    "title": "Naklejki QR — {{locationName}}",
+    "selected_count": "{{selected}} z {{total}} zaznaczonych",
+    "select_all": "Zaznacz wszystkie",
+    "deselect_all": "Odznacz wszystkie",
+    "footer": "Format A4 · 3 kolumny · 12 naklejek/strona",
+    "close": "Zamknij",
+    "print": "Drukuj",
+    "print_count": "Drukuj ({{count}})"
+  },
+  "register_org": {
+    "title": "Załóż konto Reserti",
+    "subtitle": "Plan Free · 5 biurek · bez karty kredytowej",
+    "org_name": "Nazwa firmy",
+    "first_name": "Imię",
+    "last_name": "Nazwisko",
+    "email": "Email",
+    "password": "Hasło",
+    "password_confirm": "Powtórz hasło",
+    "passwords_mismatch": "Hasła nie są identyczne",
+    "submit": "Załóż konto Free",
+    "submitting": "Zakładanie konta…",
+    "error_fallback": "Błąd rejestracji",
+    "have_account": "Masz już konto?",
+    "login_link": "Zaloguj się"
   },
   "free_nudge": {
     "ghost_title": "{{pct}}% rezerwacji bez check-inu w tym tygodniu",
