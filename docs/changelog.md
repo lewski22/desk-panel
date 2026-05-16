@@ -1,6 +1,6 @@
 # Changelog — Reserti Desk Management
 
-> Ostatnia aktualizacja: 2026-05-16 (0.19.4)
+> Ostatnia aktualizacja: 2026-05-16 (0.19.5)
 
 ---
 
@@ -120,6 +120,45 @@
 
 **`apps/unified/src/locales/pl/translation.json`** + **`en/translation.json`**
 - Dodano `org.logo.whitelabel_disabled`.
+
+---
+
+## [0.19.5] — 2026-05-16 — Security hardening round 3: SSRF depth, cross-tenant recurring, token leak
+
+### Security — naprawione podatności (audit round 3)
+
+**`backend/src/modules/integrations/providers/webhook-url-guard.ts`** *(nowy plik)*
+- Wyekstrahowano `assertPublicWebhookUrl()` do samodzielnego modułu bez zależności NestJS — eliminuje potencjalny import cykliczny między `integrations.service` a `webhook.provider`.
+- Rozszerzono SSRF guard o pełne zakresy IPv6: `::` (any), `fc00::/7` (ULA), `fd00::/8` (ULA), `fe80::/10` (link-local), `::ffff:127.x` (IPv4-mapped loopback).
+- Zmigrowano `throw new Error(...)` → `throw new BadRequestException(...)` — gwarantuje HTTP 400 zamiast HTTP 500.
+
+**`backend/src/modules/integrations/integrations.service.ts`**
+- `upsert()` — dodano SSRF check przy zapisie konfiguracji webhooka (`WEBHOOK_CUSTOM`). Poprzednio guard uruchamiał się wyłącznie przy wysyłce (`_send()`); złośliwy URL mógł być zapisany i odczytany zanim dotarł do dispatch path.
+
+**`backend/src/modules/integrations/providers/webhook.provider.ts`**
+- `test()` — zastąpiono wbudowaną walidację (tylko protokół HTTP/HTTPS) przez `assertPublicWebhookUrl()`. Poprzednia implementacja nie blokowała prywatnych adresów IP przy wywołaniu testowym; atakujący mógł ustawić `url=http://169.254.169.254` i wyzwolić SSRF przez przycisk "Test webhook".
+
+**`backend/src/modules/reservations/reservations.service.ts`**
+- `cancelRecurring()` — naprawiono duplikat `const groupId` (błąd kompilacji TypeScript). Dodano cross-tenant guard: przed anulowaniem serii sprawdza czy `recurrenceGroupId` należy do org aktora.
+- Wszystkie wewnętrzne wywołania `this.cancel()` wewnątrz `cancelRecurring()` przekazują teraz `actorOrgId` — poprzednio endpointem można było anulować indywidualne rezerwacje z obcej org.
+- `createRecurring()` — dodano sprawdzenie przynależności `deskId` do org aktora. Parametr `actorOrgId` był akceptowany, ale nigdy nie używany: uwierzytelniony użytkownik mógł tworzyć rezerwacje cykliczne na biurkach innej organizacji.
+
+**`backend/src/modules/auth/auth.controller.ts`**
+- `GET /auth/google/callback` — zmieniono redirect z query param `?google_code=` na hash fragment `#google_code=`. Hash nie jest wysyłany do serwerów, nie pojawia się w logach Cloudflare/proxy ani w nagłówku `Referer`.
+
+**`apps/unified/src/pages/LoginPage.tsx`**
+- Odczyt exchange code zmieniony z `location.search` na `location.hash.slice(1)` — spójnie z nowym schematem redirectu backendu.
+
+**`apps/unified/src/pages/OrganizationsPage.tsx`**
+- Usunięto fallback `?? 'CLIENT_ID'` w legacy Azure SSO modal — literal string trafiał do URL zgody admin OAuth. Gdy `VITE_AZURE_CLIENT_ID` nie jest skonfigurowany, wyświetlane jest ostrzeżenie zamiast uszkodzonego przycisku.
+
+### Jakość kodu
+
+**`backend/src/modules/auth/dto/exchange-google-code.dto.ts`**
+- Zacieśniono `@Length(1, 128)` → `@Length(48, 48)` — `randomBytes(24).toString('hex')` generuje dokładnie 48 znaków hex. Poprzedni zakres akceptował arbitralnie krótkie lub długie stringi.
+
+**`backend/tsconfig.json`**
+- `noImplicitAny: false` → `true` — wymusza jawne typowanie parametrów funkcji w całym projekcie. Istniejące `as any` i zmienne w blokach `catch` nie są objęte tym wymogiem.
 
 ---
 
