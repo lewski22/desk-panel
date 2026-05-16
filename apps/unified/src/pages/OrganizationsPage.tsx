@@ -303,10 +303,18 @@ function AzureConfigModal({ location, onClose }: { location: any; onClose: () =>
         {/* Instrukcja */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1.5">
           <p className="font-semibold">Jak skonfigurować (IT Admin firmy):</p>
-          <p>1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:</p>
-          <code className="block bg-blue-100 rounded px-2 py-1 text-[10px] break-all">
-            {`https://login.microsoftonline.com/organizations/adminconsent?client_id=${import.meta.env.VITE_AZURE_CLIENT_ID ?? 'CLIENT_ID'}&redirect_uri=${encodeURIComponent(`${window.location.origin}/auth-redirect.html`)}&prompt=login`}
-          </code>
+          {import.meta.env.VITE_AZURE_CLIENT_ID ? (
+            <>
+              <p>1. Otwórz link w przeglądarce zalogowanej jako Global Admin Entra ID:</p>
+              <code className="block bg-blue-100 rounded px-2 py-1 text-[10px] break-all">
+                {`https://login.microsoftonline.com/organizations/adminconsent?client_id=${import.meta.env.VITE_AZURE_CLIENT_ID}&redirect_uri=${encodeURIComponent(`${window.location.origin}/auth-redirect.html`)}&prompt=login`}
+              </code>
+            </>
+          ) : (
+            <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              VITE_AZURE_CLIENT_ID nie jest skonfigurowany — skontaktuj się z administratorem systemu.
+            </p>
+          )}
           <p>2. Kliknij "Akceptuj" → Skopiuj <strong>Tenant ID</strong> z URL lub Azure Portal</p>
           <p>3. Wklej Tenant ID poniżej i włącz SSO</p>
         </div>

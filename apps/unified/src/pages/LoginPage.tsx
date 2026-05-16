@@ -121,9 +121,9 @@ export function LoginPage({ onLogin }: Props) {
   const location = useLocation();
   const returnTo = (location.state as any)?.returnTo as string | undefined;
 
-  // Handle Google SSO redirect: ?google_code=<exchange_code>
+  // Handle Google SSO redirect: #google_code=<exchange_code> (hash — not logged by servers)
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(location.hash.slice(1));
     const googleCode = params.get('google_code');
     if (!googleCode) return;
     // Remove code from URL immediately so it's not in history

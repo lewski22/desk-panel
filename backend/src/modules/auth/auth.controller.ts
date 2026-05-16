@@ -183,8 +183,8 @@ export class AuthController {
     try {
       const { exchangeCode, redirectUrl } = await this.google.handleCallback(code, state);
       // Exchange code (60s TTL) — frontend wymienia go przez POST /auth/google/exchange.
-      // Token nigdy nie trafia do URL, historii przeglądarki ani rozszerzeń.
-      res!.redirect(`${redirectUrl}/login?google_code=${exchangeCode}`);
+      // Hash fragment nie trafia do server logs, logów Cloudflare ani nagłówka Referer.
+      res!.redirect(`${redirectUrl}/login#google_code=${exchangeCode}`);
     } catch (err: any) {
       const msg = encodeURIComponent(err.message ?? 'Błąd logowania');
       res!.redirect(`${frontendUrl}/login?error=google_auth&msg=${msg}`);
