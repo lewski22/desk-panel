@@ -466,14 +466,16 @@ export function DashboardPage() {
     appApi.subscription.getStatus().then((s: any) => {
       setSubPlan(s?.plan ?? '');
       setDeskUsePct(s?.usage?.desks?.pct);
-      if (s?.plan === 'free' && locationId) {
-        appApi.insights.getForLocation(locationId).then((r: any) => {
-          const ghost = r?.insights?.find((i: any) => i.type === 'GHOST_DESKS');
-          if (ghost?.metric !== undefined) setGhostPct(ghost.metric);
-        }).catch(() => {});
-      }
     }).catch(() => {});
-  }, [locationId]);
+  }, []);
+
+  useEffect(() => {
+    if (!locationId || subPlan !== 'free') return;
+    appApi.insights.getForLocation(locationId).then((r: any) => {
+      const ghost = r?.insights?.find((i: any) => i.type === 'GHOST_DESKS');
+      if (ghost?.metric !== undefined) setGhostPct(ghost.metric);
+    }).catch(() => {});
+  }, [locationId, subPlan]);
 
   const zoneData = useMemo(() => {
     const zones = new Map<string, { free:number; occupied:number; reserved:number }>();

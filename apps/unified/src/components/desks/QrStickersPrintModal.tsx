@@ -13,6 +13,9 @@ interface Props {
 
 const APP_URL = (import.meta as any).env?.VITE_APP_URL ?? window.location.origin;
 
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState(new Set(desks.map(d => d.id)));
@@ -50,21 +53,21 @@ export function QrStickersPrintModal({ desks, locationName, onClose }: Props) {
 
     const stickers = list.map(d => {
       const meta = [
-        d.floor && `Piętro ${d.floor}`, d.zone
+        d.floor && `Piętro ${esc(d.floor)}`, d.zone && esc(d.zone)
       ].filter(Boolean).join(' · ');
       return `<div class="sticker">
         ${qrMap[d.id]
           ? `<img src="${qrMap[d.id]}" />`
           : '<div class="no-qr">Brak QR</div>'}
-        <div class="name">${d.name}</div>
-        <div class="code">${d.code}${meta ? ` · ${meta}` : ''}</div>
-        <div class="loc">${locationName}</div>
+        <div class="name">${esc(d.name)}</div>
+        <div class="code">${esc(d.code)}${meta ? ` · ${meta}` : ''}</div>
+        <div class="loc">${esc(locationName)}</div>
         <div class="brand">reserti.com</div>
       </div>`;
     }).join('');
 
     w.document.write(`<!DOCTYPE html><html><head>
-      <title>QR — ${locationName}</title>
+      <title>QR — ${esc(locationName)}</title>
       <style>
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:system-ui,sans-serif;padding:12mm}

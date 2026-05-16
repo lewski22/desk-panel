@@ -366,7 +366,7 @@ export class AuthService {
           passwordHash:   await bcrypt.hash(dto.password, 12),
           firstName:      dto.adminFirstName,
           lastName:       dto.adminLastName,
-          role:           'SUPER_ADMIN' as any,
+          role:           UserRole.SUPER_ADMIN,
           isActive:       true,
           organizationId: org.id,
         },

@@ -51,7 +51,7 @@ export function RegisterOrgPage() {
           </p>
         </div>
 
-        <div className="space-y-3">
+        <form onSubmit={e => { e.preventDefault(); submit(); }} className="space-y-3">
           <Input label={t('register_org.org_name')}
             value={form.orgName} onChange={set('orgName')} />
           <div className="grid grid-cols-2 gap-3">
@@ -66,7 +66,7 @@ export function RegisterOrgPage() {
             value={form.password} onChange={set('password')} />
           <Input label={t('register_org.password_confirm')} type="password"
             value={form.confirm} onChange={set('confirm')} />
-        </div>
+        </form>
 
         {err && (
           <p className="mt-3 text-sm text-red-600 bg-red-50 border

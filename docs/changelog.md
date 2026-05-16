@@ -25,6 +25,14 @@
 ### Fixed
 - LED desync po restarcie beacona: `mqtt.handlers.ts` wywołuje `restoreDeskLed()` przy `payload.request_sync === true`
 
+## [0.21.1] — 2026-05-16
+
+### Fixed
+- **XSS w QrStickersPrintModal** — `d.name`, `d.code`, `d.zone`, `locationName` wstrzykiwane do `document.write()` są teraz eskejpowane przez helper `esc()` (zastępuje `&`, `<`, `>`, `"`)
+- **`RegisterOrgPage` — Enter nie submitował formularza** — dodano `<form onSubmit>` zamiast samego `onClick` na przycisku
+- **`UserRole.SUPER_ADMIN` — niepoprawny cast** — zastąpiono `'SUPER_ADMIN' as any` prawidłowym `UserRole.SUPER_ADMIN` (enum Prisma był już zaimportowany)
+- **`DashboardPage` — zbędne wywołania API** — `getStatus()` wywoływany raz przy montowaniu (deps: `[]`); ghost-insights call zależy od `[locationId, subPlan]` i pomija niż plan `free`
+
 ### Infra
 - `desk-gateway-python/install.sh` v1.1 — skrypt prowizjonowania gateway (zweryfikowany — już obecny)
 
