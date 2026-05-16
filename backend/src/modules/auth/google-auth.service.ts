@@ -232,11 +232,12 @@ export class GoogleAuthService {
       const val = this.config.get<string>(key);
       if (val) { try { trustedOrigins.push(new URL(val).origin); } catch { /* skip */ } }
     }
-    const extra = (process.env.ALLOWED_REDIRECT_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean);
+    const extra = (this.config.get<string>('ALLOWED_REDIRECT_ORIGINS') ?? '').split(',').map(s => s.trim()).filter(Boolean);
     for (const u of extra) { try { trustedOrigins.push(new URL(u).origin); } catch { /* skip */ } }
 
     if (trustedOrigins.length === 0) {
       this.logger.error('_assertSafeRedirectUrl: no allowed origins configured — set FRONTEND_URL');
+      throw new BadRequestException('OAuth redirect not configured — contact administrator');
     }
 
     let given: string;

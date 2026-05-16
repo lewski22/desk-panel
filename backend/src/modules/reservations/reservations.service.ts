@@ -401,9 +401,10 @@ export class ReservationsService {
 
   async cancelRecurring(id: string, scope: 'single' | 'following' | 'all', actorId: string, actorRole: string, actorOrgId?: string) {
     const res = await this.findOne(id);
-    if (actorOrgId) {
+    const groupId = (res as any).recurrenceGroupId;
+    if (actorOrgId && groupId) {
       const sample = await this.prisma.reservation.findFirst({
-        where: { recurrenceGroupId: (res as any).recurrenceGroupId ?? id },
+        where: { recurrenceGroupId: groupId },
         include: { desk: { include: { location: { select: { organizationId: true } } } } },
       });
       if (sample && sample.desk?.location?.organizationId !== actorOrgId) {
