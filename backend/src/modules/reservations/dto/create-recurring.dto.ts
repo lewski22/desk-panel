@@ -1,7 +1,7 @@
-import { IsString, IsDateString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsIn, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateRecurringDto {
-  @IsString()
+  @IsUUID()
   deskId: string;
 
   @IsDateString()
@@ -15,6 +15,7 @@ export class CreateRecurringDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string;
 
   @IsString()

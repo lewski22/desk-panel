@@ -60,7 +60,7 @@ export class AuthController {
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @ApiOperation({ summary: 'Rotate refresh token — reads from cookie, sets new cookies' })
   async refresh(@Request() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
-    const rt = (req as any).cookies?.refresh_token ?? (req.body as any)?.refreshToken;
+    const rt = (req as any).cookies?.refresh_token;
     if (!rt) throw new UnauthorizedException('Missing refresh token');
     const d = await this.auth.refresh(rt);
     const refreshDays = d.user.role === UserRole.KIOSK ? 30 : 7;
@@ -73,7 +73,7 @@ export class AuthController {
   @SkipThrottle()
   @ApiOperation({ summary: 'Revoke refresh token and clear cookies' })
   async logout(@Request() req: ExpressRequest, @Res({ passthrough: true }) res: Response) {
-    const rt = (req as any).cookies?.refresh_token ?? (req.body as any)?.refreshToken;
+    const rt = (req as any).cookies?.refresh_token;
     if (rt) await this.auth.logout(rt);
     clearAuthCookies(res);
   }

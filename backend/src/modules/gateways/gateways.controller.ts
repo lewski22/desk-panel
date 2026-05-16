@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request, Req, Res, Headers, HttpCode, HttpStatus, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
@@ -116,7 +117,12 @@ export class GatewaysController {
     @Headers('x-gateway-provision-key') secret: string,
   ) {
     const expected = process.env.GATEWAY_PROVISION_KEY ?? '';
-    if (!expected || secret !== expected) throw new UnauthorizedException('Invalid provision key');
+    if (!expected) throw new UnauthorizedException('Invalid provision key');
+    let keyValid = false;
+    try {
+      keyValid = timingSafeEqual(Buffer.from(secret ?? ''), Buffer.from(expected));
+    } catch { /* buffers of different length — timingSafeEqual throws */ }
+    if (!keyValid) throw new UnauthorizedException('Invalid provision key');
 
     const gw = await this.prisma.gateway.findUnique({
       where:  { id: gwId },

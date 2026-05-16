@@ -15,6 +15,7 @@ import {
   UseGuards, Request, HttpCode, HttpStatus, Res,
   BadRequestException, UnauthorizedException, Logger,
 } from '@nestjs/common';
+import { GraphWebhookBodyDto } from './dto/graph-webhook.dto';
 import { Response }        from 'express';
 import { SkipThrottle }    from '@nestjs/throttler';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -193,7 +194,7 @@ export class GraphController {
   @ApiOperation({ summary: 'Microsoft Graph webhook — odbierz notyfikacje kalendarza' })
   async graphWebhook(
     @Query('validationToken') validationToken: string | undefined,
-    @Body() body: any,
+    @Body() body: GraphWebhookBodyDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<any> {
     // Microsoft wysyła validationToken przy rejestracji subskrypcji
@@ -204,7 +205,7 @@ export class GraphController {
     }
 
     // Przetwarzaj notyfikacje w tle — nie blokuj odpowiedzi
-    const notifications: any[] = body?.value ?? [];
+    const notifications: GraphWebhookBodyDto['value'] = body?.value ?? [];
     if (notifications.length > 0) {
       this.graphService.processWebhookNotification(notifications).catch(err => {
         this.logger.error(`Webhook processing error: ${err.message}`);

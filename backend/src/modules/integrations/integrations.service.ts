@@ -8,7 +8,7 @@
  * backend/src/modules/integrations/integrations.service.ts
  */
 import {
-  Injectable, Logger, NotFoundException, ForbiddenException,
+  Injectable, Logger, NotFoundException, ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { PrismaService }            from '../../database/prisma.service';
 import { IntegrationCryptoService } from './integration-crypto.service';
@@ -60,6 +60,20 @@ export class IntegrationsService {
     if (provider === 'WEBHOOK_CUSTOM') {
       const webhookCfg = config as WebhookCustomConfig;
       if (webhookCfg.url) assertPublicWebhookUrl(webhookCfg.url);
+      if (typeof webhookCfg.url !== 'string' || !webhookCfg.url)
+        throw new BadRequestException('webhook url musi być niepustym stringiem');
+      if (typeof webhookCfg.secret !== 'string' || !webhookCfg.secret)
+        throw new BadRequestException('webhook secret musi być niepustym stringiem');
+      if (webhookCfg.events !== undefined && !Array.isArray(webhookCfg.events))
+        throw new BadRequestException('webhook events musi być tablicą');
+      if (webhookCfg.timeoutMs !== undefined &&
+          (typeof webhookCfg.timeoutMs !== 'number' || webhookCfg.timeoutMs < 500 || webhookCfg.timeoutMs > 30_000))
+        throw new BadRequestException('timeoutMs musi być liczbą między 500 a 30000');
+      if (webhookCfg.maxRetries !== undefined &&
+          (typeof webhookCfg.maxRetries !== 'number' || !Number.isInteger(webhookCfg.maxRetries) || webhookCfg.maxRetries < 0 || webhookCfg.maxRetries > 10))
+        throw new BadRequestException('maxRetries musi być całkowitą liczbą między 0 a 10');
+      if (webhookCfg.headers !== undefined && (typeof webhookCfg.headers !== 'object' || Array.isArray(webhookCfg.headers)))
+        throw new BadRequestException('webhook headers musi być obiektem klucz-wartość');
     }
 
     const configEncrypted = this.crypto.encryptJson(config);

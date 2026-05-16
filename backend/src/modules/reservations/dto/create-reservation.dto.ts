@@ -1,7 +1,7 @@
-import { IsString, IsDateString, IsOptional, IsBoolean, IsIn } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsBoolean, IsIn, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateReservationDto {
-  @IsString()
+  @IsUUID()
   deskId: string;
 
   @IsDateString()
@@ -15,10 +15,11 @@ export class CreateReservationDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   notes?: string;
 
   @IsOptional()
-  @IsString()
+  @IsUUID()
   targetUserId?: string;
 
   @IsOptional()
