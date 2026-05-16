@@ -530,8 +530,9 @@ function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => voi
 
   return (
     <section className="mt-6 border border-zinc-200 rounded-2xl p-5 bg-white">
-      <h2 className="text-sm font-semibold text-zinc-700 mb-1">
-        🔐 {t('org.password_policy.title')}
+      <h2 className="text-sm font-semibold text-zinc-700 mb-1 flex items-center gap-1.5">
+        <i className="ti ti-shield-lock text-[#A898B8]" aria-hidden="true" />
+        {t('org.password_policy.title')}
       </h2>
       <p className="text-xs text-zinc-400 mb-5">
         {t('org.password_policy.description')}
@@ -628,7 +629,7 @@ function PasswordPolicySection({ org, onSaved }: { org: any; onSaved?: () => voi
           {t('org.password_policy.force_reset_description')}
         </p>
         <Btn onClick={forceReset} loading={resetting} variant="danger" size="sm">
-          🔑 {t('org.password_policy.force_reset_btn')}
+          <i className="ti ti-key mr-1" aria-hidden="true" />{t('org.password_policy.force_reset_btn')}
         </Btn>
       </div>
     </section>
@@ -1000,30 +1001,26 @@ export function OrganizationsPage() {
                   <div className="px-3 py-2.5 bg-zinc-50 flex gap-1.5 flex-wrap mt-auto">
                     <button
                       onClick={() => openEdit(loc)}
-                      className="text-[11px] px-3 py-1.5 rounded-lg border border-brand/40
-                                 bg-brand/5 text-brand hover:bg-brand/10 font-semibold
-                                 transition-colors flex-1 text-center"
+                      title={t('organizations_extra.edit', 'Edytuj')}
+                      className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors"
                     >
-                      {t('organizations_extra.edit', 'Edytuj')}
+                      <i className="ti ti-pencil text-sm" aria-hidden="true" />
                     </button>
                     {hasBeacons && (
                       <button
                         onClick={() => setInstallModal(loc)}
-                        className="text-[11px] px-3 py-1.5 rounded-lg border border-zinc-200
-                                   bg-white text-zinc-600 hover:bg-zinc-100 font-medium
-                                   transition-colors"
+                        title="+ Gateway"
+                        className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors"
                       >
-                        + Gateway
+                        <i className="ti ti-antenna text-sm" aria-hidden="true" />
                       </button>
                     )}
                     <button
                       onClick={() => setAzureModal(loc)}
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg border border-zinc-200
-                                 bg-white text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100
-                                 transition-colors"
                       title="Azure / M365"
+                      className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors"
                     >
-                      M365
+                      <i className="ti ti-brand-azure text-sm" aria-hidden="true" />
                     </button>
                     <KioskLinkButton locationId={loc.id} kioskPin={(loc as any).kioskPin} />
                   </div>
@@ -1036,7 +1033,7 @@ export function OrganizationsPage() {
               <div className="col-span-full text-center py-16 text-zinc-400">
                 {search ? (
                   <>
-                    <p className="text-2xl mb-2">🔍</p>
+                    <i className="ti ti-search text-2xl text-[#A898B8] mb-2 block" aria-hidden="true" />
                     <p className="text-sm">
                       {t('organizations.no_search_results', 'Brak biur pasujących do „{{q}}"', { q: search })}
                     </p>
@@ -1049,7 +1046,7 @@ export function OrganizationsPage() {
                   </>
                 ) : (
                   <>
-                    <p className="text-3xl mb-2">🏢</p>
+                    <i className="ti ti-building text-3xl text-[#A898B8] mb-2 block" aria-hidden="true" />
                     <p className="text-sm">{t('organizations.no_locations')}</p>
                   </>
                 )}
@@ -1129,10 +1126,10 @@ export function OrganizationsPage() {
               {/* ── Tab bar ──────────────────────────────────────── */}
               <div className="flex border-b border-zinc-100 bg-zinc-50 overflow-x-auto">
                 {([
-                  { id: 'basic'     as const, label: 'Podstawowe',      icon: '🏢' },
-                  { id: 'hours'     as const, label: 'Godziny i limity', icon: '🕐' },
-                  ...(hasBeacons ? [{ id: 'iot' as const, label: 'IoT i WiFi', icon: '📡' }] : []),
-                  { id: 'resources' as const, label: 'Zasoby',           icon: '🪑' },
+                  { id: 'basic'     as const, label: 'Podstawowe',      tablerIcon: 'ti-building' },
+                  { id: 'hours'     as const, label: 'Godziny i limity', tablerIcon: 'ti-clock' },
+                  ...(hasBeacons ? [{ id: 'iot' as const, label: 'IoT i WiFi', tablerIcon: 'ti-antenna' }] : []),
+                  { id: 'resources' as const, label: 'Zasoby',           tablerIcon: 'ti-armchair' },
                 ]).map(tab => (
                   <button
                     key={tab.id}
@@ -1145,7 +1142,7 @@ export function OrganizationsPage() {
                         : 'border-transparent text-zinc-500 hover:text-zinc-700'
                     }`}
                   >
-                    <span style={{ fontSize: 13 }}>{tab.icon}</span>
+                    <i className={`ti ${tab.tablerIcon}`} style={{ fontSize: 13 }} aria-hidden="true" />
                     {tab.label}
                   </button>
                 ))}
@@ -1412,7 +1409,7 @@ export function OrganizationsPage() {
                         </button>
                       </div>
                       <p className="text-[10px] text-zinc-400 mt-1.5 flex items-center gap-1">
-                        <span className="text-emerald-500">🔒</span>
+                        <i className="ti ti-lock text-emerald-500" aria-hidden="true" />
                         {t('organizations.form.wifi_hint')}
                       </p>
                     </div>

@@ -228,9 +228,18 @@ GET    /metrics | /health                  POZA /api/v1
 
 ### Design system
 
-- **Kolor brand:** `#9C2264` — `tailwind.config.js` + `src/index.css` → klasy `bg-brand`, `text-brand`, `hover:bg-brand-hover`
-- **Paleta statusów:** emerald `#10b981` wolne / amber `#f59e0b` zarezerwowane / red `#ef4444` zajęte / zinc `#a1a1aa` offline
-- **Ikony:** `lucide-react` — re-eksportowane przez `components/icons/SidebarIcons.tsx`
+- **Design tokens:** jedyne źródło prawdy → `design/brand.tokens.ts`
+  Generator: `npm run tokens` → regeneruje `tailwind.config.js`,
+  `src/index.css`, `docs/DESIGN_TOKENS.md`
+- **Kolor brand:** `#B53578` (primary) / `#9C2264` (hover/sidebar)
+  Klasy Tailwind: `bg-brand`, `text-brand`, `border-brand`, `hover:bg-brand-hover`
+  CSS vars: `--brand`, `--brand-hover`, `--brand-surface`
+- **Paleta ink:** `#1A0A2E` primary / `#6B5F7A` muted / `#A898B8` faint
+- **Paleta statusów:** `--status-free` #10B981 / `--status-pending` #F59E0B
+  / `--status-occ` #EF4444 / `--status-offline` #71717A
+- **Ikony:** Tabler Icons (klasy CSS `ti-*`, już załadowane) — zero emoji w UI.
+  Dekoracyjne: `aria-hidden="true"` zawsze.
+- **Dokumentacja tokenów:** `docs/DESIGN_TOKENS.md` (generowana)
 - **i18n:** 100% pokrycie, `useTranslation()` wszędzie, zero literałów PL/EN w kodzie
 
 ### Kluczowe wzorce w client.ts

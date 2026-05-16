@@ -1,0 +1,39 @@
+name: Check design tokens
+
+on:
+  pull_request:
+    paths:
+      - 'design/brand.tokens.ts'
+      - 'apps/unified/tailwind.config.js'
+      - 'apps/unified/src/index.css'
+      - 'docs/DESIGN_TOKENS.md'
+
+jobs:
+  verify:
+    name: Verify generated files are up-to-date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Re-generate tokens
+        run: npm run tokens
+
+      - name: Check for uncommitted changes
+        run: |
+          if ! git diff --exit-code; then
+            echo ""
+            echo "Pliki wygenerowane z tokenow sa nieaktualne!"
+            echo "Uruchom 'npm run tokens' i zcommituj zmiany."
+            echo ""
+            git diff --stat
+            exit 1
+          fi
+          echo "Pliki tokenow sa aktualne."

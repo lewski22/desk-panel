@@ -2,7 +2,7 @@
  * VisitorsPage — Sprint J2
  * Zarządzanie gośćmi biura: lista, zapraszanie, check-in/out
  */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
 import {
@@ -15,11 +15,11 @@ import { format }          from 'date-fns';
 import { pl, enUS }        from 'date-fns/locale';
 import type { Visitor }    from '../types/api';
 
-const STATUS_CFG: Record<string, { label: string; cls: string; icon: string }> = {
-  INVITED:     { label: 'Zaproszony',    cls: 'bg-sky-100 text-sky-700',     icon: '✉️' },
-  CHECKED_IN:  { label: 'W biurze',      cls: 'bg-emerald-100 text-emerald-700', icon: '🏢' },
-  CHECKED_OUT: { label: 'Wyszedł',       cls: 'bg-zinc-100 text-zinc-500',   icon: '👋' },
-  CANCELLED:   { label: 'Anulowany',     cls: 'bg-red-50 text-red-500',      icon: '✗' },
+const STATUS_CFG: Record<string, { label: string; cls: string; tablerIcon: string }> = {
+  INVITED:     { label: 'Zaproszony',    cls: 'bg-sky-100 text-sky-700',         tablerIcon: 'ti-mail' },
+  CHECKED_IN:  { label: 'W biurze',      cls: 'bg-emerald-100 text-emerald-700', tablerIcon: 'ti-building' },
+  CHECKED_OUT: { label: 'Wyszedł',       cls: 'bg-zinc-100 text-zinc-500',       tablerIcon: 'ti-logout' },
+  CANCELLED:   { label: 'Anulowany',     cls: 'bg-red-50 text-red-500',          tablerIcon: 'ti-x' },
 };
 
 // ── Invite Modal ──────────────────────────────────────────────
@@ -121,28 +121,32 @@ function VisitorRow({ v, onCheckin, onCheckout, onCancel, locale }: {
         {v.purpose ?? '—'}
       </td>
       <td className="py-3 px-4">
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.cls}`}>
-          {cfg.icon} {cfg.label}
+        <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.cls}`}>
+          <i className={`ti ${cfg.tablerIcon}`} aria-hidden="true" />
+          {cfg.label}
         </span>
       </td>
       <td className="py-3 px-4">
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1">
           {v.status === 'INVITED' && (
             <button onClick={() => onCheckin(v.id)}
-              className="text-xs px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors font-medium">
-              Check-in
+              title="Check-in"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-colors">
+              <i className="ti ti-login text-sm" aria-hidden="true" />
             </button>
           )}
           {v.status === 'CHECKED_IN' && (
             <button onClick={() => onCheckout(v.id)}
-              className="text-xs px-2 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-              Check-out
+              title="Check-out"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors">
+              <i className="ti ti-logout text-sm" aria-hidden="true" />
             </button>
           )}
           {['INVITED','CHECKED_IN'].includes(v.status) && (
             <button onClick={() => onCancel(v.id)}
-              className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-colors">
-              Anuluj
+              title="Anuluj"
+              className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors">
+              <i className="ti ti-x text-sm" aria-hidden="true" />
             </button>
           )}
         </div>
@@ -160,7 +164,17 @@ export function VisitorsPage() {
   const [date, setDate]             = useState(todayLocal());
   const [visitors, setVisitors]     = useState<Visitor[]>([]);
   const [loading, setLoading]       = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteOpen,   setInviteOpen]   = useState(false);
+  const [showLocDrop,  setShowLocDrop]  = useState(false);
+  const locDropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locDropRef.current && !locDropRef.current.contains(e.target as Node)) setShowLocDrop(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     appApi.locations.listAll()
@@ -203,17 +217,33 @@ export function VisitorsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="flex flex-wrap gap-3 mb-5 items-center">
         {locations.length > 1 && (
-          <select value={locationId} onChange={e => setLocId(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:outline-none">
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          <div className="relative" ref={locDropRef}>
+            <button
+              onClick={() => setShowLocDrop(v => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#DCD6EA] bg-[#F8F6FC] text-sm text-[#6B5F7A]"
+            >
+              <span>{locations.find(l => l.id === locationId)?.name ?? t('reports.filter.all')}</span>
+              <i className="ti ti-chevron-down text-xs" aria-hidden="true" />
+            </button>
+            {showLocDrop && (
+              <div className="absolute top-full mt-1 left-0 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-full">
+                {locations.map(l => (
+                  <button key={l.id} onClick={() => { setLocId(l.id); setShowLocDrop(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm ${locationId === l.id ? 'text-[#B53578] font-medium' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'}`}>
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         <DaySlider selected={date} onChange={setDate} pastDays={7} futureDays={14} />
         <button onClick={load}
-          className="px-3 py-2 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-600 text-sm transition-colors">
-          ↺ {t('btn.refresh')}
+          title={t('btn.refresh')}
+          className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors">
+          <i className="ti ti-refresh text-sm" aria-hidden="true" />
         </button>
       </div>
 
@@ -233,7 +263,7 @@ export function VisitorsPage() {
 
       {/* Table */}
       {loading ? <Spinner /> : visitors.length === 0 ? (
-        <EmptyState icon="👤" title={t('visitors.empty')} sub={t('visitors.empty_sub')}
+        <EmptyState icon={<i className="ti ti-user-off text-[#A898B8]" aria-hidden="true" />} title={t('visitors.empty')} sub={t('visitors.empty_sub')}
           action={<Btn onClick={() => setInviteOpen(true)}>+ {t('visitors.invite_btn')}</Btn>} />
       ) : (
         <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-none sm:rounded-xl border-y sm:border border-zinc-100">

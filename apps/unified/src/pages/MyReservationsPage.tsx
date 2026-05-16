@@ -24,7 +24,7 @@ function QrBookingModal({ booking, onClose }: { booking: any; onClose: () => voi
   };
 
   return (
-    <Modal title={`QR — ${booking.resource?.name ?? '🅿️'}`} onClose={onClose}>
+    <Modal title={`QR — ${booking.resource?.name ?? ''}`} onClose={onClose}>
       <div className="space-y-4 text-center">
         {qrUrl ? (
           <>
@@ -35,11 +35,14 @@ function QrBookingModal({ booking, onClose }: { booking: any; onClose: () => voi
             <div className="flex gap-2">
               <button onClick={copy}
                 className="flex-1 py-2.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-sm font-medium transition-colors">
-                {copied ? '✅ Skopiowano' : '📋 Kopiuj'}
+                {copied
+                  ? <><i className="ti ti-check mr-1" aria-hidden="true" />Skopiowano</>
+                  : <><i className="ti ti-clipboard mr-1" aria-hidden="true" />Kopiuj</>
+                }
               </button>
               <button onClick={() => window.open(qrUrl, '_blank')}
                 className="flex-1 py-2.5 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors">
-                🔗 Otwórz
+                <i className="ti ti-external-link mr-1" aria-hidden="true" />Otwórz
               </button>
             </div>
           </>
@@ -260,8 +263,8 @@ export function MyReservationsPage() {
       new Date(iso).toLocaleDateString(locale, { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TZ });
     return (
       <div key={b.id} className={`bg-white border border-zinc-200 rounded-2xl p-4 flex items-center gap-3 ${isPast ? 'opacity-60' : ''}`}>
-        <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center text-lg shrink-0">
-          {b.resource?.type === 'PARKING' ? '🅿️' : '🏛'}
+        <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center shrink-0">
+          <i className={`ti ${b.resource?.type === 'PARKING' ? 'ti-parking' : 'ti-building-community'} text-lg text-violet-500`} aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-zinc-800 truncate">{b.resource?.name ?? '—'}</p>
@@ -311,27 +314,24 @@ export function MyReservationsPage() {
         <h1 className="text-xl font-semibold text-zinc-800">{t('pages.myReservations.title')}</h1>
         <button
           onClick={() => load(showBookingHistory)}
-          className="w-9 h-9 rounded-xl border border-zinc-200 hover:bg-zinc-50 transition-colors text-zinc-500 flex items-center justify-center"
+          className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors"
           title={t('btn.refresh')}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M13.5 2.5A6.5 6.5 0 1 0 14.5 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M11 2.5h3.5v3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <i className="ti ti-refresh text-sm" aria-hidden="true" />
         </button>
       </div>
 
       {err && <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{err}</div>}
 
       {reservations.length === 0 && bookings.length === 0 && (
-        <EmptyState icon="📅" title={t('reservations.none')} sub={t('reservations.none_hint')} />
+        <EmptyState icon={<i className="ti ti-calendar-off text-[#A898B8]" aria-hidden="true" />} title={t('reservations.none')} sub={t('reservations.none_hint')} />
       )}
 
       {(reservations.length > 0 || bookings.length > 0) && <div className="space-y-6">
           {active.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                <h2 className="text-[10px] font-semibold text-[#A898B8] uppercase tracking-[.08em] font-['Sora']">
                   {t('reservations.active_section', 'Aktywne')}
                 </h2>
                 <span className="text-[11px] text-zinc-400">
@@ -353,7 +353,7 @@ export function MyReservationsPage() {
           {inactive.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                <h2 className="text-[10px] font-semibold text-[#A898B8] uppercase tracking-[.08em] font-['Sora']">
                   {t('reservations.history')}
                 </h2>
                 <button
@@ -392,11 +392,11 @@ export function MyReservationsPage() {
           {/* Sale konferencyjne i parkingi */}
           {showRooms && (
             <section>
-              <h3 className="font-semibold text-zinc-700 mb-3">
-                🏛 {t('my_reservations.rooms_title', 'Sale konferencyjne')}
+              <h3 className="text-[10px] font-semibold text-[#A898B8] uppercase tracking-[.08em] font-['Sora'] mb-3">
+                {t('my_reservations.rooms_title', 'Sale konferencyjne')}
               </h3>
               {roomBookings.length === 0 ? (
-                <EmptyState icon="🏛" title={t('my_reservations.rooms_empty', 'Brak nadchodzących rezerwacji sal')} />
+                <EmptyState icon={<i className="ti ti-building-community text-[#A898B8]" aria-hidden="true" />} title={t('my_reservations.rooms_empty', 'Brak nadchodzących rezerwacji sal')} />
               ) : (
                 <div className="space-y-3">{roomBookings.map(b => renderBookingCard(b))}</div>
               )}
@@ -405,11 +405,11 @@ export function MyReservationsPage() {
 
           {showParking && (
             <section>
-              <h3 className="font-semibold text-zinc-700 mb-3">
-                🅿️ {t('my_reservations.parking_title', 'Parkingi')}
+              <h3 className="text-[10px] font-semibold text-[#A898B8] uppercase tracking-[.08em] font-['Sora'] mb-3">
+                {t('my_reservations.parking_title', 'Parkingi')}
               </h3>
               {parkingBookings.length === 0 ? (
-                <EmptyState icon="🅿️" title={t('my_reservations.parking_empty', 'Brak nadchodzących rezerwacji parkingów')} />
+                <EmptyState icon={<i className="ti ti-parking text-[#A898B8]" aria-hidden="true" />} title={t('my_reservations.parking_empty', 'Brak nadchodzących rezerwacji parkingów')} />
               ) : (
                 <div className="space-y-3">{parkingBookings.map(b => renderBookingCard(b))}</div>
               )}

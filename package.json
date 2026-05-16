@@ -17,10 +17,12 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f backend",
-    "test:backend": "cd backend && npm run test"
+    "test:backend": "cd backend && npm run test",
+    "tokens": "tsx design/generate-tokens.ts"
   },
   "devDependencies": {
-    "concurrently": "^8.2.0"
+    "concurrently": "^8.2.0",
+    "tsx": "^4.19.2"
   },
   "engines": {
     "node": ">=20.0.0",

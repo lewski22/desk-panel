@@ -322,7 +322,7 @@ export function SortHeader({
 export function EmptyState({
   icon, title, sub, action, illustration,
 }: {
-  icon?:         string;
+  icon?:         React.ReactNode;
   title:         string;
   sub?:          string;
   action?:       React.ReactNode;
@@ -331,7 +331,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
       {illustration ?? (
-        <span className="text-5xl mb-4 select-none">{icon ?? '📭'}</span>
+        icon ? <span className="text-5xl mb-4 select-none leading-none">{icon}</span> : null
       )}
       <p className="text-sm font-semibold text-zinc-600 mb-1">{title}</p>
       {sub && <p className="text-xs text-zinc-400 mb-4 max-w-xs">{sub}</p>}

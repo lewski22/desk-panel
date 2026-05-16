@@ -1,0 +1,4 @@
+# ── Pliki generowane z design/brand.tokens.ts ────────────────────────
+apps/unified/tailwind.config.js  linguist-generated=true
+apps/unified/src/index.css       linguist-generated=true
+docs/DESIGN_TOKENS.md            linguist-generated=true

@@ -837,9 +837,9 @@
       "expired": "Wygasłe"
     },
     "method": {
-      "nfc": "📡 NFC",
-      "qr": "📷 QR",
-      "manual": "✋ Ręczny"
+      "nfc": "NFC",
+      "qr": "QR",
+      "manual": "Ręczny"
     },
     "selected": "Wybrano: {{count}}",
     "bulk_cancel": "Anuluj zaznaczone ({{count}})",

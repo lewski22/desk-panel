@@ -176,7 +176,7 @@ export function QrCheckinPage() {
   if (step === 'error') return (
     <Wrapper>
       <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-center">
-        <p className="text-4xl mb-3">⚠️</p>
+        <i className="ti ti-alert-triangle text-4xl text-amber-400 mb-3 block" aria-hidden="true" />
         <p className="text-white font-semibold mb-2">{t('qr.error_title')}</p>
         <p className="text-zinc-400 text-sm mb-5">{error}</p>
         <button onClick={() => navigate('/')}
@@ -289,8 +289,8 @@ export function QrCheckinPage() {
           </div>
           {(desk.floor || desk.zone) && (
             <div className="flex gap-3 mt-3">
-              {desk.floor && <span className="text-xs text-zinc-500">📍 Piętro {desk.floor}</span>}
-              {desk.zone  && <span className="text-xs text-zinc-500">🗂 {desk.zone}</span>}
+              {desk.floor && <span className="text-xs text-zinc-500 flex items-center gap-1"><i className="ti ti-stairs" aria-hidden="true" />Piętro {desk.floor}</span>}
+              {desk.zone  && <span className="text-xs text-zinc-500 flex items-center gap-1"><i className="ti ti-layout-grid" aria-hidden="true" />{desk.zone}</span>}
             </div>
           )}
         </div>

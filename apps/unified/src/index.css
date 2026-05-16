@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --brand: #9C2264;
-  --brand-hover: #831A55;
+  --brand: #B53578;
+  --brand-hover: #9C2264;
 }
 
 @layer base {

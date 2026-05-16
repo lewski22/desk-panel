@@ -20,10 +20,11 @@ const STATUS_META: Record<string, { label: string; className: string }> = {
   COMPLETED: { label: 'Zakończona',   className: 'bg-sky-100    text-sky-700'     },
 };
 
-const METHOD_LABEL: Record<string, string> = {
-  NFC:    '📡 NFC',
-  QR:     '📷 QR',
-  MANUAL: '✋ Ręczny',
+const METHOD_ICON: Record<string, string> = {
+  NFC:    'ti-antenna',
+  QR:     'ti-qrcode',
+  MANUAL: 'ti-hand-stop',
+  WEB:    'ti-world',
 };
 
 function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }) {
@@ -66,7 +67,10 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
       <td className="py-3 px-4 text-xs text-zinc-500">
         {r.checkin ? (
           <div>
-            <p>{METHOD_LABEL[r.checkin.method] ?? r.checkin.method}</p>
+            <p className="flex items-center gap-1">
+              <i className={`ti ${METHOD_ICON[r.checkin.method] ?? 'ti-login'} text-[#A898B8]`} aria-hidden="true" />
+              {r.checkin.method}
+            </p>
             <p className="text-zinc-400">
               {format(new Date(r.checkin.checkedInAt), 'HH:mm')}
               {r.checkin.checkedOutAt && ` → ${format(new Date(r.checkin.checkedOutAt), 'HH:mm')}`}
@@ -90,9 +94,13 @@ function Row({ r, onCancel }: { r: Reservation; onCancel: (id: string) => void }
           <button
             onClick={handleCancel}
             disabled={busy}
-            className="text-xs text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-40 font-medium"
+            title={t('reservations.cancel')}
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-40 ml-auto"
           >
-            {busy ? '…' : t('reservations.cancel')}
+            {busy
+              ? <i className="ti ti-loader-2 text-sm animate-spin" aria-hidden="true" />
+              : <i className="ti ti-x text-sm" aria-hidden="true" />
+            }
           </button>
         )}
       </td>
@@ -123,8 +131,8 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
             onClick={() => setFilter('ALL')}
             className={`flex-shrink-0 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
               filter === 'ALL'
-                ? 'bg-zinc-800 text-white border-zinc-800'
-                : 'bg-white text-zinc-500 border-zinc-200 hover:border-zinc-300'
+                ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
             }`}
           >
             {t('reservations.filter.all')} {filter === 'ALL' && `(${reservations.length})`}
@@ -160,9 +168,9 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
           })}
 
           <button onClick={onRefresh}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-zinc-200 bg-white
-                       text-zinc-400 hover:bg-zinc-50 transition-colors">
-            ↻
+            title={t('btn.refresh', 'Odśwież')}
+            className="w-7 h-7 flex items-center justify-center rounded-md border border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC] transition-colors">
+            <i className="ti ti-refresh text-sm" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -173,7 +181,7 @@ export function ReservationList({ reservations, loading, onCancel, onRefresh }: 
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-zinc-400">
-          <p className="text-3xl mb-2">📅</p>
+          <i className="ti ti-calendar-off text-4xl text-[#A898B8] mb-2 block" aria-hidden="true" />
           <p className="text-sm">{t('reservations.none_today')}</p>
         </div>
       ) : (

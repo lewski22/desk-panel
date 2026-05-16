@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -37,7 +37,7 @@ const SEGMENT_LABELS: Record<Segment, string> = {
   today:   'Dziś',
   trends:  'Trendy',
   ai:      'AI',
-  parking: '🅿️ Parking',
+  parking: 'Parking',
 };
 
 // ── Utils ──────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ function SnapshotTab({ filters }: { filters: Filters }) {
           <div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" />
         </div>
       ) : data.length === 0 ? (
-        <EmptyState icon="📊" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-chart-bar text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <div className="space-y-4">
           {data.map(loc => (
@@ -365,7 +365,7 @@ function ReservationsTab({ filters }: { filters: Filters }) {
       {loading ? (
         <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
-        <EmptyState icon="📅" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-calendar-off text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={data} barCategoryGap="30%">
@@ -410,7 +410,7 @@ function MethodsTab({ filters }: { filters: Filters }) {
       {loading ? (
         <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
-        <EmptyState icon="📊" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-chart-pie text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <div className="flex flex-col md:flex-row gap-6 items-center">
           <ResponsiveContainer width={200} height={200} className="shrink-0">
@@ -501,7 +501,7 @@ function ByUserTab({ filters }: { filters: Filters }) {
       {loading ? (
         <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
-        <EmptyState icon="👤" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-user-off text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <div className="space-y-2">
           {data.slice(0, 50).map((row, i) => {
@@ -572,7 +572,7 @@ function ByDeskTab({ filters }: { filters: Filters }) {
       {loading ? (
         <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
-        <EmptyState icon="🪑" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-armchair-off text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <div className="space-y-2">
           {data.slice(0, 50).map((row, i) => {
@@ -649,7 +649,7 @@ function UtilizationTab({ filters }: { filters: Filters }) {
       {loading ? (
         <div className="py-12 flex justify-center"><div className="w-5 h-5 border-2 border-zinc-200 border-t-brand rounded-full animate-spin" /></div>
       ) : data.length === 0 ? (
-        <EmptyState icon="📈" title={t('reports.no_data')} />
+        <EmptyState icon={<i className="ti ti-chart-line text-[#A898B8]" aria-hidden="true" />} title={t('reports.no_data')} />
       ) : (
         <>
           <p className="text-xs text-zinc-400 mb-3">{t('reports.utilization.hint', { workdays: data[0]?.workdays ?? 0 })}</p>
@@ -764,13 +764,13 @@ function ParkingTab({ filters }: { filters: Filters }) {
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: t('reports.parking.kpi_total', 'Rezerwacje'), value: total, icon: '📊' },
-          { label: t('reports.parking.kpi_checkin_pct', '% potwierdzeń'), value: `${checkinPct}%`, icon: '✅' },
-          { label: t('reports.parking.kpi_no_checkin', 'Nieodebrane'), value: unconfirmed.length, icon: '⚠️' },
-          { label: t('reports.parking.kpi_top_spot', 'Top miejsce (wg zameldowań)'), value: topSpot, icon: '🏆' },
+          { label: t('reports.parking.kpi_total', 'Rezerwacje'), value: total, icon: 'ti-chart-bar' },
+          { label: t('reports.parking.kpi_checkin_pct', '% potwierdzeń'), value: `${checkinPct}%`, icon: 'ti-circle-check' },
+          { label: t('reports.parking.kpi_no_checkin', 'Nieodebrane'), value: unconfirmed.length, icon: 'ti-alert-triangle' },
+          { label: t('reports.parking.kpi_top_spot', 'Top miejsce (wg zameldowań)'), value: topSpot, icon: 'ti-trophy' },
         ].map(({ label, value, icon }) => (
           <Card key={label} className="p-4">
-            <p className="text-xl mb-1">{icon}</p>
+            <i className={`ti ${icon} text-xl text-[#A898B8] mb-1 block`} aria-hidden="true" />
             <p className="text-2xl font-bold text-zinc-800">{value}</p>
             <p className="text-xs text-zinc-400 mt-0.5">{label}</p>
           </Card>
@@ -796,8 +796,9 @@ function ParkingTab({ filters }: { filters: Filters }) {
       {/* Unconfirmed table */}
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-zinc-100">
-          <p className="text-sm font-semibold text-zinc-700">
-            ⚠️ {t('reports.parking.unconfirmed_title', 'Nieodebrane rezerwacje')}
+          <p className="text-sm font-semibold text-zinc-700 flex items-center gap-1.5">
+            <i className="ti ti-alert-triangle text-amber-500" aria-hidden="true" />
+            {t('reports.parking.unconfirmed_title', 'Nieodebrane rezerwacje')}
             <span className="ml-2 text-xs font-normal text-zinc-400">({unconfirmed.length})</span>
           </p>
           <button onClick={handleExport} disabled={exporting}
@@ -837,8 +838,9 @@ function ParkingTab({ filters }: { filters: Filters }) {
         <button
           onClick={() => setShowConfirmed(v => !v)}
           className="w-full flex items-center justify-between p-4 border-b border-zinc-100 text-left">
-          <p className="text-sm font-semibold text-zinc-700">
-            ✅ {t('reports.parking.confirmed_title', 'Potwierdzone rezerwacje')}
+          <p className="text-sm font-semibold text-zinc-700 flex items-center gap-1.5">
+            <i className="ti ti-circle-check text-emerald-500" aria-hidden="true" />
+            {t('reports.parking.confirmed_title', 'Potwierdzone rezerwacje')}
             <span className="ml-2 text-xs font-normal text-zinc-400">({confirmed.length})</span>
           </p>
           <span className="text-zinc-400 text-sm">{showConfirmed ? '▾' : '▸'}</span>
@@ -886,8 +888,18 @@ function ReportsPage() {
   const [locationId, setLocationId] = useState('');
   const [locations,  setLocations]  = useState<{ id: string; name: string }[]>([]);
   const [exporting,  setExporting]  = useState(false);
+  const [showLocDrop, setShowLocDrop] = useState(false);
+  const locDropRef = useRef<HTMLDivElement>(null);
 
   const filters = useMemo<Filters>(() => ({ from, to, locationId }), [from, to, locationId]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (locDropRef.current && !locDropRef.current.contains(e.target as Node)) setShowLocDrop(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     appApi.locations.list().then(r => setLocations(Array.isArray(r) ? r : [])).catch((e) => console.error('[ReportsPage] load locations', e));
@@ -929,52 +941,66 @@ function ReportsPage() {
             className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-brand" />
         </div>
         {locations.length > 0 && (
-          <div className="col-span-2 sm:col-auto">
+          <div className="col-span-2 sm:col-auto relative" ref={locDropRef}>
             <label className="block text-xs text-zinc-400 mb-1">{t('reports.filter.location')}</label>
-            <select value={locationId} onChange={e => setLocationId(e.target.value)}
-              className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-2 min-h-touch focus:outline-none focus:ring-1 focus:ring-brand bg-white">
-              <option value="">{t('reports.filter.all')}</option>
-              {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+            <button
+              onClick={() => setShowLocDrop(v => !v)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#DCD6EA] bg-[#F8F6FC] text-sm text-[#6B5F7A] min-h-touch min-w-[160px] justify-between"
+            >
+              <span className="truncate">{locationId ? (locations.find(l => l.id === locationId)?.name ?? t('reports.filter.all')) : t('reports.filter.all')}</span>
+              <i className="ti ti-chevron-down text-xs shrink-0" aria-hidden="true" />
+            </button>
+            {showLocDrop && (
+              <div className="absolute top-full mt-1 left-0 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-full">
+                <button onClick={() => { setLocationId(''); setShowLocDrop(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm ${!locationId ? 'text-[#B53578] font-medium' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'}`}>
+                  {t('reports.filter.all')}
+                </button>
+                {locations.map(l => (
+                  <button key={l.id} onClick={() => { setLocationId(l.id); setShowLocDrop(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm ${locationId === l.id ? 'text-[#B53578] font-medium' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'}`}>
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Segment selector */}
-      <div className="flex gap-1 p-1 bg-zinc-100 rounded-xl mb-4 self-start w-fit">
+      <div className="flex flex-wrap gap-2 mb-4">
         {(['today', 'trends', 'parking', 'ai'] as Segment[]).map(s => (
           <button
             key={s}
             onClick={() => { setSegment(s); setActiveTab(SEGMENT_TABS[s][0]); }}
-            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
               segment === s
-                ? 'bg-white text-zinc-800 shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-700'
+                ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
             }`}
           >
-            {s === 'ai' ? '✦ AI' : SEGMENT_LABELS[s]}
+            {SEGMENT_LABELS[s]}
           </button>
         ))}
       </div>
 
       {/* Sub-tabs — visible only in 'trends' segment */}
       {segment === 'trends' && (
-        <div className="flex gap-0 border-b border-zinc-200 mb-5 overflow-x-auto scroll-x-fade -mx-4 sm:mx-0 px-4 sm:px-0">
-          <div className="flex min-w-max sm:min-w-0">
-            {SEGMENT_TABS.trends.map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                  activeTab === tab
-                    ? 'border-brand text-brand'
-                    : 'border-transparent text-zinc-500 hover:text-zinc-700'
-                }`}
-              >
-                {t(`reports.tabs.${tab}`)}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-wrap gap-2 mb-5">
+          {SEGMENT_TABS.trends.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap transition-all ${
+                activeTab === tab
+                  ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                  : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
+              }`}
+            >
+              {t(`reports.tabs.${tab}`)}
+            </button>
+          ))}
         </div>
       )}
 
@@ -994,7 +1020,7 @@ function ReportsPage() {
             <InsightsWidget locationId={locationId} showRefresh />
           ) : (
             <div className="text-center py-8">
-              <p className="text-2xl mb-3">🔍</p>
+              <i className="ti ti-search text-3xl text-[#A898B8] mb-3 block" aria-hidden="true" />
               <p className="text-sm font-medium text-zinc-700 mb-1">
                 {t('reports.insights.select_location')}
               </p>
@@ -1002,17 +1028,18 @@ function ReportsPage() {
                 {t('reports.insights.select_location_hint', 'Choose an office to generate AI occupancy insights')}
               </p>
               {locations.length > 0 && (
-                <select
-                  value={locationId}
-                  onChange={e => setLocationId(e.target.value)}
-                  className="text-sm border border-zinc-200 rounded-lg px-3 py-2
-                             focus:outline-none focus:ring-1 focus:ring-brand bg-white
-                             min-w-[200px]">
-                  <option value="">{t('reports.filter.all')}</option>
+                <div className="flex flex-wrap justify-center gap-2 mt-2">
                   {locations.map(l => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
+                    <button key={l.id} onClick={() => setLocationId(l.id)}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
+                        locationId === l.id
+                          ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                          : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
+                      }`}>
+                      {l.name}
+                    </button>
                   ))}
-                </select>
+                </div>
               )}
             </div>
           )}

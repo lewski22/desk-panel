@@ -57,16 +57,23 @@ const NAV_BY_ROLE: Record<string, NavEntry[]> = {
   ],
 };
 
-const MORE_LINKS = [
-  { to: '/provisioning',  icon: '📡', labelKey: 'layout.nav.provisioning', module: 'BEACONS' },
-  { to: '/resources',     icon: '🪑', labelKey: 'layout.nav.resources' },
-  { to: '/visitors',      icon: '👋', labelKey: 'layout.nav.visitors' },
-  { to: '/users',         icon: '👥', labelKey: 'layout.nav.users' },
-  { to: '/reports',       icon: '📊', labelKey: 'layout.nav.reports' },
-  { to: '/organizations', icon: '🏢', labelKey: 'layout.nav.organizations' },
-  { to: '/integrations',  icon: '🔗', labelKey: 'layout.nav.integrations' },
-  { to: '/notifications', icon: '🔔', labelKey: 'layout.nav.notifications' },
-  { to: '/subscription',  icon: '💳', labelKey: 'layout.nav.subscription' },
+interface MoreLink {
+  to:          string;
+  tablerIcon:  string;
+  labelKey:    string;
+  module?:     string;
+}
+
+const MORE_LINKS: MoreLink[] = [
+  { to: '/provisioning',  tablerIcon: 'antenna',            labelKey: 'layout.nav.provisioning', module: 'BEACONS' },
+  { to: '/resources',     tablerIcon: 'building-community', labelKey: 'layout.nav.resources' },
+  { to: '/visitors',      tablerIcon: 'users',              labelKey: 'layout.nav.visitors' },
+  { to: '/users',         tablerIcon: 'user-circle',        labelKey: 'layout.nav.users' },
+  { to: '/reports',       tablerIcon: 'chart-bar',          labelKey: 'layout.nav.reports' },
+  { to: '/organizations', tablerIcon: 'building',           labelKey: 'layout.nav.organizations' },
+  { to: '/integrations',  tablerIcon: 'link',               labelKey: 'layout.nav.integrations' },
+  { to: '/notifications', tablerIcon: 'bell',               labelKey: 'layout.nav.notifications' },
+  { to: '/subscription',  tablerIcon: 'credit-card',        labelKey: 'layout.nav.subscription' },
 ];
 
 interface Props {
@@ -118,7 +125,7 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
                 key="more"
                 onClick={() => setMoreOpen(v => !v)}
                 className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 min-h-touch"
-                style={{ color: moreOpen ? '#9C2264' : '#6B5F7A' }}
+                style={{ color: moreOpen ? '#B53578' : '#6B5F7A' }}
               >
                 {moreOpen && (
                   <span className="absolute top-0 inset-x-3 h-0.5 rounded-b-full bg-brand" style={{ left: 'auto', right: 'auto' }} />
@@ -138,7 +145,7 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
               key={item.to}
               to={item.to}
               className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5 px-1 relative min-w-0 min-h-touch transition-colors"
-              style={{ color: active ? '#9C2264' : '#6B5F7A' }}
+              style={{ color: active ? '#B53578' : '#6B5F7A' }}
             >
               {active && (
                 <span className="absolute top-0 inset-x-3 h-0.5 rounded-b-full bg-brand" />
@@ -182,7 +189,7 @@ export function BottomNav({ userRole, enabledModules = [] }: Props) {
                   onClick={() => setMoreOpen(false)}
                   className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-zinc-50 transition-colors text-center"
                 >
-                  <span className="text-xl">{item.icon}</span>
+                  <i className={`ti ti-${item.tablerIcon}`} style={{ fontSize: 18, color: '#6B5F7A' }} aria-hidden="true" />
                   <span className="text-[10px] text-zinc-600 leading-tight">{t(item.labelKey)}</span>
                 </NavLink>
               ))}
