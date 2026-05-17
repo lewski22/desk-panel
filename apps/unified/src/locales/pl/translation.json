@@ -740,7 +740,7 @@
   "organizations": {
     "create_action": "Utwórz",
     "subtitle": "Fizyczne biura — godziny pracy, adresy, lokalizacje",
-    "new_location": "+ Nowe biuro",
+    "new_location": "Nowe biuro",
     "no_locations": "Brak biur — dodaj pierwsze biuro",
     "inactive": "Nieaktywne",
     "label_office": "Biuro",
@@ -1662,7 +1662,15 @@
     "error_password_short": "Hasło musi mieć co najmniej 8 znaków.",
     "success_title": "Konto zostało utworzone!",
     "success_body": "Możesz teraz zalogować się do Reserti.",
-    "go_to_login": "Przejdź do logowania"
+    "go_to_login": "Przejdź do logowania",
+    "verify_title": "Sprawdź swoją skrzynkę email",
+    "verify_subtitle": "Wysłaliśmy link aktywacyjny na adres:",
+    "verify_hint": "Kliknij link w wiadomości, aby aktywować konto. Sprawdź też folder Spam.",
+    "verify_no_email": "Nie otrzymałeś wiadomości?",
+    "verify_resend_btn": "Wyślij ponownie",
+    "verify_resending": "Wysyłanie…",
+    "verify_resent": "Wiadomość została wysłana ponownie.",
+    "verify_resend_error": "Nie udało się wysłać. Spróbuj ponownie za chwilę."
   },
   "toast": {
     "location_saved": "Biuro zapisano",

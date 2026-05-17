@@ -15,10 +15,12 @@
  * backend/src/modules/auth/auth.service.ts
  */
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { RegisterOrgDto } from './dto/register-org.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { MailerService } from '../notifications/mailer.service';
 import { User, UserRole } from '@prisma/client';
@@ -271,14 +273,17 @@ export class AuthService {
     };
   }
 
-  /** Finalizuje rejestrację przez token zaproszenia: tworzy konto, oznacza token jako użyty, loguje użytkownika. */
+  /** Finalizuje rejestrację przez token zaproszenia: tworzy nieaktywne konto, wysyła email weryfikacyjny. */
   async completeRegistration(opts: {
     token:     string;
     firstName: string;
     lastName:  string;
     password:  string;
   }) {
-    const inv = await this.prisma.invitationToken.findUnique({ where: { token: opts.token } });
+    const inv = await this.prisma.invitationToken.findUnique({
+      where:   { token: opts.token },
+      include: { organization: { select: { name: true } } },
+    });
     if (!inv)           throw new NotFoundException('Nieprawidłowy token zaproszenia');
     if (inv.usedAt)     throw new BadRequestException('To zaproszenie zostało już wykorzystane');
     if (inv.expiresAt < new Date()) throw new BadRequestException('Zaproszenie wygasło');
@@ -288,25 +293,58 @@ export class AuthService {
     if (existing) throw new ConflictException('Konto dla tego adresu email już istnieje');
 
     const hash = await bcrypt.hash(opts.password, 12);
+    const verificationToken = randomBytes(32).toString('hex');
 
-    const user = await this.prisma.user.create({
-      data: {
-        email:          emailLower,
-        passwordHash:   hash,
-        firstName:      opts.firstName,
-        lastName:       opts.lastName,
-        role:           inv.role,
-        organizationId: inv.organizationId,
-        isActive:       true,
+    await this.prisma.$transaction(async tx => {
+      await tx.user.create({
+        data: {
+          email:                  emailLower,
+          passwordHash:           hash,
+          firstName:              opts.firstName,
+          lastName:               opts.lastName,
+          role:                   inv.role,
+          organizationId:         inv.organizationId,
+          isActive:               false,
+          emailVerificationToken: verificationToken,
+        },
+      });
+      await tx.invitationToken.update({
+        where: { token: opts.token },
+        data:  { usedAt: new Date() },
+      });
+    });
+
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:5173';
+    const verifyUrl = `${frontendUrl}/verify-email?token=${verificationToken}`;
+    const orgName = inv.organization?.name ?? 'Reserti';
+
+    await this.mailer.send({
+      to:      emailLower,
+      subject: 'Potwierdź swój adres email — Reserti',
+      html:    this.mailer.buildHtml({
+        title:    'Potwierdź adres email',
+        body:     `Cześć ${opts.firstName},<br><br>Twoje konto w organizacji <strong>${orgName}</strong> zostało założone. Kliknij poniższy przycisk, aby je aktywować.`,
+        ctaLabel: 'Aktywuj konto',
+        ctaUrl:   verifyUrl,
+        footer:   'Link wygasa po 24 godzinach. Jeśli nie zakładałeś konta w Reserti, zignoruj tę wiadomość.',
+      }),
+    }, inv.organizationId);
+
+    return { message: 'Konto utworzone. Sprawdź skrzynkę e-mail i kliknij link aktywacyjny.', email: emailLower, requiresVerification: true };
+  }
+
+  /** Cron: usuwa nieaktywowane konta i osierocone orgi po 24h. Wykonuje się codziennie o 3:00. */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupUnverifiedAccounts() {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await this.prisma.user.deleteMany({
+      where: {
+        isActive:               false,
+        emailVerificationToken: { not: null },
+        createdAt:              { lt: cutoff },
+        role:                   { notIn: [UserRole.KIOSK] },
       },
     });
-
-    await this.prisma.invitationToken.update({
-      where: { token: opts.token },
-      data:  { usedAt: new Date() },
-    });
-
-    return this.login(user);
   }
 
   /** Zmienia hasło po weryfikacji obecnego. Waliduje złożoność wg polityki org. Unieważnia wszystkie refresh tokeny (wylogowanie ze wszystkich urządzeń). */

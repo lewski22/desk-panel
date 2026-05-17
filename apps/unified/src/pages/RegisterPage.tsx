@@ -21,6 +21,9 @@ export function RegisterPage() {
   const [form, setForm] = useState({ firstName: '', lastName: '', password: '', confirm: '' });
   const [busy,        setBusy]       = useState(false);
   const [formErr,     setFormErr]    = useState('');
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [resending,   setResending]  = useState(false);
+  const [resendMsg,   setResendMsg]  = useState('');
 
   useEffect(() => {
     if (!token) { setStep('error'); setErrorMsg(t('register.error_no_token')); return; }
@@ -41,12 +44,13 @@ export function RegisterPage() {
     if (form.password.length < 8) { setFormErr(t('register.error_password_short')); return; }
     setBusy(true);
     try {
-      await appApi.auth.register({
+      const res = await appApi.auth.register({
         token:     token!,
         firstName: form.firstName.trim(),
         lastName:  form.lastName.trim(),
         password:  form.password,
       });
+      setVerifyEmail(res.email ?? inviteInfo?.email ?? '');
       setStep('success');
     } catch (err: any) {
       setFormErr(err.message ?? t('register.error_generic'));
@@ -161,18 +165,43 @@ export function RegisterPage() {
             </>
           )}
 
-          {/* Success */}
+          {/* Success — email verification pending */}
           {step === 'success' && (
             <div className="text-center py-4">
-              <p className="text-4xl mb-3">🎉</p>
-              <p className="font-semibold text-zinc-800 mb-2">{t('register.success_title')}</p>
-              <p className="text-sm text-zinc-500 mb-6">{t('register.success_body')}</p>
+              <p className="text-4xl mb-3">📬</p>
+              <p className="font-semibold text-zinc-800 mb-2">{t('register.verify_title')}</p>
+              <p className="text-sm text-zinc-500 mb-1">{t('register.verify_subtitle')}</p>
+              {verifyEmail && <p className="text-sm font-medium text-zinc-700 mb-4">{verifyEmail}</p>}
+              <p className="text-xs text-zinc-400 mb-6">{t('register.verify_hint')}</p>
+
+              <p className="text-xs text-zinc-500 mb-2">{t('register.verify_no_email')}</p>
+              {resendMsg
+                ? <p className="text-xs text-green-600">{resendMsg}</p>
+                : (
+                  <button
+                    disabled={resending}
+                    onClick={async () => {
+                      setResending(true);
+                      try {
+                        await appApi.auth.resendVerification(verifyEmail);
+                        setResendMsg(t('register.verify_resent'));
+                      } catch {
+                        setResendMsg(t('register.verify_resend_error'));
+                      }
+                      setResending(false);
+                    }}
+                    className="text-sm text-brand font-medium hover:underline disabled:opacity-50"
+                  >
+                    {resending ? t('register.verify_resending') : t('register.verify_resend_btn')}
+                  </button>
+                )
+              }
+
               <button
                 onClick={() => navigate('/login')}
-                className="w-full bg-brand hover:bg-brand-hover text-white font-semibold py-2.5 rounded-xl
-                  text-sm transition-colors"
+                className="mt-6 text-xs text-zinc-400 hover:underline block mx-auto"
               >
-                {t('register.go_to_login')}
+                {t('register.back_to_login')}
               </button>
             </div>
           )}

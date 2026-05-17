@@ -740,7 +740,7 @@
   "organizations": {
     "create_action": "Create",
     "subtitle": "Physical offices — opening hours, addresses, locations",
-    "new_location": "+ New office",
+    "new_location": "New office",
     "no_locations": "No offices — add your first office",
     "inactive": "Inactive",
     "label_office": "Office",
@@ -1662,7 +1662,15 @@
     "error_password_short": "Password must be at least 8 characters.",
     "success_title": "Account created!",
     "success_body": "You can now log in to Reserti.",
-    "go_to_login": "Go to login"
+    "go_to_login": "Go to login",
+    "verify_title": "Check your inbox",
+    "verify_subtitle": "We sent an activation link to:",
+    "verify_hint": "Click the link in the email to activate your account. Check your spam folder too.",
+    "verify_no_email": "Didn't receive the email?",
+    "verify_resend_btn": "Resend",
+    "verify_resending": "Sending…",
+    "verify_resent": "Email sent again.",
+    "verify_resend_error": "Failed to send. Please try again in a moment."
   },
   "toast": {
     "location_saved": "Office saved",

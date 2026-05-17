@@ -51,7 +51,7 @@ async function tryRefresh(): Promise<boolean> {
 }
 
 // Public endpoints — 401 means "bad credentials", not "session expired"
-const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/invite'];
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/invite', '/auth/resend-verification'];
 
 async function req<T>(path: string, opts: RequestInit = {}, _retry = true): Promise<T> {
   if (DEMO_MODE) {
@@ -125,7 +125,9 @@ export const appApi = {
     getInviteInfo: (token: string) =>
       req<{ email: string; orgName: string; role: string; expired: boolean; used: boolean }>(`/auth/invite/${token}`),
     register: (body: { token: string; firstName: string; lastName: string; password: string }) =>
-      req<any>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+      req<{ message: string; email: string; requiresVerification: boolean }>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
+    resendVerification: (email: string) =>
+      req<{ message: string }>('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) }),
     async exchangeGoogleCode(code: string) {
       const d = await req<{ user: any }>('/auth/google/exchange', {
         method: 'POST', body: JSON.stringify({ code }),
