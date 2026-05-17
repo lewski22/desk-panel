@@ -46,6 +46,7 @@
     "@nestjs/cli": "^11.0.0", "@nestjs/testing": "^11.0.0",
     "@types/bcrypt": "^5.0.0", "@types/cookie-parser": "^1.4.7", "@types/express": "^5.0.0",
     "@types/jest": "^29.5.0", "@types/jsonwebtoken": "^9.0.5",
+    "@types/multer": "^1.4.11",
     "@types/node": "^20.0.0", "@types/nodemailer": "^6.4.0",
     "@types/passport-jwt": "^3.0.8", "@types/passport-local": "^1.0.35",
     "@types/uuid": "^9.0.2", "@types/web-push": "^3.6.4",

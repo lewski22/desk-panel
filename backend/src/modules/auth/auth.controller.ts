@@ -85,7 +85,7 @@ export class AuthController {
   @ApiBearerAuth()
   @SkipThrottle()
   @ApiOperation({ summary: 'Zwraca profil zalogowanego użytkownika z aktualnymi enabledModules' })
-  me(@Request() req) {
+  me(@Request() req: any) {
     return this.auth.getMe(req.user.id);
   }
 
@@ -96,7 +96,7 @@ export class AuthController {
   @ApiBearerAuth()
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
   @ApiOperation({ summary: 'Zmień hasło — wymaga podania aktualnego hasła' })
-  changePassword(@Body() dto: ChangePasswordDto, @Request() req) {
+  changePassword(@Body() dto: ChangePasswordDto, @Request() req: any) {
     return this.auth.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
   }
 
