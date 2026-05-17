@@ -2,7 +2,7 @@
  * SubscriptionsController — Sprint B
  */
 import {
-  Controller, Get, Post, Put, Param, Body,
+  Controller, Get, Post, Put, Param, Body, Query,
   UseGuards, Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -79,5 +79,44 @@ export class SubscriptionsController {
     @Body()        body: UpdatePlanTemplateDto,
   ) {
     return this.svc.updatePlanTemplate(plan, body);
+  }
+
+  @Get('owner/subscription/log')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Global subscription event log cross-org (Owner)' })
+  getGlobalLog(
+    @Query('limit')  limit?:  string,
+    @Query('offset') offset?: string,
+    @Query('orgId')  orgId?:  string,
+    @Query('type')   type?:   string,
+  ) {
+    return this.svc.getGlobalLog({
+      limit:  limit  ? parseInt(limit,  10) : 100,
+      offset: offset ? parseInt(offset, 10) : 0,
+      orgId,
+      type,
+    });
+  }
+
+  @Post('owner/organizations/:id/invoice/sent')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Mark invoice as sent for org (Owner)' })
+  markInvoiceSent(
+    @Param('id') id:   string,
+    @Body()      body: { invoiceNumber?: string; amount?: number; sentTo?: string },
+    @Request()   req:  any,
+  ) {
+    return this.svc.markInvoiceSent(id, { ...body, changedBy: req.user.id });
+  }
+
+  @Post('owner/organizations/:id/invoice/paid')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Mark invoice as paid for org (Owner)' })
+  markInvoicePaid(
+    @Param('id') id:   string,
+    @Body()      body: { invoiceNumber?: string; amount?: number },
+    @Request()   req:  any,
+  ) {
+    return this.svc.markInvoicePaid(id, { ...body, changedBy: req.user.id });
   }
 }

@@ -13,7 +13,7 @@
  * backend/src/modules/owner/owner.service.ts
  */
 import {
-  Injectable, NotFoundException, ConflictException, Logger,
+  Injectable, NotFoundException, ConflictException, BadRequestException, Logger,
 } from '@nestjs/common';
 import { JwtService }    from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -256,6 +256,126 @@ export class OwnerService {
   private _generatePassword(): string {
     // 12-znakowe hasło: litery + cyfry
     return randomBytes(9).toString('base64').replace(/[+/=]/g, 'X');
+  }
+
+  // ── Niezweryfikowane konta ────────────────────────────────────
+  async getUnverifiedAccounts() {
+    const users = await this.prisma.user.findMany({
+      where: {
+        isActive:               false,
+        emailVerificationToken: { not: null },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id:        true,
+        email:     true,
+        firstName: true,
+        lastName:  true,
+        role:      true,
+        createdAt: true,
+        organization: { select: { id: true, name: true, plan: true, slug: true } },
+      },
+    });
+
+    const now = Date.now();
+    return users.map(u => ({
+      ...u,
+      ageHours:  Math.floor((now - u.createdAt.getTime()) / 3_600_000),
+      isExpired: now - u.createdAt.getTime() > 24 * 3_600_000,
+    }));
+  }
+
+  async deleteUnverifiedAccount(userId: string, deletedBy: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where:  { id: userId },
+      select: { id: true, email: true, isActive: true, emailVerificationToken: true, organizationId: true, role: true },
+    });
+
+    if (user.isActive) {
+      throw new BadRequestException('Konto jest już aktywne — nie można usunąć przez ten endpoint');
+    }
+    if (!user.emailVerificationToken) {
+      throw new BadRequestException('Konto nie czeka na weryfikację emaila');
+    }
+
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    if (user.organizationId) {
+      const remaining = await this.prisma.user.count({ where: { organizationId: user.organizationId } });
+      if (remaining === 0) {
+        await this.prisma.subscriptionEvent.create({
+          data: {
+            organizationId: user.organizationId,
+            type:           'email_unverified_deleted',
+            note:           `Konto ${user.email} usunięte ręcznie przez Ownera`,
+            metadata:       { userId, deletedBy },
+          },
+        }).catch(() => {});
+        await this.prisma.organization.delete({ where: { id: user.organizationId } });
+      }
+    }
+
+    return { deleted: true, email: user.email };
+  }
+
+  // ── Status onboardingu ────────────────────────────────────────
+  async getOnboardingStatus() {
+    const orgs = await this.prisma.organization.findMany({
+      where:   { isActive: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, name: true, slug: true, plan: true,
+        billingEmail: true, mrr: true, nextInvoiceAt: true,
+        createdAt: true,
+        users: {
+          where:  { role: UserRole.SUPER_ADMIN },
+          select: { isActive: true, email: true },
+          take:   1,
+        },
+        locations: {
+          select: {
+            _count: { select: { desks: true, gateways: true } },
+          },
+        },
+        subscriptionEvents: {
+          where:   { type: { in: ['invoice_sent', 'invoice_paid'] } },
+          orderBy: { createdAt: 'desc' },
+          take:    1,
+          select:  { type: true, createdAt: true },
+        },
+      },
+    });
+
+    return orgs.map(org => {
+      const sa            = org.users[0];
+      const totalDesks    = org.locations.reduce((s, l) => s + l._count.desks,    0);
+      const totalGateways = org.locations.reduce((s, l) => s + l._count.gateways, 0);
+      const lastInvoice   = org.subscriptionEvents[0] ?? null;
+
+      return {
+        id:    org.id,
+        name:  org.name,
+        slug:  org.slug,
+        plan:  org.plan,
+        createdAt: org.createdAt,
+        steps: {
+          registered:      true,
+          emailVerified:   !!sa?.isActive,
+          hasBillingEmail: !!org.billingEmail,
+          hasDesks:        totalDesks > 0,
+          hasGateway:      totalGateways > 0,
+          hasMrr:          (org.mrr ?? 0) > 0,
+          invoiceSent:     lastInvoice?.type === 'invoice_sent' || lastInvoice?.type === 'invoice_paid',
+          invoicePaid:     lastInvoice?.type === 'invoice_paid',
+        },
+        adminEmail:    sa?.email ?? null,
+        totalDesks,
+        totalGateways,
+        mrr:           org.mrr ?? 0,
+        nextInvoiceAt: org.nextInvoiceAt,
+        lastInvoice,
+      };
+    });
   }
 
   private _toSummary(org: any) {

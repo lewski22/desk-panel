@@ -371,6 +371,19 @@ export const appApi = {
     getPlans:           ()                    => req<any>('/owner/subscription/plans'),
     updatePlanTemplate: (plan: string, body: any) =>
       req<any>(`/owner/subscription/plans/${plan}`, { method: 'PUT', body: JSON.stringify(body) }),
+    getGlobalLog: (params?: { limit?: number; offset?: number; orgId?: string; type?: string }) => {
+      const p = new URLSearchParams();
+      if (params?.limit  !== undefined) p.set('limit',  String(params.limit));
+      if (params?.offset !== undefined) p.set('offset', String(params.offset));
+      if (params?.orgId)  p.set('orgId',  params.orgId);
+      if (params?.type)   p.set('type',   params.type);
+      const qs = p.toString();
+      return req<{ events: any[]; total: number }>(`/owner/subscription/log${qs ? `?${qs}` : ''}`);
+    },
+    markInvoiceSent: (orgId: string, body: { invoiceNumber?: string; amount?: number; sentTo?: string }) =>
+      req<any>(`/owner/organizations/${orgId}/invoice/sent`, { method: 'POST', body: JSON.stringify(body) }),
+    markInvoicePaid: (orgId: string, body: { invoiceNumber?: string; amount?: number }) =>
+      req<any>(`/owner/organizations/${orgId}/invoice/paid`, { method: 'POST', body: JSON.stringify(body) }),
   },
 
   // ── Visitors ─────────────────────────────────────────────────
@@ -427,6 +440,12 @@ export const appApi = {
       req<{ affected: number }>(`/owner/organizations/${id}/force-password-reset`, { method: 'POST', body: '{}' }),
     forcePasswordResetAll: () =>
       req<{ affected: number }>('/owner/force-password-reset', { method: 'POST', body: '{}' }),
+    getUnverifiedAccounts: () =>
+      req<any[]>('/owner/unverified-accounts'),
+    deleteUnverifiedAccount: (userId: string) =>
+      req<{ deleted: boolean; email: string }>(`/owner/unverified-accounts/${userId}`, { method: 'DELETE' }),
+    getOnboardingStatus: () =>
+      req<any[]>('/owner/onboarding-status'),
   },
 
   // ── Organizations ─────────────────────────────────────────────

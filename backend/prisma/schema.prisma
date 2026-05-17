@@ -523,6 +523,7 @@ model SubscriptionEvent {
   newPlan        String?
   changedBy      String?
   note           String?
+  metadata       Json?
   createdAt      DateTime @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id])

@@ -3,6 +3,7 @@ import {
   Param, Body, Query, UseGuards, Request,
   HttpCode, HttpStatus, BadRequestException,
 } from '@nestjs/common';
+
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }      from '../auth/guards/jwt-auth.guard';
 import { OwnerGuard }        from './guards/owner.guard';
@@ -129,5 +130,31 @@ export class OwnerController {
   @ApiOperation({ summary: 'Metryki platformy: firmy, gateway, beacony, check-iny' })
   getStats() {
     return this.svc.getStats();
+  }
+
+  // ── Niezweryfikowane konta ────────────────────────────────────
+
+  @Get('unverified-accounts')
+  @ApiOperation({ summary: 'Lista kont oczekujących na weryfikację emaila' })
+  getUnverifiedAccounts() {
+    return this.svc.getUnverifiedAccounts();
+  }
+
+  @Delete('unverified-accounts/:userId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Usuń niezweryfikowane konto (i osierocone org jeśli puste)' })
+  deleteUnverifiedAccount(
+    @Param('userId') userId: string,
+    @Request()       req:    any,
+  ) {
+    return this.svc.deleteUnverifiedAccount(userId, req.user.id);
+  }
+
+  // ── Status onboardingu ────────────────────────────────────────
+
+  @Get('onboarding-status')
+  @ApiOperation({ summary: 'Status onboardingu krok-po-kroku dla każdej org' })
+  getOnboardingStatus() {
+    return this.svc.getOnboardingStatus();
   }
 }

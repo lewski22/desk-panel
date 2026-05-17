@@ -337,6 +337,30 @@ export class AuthService {
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async cleanupUnverifiedAccounts() {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const toDelete = await this.prisma.user.findMany({
+      where: {
+        isActive:               false,
+        emailVerificationToken: { not: null },
+        createdAt:              { lt: cutoff },
+        role:                   { notIn: [UserRole.KIOSK] },
+      },
+      select: { id: true, email: true, organizationId: true },
+    });
+
+    for (const u of toDelete) {
+      if (u.organizationId) {
+        await this.prisma.subscriptionEvent.create({
+          data: {
+            organizationId: u.organizationId,
+            type:           'email_unverified_deleted',
+            note:           `Konto ${u.email} usunięte (brak weryfikacji emaila > 24h)`,
+            metadata:       { userId: u.id, deletedBy: 'cron' },
+          },
+        }).catch(() => {});
+      }
+    }
+
     await this.prisma.user.deleteMany({
       where: {
         isActive:               false,
@@ -411,6 +435,17 @@ export class AuthService {
       });
       return { org, user };
     });
+
+    // Zapisz event rejestracji
+    await this.prisma.subscriptionEvent.create({
+      data: {
+        organizationId: org.id,
+        type:           'org_registered',
+        newPlan:        'free',
+        note:           `Self-service rejestracja przez ${dto.adminEmail.toLowerCase()}`,
+        metadata:       { source: 'self_service' },
+      },
+    }).catch(() => {});
 
     return {
       organizationId: org.id,

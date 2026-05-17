@@ -7,6 +7,7 @@ import { PlanBadge } from '../components/subscription/PlanBadge';
 import { OrgInsightsWidget } from '../components/insights/InsightsWidget';
 import { useDirtyGuard } from '../hooks/useDirtyGuard';
 import { DirtyGuardDialog } from '../components/ui/DirtyGuardDialog';
+import { OrgLogoUpload } from '../components/org/OrgLogoUpload';
 
 // ─── Modal: nowa firma ────────────────────────────────────────
 function CreateOrgModal({ onClose, onCreated }: { onClose(): void; onCreated(): void }) {
@@ -270,6 +271,15 @@ function EditOrgModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
           <Btn onClick={submit} loading={saving}>{t('btn.save')}</Btn>
         </div>
       </div>
+
+      <OrgLogoUpload
+        orgId={org.id}
+        logoUrl={org.logoUrl ?? null}
+        logoBgColor={org.logoBgColor ?? null}
+        whitelabelEnabled={org.whitelabelEnabled ?? false}
+        onSaved={onSaved}
+      />
+
       {showConfirm && <DirtyGuardDialog onConfirm={confirmClose} onCancel={cancelClose} />}
     </Modal>
   );
@@ -713,15 +723,61 @@ function SubscriptionTab({ orgs, subDash, onEdit }: {
   );
 }
 
+const STEPS = [
+  { key: 'registered',      label: 'Rejestracja',      icon: '📝' },
+  { key: 'emailVerified',   label: 'Email OK',          icon: '✉️' },
+  { key: 'hasBillingEmail', label: 'Email faktury',     icon: '💳' },
+  { key: 'hasDesks',        label: 'Biurka dodane',     icon: '🪑' },
+  { key: 'hasGateway',      label: 'Gateway',           icon: '📡' },
+  { key: 'hasMrr',          label: 'MRR ustawione',     icon: '💰' },
+  { key: 'invoiceSent',     label: 'Faktura wysłana',   icon: '📨' },
+  { key: 'invoicePaid',     label: 'Faktura opłacona',  icon: '✅' },
+];
+
+const EVENT_COLORS: Record<string, string> = {
+  org_registered:           'bg-blue-50 text-blue-700',
+  email_verified:           'bg-green-50 text-green-700',
+  email_unverified_deleted: 'bg-red-50 text-red-700',
+  plan_changed:             'bg-purple-50 text-purple-700',
+  renewed:                  'bg-indigo-50 text-indigo-700',
+  invoice_sent:             'bg-amber-50 text-amber-700',
+  invoice_paid:             'bg-green-50 text-green-700',
+  plan_expired:             'bg-red-50 text-red-700',
+  limit_warning:            'bg-orange-50 text-orange-700',
+};
+
+const EVENT_LABELS: Record<string, string> = {
+  org_registered:           'Rejestracja',
+  email_verified:           'Email OK',
+  email_unverified_deleted: 'Usunięto konto',
+  plan_changed:             'Zmiana planu',
+  renewed:                  'Odnowienie',
+  invoice_sent:             'Faktura wysłana',
+  invoice_paid:             'Faktura opłacona',
+  plan_expired:             'Plan wygasł',
+  limit_warning:            'Limit > 80%',
+};
+
+const LOG_LIMIT = 50;
+
 export function OwnerPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [stats, setStats]       = useState<any>(null);
   const [orgs,  setOrgs]        = useState<any[]>([]);
   const [subDash, setSubDash]   = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'|'insights'>(
+  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'|'insights'|'log'|'unverified'|'onboarding'>(
     searchParams.get('tab') === 'sub' ? 'sub' : 'orgs'
   );
+  const [unverified,      setUnverified]      = useState<any[]>([]);
+  const [unverifiedCount, setUnverifiedCount] = useState(0);
+  const [deletingId,      setDeletingId]      = useState<string | null>(null);
+  const [onboarding,      setOnboarding]      = useState<any[]>([]);
+  const [globalLog,       setGlobalLog]       = useState<any[]>([]);
+  const [logTotal,        setLogTotal]        = useState(0);
+  const [logOffset,       setLogOffset]       = useState(0);
+  const [logTypeFilter,   setLogTypeFilter]   = useState('');
+  const [logOrgFilter,    setLogOrgFilter]    = useState('');
   const [search, setSearch]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading]   = useState(true);
@@ -731,6 +787,14 @@ export function OwnerPage() {
   const [subEditOrg, setSubEditOrg] = useState<any>(null);
   const [impersonating, setImpersonating] = useState<string | null>(null);
 
+  const loadLog = useCallback(async (offset = 0, type = '', orgId = '') => {
+    try {
+      const r = await appApi.subscription.getGlobalLog({ limit: LOG_LIMIT, offset, type: type || undefined, orgId: orgId || undefined });
+      setGlobalLog(r.events);
+      setLogTotal(r.total);
+    } catch { /* silent */ }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true); setErr('');
     try {
@@ -739,9 +803,13 @@ export function OwnerPage() {
         appApi.owner.listOrgs(),
         appApi.subscription.getDashboard(),
       ]);
+      const orgList = Array.isArray(o) ? o : [];
       setStats(s);
-      setOrgs(Array.isArray(o) ? o : []);
+      setOrgs(orgList);
       setSubDash(sd);
+      setEditOrg(prev => prev ? (orgList.find(x => x.id === prev.id) ?? prev) : null);
+      appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); }).catch(() => {});
+      appApi.owner.getOnboardingStatus().then(setOnboarding).catch(() => {});
     } catch (e: any) {
       setErr(e.message || t('qr.no_connection'));
     }
@@ -749,6 +817,7 @@ export function OwnerPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (activeTab === 'log') loadLog(logOffset, logTypeFilter, logOrgFilter); }, [activeTab, logOffset, logTypeFilter, logOrgFilter, loadLog]);
 
   const handleImpersonate = async (org: any) => {
     setImpersonating(org.id);
@@ -849,8 +918,16 @@ export function OwnerPage() {
       {/* Tabs + filtry */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 overflow-x-auto">
-          {([['orgs','🏢 Organizacje'],['sub','💳 Subskrypcje'],['plans','📋 Szablony planów'],['insights','🤖 AI Insights']] as const).map(([tab, label]) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+          {([
+            ['orgs',        '🏢 Organizacje'],
+            ['sub',         '💳 Subskrypcje'],
+            ['plans',       '📋 Szablony planów'],
+            ['insights',    '🤖 AI Insights'],
+            ['log',         '📋 Log'],
+            ['unverified',  `⏳ Niezweryfikowane${unverifiedCount > 0 ? ` (${unverifiedCount})` : ''}`],
+            ['onboarding',  '🚀 Onboarding'],
+          ] as const).map(([tab, label]) => (
+            <button key={tab} onClick={() => setActiveTab(tab as any)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
               }`}>
@@ -946,6 +1023,31 @@ export function OwnerPage() {
                         <Btn size="sm" variant="secondary" onClick={() => handleForcePasswordReset(org)}>
                           🔐 Reset haseł
                         </Btn>
+                        <button
+                          onClick={async () => {
+                            const nr = prompt('Numer faktury (opcjonalnie):') ?? undefined;
+                            const to = org.billingEmail ?? prompt('Email faktury:') ?? undefined;
+                            try {
+                              await appApi.subscription.markInvoiceSent(org.id, { invoiceNumber: nr || undefined, sentTo: to || undefined });
+                              loadLog(0, logTypeFilter, logOrgFilter);
+                            } catch (e: any) { alert(e.message); }
+                          }}
+                          className="text-xs px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          📨 Wysłana
+                        </button>
+                        <button
+                          onClick={async () => {
+                            const nr = prompt('Numer faktury (opcjonalnie):') ?? undefined;
+                            try {
+                              await appApi.subscription.markInvoicePaid(org.id, { invoiceNumber: nr || undefined });
+                              loadLog(0, logTypeFilter, logOrgFilter);
+                            } catch (e: any) { alert(e.message); }
+                          }}
+                          className="text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          ✅ Opłacona
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -972,6 +1074,223 @@ export function OwnerPage() {
       {activeTab === 'insights' && (
         <div className="bg-white border border-zinc-100 rounded-xl p-5">
           <OrgInsightsWidget />
+        </div>
+      )}
+
+      {/* Zakładka: Niezweryfikowane konta */}
+      {activeTab === 'unverified' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-zinc-800">
+              Konta bez potwierdzonego emaila
+              {unverified.length > 0 && (
+                <span className="ml-2 text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{unverified.length}</span>
+              )}
+            </h2>
+            <button onClick={() => appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); })}
+              className="text-xs text-brand hover:underline">Odśwież</button>
+          </div>
+          {unverified.length === 0 ? (
+            <div className="text-center py-12 text-zinc-400">
+              <p className="text-3xl mb-2">✅</p>
+              <p className="text-sm">Brak kont oczekujących na weryfikację</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-zinc-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                    <th className="py-2.5 px-4 text-left">Email</th>
+                    <th className="py-2.5 px-4 text-left">Organizacja</th>
+                    <th className="py-2.5 px-4 text-left">Plan</th>
+                    <th className="py-2.5 px-4 text-left">Wiek</th>
+                    <th className="py-2.5 px-4 text-left">Status</th>
+                    <th className="py-2.5 px-4 text-right">Akcja</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {unverified.map(u => (
+                    <tr key={u.id} className="hover:bg-zinc-50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="font-medium text-zinc-800">{u.email}</div>
+                        <div className="text-xs text-zinc-400">{u.firstName} {u.lastName}</div>
+                      </td>
+                      <td className="py-3 px-4 text-zinc-600">{u.organization?.name ?? '—'}</td>
+                      <td className="py-3 px-4">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium capitalize">{u.organization?.plan ?? '—'}</span>
+                      </td>
+                      <td className="py-3 px-4 text-zinc-500">{u.ageHours < 1 ? '< 1h' : `${u.ageHours}h`}</td>
+                      <td className="py-3 px-4">
+                        {u.isExpired
+                          ? <span className="text-xs text-red-600 font-medium">⚠ Link wygasł</span>
+                          : <span className="text-xs text-amber-600 font-medium">⏳ Oczekuje</span>}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Usunąć konto ${u.email}?`)) return;
+                            setDeletingId(u.id);
+                            try {
+                              await appApi.owner.deleteUnverifiedAccount(u.id);
+                              setUnverified(prev => prev.filter(x => x.id !== u.id));
+                              setUnverifiedCount(c => c - 1);
+                            } catch (e: any) { alert(e.message ?? 'Błąd usuwania'); }
+                            setDeletingId(null);
+                          }}
+                          disabled={deletingId === u.id}
+                          className="text-xs px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium disabled:opacity-50 transition-colors"
+                        >
+                          {deletingId === u.id ? '…' : 'Usuń'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Zakładka: Status onboardingu */}
+      {activeTab === 'onboarding' && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-zinc-800">Status onboardingu organizacji</h2>
+          {onboarding.length === 0 ? (
+            <div className="text-center py-12 text-zinc-400 text-sm">Brak danych</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-zinc-200">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                    <th className="py-2.5 px-4 text-left">Organizacja</th>
+                    <th className="py-2.5 px-4 text-left">Plan</th>
+                    {STEPS.map(s => (
+                      <th key={s.key} className="py-2.5 px-3 text-center" title={s.label}>{s.icon}</th>
+                    ))}
+                    <th className="py-2.5 px-4 text-right">Ukończono</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {onboarding.map(org => {
+                    const done = STEPS.filter(s => org.steps[s.key]).length;
+                    const pct  = Math.round((done / STEPS.length) * 100);
+                    return (
+                      <tr key={org.id} className="hover:bg-zinc-50 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-zinc-800">{org.name}</div>
+                          <div className="text-xs text-zinc-400">{org.adminEmail ?? '—'}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 capitalize">{org.plan}</span>
+                        </td>
+                        {STEPS.map(s => (
+                          <td key={s.key} className="py-3 px-3 text-center">
+                            {org.steps[s.key]
+                              ? <span className="text-green-500 text-base">✓</span>
+                              : <span className="text-zinc-300 text-base">○</span>}
+                          </td>
+                        ))}
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center gap-2 justify-end">
+                            <div className="w-16 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-xs text-zinc-500">{pct}%</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Zakładka: Globalny log zdarzeń */}
+      {activeTab === 'log' && (
+        <div className="space-y-4">
+          <div className="flex gap-3 flex-wrap items-center">
+            <h2 className="text-lg font-semibold text-zinc-800 mr-2">Globalny log zdarzeń</h2>
+            <select
+              value={logTypeFilter}
+              onChange={e => { setLogTypeFilter(e.target.value); setLogOffset(0); }}
+              className="text-xs border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-600 focus:outline-none"
+            >
+              <option value="">Wszystkie typy</option>
+              {Object.entries(EVENT_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+            <select
+              value={logOrgFilter}
+              onChange={e => { setLogOrgFilter(e.target.value); setLogOffset(0); }}
+              className="text-xs border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-600 focus:outline-none"
+            >
+              <option value="">Wszystkie org</option>
+              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+            <span className="text-xs text-zinc-400 ml-auto">{logTotal} zdarzeń</span>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-zinc-200">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
+                  <th className="py-2.5 px-4 text-left">Data</th>
+                  <th className="py-2.5 px-4 text-left">Organizacja</th>
+                  <th className="py-2.5 px-4 text-left">Zdarzenie</th>
+                  <th className="py-2.5 px-4 text-left">Plan</th>
+                  <th className="py-2.5 px-4 text-left">Notatka</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100">
+                {globalLog.map(ev => (
+                  <tr key={ev.id} className="hover:bg-zinc-50 transition-colors">
+                    <td className="py-2.5 px-4 text-xs text-zinc-500 whitespace-nowrap font-mono">
+                      {new Date(ev.createdAt).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <div className="font-medium text-zinc-800">{ev.organization?.name ?? '—'}</div>
+                      <div className="text-xs text-zinc-400">{ev.organization?.plan ?? ''}</div>
+                    </td>
+                    <td className="py-2.5 px-4">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${EVENT_COLORS[ev.type] ?? 'bg-zinc-100 text-zinc-600'}`}>
+                        {EVENT_LABELS[ev.type] ?? ev.type}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-4 text-xs text-zinc-500">
+                      {ev.previousPlan && ev.newPlan && ev.previousPlan !== ev.newPlan
+                        ? <span>{ev.previousPlan} → <strong>{ev.newPlan}</strong></span>
+                        : ev.newPlan ?? ev.previousPlan ?? '—'}
+                    </td>
+                    <td className="py-2.5 px-4 text-xs text-zinc-500 max-w-[280px] truncate">{ev.note ?? '—'}</td>
+                  </tr>
+                ))}
+                {globalLog.length === 0 && (
+                  <tr><td colSpan={5} className="py-12 text-center text-zinc-400 text-sm">Brak zdarzeń</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {logTotal > LOG_LIMIT && (
+            <div className="flex items-center gap-3 justify-center pt-2">
+              <button
+                onClick={() => setLogOffset(o => Math.max(0, o - LOG_LIMIT))}
+                disabled={logOffset === 0}
+                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
+              >← Wcześniej</button>
+              <span className="text-xs text-zinc-500">{logOffset + 1}–{Math.min(logOffset + LOG_LIMIT, logTotal)} z {logTotal}</span>
+              <button
+                onClick={() => setLogOffset(o => o + LOG_LIMIT)}
+                disabled={logOffset + LOG_LIMIT >= logTotal}
+                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
+              >Później →</button>
+            </div>
+          )}
         </div>
       )}
 

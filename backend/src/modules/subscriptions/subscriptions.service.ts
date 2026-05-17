@@ -249,6 +249,99 @@ export class SubscriptionsService {
     });
   }
 
+  // ── Helper: zapisz event (cross-service) ──────────────────────
+  async recordEvent(opts: {
+    organizationId: string;
+    type:           string;
+    previousPlan?:  string;
+    newPlan?:       string;
+    changedBy?:     string;
+    note?:          string;
+    metadata?:      Record<string, any>;
+  }) {
+    return this.prisma.subscriptionEvent.create({
+      data: {
+        organizationId: opts.organizationId,
+        type:           opts.type,
+        previousPlan:   opts.previousPlan,
+        newPlan:        opts.newPlan,
+        changedBy:      opts.changedBy,
+        note:           opts.note,
+        metadata:       opts.metadata ?? undefined,
+      },
+    });
+  }
+
+  // ── Globalny log cross-org (Owner) ────────────────────────────
+  async getGlobalLog(opts?: {
+    limit?:  number;
+    offset?: number;
+    orgId?:  string;
+    type?:   string;
+  }) {
+    const take = opts?.limit  ?? 100;
+    const skip = opts?.offset ?? 0;
+    const where: any = {};
+    if (opts?.orgId) where.organizationId = opts.orgId;
+    if (opts?.type)  where.type           = opts.type;
+
+    const [events, total] = await Promise.all([
+      this.prisma.subscriptionEvent.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+        include: {
+          organization: { select: { id: true, name: true, slug: true, plan: true } },
+        },
+      }),
+      this.prisma.subscriptionEvent.count({ where }),
+    ]);
+
+    return { events, total, take, skip };
+  }
+
+  // ── Oznaczanie faktur ─────────────────────────────────────────
+  async markInvoiceSent(organizationId: string, opts: {
+    invoiceNumber?: string;
+    amount?:        number;
+    sentTo?:        string;
+    changedBy:      string;
+  }) {
+    return this.recordEvent({
+      organizationId,
+      type:      'invoice_sent',
+      changedBy: opts.changedBy,
+      note:      opts.invoiceNumber
+                 ? `Faktura ${opts.invoiceNumber} wysłana na ${opts.sentTo ?? 'billing email'}`
+                 : 'Faktura wysłana',
+      metadata: {
+        invoiceNumber: opts.invoiceNumber,
+        amount:        opts.amount,
+        sentTo:        opts.sentTo,
+      },
+    });
+  }
+
+  async markInvoicePaid(organizationId: string, opts: {
+    invoiceNumber?: string;
+    amount?:        number;
+    changedBy:      string;
+  }) {
+    return this.recordEvent({
+      organizationId,
+      type:      'invoice_paid',
+      changedBy: opts.changedBy,
+      note:      opts.invoiceNumber
+                 ? `Faktura ${opts.invoiceNumber} opłacona`
+                 : 'Płatność potwierdzona',
+      metadata: {
+        invoiceNumber: opts.invoiceNumber,
+        amount:        opts.amount,
+      },
+    });
+  }
+
   // ── Owner Dashboard — MRR + wygasające ───────────────────────
   async getDashboard() {
     const now     = new Date();
