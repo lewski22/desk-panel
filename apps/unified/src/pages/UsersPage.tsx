@@ -226,29 +226,36 @@ export function UsersPage() {
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="relative w-full sm:w-64">
-          <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-[#6B5F7A] text-sm pointer-events-none" />
+          <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-[#A898B8] pointer-events-none" style={{ fontSize: 14 }} aria-hidden="true" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('users.filter.search_placeholder')}
-            className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-xl text-sm bg-[#F8F6FC] focus:outline-none focus:ring-2 focus:ring-[#B53578]/20"
+            className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-lg text-sm bg-[#F8F6FC] focus:outline-none focus:border-[#B53578] focus:ring-2 focus:ring-[#B53578]/10 focus:bg-white transition-colors"
           />
         </div>
 
         {/* Role chip dropdown */}
         <div className="relative" ref={roleDropRef}>
-          <button onClick={() => setShowRoleDrop(p => !p)} className={chipBtn(!!roleFilter)}>
-            <i className="ti ti-shield text-base" />
+          <button
+            onClick={() => setShowRoleDrop(p => !p)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+              roleFilter
+                ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
+            }`}
+          >
+            <i className="ti ti-shield" style={{ fontSize: 13 }} aria-hidden="true" />
             {roleFilter ? ROLE_LABEL[roleFilter] : t('users.filter.all_roles')}
-            <i className="ti ti-chevron-down text-xs" />
+            <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
           </button>
           {showRoleDrop && (
-            <div className="absolute left-0 top-10 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[160px]">
+            <div className="absolute top-full mt-1 left-0 z-20 bg-white border border-[#EDE8FA] rounded-lg shadow-sm py-1 min-w-[160px]">
               {(['', 'SUPER_ADMIN', 'OFFICE_ADMIN', 'STAFF', 'END_USER'] as const).map(r => (
                 <button key={r} onClick={() => { setRoleFilter(r); setShowRoleDrop(false); }}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                    roleFilter === r ? 'text-[#B53578] bg-[#FDF4F9]' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-50 ${
+                    roleFilter === r ? 'text-[#B53578] font-medium' : 'text-zinc-600'
                   }`}>
                   {r ? ROLE_LABEL[r] : t('users.filter.all_roles')}
                 </button>
@@ -259,21 +266,28 @@ export function UsersPage() {
 
         {/* Card chip dropdown */}
         <div className="relative" ref={cardDropRef}>
-          <button onClick={() => setShowCardDrop(p => !p)} className={chipBtn(!!cardFilter)}>
-            <i className="ti ti-credit-card text-base" />
+          <button
+            onClick={() => setShowCardDrop(p => !p)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border transition-all ${
+              cardFilter
+                ? 'bg-[#FDF4F9] border-[#B53578] text-[#B53578]'
+                : 'bg-white border-[#DCD6EA] text-[#6B5F7A] hover:bg-[#F8F6FC]'
+            }`}
+          >
+            <i className="ti ti-credit-card" style={{ fontSize: 13 }} aria-hidden="true" />
             {cardFilter === 'has' ? t('users.filter.has_card') : cardFilter === 'none' ? t('users.filter.no_card') : t('users.filter.all_cards')}
-            <i className="ti ti-chevron-down text-xs" />
+            <i className="ti ti-chevron-down" style={{ fontSize: 11 }} aria-hidden="true" />
           </button>
           {showCardDrop && (
-            <div className="absolute left-0 top-10 z-20 bg-white border border-[#DCD6EA] rounded-xl shadow-lg py-1 min-w-[160px]">
+            <div className="absolute top-full mt-1 left-0 z-20 bg-white border border-[#EDE8FA] rounded-lg shadow-sm py-1 min-w-[150px]">
               {([
-                { value: '' as const,    label: t('users.filter.all_cards') },
-                { value: 'has' as const, label: t('users.filter.has_card') },
-                { value: 'none' as const,label: t('users.filter.no_card') },
+                { value: '' as const,     label: t('users.filter.all_cards') },
+                { value: 'has' as const,  label: t('users.filter.has_card') },
+                { value: 'none' as const, label: t('users.filter.no_card') },
               ]).map(({ value, label }) => (
                 <button key={value} onClick={() => { setCardFilter(value); setShowCardDrop(false); }}
-                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                    cardFilter === value ? 'text-[#B53578] bg-[#FDF4F9]' : 'text-[#6B5F7A] hover:bg-[#F8F6FC]'
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-50 ${
+                    cardFilter === value ? 'text-[#B53578] font-medium' : 'text-zinc-600'
                   }`}>
                   {label}
                 </button>

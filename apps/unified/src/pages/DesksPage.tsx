@@ -280,7 +280,7 @@ export function DesksPage() {
         {/* Search */}
         <div className="relative w-full sm:w-52">
           <i
-            className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+            className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-[#A898B8] pointer-events-none"
             style={{ fontSize: 14 }}
             aria-hidden="true"
           />
@@ -289,7 +289,7 @@ export function DesksPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('desks.filter.search_placeholder')}
-            className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-lg text-sm bg-[#F8F6FC] focus:outline-none focus:border-[#B53578] focus:ring-2 focus:ring-[#B53578]/10 focus:bg-white"
+            className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-lg text-sm bg-[#F8F6FC] focus:outline-none focus:border-[#B53578] focus:ring-2 focus:ring-[#B53578]/10 focus:bg-white transition-colors"
           />
         </div>
 
@@ -314,7 +314,9 @@ export function DesksPage() {
               <div className="absolute top-full mt-1 left-0 z-20 bg-white border border-[#EDE8FA] rounded-lg shadow-sm py-1 min-w-[120px]">
                 <button
                   onClick={() => { setFloorFilter(''); setShowFloorDrop(false); }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
+                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-50 ${
+                    floorFilter === '' ? 'text-[#B53578] font-medium' : 'text-zinc-600'
+                  }`}
                 >
                   {t('desks.filter.all_floors')}
                 </button>
@@ -322,7 +324,9 @@ export function DesksPage() {
                   <button
                     key={f}
                     onClick={() => { setFloorFilter(f); setShowFloorDrop(false); }}
-                    className="w-full text-left px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50"
+                    className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-50 ${
+                      floorFilter === f ? 'text-[#B53578] font-medium' : 'text-zinc-600'
+                    }`}
                   >
                     {t('desks.filter.floor_prefix', 'Piętro')} {f}
                   </button>

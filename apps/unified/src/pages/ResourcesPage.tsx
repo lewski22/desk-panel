@@ -464,6 +464,27 @@ export function ResourcesPage() {
     .filter(type => grouped[type])
     .map(type => [type, grouped[type]] as [string, any[]]);
 
+  const TABLE_HEADERS = (
+    <thead>
+      <tr>
+        {[
+          { key: 'name',     label: t('resource.table.name',     'Nazwa'),       w: '30%' },
+          { key: 'details',  label: t('resource.table.details',  'Szczegóły'),   w: '28%' },
+          { key: 'location', label: t('resource.table.location', 'Lokalizacja'), w: '20%' },
+          { key: 'status',   label: t('resource.table.status',   'Status'),      w: '14%' },
+          { key: 'actions',  label: '',                                           w: '8%'  },
+        ].map(col => (
+          <th key={col.key} style={{ width: col.w }}
+            className="py-2.5 px-4 text-left text-[10px] text-[#A898B8]
+              font-semibold uppercase tracking-wider bg-[#F8F6FC]
+              border-b border-[#EDE8FA]">
+            {col.label}
+          </th>
+        ))}
+      </tr>
+    </thead>
+  );
+
   return (
     <div>
       {/* Page header */}
@@ -546,23 +567,7 @@ export function ResourcesPage() {
 
               {/* Table */}
               <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th style={{ width: '30%' }} className="py-2.5 px-4 text-left text-[10px] text-zinc-400 font-semibold uppercase tracking-wider bg-zinc-50 border-b border-zinc-100">
-                      {t('resource.table.name')}
-                    </th>
-                    <th style={{ width: '30%' }} className="py-2.5 px-4 text-left text-[10px] text-zinc-400 font-semibold uppercase tracking-wider bg-zinc-50 border-b border-zinc-100 hidden sm:table-cell">
-                      {t('resource.table.details')}
-                    </th>
-                    <th style={{ width: '22%' }} className="py-2.5 px-4 text-left text-[10px] text-zinc-400 font-semibold uppercase tracking-wider bg-zinc-50 border-b border-zinc-100 hidden md:table-cell">
-                      {t('resource.table.location')}
-                    </th>
-                    <th style={{ width: '12%' }} className="py-2.5 px-4 text-left text-[10px] text-zinc-400 font-semibold uppercase tracking-wider bg-zinc-50 border-b border-zinc-100">
-                      {t('resource.table.status')}
-                    </th>
-                    <th style={{ width: '6%' }} className="py-2.5 px-4 bg-zinc-50 border-b border-zinc-100" />
-                  </tr>
-                </thead>
+                {TABLE_HEADERS}
                 <tbody>
                   {list.map(r => (
                     <React.Fragment key={r.id}>

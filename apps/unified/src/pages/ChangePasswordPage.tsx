@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { useOrgUser } from '../context/UserContext';
 
 interface PasswordPolicy {
   minLength:        number;
@@ -30,7 +31,7 @@ export function ChangePasswordPage() {
   const [err,     setErr]     = useState('');
   const [success, setSuccess] = useState(false);
 
-  const user        = appApi.auth.user();
+  const user        = useOrgUser();
   const isSso       = (user as any)?.azureObjectId;
   const mustChange  = !!(user as any)?.mustChangePassword;
   const policy      = (user as any)?.passwordPolicy as PasswordPolicy | undefined;

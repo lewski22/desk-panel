@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
+import { useOrgUser } from '../context/UserContext';
 import { PageHeader, Btn } from '../components/ui';
 import { SmtpConfigSection } from './SmtpConfigSection';
 
@@ -402,7 +403,7 @@ function PushOptInSection() {
 
 export function NotificationsPage() {
   const { t, i18n } = useTranslation();
-  const authUser = appApi.auth.user();
+  const authUser = useOrgUser();
   const orgId    = authUser?.organizationId ?? '';
   const isSA     = authUser?.role === 'SUPER_ADMIN';
   const [settings, setSettings]   = useState<any[]>([]);

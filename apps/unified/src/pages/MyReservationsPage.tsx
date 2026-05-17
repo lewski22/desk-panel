@@ -2,9 +2,10 @@
  * MyReservationsPage — Sprint H2
  * Dodano swipe-left → reveal "Anuluj" (iOS Mail pattern)
  */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { appApi }          from '../api/client';
+import { useOrgUser }      from '../context/UserContext';
 import { EmptyState, Modal } from '../components/ui';
 import { QrImage } from '../components/ui/QrImage';
 
@@ -169,7 +170,7 @@ function canCheckin(r: any): boolean {
 
 export function MyReservationsPage() {
   const { t, i18n } = useTranslation();
-  const user = useMemo(() => appApi.auth.user(), []);
+  const user = useOrgUser();
   const isPrivilegedRole = ['SUPER_ADMIN', 'OFFICE_ADMIN', 'OWNER'].includes(user?.role ?? '');
 
   const [reservations, setReservations] = useState<any[]>([]);

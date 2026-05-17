@@ -895,31 +895,35 @@ export function OrganizationsPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
             {[
               { num: locations.length, label: t('organizations.summary.locations', 'Biur')      },
-              { num: activeCount,      label: t('organizations.summary.active',    'Aktywnych'), color: '#3B6D11' },
-              { num: totalDesks,       label: t('organizations.summary.desks',     'Biurek')     },
+              { num: activeCount,      label: t('organizations.summary.active',    'Aktywnych') },
+              { num: totalDesks,       label: t('organizations.summary.desks',     'Biurek')    },
               ...(hasBeacons ? [{ num: totalGateways, label: t('organizations.summary.gateways', 'Gatewayów') }] : []),
-            ].map(({ num, label, color }: { num: number | string; label: string; color?: string }) => (
+            ].map(({ num, label }: { num: number | string; label: string }) => (
               <div key={label}
-                className="bg-zinc-50 border border-zinc-100 rounded-xl px-3 py-2.5 text-center">
-                <p className="text-xl font-semibold" style={{ color: color ?? 'inherit' }}>{num}</p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">{label}</p>
+                className="bg-[#F8F6FC] border border-[#EDE8FA] rounded-xl px-3 py-2.5 text-center">
+                <p className="text-xl font-semibold text-[#1A0A2E]">{num}</p>
+                <p className="text-[11px] text-[#A898B8] mt-0.5">{label}</p>
               </div>
             ))}
           </div>
 
           {/* ── Topbar: wyszukiwarka + przycisk dodaj ─────── */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t('organizations.search_placeholder', 'Szukaj biura...')}
-              className="flex-1 min-w-[180px] max-w-sm h-9 border border-zinc-200 rounded-lg
-                         px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30
-                         bg-white text-zinc-800 placeholder-zinc-400"
-            />
+            <div className="relative flex-1 min-w-[180px] max-w-sm">
+              <i className="ti ti-search absolute left-3 top-1/2 -translate-y-1/2 text-[#A898B8] pointer-events-none" style={{ fontSize: 14 }} aria-hidden="true" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t('organizations.search_placeholder', 'Szukaj biura...')}
+                className="w-full pl-8 pr-3 py-2 border border-[#DCD6EA] rounded-lg
+                           text-sm bg-[#F8F6FC] focus:outline-none focus:border-[#B53578]
+                           focus:ring-2 focus:ring-[#B53578]/10 focus:bg-white transition-colors"
+              />
+            </div>
             <Btn onClick={openCreate}>
-              + {t('organizations.new_location', 'Nowe biuro')}
+              <i className="ti ti-plus" style={{ fontSize: 13, marginRight: 4 }} aria-hidden="true" />
+              {t('organizations.new_location', 'Nowe biuro')}
             </Btn>
           </div>
 
