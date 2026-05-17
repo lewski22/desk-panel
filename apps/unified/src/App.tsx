@@ -18,6 +18,10 @@ import { DeskMapPage }         from './pages/DeskMapPage';
 import { MyReservationsPage }  from './pages/MyReservationsPage';
 import { DevicesPage }         from './pages/DevicesPage';
 import { OwnerPage }           from './pages/OwnerPage';
+import { OwnerLogPage }        from './pages/OwnerLogPage';
+import { OwnerPlansPage }      from './pages/OwnerPlansPage';
+import { OwnerUnverifiedPage } from './pages/OwnerUnverifiedPage';
+import { OwnerOnboardingPage } from './pages/OwnerOnboardingPage';
 import { NotificationsPage }   from './pages/NotificationsPage';
 import { NotificationRulesPage } from './pages/NotificationRulesPage';
 import { ChangePasswordPage }  from './pages/ChangePasswordPage';
@@ -178,6 +182,18 @@ export default function App() {
                   } />
                   <Route path="/owner" element={
                     <Guard user={user} allowed={OWNER_ONLY}><OwnerPage /></Guard>
+                  } />
+                  <Route path="/owner/log" element={
+                    <Guard user={user} allowed={OWNER_ONLY}><OwnerLogPage /></Guard>
+                  } />
+                  <Route path="/owner/plans" element={
+                    <Guard user={user} allowed={OWNER_ONLY}><OwnerPlansPage /></Guard>
+                  } />
+                  <Route path="/owner/unverified" element={
+                    <Guard user={user} allowed={OWNER_ONLY}><OwnerUnverifiedPage /></Guard>
+                  } />
+                  <Route path="/owner/onboarding" element={
+                    <Guard user={user} allowed={OWNER_ONLY}><OwnerOnboardingPage /></Guard>
                   } />
 
                   {/* Wspólne (staff + admin) */}

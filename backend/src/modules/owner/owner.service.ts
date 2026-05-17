@@ -306,7 +306,17 @@ export class OwnerService {
       if (orgId) {
         const remaining = await tx.user.count({ where: { organizationId: orgId } });
         if (remaining === 0) {
-          // Event must be recorded before org delete (cascade would remove it)
+          // Event recorded before org delete — cascade would remove it otherwise
+          await tx.subscriptionEvent.create({
+            data: {
+              organizationId: orgId,
+              type:           'email_unverified_deleted',
+              note:           `Konto ${user.email} usunięte ręcznie przez Ownera (org skasowana — brak innych użytkowników)`,
+              metadata:       { userId, deletedBy },
+            },
+          });
+          await tx.organization.delete({ where: { id: orgId } });
+        } else {
           await tx.subscriptionEvent.create({
             data: {
               organizationId: orgId,
@@ -315,7 +325,6 @@ export class OwnerService {
               metadata:       { userId, deletedBy },
             },
           });
-          await tx.organization.delete({ where: { id: orgId } });
         }
       }
     });
@@ -363,6 +372,7 @@ export class OwnerService {
         slug:  org.slug,
         plan:  org.plan,
         createdAt: org.createdAt,
+        noAdmin: !sa,
         steps: {
           registered:      true,
           emailVerified:   !!sa && sa.emailVerificationToken === null,

@@ -1,4 +1,4 @@
-import { IsOptional, IsInt, IsBoolean } from 'class-validator';
+import { IsOptional, IsInt, IsBoolean, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class UpdatePlanTemplateDto {
@@ -37,4 +37,16 @@ export class UpdatePlanTemplateDto {
   @IsOptional()
   @IsBoolean()
   api?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceMonthlyEurCents?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceYearlyEurCents?: number | null;
 }

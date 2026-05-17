@@ -96,9 +96,12 @@ const NAV_GROUPS: NavGroup[] = [
     key:   'layout.group.operator',
     roles: ['OWNER'],
     items: [
-      { to: '/owner',              icon: IconGear, labelKey: 'layout.nav.owner',             roles: ['OWNER'] },
-      { to: '/owner?tab=sub',      icon: IconCard, labelKey: 'layout.nav.subscription',      roles: ['OWNER'] },
-      { to: '/notification-rules', icon: IconBell, labelKey: 'layout.nav.notification_rules', roles: ['OWNER'] },
+      { to: '/owner',              icon: IconGear,      labelKey: 'layout.nav.owner',              roles: ['OWNER'] },
+      { to: '/owner/log',          icon: IconClipboard, labelKey: 'layout.nav.owner_log',          roles: ['OWNER'] },
+      { to: '/owner/plans',        icon: IconPieChart,  labelKey: 'layout.nav.owner_plans',        roles: ['OWNER'] },
+      { to: '/owner/unverified',   icon: IconUsers,     labelKey: 'layout.nav.owner_unverified',   roles: ['OWNER'] },
+      { to: '/owner/onboarding',   icon: IconBarChart,  labelKey: 'layout.nav.owner_onboarding',   roles: ['OWNER'] },
+      { to: '/notification-rules', icon: IconBell,      labelKey: 'layout.nav.notification_rules', roles: ['OWNER'] },
     ],
   },
 ];

@@ -48,16 +48,18 @@ export class SubscriptionsService {
       const row = rows.find(r => r.plan === plan);
       result[plan] = {
         plan,
-        label:     PLAN_LABELS[plan] ?? plan,
-        color:     PLAN_COLORS[plan] ?? 'zinc',
-        desks:     row?.desks     ?? def.desks,
-        users:     row?.users     ?? def.users,
-        gateways:  row?.gateways  ?? def.gateways,
-        locations: row?.locations ?? def.locations,
-        ota:       row?.ota       ?? def.ota,
-        sso:       row?.sso       ?? def.sso,
-        smtp:      row?.smtp      ?? def.smtp,
-        api:       row?.api       ?? def.api,
+        label:                PLAN_LABELS[plan] ?? plan,
+        color:                PLAN_COLORS[plan] ?? 'zinc',
+        desks:                row?.desks     ?? def.desks,
+        users:                row?.users     ?? def.users,
+        gateways:             row?.gateways  ?? def.gateways,
+        locations:            row?.locations ?? def.locations,
+        ota:                  row?.ota       ?? def.ota,
+        sso:                  row?.sso       ?? def.sso,
+        smtp:                 row?.smtp      ?? def.smtp,
+        api:                  row?.api       ?? def.api,
+        priceMonthlyEurCents: row?.priceMonthlyEurCents ?? null,
+        priceYearlyEurCents:  row?.priceYearlyEurCents  ?? null,
       };
     }
     return result;
@@ -67,11 +69,27 @@ export class SubscriptionsService {
     desks?: number | null; users?: number | null;
     gateways?: number | null; locations?: number | null;
     ota?: boolean; sso?: boolean; smtp?: boolean; api?: boolean;
+    priceMonthlyEurCents?: number | null;
+    priceYearlyEurCents?:  number | null;
   }) {
     return this.prisma.planTemplate.upsert({
       where:  { plan },
       create: { plan, ...dto, updatedAt: new Date() },
       update: { ...dto, updatedAt: new Date() },
+    });
+  }
+
+  // ── Hardware pricing ──────────────────────────────────────────
+  async getHardwarePricing() {
+    return this.prisma.hardwarePricing.findUnique({ where: { id: 'default' } })
+      ?? { id: 'default', beaconPriceEurCents: null };
+  }
+
+  async setHardwarePricing(dto: { beaconPriceEurCents?: number | null }) {
+    return this.prisma.hardwarePricing.upsert({
+      where:  { id: 'default' },
+      create: { id: 'default', beaconPriceEurCents: dto.beaconPriceEurCents ?? null, updatedAt: new Date() },
+      update: { beaconPriceEurCents: dto.beaconPriceEurCents ?? null, updatedAt: new Date() },
     });
   }
 

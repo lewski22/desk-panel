@@ -530,16 +530,24 @@ model SubscriptionEvent {
 }
 
 model PlanTemplate {
-  plan      String   @id
-  desks     Int?
-  users     Int?
-  gateways  Int?
-  locations Int?
-  ota       Boolean  @default(false)
-  sso       Boolean  @default(false)
-  smtp      Boolean  @default(false)
-  api       Boolean  @default(false)
-  updatedAt DateTime @updatedAt
+  plan                 String   @id
+  desks                Int?
+  users                Int?
+  gateways             Int?
+  locations            Int?
+  ota                  Boolean  @default(false)
+  sso                  Boolean  @default(false)
+  smtp                 Boolean  @default(false)
+  api                  Boolean  @default(false)
+  priceMonthlyEurCents Int?
+  priceYearlyEurCents  Int?
+  updatedAt            DateTime @updatedAt
+}
+
+model HardwarePricing {
+  id                  String   @id @default("default")
+  beaconPriceEurCents Int?
+  updatedAt           DateTime @updatedAt
 }
 
 // ─── Notifications ───────────────────────────────────────────

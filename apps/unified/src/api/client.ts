@@ -384,6 +384,10 @@ export const appApi = {
       req<any>(`/owner/organizations/${orgId}/invoice/sent`, { method: 'POST', body: JSON.stringify(body) }),
     markInvoicePaid: (orgId: string, body: { invoiceNumber?: string; amount?: number }) =>
       req<any>(`/owner/organizations/${orgId}/invoice/paid`, { method: 'POST', body: JSON.stringify(body) }),
+    getHardwarePricing: () =>
+      req<{ id: string; beaconPriceEurCents: number | null }>('/owner/subscription/hardware-pricing'),
+    setHardwarePricing: (body: { beaconPriceEurCents?: number | null }) =>
+      req<{ id: string; beaconPriceEurCents: number | null }>('/owner/subscription/hardware-pricing', { method: 'PUT', body: JSON.stringify(body) }),
   },
 
   // ── Visitors ─────────────────────────────────────────────────

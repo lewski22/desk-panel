@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { appApi } from '../api/client';
 import { PageHeader, Btn, Modal, Input, Spinner } from '../components/ui';
@@ -469,7 +468,6 @@ function InvoiceModal({ org, type, onClose, onDone }: {
 }
 
 // ─── Główna strona ────────────────────────────────────────────
-// ─── SubscriptionTab + SubPlanModal — Sprint B3 ─────────────────
 
 function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; onSaved(): void }) {
   const { t } = useTranslation();
@@ -572,272 +570,25 @@ function SubPlanModal({ org, onClose, onSaved }: { org: any; onClose(): void; on
   );
 }
 
-// ─── Edytor szablonów planów ──────────────────────────────────
-function PlanTemplatesTab() {
-  const [templates, setTemplates] = useState<Record<string, any>>({});
-  const [editing,   setEditing]   = useState<string | null>(null);
-  const [form,      setForm]      = useState<any>({});
-  const [saving,    setSaving]    = useState(false);
-  const [saved,     setSaved]     = useState<string | null>(null);
-  const [err,       setErr]       = useState('');
 
-  useEffect(() => {
-    appApi.subscription.getPlans().then(setTemplates).catch(() => {});
-  }, []);
-
-  const startEdit = (plan: string) => {
-    setEditing(plan);
-    const t = templates[plan] ?? {};
-    setForm({
-      desks:     t.desks     != null ? String(t.desks)     : '',
-      users:     t.users     != null ? String(t.users)     : '',
-      gateways:  t.gateways  != null ? String(t.gateways)  : '',
-      locations: t.locations != null ? String(t.locations) : '',
-      ota:  !!t.ota,
-      sso:  !!t.sso,
-      smtp: !!t.smtp,
-      api:  !!t.api,
-    });
-    setErr('');
-  };
-
-  const save = async () => {
-    if (!editing) return;
-    setSaving(true); setErr('');
-    const toNum = (v: string) => v === '' ? null : Number(v);
-    try {
-      const updated = await appApi.subscription.updatePlanTemplate(editing, {
-        desks:     toNum(form.desks),
-        users:     toNum(form.users),
-        gateways:  toNum(form.gateways),
-        locations: toNum(form.locations),
-        ota:  form.ota,
-        sso:  form.sso,
-        smtp: form.smtp,
-        api:  form.api,
-      });
-      setTemplates(prev => ({ ...prev, [editing]: { ...prev[editing], ...updated } }));
-      setSaved(editing);
-      setEditing(null);
-      setTimeout(() => setSaved(null), 3000);
-    } catch (e: any) { setErr(e.message); }
-    setSaving(false);
-  };
-
-  const PLANS = ['free', 'trial', 'starter', 'pro', 'enterprise'];
-  const FEATURES: [string, string][] = [['ota','OTA Updates'],['sso','SSO / Azure'],['smtp','Custom SMTP'],['api','API Access']];
-
-  return (
-    <div className="space-y-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-xs text-blue-700">
-        Zmiany szablonów wpływają na domyślne limity przy przypisywaniu planu oraz na limity organizacji, które nie mają ustawionych indywidualnych overridów.
-      </div>
-      {PLANS.map(plan => {
-        const tpl = templates[plan] ?? {};
-        const isEditing = editing === plan;
-        return (
-          <div key={plan} className="bg-white border border-zinc-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-zinc-800 capitalize">{plan}</span>
-                {saved === plan && <span className="text-xs text-emerald-600 font-medium">✓ Zapisano</span>}
-              </div>
-              {!isEditing
-                ? <Btn size="sm" variant="secondary" onClick={() => startEdit(plan)}>Edytuj</Btn>
-                : <div className="flex gap-2">
-                    <Btn size="sm" variant="secondary" onClick={() => setEditing(null)}>Anuluj</Btn>
-                    <Btn size="sm" onClick={save} loading={saving}>Zapisz</Btn>
-                  </div>
-              }
-            </div>
-
-            {!isEditing ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                {[
-                  ['Biurka',       tpl.desks     ?? '∞'],
-                  ['Użytkownicy',  tpl.users     ?? '∞'],
-                  ['Gatewaye',     tpl.gateways  ?? '∞'],
-                  ['Biura',        tpl.locations ?? '∞'],
-                ].map(([label, val]) => (
-                  <div key={label as string} className="bg-zinc-50 rounded-lg px-3 py-2">
-                    <p className="text-zinc-400 mb-0.5">{label}</p>
-                    <p className="font-semibold text-zinc-700">{val}</p>
-                  </div>
-                ))}
-                <div className="col-span-2 sm:col-span-4 flex gap-3 mt-1">
-                  {FEATURES.map(([key, label]) => (
-                    <span key={key} className={`text-[10px] px-2 py-0.5 rounded font-medium ${tpl[key] ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-400'}`}>
-                      {tpl[key] ? '✓' : '✗'} {label}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {[
-                    ['desks',     'Biurka (puste=∞)'],
-                    ['users',     'Użytkownicy'],
-                    ['gateways',  'Gatewaye'],
-                    ['locations', 'Biura'],
-                  ].map(([key, label]) => (
-                    <div key={key}>
-                      <label className="block text-[11px] text-zinc-500 mb-1">{label}</label>
-                      <input type="number" value={form[key]}
-                        onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.value }))}
-                        placeholder="∞"
-                        className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#B03472]/20" />
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {FEATURES.map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2 cursor-pointer text-sm text-zinc-600">
-                      <input type="checkbox" checked={!!form[key]}
-                        onChange={e => setForm((f: any) => ({ ...f, [key]: e.target.checked }))}
-                        className="rounded" />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-                {err && <p className="text-xs text-red-500">{err}</p>}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+function subStatus(org: any): { label: string; cls: string } {
+  const now  = new Date();
+  const exp  = org.trialEndsAt ?? org.planExpiresAt;
+  const days = exp ? Math.ceil((new Date(exp).getTime() - now.getTime()) / 86_400_000) : null;
+  const isTrial = !!org.trialEndsAt;
+  if (days !== null && days <= 0)  return { label: 'Wygasły',          cls: 'bg-red-100 text-red-600' };
+  if (isTrial && days !== null)    return { label: `Trial ${days}d`,   cls: 'bg-sky-100 text-sky-700' };
+  if (days !== null && days <= 14) return { label: `Wygasa ${days}d`,  cls: 'bg-amber-100 text-amber-700' };
+  return { label: 'Aktywny', cls: 'bg-emerald-100 text-emerald-700' };
 }
 
-function SubscriptionTab({ orgs, subDash, onEdit }: {
-  orgs: any[]; subDash: any; onEdit: (org: any) => void;
-}) {
-  const now = new Date();
-  const rows = orgs.map(org => {
-    const exp  = org.trialEndsAt ?? org.planExpiresAt;
-    const days = exp ? Math.ceil((new Date(exp).getTime() - now.getTime()) / 86_400_000) : null;
-    const isTrial = !!org.trialEndsAt;
-    let statusLabel = 'Aktywny';
-    let statusCls   = 'bg-emerald-100 text-emerald-700';
-    if (days !== null && days <= 0)  { statusLabel = 'Wygasły';            statusCls = 'bg-red-100 text-red-600'; }
-    else if (days !== null && days <= 14) { statusLabel = `Wygasa ${days}d`; statusCls = 'bg-amber-100 text-amber-700'; }
-    if (isTrial && days !== null && days > 0) { statusLabel = `Trial (${days}d)`; statusCls = 'bg-sky-100 text-sky-700'; }
-    return { ...org, days, statusLabel, statusCls };
-  });
-
-  return (
-    <div>
-      {subDash && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: 'MRR łącznie',      value: `${((subDash.totalMrr ?? 0)/100).toFixed(0)} zł`, cls: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
-            { label: 'Wygasa (14 dni)',   value: subDash.expiringSoon,  cls: 'text-amber-700 bg-amber-50 border-amber-100' },
-            { label: 'Wygasłe',           value: subDash.expired,       cls: 'text-red-600 bg-red-50 border-red-100' },
-            { label: 'Trial',             value: subDash.onTrial,       cls: 'text-sky-700 bg-sky-50 border-sky-100' },
-          ].map(({ label, value, cls }) => (
-            <div key={label} className={`rounded-xl border p-4 ${cls.split(' ').slice(1).join(' ')}`}>
-              <p className={`text-2xl font-bold font-mono ${cls.split(' ')[0]}`}>{value}</p>
-              <p className="text-xs text-zinc-400 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-      <div className="overflow-x-auto rounded-xl border border-zinc-100">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 border-b border-zinc-100">
-            <tr>
-              {['Firma','Plan','Status','Wygasa','MRR',''].map(h => (
-                <th key={h} className="py-2.5 px-4 text-left text-xs text-zinc-400 font-semibold uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(org => (
-              <tr key={org.id} className="border-b border-zinc-50 hover:bg-zinc-50/60 group">
-                <td className="py-3 px-4 font-medium text-zinc-800">{org.name}</td>
-                <td className="py-3 px-4"><PlanBadge plan={org.plan} /></td>
-                <td className="py-3 px-4">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${org.statusCls}`}>{org.statusLabel}</span>
-                </td>
-                <td className="py-3 px-4 text-xs text-zinc-500">
-                  {org.trialEndsAt ?? org.planExpiresAt
-                    ? new Date(org.trialEndsAt ?? org.planExpiresAt).toLocaleDateString('pl-PL')
-                    : '∞'}
-                </td>
-                <td className="py-3 px-4 text-xs font-mono text-zinc-600">
-                  {org.mrr ? `${(org.mrr/100).toFixed(0)} zł` : '—'}
-                </td>
-                <td className="py-3 px-4">
-                  <button onClick={() => onEdit(org)}
-                    className="text-xs px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 opacity-0 group-hover:opacity-100 transition-all">
-                    Edytuj plan
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-const STEPS = [
-  { key: 'registered',      label: 'Rejestracja',      icon: '📝' },
-  { key: 'emailVerified',   label: 'Email OK',          icon: '✉️' },
-  { key: 'hasBillingEmail', label: 'Email faktury',     icon: '💳' },
-  { key: 'hasDesks',        label: 'Biurka dodane',     icon: '🪑' },
-  { key: 'hasGateway',      label: 'Gateway',           icon: '📡' },
-  { key: 'hasMrr',          label: 'MRR ustawione',     icon: '💰' },
-  { key: 'invoiceSent',     label: 'Faktura wysłana',   icon: '📨' },
-  { key: 'invoicePaid',     label: 'Faktura opłacona',  icon: '✅' },
-];
-
-const EVENT_COLORS: Record<string, string> = {
-  org_registered:           'bg-blue-50 text-blue-700',
-  email_verified:           'bg-green-50 text-green-700',
-  email_unverified_deleted: 'bg-red-50 text-red-700',
-  plan_changed:             'bg-purple-50 text-purple-700',
-  renewed:                  'bg-indigo-50 text-indigo-700',
-  invoice_sent:             'bg-amber-50 text-amber-700',
-  invoice_paid:             'bg-green-50 text-green-700',
-  plan_expired:             'bg-red-50 text-red-700',
-  limit_warning:            'bg-orange-50 text-orange-700',
-};
-
-const EVENT_LABELS: Record<string, string> = {
-  org_registered:           'Rejestracja',
-  email_verified:           'Email OK',
-  email_unverified_deleted: 'Usunięto konto',
-  plan_changed:             'Zmiana planu',
-  renewed:                  'Odnowienie',
-  invoice_sent:             'Faktura wysłana',
-  invoice_paid:             'Faktura opłacona',
-  plan_expired:             'Plan wygasł',
-  limit_warning:            'Limit > 80%',
-};
-
-const LOG_LIMIT = 50;
 
 export function OwnerPage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
   const [stats, setStats]       = useState<any>(null);
   const [orgs,  setOrgs]        = useState<any[]>([]);
   const [subDash, setSubDash]   = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'orgs'|'sub'|'plans'|'insights'|'log'|'unverified'|'onboarding'>(
-    searchParams.get('tab') === 'sub' ? 'sub' : 'orgs'
-  );
-  const [unverified,      setUnverified]      = useState<any[]>([]);
-  const [unverifiedCount, setUnverifiedCount] = useState(0);
-  const [deletingId,      setDeletingId]      = useState<string | null>(null);
-  const [onboarding,      setOnboarding]      = useState<any[]>([]);
-  const [globalLog,       setGlobalLog]       = useState<any[]>([]);
-  const [logTotal,        setLogTotal]        = useState(0);
-  const [logOffset,       setLogOffset]       = useState(0);
-  const [logTypeFilter,   setLogTypeFilter]   = useState('');
-  const [logOrgFilter,    setLogOrgFilter]    = useState('');
+  const [activeTab, setActiveTab] = useState<'orgs'|'insights'>('orgs');
   const [search, setSearch]     = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading]   = useState(true);
@@ -847,16 +598,6 @@ export function OwnerPage() {
   const [subEditOrg, setSubEditOrg] = useState<any>(null);
   const [impersonating, setImpersonating] = useState<string | null>(null);
   const [invoiceModal,  setInvoiceModal]  = useState<{ org: any; type: 'sent' | 'paid' } | null>(null);
-
-  const loadLog = useCallback(async (offset = logOffset, type = logTypeFilter, orgId = logOrgFilter) => {
-    try {
-      const r = await appApi.subscription.getGlobalLog({ limit: LOG_LIMIT, offset, type: type || undefined, orgId: orgId || undefined });
-      setGlobalLog(r.events);
-      setLogTotal(r.total);
-    } catch (err) {
-      console.warn('loadLog failed', err);
-    }
-  }, [logOffset, logTypeFilter, logOrgFilter]);
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
@@ -871,8 +612,6 @@ export function OwnerPage() {
       setOrgs(orgList);
       setSubDash(sd);
       setEditOrg(prev => prev ? (orgList.find(x => x.id === prev.id) ?? prev) : null);
-      appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); }).catch(e => console.warn('getUnverifiedAccounts failed', e));
-      appApi.owner.getOnboardingStatus().then(setOnboarding).catch(e => console.warn('getOnboardingStatus failed', e));
     } catch (e: any) {
       setErr(e.message || t('qr.no_connection'));
     }
@@ -880,7 +619,6 @@ export function OwnerPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (activeTab === 'log') loadLog(); }, [activeTab, loadLog]);
 
   const handleImpersonate = async (org: any) => {
     setImpersonating(org.id);
@@ -982,15 +720,10 @@ export function OwnerPage() {
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="flex gap-1 bg-zinc-100 rounded-xl p-1 overflow-x-auto">
           {([
-            ['orgs',        '🏢 Organizacje'],
-            ['sub',         '💳 Subskrypcje'],
-            ['plans',       '📋 Szablony planów'],
-            ['insights',    '🤖 AI Insights'],
-            ['log',         '📋 Log'],
-            ['unverified',  `⏳ Niezweryfikowane${unverifiedCount > 0 ? ` (${unverifiedCount})` : ''}`],
-            ['onboarding',  '🚀 Onboarding'],
+            ['orgs',     '🏢 Organizacje'],
+            ['insights', '🤖 AI Insights'],
           ] as const).map(([tab, label]) => (
-            <button key={tab} onClick={() => setActiveTab(tab as any)}
+            <button key={tab} onClick={() => setActiveTab(tab)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 activeTab === tab ? 'bg-white text-zinc-800 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'
               }`}>
@@ -1032,7 +765,7 @@ export function OwnerPage() {
             <table className="w-full min-w-[640px]">
               <thead>
                 <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                  {['Firma', 'Slug', 'Plan', 'Użytkownicy', 'Status', 'White-label', 'Akcje'].map(h => (
+                  {['Firma', 'Slug', 'Plan', 'Sub. status', 'Wygasa', 'MRR', 'Użytkownicy', 'Status', 'White-label', 'Akcje'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-zinc-400 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -1049,6 +782,17 @@ export function OwnerPage() {
                     </td>
                     <td className="px-4 py-3">
                       <PlanBadge plan={org.plan ?? 'basic'} />
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => { const s = subStatus(org); return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>; })()}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-zinc-500 whitespace-nowrap">
+                      {org.trialEndsAt ?? org.planExpiresAt
+                        ? new Date(org.trialEndsAt ?? org.planExpiresAt).toLocaleDateString('pl-PL')
+                        : '∞'}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-mono text-zinc-600 whitespace-nowrap">
+                      {org.mrr ? `${(org.mrr / 100).toFixed(0)} zł` : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-500 tabular-nums">
                       {org.usersCount ?? org._count?.users ?? '—'}
@@ -1086,6 +830,9 @@ export function OwnerPage() {
                         <Btn size="sm" variant="secondary" onClick={() => handleForcePasswordReset(org)}>
                           🔐 Reset haseł
                         </Btn>
+                        <Btn size="sm" variant="secondary" onClick={() => setSubEditOrg(org)}>
+                          💳 Plan
+                        </Btn>
                         <button
                           onClick={() => setInvoiceModal({ org, type: 'sent' })}
                           className="text-xs px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 opacity-0 group-hover:opacity-100 transition-all"
@@ -1108,239 +855,10 @@ export function OwnerPage() {
         )}
       </div>}
 
-      {/* Zakładka Subskrypcje */}
-      {activeTab === 'sub' && (
-        <SubscriptionTab
-          orgs={orgs}
-          subDash={subDash}
-          onEdit={setSubEditOrg}
-        />
-      )}
-
-      {/* Zakładka Szablony planów */}
-      {activeTab === 'plans' && <PlanTemplatesTab />}
-
       {/* Zakładka AI Insights — per lokalizacja wszystkich org */}
       {activeTab === 'insights' && (
         <div className="bg-white border border-zinc-100 rounded-xl p-5">
           <OrgInsightsWidget />
-        </div>
-      )}
-
-      {/* Zakładka: Niezweryfikowane konta */}
-      {activeTab === 'unverified' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-zinc-800">
-              Konta bez potwierdzonego emaila
-              {unverified.length > 0 && (
-                <span className="ml-2 text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{unverified.length}</span>
-              )}
-            </h2>
-            <button onClick={() => appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); })}
-              className="text-xs text-brand hover:underline">Odśwież</button>
-          </div>
-          {unverified.length === 0 ? (
-            <div className="text-center py-12 text-zinc-400">
-              <p className="text-3xl mb-2">✅</p>
-              <p className="text-sm">Brak kont oczekujących na weryfikację</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-zinc-200">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
-                    <th className="py-2.5 px-4 text-left">Email</th>
-                    <th className="py-2.5 px-4 text-left">Organizacja</th>
-                    <th className="py-2.5 px-4 text-left">Plan</th>
-                    <th className="py-2.5 px-4 text-left">Wiek</th>
-                    <th className="py-2.5 px-4 text-left">Status</th>
-                    <th className="py-2.5 px-4 text-right">Akcja</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {unverified.map(u => (
-                    <tr key={u.id} className="hover:bg-zinc-50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-zinc-800">{u.email}</div>
-                        <div className="text-xs text-zinc-400">{u.firstName} {u.lastName}</div>
-                      </td>
-                      <td className="py-3 px-4 text-zinc-600">{u.organization?.name ?? '—'}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium capitalize">{u.organization?.plan ?? '—'}</span>
-                      </td>
-                      <td className="py-3 px-4 text-zinc-500">{u.ageHours < 1 ? '< 1h' : `${u.ageHours}h`}</td>
-                      <td className="py-3 px-4">
-                        {u.isExpired
-                          ? <span className="text-xs text-red-600 font-medium">⚠ Link wygasł</span>
-                          : <span className="text-xs text-amber-600 font-medium">⏳ Oczekuje</span>}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={async () => {
-                            if (!confirm(`Usunąć konto ${u.email}?`)) return;
-                            setDeletingId(u.id);
-                            try {
-                              await appApi.owner.deleteUnverifiedAccount(u.id);
-                              setUnverified(prev => prev.filter(x => x.id !== u.id));
-                              setUnverifiedCount(c => c - 1);
-                            } catch (e: any) { alert(e.message ?? 'Błąd usuwania'); }
-                            setDeletingId(null);
-                          }}
-                          disabled={deletingId === u.id}
-                          className="text-xs px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium disabled:opacity-50 transition-colors"
-                        >
-                          {deletingId === u.id ? '…' : 'Usuń'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Zakładka: Status onboardingu */}
-      {activeTab === 'onboarding' && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-zinc-800">Status onboardingu organizacji</h2>
-          {onboarding.length === 0 ? (
-            <div className="text-center py-12 text-zinc-400 text-sm">Brak danych</div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-zinc-200">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
-                    <th className="py-2.5 px-4 text-left">Organizacja</th>
-                    <th className="py-2.5 px-4 text-left">Plan</th>
-                    {STEPS.map(s => (
-                      <th key={s.key} className="py-2.5 px-3 text-center" title={s.label}>{s.icon}</th>
-                    ))}
-                    <th className="py-2.5 px-4 text-right">Ukończono</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100">
-                  {onboarding.map(org => {
-                    const done = STEPS.filter(s => org.steps[s.key]).length;
-                    const pct  = Math.round((done / STEPS.length) * 100);
-                    return (
-                      <tr key={org.id} className="hover:bg-zinc-50 transition-colors">
-                        <td className="py-3 px-4">
-                          <div className="font-medium text-zinc-800">{org.name}</div>
-                          <div className="text-xs text-zinc-400">{org.adminEmail ?? '—'}</div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 capitalize">{org.plan}</span>
-                        </td>
-                        {STEPS.map(s => (
-                          <td key={s.key} className="py-3 px-3 text-center">
-                            {org.steps[s.key]
-                              ? <span className="text-green-500 text-base">✓</span>
-                              : <span className="text-zinc-300 text-base">○</span>}
-                          </td>
-                        ))}
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center gap-2 justify-end">
-                            <div className="w-16 h-1.5 bg-zinc-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs text-zinc-500">{pct}%</span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Zakładka: Globalny log zdarzeń */}
-      {activeTab === 'log' && (
-        <div className="space-y-4">
-          <div className="flex gap-3 flex-wrap items-center">
-            <h2 className="text-lg font-semibold text-zinc-800 mr-2">Globalny log zdarzeń</h2>
-            <select
-              value={logTypeFilter}
-              onChange={e => { setLogTypeFilter(e.target.value); setLogOffset(0); }}
-              className="text-xs border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-600 focus:outline-none"
-            >
-              <option value="">Wszystkie typy</option>
-              {Object.entries(EVENT_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-            <select
-              value={logOrgFilter}
-              onChange={e => { setLogOrgFilter(e.target.value); setLogOffset(0); }}
-              className="text-xs border border-zinc-200 rounded-lg px-3 py-1.5 text-zinc-600 focus:outline-none"
-            >
-              <option value="">Wszystkie org</option>
-              {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
-            <span className="text-xs text-zinc-400 ml-auto">{logTotal} zdarzeń</span>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-zinc-200">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-zinc-50 text-xs text-zinc-500 uppercase tracking-wide">
-                  <th className="py-2.5 px-4 text-left">Data</th>
-                  <th className="py-2.5 px-4 text-left">Organizacja</th>
-                  <th className="py-2.5 px-4 text-left">Zdarzenie</th>
-                  <th className="py-2.5 px-4 text-left">Plan</th>
-                  <th className="py-2.5 px-4 text-left">Notatka</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {globalLog.map(ev => (
-                  <tr key={ev.id} className="hover:bg-zinc-50 transition-colors">
-                    <td className="py-2.5 px-4 text-xs text-zinc-500 whitespace-nowrap font-mono">
-                      {new Date(ev.createdAt).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <div className="font-medium text-zinc-800">{ev.organization?.name ?? '—'}</div>
-                      <div className="text-xs text-zinc-400">{ev.organization?.plan ?? ''}</div>
-                    </td>
-                    <td className="py-2.5 px-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${EVENT_COLORS[ev.type] ?? 'bg-zinc-100 text-zinc-600'}`}>
-                        {EVENT_LABELS[ev.type] ?? ev.type}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-xs text-zinc-500">
-                      {ev.previousPlan && ev.newPlan && ev.previousPlan !== ev.newPlan
-                        ? <span>{ev.previousPlan} → <strong>{ev.newPlan}</strong></span>
-                        : ev.newPlan ?? ev.previousPlan ?? '—'}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs text-zinc-500 max-w-[280px] truncate">{ev.note ?? '—'}</td>
-                  </tr>
-                ))}
-                {globalLog.length === 0 && (
-                  <tr><td colSpan={5} className="py-12 text-center text-zinc-400 text-sm">Brak zdarzeń</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {logTotal > LOG_LIMIT && (
-            <div className="flex items-center gap-3 justify-center pt-2">
-              <button
-                onClick={() => setLogOffset(o => Math.max(0, o - LOG_LIMIT))}
-                disabled={logOffset === 0}
-                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
-              >← Wcześniej</button>
-              <span className="text-xs text-zinc-500">{logOffset + 1}–{Math.min(logOffset + LOG_LIMIT, logTotal)} z {logTotal}</span>
-              <button
-                onClick={() => setLogOffset(o => o + LOG_LIMIT)}
-                disabled={logOffset + LOG_LIMIT >= logTotal}
-                className="text-xs px-3 py-1.5 rounded-lg border border-zinc-200 hover:bg-zinc-50 disabled:opacity-40"
-              >Później →</button>
-            </div>
-          )}
         </div>
       )}
 
@@ -1356,7 +874,7 @@ export function OwnerPage() {
           org={invoiceModal.org}
           type={invoiceModal.type}
           onClose={() => setInvoiceModal(null)}
-          onDone={() => { setLogOffset(0); loadLog(0); }}
+          onDone={() => {}}
         />
       )}
     </div>

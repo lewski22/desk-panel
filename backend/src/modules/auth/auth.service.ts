@@ -445,7 +445,7 @@ export class AuthService {
         note:           `Self-service rejestracja przez ${dto.adminEmail.toLowerCase()}`,
         metadata:       { source: 'self_service' },
       },
-    }).catch(() => {});
+    }).catch(err => this.logger.warn('registerOrg: failed to record org_registered event', err));
 
     return {
       organizationId: org.id,

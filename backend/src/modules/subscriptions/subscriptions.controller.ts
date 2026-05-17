@@ -3,7 +3,7 @@
  */
 import {
   Controller, Get, Post, Put, Param, Body, Query,
-  UseGuards, Request,
+  UseGuards, Request, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard }          from '../auth/guards/jwt-auth.guard';
@@ -14,6 +14,7 @@ import { SubscriptionsService }      from './subscriptions.service';
 import { UpdatePlanDto }             from './dto/update-plan.dto';
 import { UpdatePlanTemplateDto }     from './dto/update-plan-template.dto';
 import { MarkInvoiceSentDto, MarkInvoicePaidDto } from './dto/mark-invoice.dto';
+import { SetHardwarePricingDto }                  from './dto/set-hardware-pricing.dto';
 import { OwnerGuard }            from '../owner/guards/owner.guard';
 
 @ApiTags('subscription')
@@ -119,5 +120,22 @@ export class SubscriptionsController {
     @Request()   req:  any,
   ) {
     return this.svc.markInvoicePaid(id, { ...body, changedBy: req.user.id });
+  }
+
+  // ── Hardware pricing ──────────────────────────────────────────
+
+  @Get('owner/subscription/hardware-pricing')
+  @UseGuards(OwnerGuard)
+  @ApiOperation({ summary: 'Get hardware pricing (beacon price per unit)' })
+  getHardwarePricing() {
+    return this.svc.getHardwarePricing();
+  }
+
+  @Put('owner/subscription/hardware-pricing')
+  @UseGuards(OwnerGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Set hardware pricing (beacon price per unit)' })
+  setHardwarePricing(@Body() body: SetHardwarePricingDto) {
+    return this.svc.setHardwarePricing(body);
   }
 }
