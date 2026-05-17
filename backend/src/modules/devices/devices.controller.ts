@@ -35,6 +35,7 @@ export class DevicesController {
   ) {}
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN, UserRole.OFFICE_ADMIN, UserRole.STAFF)
   @ApiOperation({ summary: 'List all beacons (filtered by org for non-OWNER)' })
   findAll(@Request() req: any) {
     // OWNER widzi wszystko; SUPER_ADMIN/OFFICE_ADMIN tylko swoją org

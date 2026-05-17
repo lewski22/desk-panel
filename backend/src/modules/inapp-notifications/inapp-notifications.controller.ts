@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Request, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard }   from '../auth/guards/roles.guard';
 import { Roles }        from '../auth/decorators/roles.decorator';
@@ -23,6 +24,7 @@ export class InAppNotificationsController {
   }
 
   @Get('count')
+  @SkipThrottle()
   countUnread(@Request() req: any) { return this.svc.countUnread(req.user.id); }
 
   @Patch('read-all')
