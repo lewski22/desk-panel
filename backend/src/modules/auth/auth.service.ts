@@ -14,7 +14,7 @@
  *
  * backend/src/modules/auth/auth.service.ts
  */
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, BadRequestException, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { RegisterOrgDto } from './dto/register-org.dto';
 import { JwtService } from '@nestjs/jwt';
@@ -27,6 +27,8 @@ import { User, UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private prisma:  PrismaService,
     private jwt:     JwtService,
@@ -349,26 +351,24 @@ export class AuthService {
     });
 
     for (const u of toDelete) {
-      if (u.organizationId) {
-        await this.prisma.subscriptionEvent.create({
-          data: {
-            organizationId: u.organizationId,
-            type:           'email_unverified_deleted',
-            note:           `Konto ${u.email} usunięte (brak weryfikacji emaila > 24h)`,
-            metadata:       { userId: u.id, deletedBy: 'cron' },
-          },
-        }).catch(() => {});
+      try {
+        await this.prisma.$transaction(async tx => {
+          if (u.organizationId) {
+            await tx.subscriptionEvent.create({
+              data: {
+                organizationId: u.organizationId,
+                type:           'email_unverified_deleted',
+                note:           `Konto ${u.email} usunięte (brak weryfikacji emaila > 24h)`,
+                metadata:       { userId: u.id, deletedBy: 'cron' },
+              },
+            });
+          }
+          await tx.user.delete({ where: { id: u.id } });
+        });
+      } catch (err) {
+        this.logger.warn(`cleanupUnverifiedAccounts: failed to delete user ${u.id} (${u.email})`, err);
       }
     }
-
-    await this.prisma.user.deleteMany({
-      where: {
-        isActive:               false,
-        emailVerificationToken: { not: null },
-        createdAt:              { lt: cutoff },
-        role:                   { notIn: [UserRole.KIOSK] },
-      },
-    });
   }
 
   /** Zmienia hasło po weryfikacji obecnego. Waliduje złożoność wg polityki org. Unieważnia wszystkie refresh tokeny (wylogowanie ze wszystkich urządzeń). */

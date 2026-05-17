@@ -298,22 +298,27 @@ export class OwnerService {
       throw new BadRequestException('Konto nie czeka na weryfikację emaila');
     }
 
-    await this.prisma.user.delete({ where: { id: userId } });
+    const orgId = user.organizationId;
 
-    if (user.organizationId) {
-      const remaining = await this.prisma.user.count({ where: { organizationId: user.organizationId } });
-      if (remaining === 0) {
-        await this.prisma.subscriptionEvent.create({
-          data: {
-            organizationId: user.organizationId,
-            type:           'email_unverified_deleted',
-            note:           `Konto ${user.email} usunięte ręcznie przez Ownera`,
-            metadata:       { userId, deletedBy },
-          },
-        }).catch(() => {});
-        await this.prisma.organization.delete({ where: { id: user.organizationId } });
+    await this.prisma.$transaction(async tx => {
+      await tx.user.delete({ where: { id: userId } });
+
+      if (orgId) {
+        const remaining = await tx.user.count({ where: { organizationId: orgId } });
+        if (remaining === 0) {
+          // Event must be recorded before org delete (cascade would remove it)
+          await tx.subscriptionEvent.create({
+            data: {
+              organizationId: orgId,
+              type:           'email_unverified_deleted',
+              note:           `Konto ${user.email} usunięte ręcznie przez Ownera`,
+              metadata:       { userId, deletedBy },
+            },
+          });
+          await tx.organization.delete({ where: { id: orgId } });
+        }
       }
-    }
+    });
 
     return { deleted: true, email: user.email };
   }
@@ -329,7 +334,7 @@ export class OwnerService {
         createdAt: true,
         users: {
           where:  { role: UserRole.SUPER_ADMIN },
-          select: { isActive: true, email: true },
+          select: { isActive: true, email: true, emailVerificationToken: true },
           take:   1,
         },
         locations: {
@@ -360,7 +365,7 @@ export class OwnerService {
         createdAt: org.createdAt,
         steps: {
           registered:      true,
-          emailVerified:   !!sa?.isActive,
+          emailVerified:   !!sa && sa.emailVerificationToken === null,
           hasBillingEmail: !!org.billingEmail,
           hasDesks:        totalDesks > 0,
           hasGateway:      totalGateways > 0,
@@ -394,9 +399,12 @@ export class OwnerService {
       contactEmail: org.contactEmail,
       trialEndsAt:  org.trialEndsAt,
       planExpiresAt:org.planExpiresAt,
-      notes:        org.notes,
-      createdAt:    org.createdAt,
-      usersCount:   org._count.users,
+      notes:             org.notes,
+      createdAt:         org.createdAt,
+      whitelabelEnabled: org.whitelabelEnabled ?? false,
+      logoUrl:           org.logoUrl           ?? null,
+      logoBgColor:       org.logoBgColor        ?? null,
+      usersCount:        org._count.users,
       locationsCount: org.locations.length,
       gateways: {
         total:  gateways.length,

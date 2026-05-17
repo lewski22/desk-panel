@@ -5,6 +5,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService }         from '../../database/prisma.service';
+import { Prisma }                from '@prisma/client';
 import { InAppNotificationsService } from '../inapp-notifications/inapp-notifications.service';
 import { NotificationsService }      from '../notifications/notifications.service';
 
@@ -281,7 +282,7 @@ export class SubscriptionsService {
   }) {
     const take = opts?.limit  ?? 100;
     const skip = opts?.offset ?? 0;
-    const where: any = {};
+    const where: Prisma.SubscriptionEventWhereInput = {};
     if (opts?.orgId) where.organizationId = opts.orgId;
     if (opts?.type)  where.type           = opts.type;
 

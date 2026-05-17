@@ -13,6 +13,7 @@ import { UserRole }              from '@prisma/client';
 import { SubscriptionsService }      from './subscriptions.service';
 import { UpdatePlanDto }             from './dto/update-plan.dto';
 import { UpdatePlanTemplateDto }     from './dto/update-plan-template.dto';
+import { MarkInvoiceSentDto, MarkInvoicePaidDto } from './dto/mark-invoice.dto';
 import { OwnerGuard }            from '../owner/guards/owner.guard';
 
 @ApiTags('subscription')
@@ -103,7 +104,7 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Mark invoice as sent for org (Owner)' })
   markInvoiceSent(
     @Param('id') id:   string,
-    @Body()      body: { invoiceNumber?: string; amount?: number; sentTo?: string },
+    @Body()      body: MarkInvoiceSentDto,
     @Request()   req:  any,
   ) {
     return this.svc.markInvoiceSent(id, { ...body, changedBy: req.user.id });
@@ -114,7 +115,7 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Mark invoice as paid for org (Owner)' })
   markInvoicePaid(
     @Param('id') id:   string,
-    @Body()      body: { invoiceNumber?: string; amount?: number },
+    @Body()      body: MarkInvoicePaidDto,
     @Request()   req:  any,
   ) {
     return this.svc.markInvoicePaid(id, { ...body, changedBy: req.user.id });

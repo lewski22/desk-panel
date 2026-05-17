@@ -408,6 +408,66 @@ function LegacySubPlanModal({ org, onClose }: { org: any; onClose: () => void })
   );
 }
 
+// ─── Modal: oznaczanie faktury ────────────────────────────────
+function InvoiceModal({ org, type, onClose, onDone }: {
+  org:     any;
+  type:    'sent' | 'paid';
+  onClose(): void;
+  onDone():  void;
+}) {
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [sentTo,        setSentTo]        = useState(type === 'sent' ? (org.billingEmail ?? '') : '');
+  const [saving,        setSaving]        = useState(false);
+  const [err,           setErr]           = useState('');
+
+  const submit = async () => {
+    setSaving(true); setErr('');
+    try {
+      if (type === 'sent') {
+        await appApi.subscription.markInvoiceSent(org.id, {
+          invoiceNumber: invoiceNumber || undefined,
+          sentTo:        sentTo        || undefined,
+        });
+      } else {
+        await appApi.subscription.markInvoicePaid(org.id, {
+          invoiceNumber: invoiceNumber || undefined,
+        });
+      }
+      onDone();
+      onClose();
+    } catch (e: any) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const title = type === 'sent' ? '📨 Oznacz fakturę jako wysłaną' : '✅ Oznacz fakturę jako opłaconą';
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="space-y-3">
+        <Input
+          label="Numer faktury (opcjonalnie)"
+          value={invoiceNumber}
+          onChange={e => setInvoiceNumber(e.target.value)}
+          placeholder="np. FV/2026/05/001"
+        />
+        {type === 'sent' && (
+          <Input
+            label="Wyślij na email"
+            value={sentTo}
+            onChange={e => setSentTo(e.target.value)}
+            placeholder={org.billingEmail ?? 'billing@firma.pl'}
+          />
+        )}
+        {err && <p className="text-sm text-red-500">{err}</p>}
+        <div className="flex gap-2 justify-end pt-1">
+          <Btn variant="secondary" onClick={onClose}>Anuluj</Btn>
+          <Btn onClick={submit} loading={saving}>Zapisz</Btn>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 // ─── Główna strona ────────────────────────────────────────────
 // ─── SubscriptionTab + SubPlanModal — Sprint B3 ─────────────────
 
@@ -786,14 +846,17 @@ export function OwnerPage() {
   const [editOrg, setEditOrg]       = useState<any>(null);
   const [subEditOrg, setSubEditOrg] = useState<any>(null);
   const [impersonating, setImpersonating] = useState<string | null>(null);
+  const [invoiceModal,  setInvoiceModal]  = useState<{ org: any; type: 'sent' | 'paid' } | null>(null);
 
-  const loadLog = useCallback(async (offset = 0, type = '', orgId = '') => {
+  const loadLog = useCallback(async (offset = logOffset, type = logTypeFilter, orgId = logOrgFilter) => {
     try {
       const r = await appApi.subscription.getGlobalLog({ limit: LOG_LIMIT, offset, type: type || undefined, orgId: orgId || undefined });
       setGlobalLog(r.events);
       setLogTotal(r.total);
-    } catch { /* silent */ }
-  }, []);
+    } catch (err) {
+      console.warn('loadLog failed', err);
+    }
+  }, [logOffset, logTypeFilter, logOrgFilter]);
 
   const load = useCallback(async () => {
     setLoading(true); setErr('');
@@ -808,8 +871,8 @@ export function OwnerPage() {
       setOrgs(orgList);
       setSubDash(sd);
       setEditOrg(prev => prev ? (orgList.find(x => x.id === prev.id) ?? prev) : null);
-      appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); }).catch(() => {});
-      appApi.owner.getOnboardingStatus().then(setOnboarding).catch(() => {});
+      appApi.owner.getUnverifiedAccounts().then(d => { setUnverified(d); setUnverifiedCount(d.length); }).catch(e => console.warn('getUnverifiedAccounts failed', e));
+      appApi.owner.getOnboardingStatus().then(setOnboarding).catch(e => console.warn('getOnboardingStatus failed', e));
     } catch (e: any) {
       setErr(e.message || t('qr.no_connection'));
     }
@@ -817,7 +880,7 @@ export function OwnerPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (activeTab === 'log') loadLog(logOffset, logTypeFilter, logOrgFilter); }, [activeTab, logOffset, logTypeFilter, logOrgFilter, loadLog]);
+  useEffect(() => { if (activeTab === 'log') loadLog(); }, [activeTab, loadLog]);
 
   const handleImpersonate = async (org: any) => {
     setImpersonating(org.id);
@@ -1024,26 +1087,13 @@ export function OwnerPage() {
                           🔐 Reset haseł
                         </Btn>
                         <button
-                          onClick={async () => {
-                            const nr = prompt('Numer faktury (opcjonalnie):') ?? undefined;
-                            const to = org.billingEmail ?? prompt('Email faktury:') ?? undefined;
-                            try {
-                              await appApi.subscription.markInvoiceSent(org.id, { invoiceNumber: nr || undefined, sentTo: to || undefined });
-                              loadLog(0, logTypeFilter, logOrgFilter);
-                            } catch (e: any) { alert(e.message); }
-                          }}
+                          onClick={() => setInvoiceModal({ org, type: 'sent' })}
                           className="text-xs px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 opacity-0 group-hover:opacity-100 transition-all"
                         >
                           📨 Wysłana
                         </button>
                         <button
-                          onClick={async () => {
-                            const nr = prompt('Numer faktury (opcjonalnie):') ?? undefined;
-                            try {
-                              await appApi.subscription.markInvoicePaid(org.id, { invoiceNumber: nr || undefined });
-                              loadLog(0, logTypeFilter, logOrgFilter);
-                            } catch (e: any) { alert(e.message); }
-                          }}
+                          onClick={() => setInvoiceModal({ org, type: 'paid' })}
                           className="text-xs px-2 py-1 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 opacity-0 group-hover:opacity-100 transition-all"
                         >
                           ✅ Opłacona
@@ -1299,6 +1349,16 @@ export function OwnerPage() {
 
       {/* Modal edycji planu subskrypcji */}
       {subEditOrg && <SubPlanModal org={subEditOrg} onClose={() => setSubEditOrg(null)} onSaved={load} />}
+
+      {/* Modal oznaczania faktury */}
+      {invoiceModal && (
+        <InvoiceModal
+          org={invoiceModal.org}
+          type={invoiceModal.type}
+          onClose={() => setInvoiceModal(null)}
+          onDone={() => { setLogOffset(0); loadLog(0); }}
+        />
+      )}
     </div>
   );
 }
